@@ -1,0 +1,95 @@
+# Проверка на каждый push в main и на каждый pull request, публикация на GitHub Pages из main (по умолчанию выключена).
+# Что делает и как читать результат: docs/TESTING.md, раздел «Проверка на GitHub (CI)».
+name: Проверка и публикация
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Типы, линтер, тесты, сборка, прототип в браузере
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+
+      - name: Типы, линтер, тесты, сборка (npm run check)
+        run: npm run check
+
+      - name: Собранный прототип в dist/ соответствует исходникам
+        run: |
+          if [ -n "$(git status --porcelain -- dist)" ]; then
+            echo "::error::dist/ собран не из этих исходников: запустить npm run build и закоммитить dist/"
+            git status --short -- dist
+            git diff --stat -- dist
+            exit 1
+          fi
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install playwright
+
+      # На машинах GitHub Chrome уже стоит (/usr/bin/google-chrome), проверка берёт его. Если его там не окажется,
+      # ставится Chromium из Playwright: test/e2e/smoke.py сам выбирает, что есть.
+      - name: Браузер для проверки
+        run: |
+          if [ -x /usr/bin/google-chrome ]; then
+            /usr/bin/google-chrome --version
+          else
+            python -m playwright install --with-deps chromium
+          fi
+
+      - name: Прототип в браузере (npm run e2e)
+        run: npm run e2e
+
+      - name: Снимки экранов
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: snimki-ekranov
+          path: test/e2e/shots/
+          if-no-files-found: ignore
+          retention-days: 14
+
+  # Публикация включается переменной репозитория PAGES_DEPLOY = on (Settings → Secrets and variables → Actions → Variables)
+  # и требует Settings → Pages → Source: GitHub Actions. Страница публичная: прототип увидит любой, у кого есть ссылка.
+  deploy:
+    name: Публикация на GitHub Pages
+    needs: check
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && vars.PAGES_DEPLOY == 'on'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Собрать страницу из dist/
+        run: |
+          mkdir _site
+          cp dist/index.html _site/index.html
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v4

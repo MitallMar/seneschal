@@ -1,9 +1,9 @@
 // Ядро симуляции характеров и совета. Без интерфейса — можно гонять в браузере и в Node.
 import type { Axis, Star, PostId, Faction, Resource, Effect, Trait, Mark, AspirationDef, GameEvent, EventOption } from "../data/types";
-import { AXES, AXIS_NAMES, AXIS_DAT, OPPOSED, POSTS, TRAITS, MARKS, ASPIRATIONS, ROSTER } from "../data/core";
+import { AXES, AXIS_DAT, OPPOSED, POSTS, TRAITS, MARKS, ASPIRATIONS, ROSTER } from "../data/core";
 import { BACKSTORY } from "../data/backstory";
 import { EVENTS } from "../data/events";
-import { CFG } from "./config";
+import { BALANCE as B } from "./balance";
 import { Rng } from "./rng";
 
 export interface Person {
@@ -53,6 +53,9 @@ export interface World {
   log: LogEntry[];
 }
 
+// Шкалы (не баланс): звезда 0..10, отношения и лояльность −10..10, знание человека 0..3. На них рассчитаны экран и тексты.
+export const STAR_MAX = 10, REL_MAX = 10, KNOWLEDGE_MAX = 3;
+
 const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
 const round1 = (v: number) => Math.round(v * 10) / 10;
 const relKey = (a: number, b: number) => (a < b ? `${a}|${b}` : `${b}|${a}`);
@@ -60,34 +63,38 @@ const relKey = (a: number, b: number) => (a < b ? `${a}|${b}` : `${b}|${a}`);
 export function getRel(w: World, a: number, b: number): number {
   return w.rel.get(relKey(a, b)) ?? 0;
 }
+// Задать отношения двоих напрямую: для тестов и заготовок ситуаций в спортзале. Игра меняет отношения только через addRel.
+export function setRel(w: World, a: number, b: number, v: number): void {
+  w.rel.set(relKey(a, b), clamp(v, -REL_MAX, REL_MAX));
+}
 function addRel(w: World, a: number, b: number, d: number) {
   const pa = w.people[a], pb = w.people[b];
   const g = d < 0 ? Math.max(pa.trait.mods.grudge ?? 1, pb.trait.mods.grudge ?? 1) : 1;
-  w.rel.set(relKey(a, b), clamp(getRel(w, a, b) + d * g, -10, 10));
+  w.rel.set(relKey(a, b), clamp(getRel(w, a, b) + d * g, -REL_MAX, REL_MAX));
 }
 
 export function relWord(v: number): string {
-  if (v >= 6) return "заодно";
-  if (v >= 2) return "ладят";
-  if (v > -2) return "терпят";
-  if (v > -6) return "соперники";
+  if (v >= B.rel.ally) return "заодно";
+  if (v >= B.rel.friendly) return "ладят";
+  if (v > B.rel.rival) return "терпят";
+  if (v > B.rel.enemy) return "соперники";
   return "враги";
 }
 export function loyaltyWord(v: number): string {
-  if (v >= 6) return "предан";
-  if (v >= 2) return "доверяет";
-  if (v > -2) return "служит";
-  if (v > -6) return "недоволен";
+  if (v >= B.loyalty.devoted) return "предан";
+  if (v >= B.loyalty.trusts) return "доверяет";
+  if (v > B.loyalty.unhappy) return "служит";
+  if (v > B.loyalty.bitter) return "недоволен";
   return "озлоблен";
 }
 export function expWord(p: Person): string {
   if (!p.post) return "—";
-  if (p.exp >= CFG.expMaster) return "мастер";
-  if (p.exp >= CFG.expSettled) return "освоился";
+  if (p.exp >= B.exp.master) return "мастер";
+  if (p.exp >= B.exp.settled) return "освоился";
   return "новичок";
 }
 export function isStale(p: Person): boolean {
-  return !!p.post && p.tenure >= CFG.staleFrom;
+  return !!p.post && p.tenure >= B.exp.staleFrom;
 }
 export function topAxis(star: Star): Axis {
   return AXES.reduce((best, a) => (star[a] > star[best] ? a : best), AXES[0]);
@@ -114,9 +121,6 @@ function gender(text: string, p: Person, other?: Person): string {
 function addStar(star: Star, shift: Partial<Star>, k = 1) {
   for (const a of AXES) if (shift[a]) star[a] += shift[a]! * k;
 }
-function clampStar(star: Star) {
-  for (const a of AXES) star[a] = clamp(star[a], 0, 10);
-}
 
 // ---------- Генерация партии ----------
 
@@ -128,20 +132,20 @@ export function newWorld(seed: string, labOpen = false): World {
     head: null, labOpen, season: 1,
     factions: { derevni: 0, les: 0, kuptsy: 0, zamok: 0, dvor: 0 },
     resources: { kazna: 0, pripasy: 0, poryadok: 0 },
-    authority: CFG.authorityStart, deedsLeft: CFG.personalDeeds, log: [],
+    authority: B.staff.authorityStart, deedsLeft: B.season.deeds, log: [],
   };
 
   // 1. Персонажи: авторская черта и метка, базовая звезда
   ROSTER.forEach((r, i) => {
     const star = {} as Star;
-    for (const a of AXES) star[a] = CFG.starBase + rng.range(0, CFG.starBaseRandom);
+    for (const a of AXES) star[a] = B.star.base + rng.range(0, B.star.baseRandom);
     const trait = TRAITS.find((t) => t.id === r.trait)!;
     const mark = r.mark ? MARKS.find((m) => m.id === r.mark) : undefined;
     addStar(star, trait.star);
     if (mark) addStar(star, mark.star);
     w.people.push({
       id: i, name: r.name, female: r.female, age: r.age, trait, mark, star, startStar: star,
-      bio: [], loyalty: 2 + (trait.mods.loyalty ?? 0) + rng.range(-2, 2),
+      bio: [], loyalty: B.loyalty.start + (trait.mods.loyalty ?? 0) + rng.range(-B.loyalty.startSpread, B.loyalty.startSpread),
       tenure: 0, exp: 0, knowledge: 0,
       choices: { dolg: 0, vygoda: 0, zabota: 0, derzost: 0, obychai: 0 }, decisions: 0, matchedTop: 0,
     });
@@ -152,7 +156,7 @@ export function newWorld(seed: string, labOpen = false): World {
 
   // 3. Прогон предыстории
   for (const p of w.people) {
-    const pool = rng.shuffle(BACKSTORY).slice(0, CFG.backstoryCount);
+    const pool = rng.shuffle(BACKSTORY).slice(0, B.star.backstoryCount);
     const aspirations: string[] = [];
     for (const ev of pool) {
       let other: Person | undefined;
@@ -167,7 +171,7 @@ export function newWorld(seed: string, labOpen = false): World {
     }
     // Нормализация: важны относительные склонности, а не сумма событий
     const mean = AXES.reduce((t, a) => t + p.star[a], 0) / AXES.length;
-    for (const a of AXES) p.star[a] = clamp(5 + (p.star[a] - mean) * CFG.starSpread, 0.5, 10);
+    for (const a of AXES) p.star[a] = clamp(B.star.center + (p.star[a] - mean) * B.star.spread, B.star.floor, STAR_MAX);
     const bounds = ROSTER[p.id].bounds;
     if (bounds) for (const a of AXES) if (bounds[a]) p.star[a] = clamp(p.star[a], bounds[a]![0], bounds[a]![1]);
     for (const a of AXES) p.star[a] = round1(p.star[a]);
@@ -188,13 +192,14 @@ export function newWorld(seed: string, labOpen = false): World {
   for (let i = 0; i < w.people.length; i++) {
     for (let j = i + 1; j < w.people.length; j++) {
       const a = w.people[i], b = w.people[j];
-      let v = rng.range(-1, 1);
+      let v = rng.range(-B.rel.startSpread, B.rel.startSpread);
       for (const [x, y] of OPPOSED) {
-        if ((a.star[x] >= 7 && b.star[y] >= 7) || (a.star[y] >= 7 && b.star[x] >= 7)) v -= 2;
+        const from = B.rel.opposedFrom;
+        if ((a.star[x] >= from && b.star[y] >= from) || (a.star[y] >= from && b.star[x] >= from)) v -= B.rel.opposedPenalty;
       }
-      if (topAxis(a.star) === topAxis(b.star)) v += 2;
+      if (topAxis(a.star) === topAxis(b.star)) v += B.rel.sameTop;
       v += personal.get(relKey(i, j)) ?? 0;
-      w.rel.set(relKey(i, j), clamp(round1(v), -10, 10));
+      w.rel.set(relKey(i, j), clamp(round1(v), -REL_MAX, REL_MAX));
     }
   }
 
@@ -207,9 +212,9 @@ export function newWorld(seed: string, labOpen = false): World {
 export function fitness(p: Person, post: PostId): number {
   const def = POSTS.find((x) => x.id === post)!;
   let f = def.axes.reduce((s, a) => s + p.star[a], 0) / def.axes.length;
-  if (p.mark?.goodPost === post) f += 2;
-  if (p.mark?.badPost === post) f -= 3;
-  if (p.aspiration?.post === post) f += 1;
+  if (p.mark?.goodPost === post) f += B.exp.fitMarkGood;
+  if (p.mark?.badPost === post) f -= B.exp.fitMarkBad;
+  if (p.aspiration?.post === post) f += B.exp.fitAspiration;
   return f;
 }
 
@@ -223,7 +228,7 @@ export function autoAssign(w: World, initial = false) {
     if (w.posts[post] != null || p.post) continue;
     w.posts[post] = p.id;
     p.post = post;
-    if (initial) { p.tenure = w.rng.int(2, 14); p.exp = Math.min(p.tenure, CFG.expMaster); }
+    if (initial) { p.tenure = w.rng.int(B.staff.startTenureMin, B.staff.startTenureMax); p.exp = Math.min(p.tenure, B.exp.master); }
   }
   // главный — самый лояльный из совета
   const council = w.people.filter((p) => p.post);
@@ -255,7 +260,7 @@ export function assignCost(w: World, p: Person, post: PostId | null): { cost: nu
 }
 function removeCost(p: Person): { cost: number; why: string } {
   if (!p.post) return { cost: 0, why: "" };
-  const cost = CFG.removeBase + Math.floor(p.tenure / CFG.removePerSeasons);
+  const cost = B.staff.removeBase + Math.floor(p.tenure / B.staff.removePerSeasons);
   return { cost, why: `снять ${p.name} против воли (${p.tenure} сез. на месте) — ${cost}` };
 }
 
@@ -268,8 +273,8 @@ export function assign(w: World, personId: number, post: PostId | null) {
   if (post) {
     const prev = holder(w, post);
     if (prev) {
-      prev.post = undefined; prev.tenure = 0; prev.exp = Math.floor(prev.exp / 2);
-      prev.loyalty = clamp(prev.loyalty - (prev.aspiration?.post === post ? 3 : 1.5), -10, 10);
+      prev.post = undefined; prev.tenure = 0; prev.exp = Math.floor(prev.exp * B.staff.removedExpKeep);
+      prev.loyalty = clamp(prev.loyalty + (prev.aspiration?.post === post ? B.staff.removedDesiredLoyalty : B.staff.removedLoyalty), -REL_MAX, REL_MAX);
       lines.push(`${prev.name} снят${prev.female ? "а" : ""} с должности «${postName(post)}» и обижен${prev.female ? "а" : ""}.`);
     }
   }
@@ -278,13 +283,13 @@ export function assign(w: World, personId: number, post: PostId | null) {
   if (post) {
     w.posts[post] = p.id;
     if (p.aspiration?.post === post) {
-      p.loyalty = clamp(p.loyalty + 2, -10, 10);
+      p.loyalty = clamp(p.loyalty + B.staff.desiredLoyalty, -REL_MAX, REL_MAX);
       lines.push(`${p.name} получил${p.female ? "а" : ""} желанную должность «${postName(post)}» — благодарен${p.female ? "на" : ""}.`);
     } else lines.push(`${p.name} теперь «${postName(post)}».`);
     // обойдённые, кто хотел эту должность
     for (const o of w.people) {
       if (o.id !== p.id && o.aspiration?.post === post) {
-        addRel(w, o.id, p.id, -1.5);
+        addRel(w, o.id, p.id, B.staff.bypassedRel);
         lines.push(`${o.name} сам${o.female ? "а" : ""} метил${o.female ? "а" : ""} на это место — отношения с ${p.name} хуже.`);
       }
     }
@@ -303,17 +308,17 @@ export function talk(w: World, id: number): boolean {
   if (w.deedsLeft <= 0) return false;
   const p = w.people[id];
   w.deedsLeft--;
-  p.knowledge = Math.min(3, p.knowledge + 1);
-  p.loyalty = clamp(p.loyalty + 0.5, -10, 10);
+  p.knowledge = Math.min(KNOWLEDGE_MAX, p.knowledge + 1);
+  p.loyalty = clamp(p.loyalty + B.staff.talkLoyalty, -REL_MAX, REL_MAX);
   w.log.push({ season: w.season, kind: "info", title: "Разговор", lines: [`Сенешаль говорил с ${p.name}. Теперь он лучше понимает этого человека.`] });
   return true;
 }
 
 export function giveOrder(w: World, id: number, axis: Axis | null) {
   const p = w.people[id];
-  if (axis && !p.order) w.authority = round1(w.authority - 1);
+  if (axis && !p.order) w.authority = round1(w.authority - B.staff.orderCost);
   p.order = axis ?? undefined;
-  if (axis) w.log.push({ season: w.season, kind: "staff", title: "Наказ", lines: [`${p.name}: «действуй по ${AXIS_DAT[axis]}». Авторитет −1.`] });
+  if (axis) w.log.push({ season: w.season, kind: "staff", title: "Наказ", lines: [`${p.name}: «действуй по ${AXIS_DAT[axis]}». Авторитет −${B.staff.orderCost}.`] });
 }
 
 // ---------- Решения ----------
@@ -328,13 +333,13 @@ function scoreOptions(w: World, p: Person, ev: GameEvent, noisy = true): Scored[
     const lead = opt.axes.reduce((b, a) => (p.star[a] > p.star[b] ? a : b), opt.axes[0]);
     parts.push(`по ${AXIS_DAT[lead]}`);
     if (p.order && opt.axes.includes(p.order)) {
-      const obey = Math.max(0, p.loyalty + 2 + (p.trait.mods.obedience ?? 0) - (stale ? 3 : 0));
-      const bonus = obey * CFG.orderWeight;
-      if (bonus > 0.3) { base += bonus; parts.push("по наказу"); }
+      const obey = Math.max(0, p.loyalty + B.decide.orderObeyBase + (p.trait.mods.obedience ?? 0) - (stale ? B.decide.orderStalePenalty : 0));
+      const bonus = obey * B.decide.orderWeight;
+      if (bonus > B.decide.orderMinBonus) { base += bonus; parts.push("по наказу"); }
     }
-    if (stale && opt.axes.includes("vygoda") && p.star.vygoda >= 6) { base += 1; parts.push("в свою пользу"); }
-    if (opt.risky && p.trait.id === "ostorozhny") base -= 1;
-    const noise = noisy ? w.rng.gauss() * (CFG.noise + (p.trait.mods.random ?? 0)) : 0;
+    if (stale && opt.axes.includes("vygoda") && p.star.vygoda >= B.decide.staleGreedFrom) { base += B.decide.staleGreedBonus; parts.push("в свою пользу"); }
+    if (opt.risky && p.trait.id === "ostorozhny") base -= B.decide.cautiousRisk;
+    const noise = noisy ? w.rng.gauss() * (B.decide.noise + (p.trait.mods.random ?? 0)) : 0;
     return { opt, score: base + noise, base, why: parts.join(", ") };
   });
 }
@@ -347,10 +352,10 @@ function decide(w: World, p: Person, ev: GameEvent): Scored & { surprise: boolea
 }
 
 function competence(p: Person): number {
-  let c = p.exp >= CFG.expMaster ? CFG.competence.master : p.exp >= CFG.expSettled ? CFG.competence.settled : CFG.competence.novice;
-  if (p.post && p.mark?.goodPost === p.post) c += CFG.markGood;
-  if (p.post && p.mark?.badPost === p.post) c += CFG.markBad;
-  return clamp(c, 0.2, 1.2);
+  let c = p.exp >= B.exp.master ? B.exp.masterSkill : p.exp >= B.exp.settled ? B.exp.settledSkill : B.exp.novice;
+  if (p.post && p.mark?.goodPost === p.post) c += B.exp.markGood;
+  if (p.post && p.mark?.badPost === p.post) c += B.exp.markBad;
+  return clamp(c, B.exp.skillMin, B.exp.skillMax);
 }
 
 function applyEffects(w: World, opt: EventOption, mult: number, doer: Person | undefined, lines: string[]): Partial<Record<Effect, number>> {
@@ -358,13 +363,13 @@ function applyEffects(w: World, opt: EventOption, mult: number, doer: Person | u
   if (doer) k *= competence(doer);
   let failed = false;
   if (opt.risky && doer) {
-    const pSuccess = 0.3 + 0.55 * competence(doer);
+    const pSuccess = B.exp.riskBase + B.exp.riskSkill * competence(doer);
     if (!w.rng.chance(pSuccess)) failed = true;
   }
   const out: Partial<Record<Effect, number>> = {};
   for (const [key, v] of Object.entries(opt.effects) as [Effect, number][]) {
     let val = v * k;
-    if (failed && val > 0) val = -val * 0.5;
+    if (failed && val > 0) val = -val * B.exp.failBackfire;
     val = round1(val);
     out[key] = val;
     if (key in w.factions) w.factions[key as Faction] = round1(w.factions[key as Faction] + val);
@@ -380,7 +385,7 @@ function recordChoice(p: Person, opt: EventOption) {
   if (opt.axes.includes(top)) p.matchedTop++;
   for (const a of opt.axes) {
     p.choices[a]++;
-    p.star[a] = round1(clamp(p.star[a] + CFG.driftChosen, 0, 10));
+    p.star[a] = round1(clamp(p.star[a] + B.star.drift, 0, STAR_MAX));
   }
 }
 
@@ -390,15 +395,16 @@ function toneOf(eff: Partial<Record<Effect, number>>): LogEntry["tone"] {
   return pos && !neg ? "good" : neg && !pos ? "bad" : pos && neg ? "mixed" : "neutral";
 }
 
-function runEvent(w: World, ev: GameEvent) {
+// Одно событие: решают держатели задетых должностей. Запись уходит в летопись; возвращается она же.
+export function runEvent(w: World, ev: GameEvent): LogEntry {
   const holders = ev.posts.map((post) => holder(w, post)).filter((x): x is Person => !!x);
   const lines: string[] = [ev.text];
   let effects: Partial<Record<Effect, number>> = {};
 
   if (holders.length === 0) {
     lines.push("Должности пусты — делом никто не занялся.");
-    w.resources.poryadok -= 1;
-    effects = { poryadok: -1 };
+    w.resources.poryadok -= B.council.emptyOrder;
+    effects = { poryadok: -B.council.emptyOrder };
   } else if (holders.length === 1) {
     const p = holders[0];
     const d = decide(w, p, ev);
@@ -410,7 +416,9 @@ function runEvent(w: World, ev: GameEvent) {
     effects = council(w, ev, holders[0], holders[1], lines);
   }
   const title = `${ev.title}${ev.adventurers ? " ⚔" : ""}`;
-  w.log.push({ season: w.season, kind: "event", title, lines, effects, tone: toneOf(effects) });
+  const entry: LogEntry = { season: w.season, kind: "event", title, lines, effects, tone: toneOf(effects) };
+  w.log.push(entry);
+  return entry;
 }
 
 function council(w: World, ev: GameEvent, a: Person, b: Person, lines: string[]): Partial<Record<Effect, number>> {
@@ -421,10 +429,10 @@ function council(w: World, ev: GameEvent, a: Person, b: Person, lines: string[])
   lines.push(`${b.name} (${postName(b.post!)}) хочет «${db.opt.text}» — ${db.why}.`);
 
   if (da.opt.id === db.opt.id) {
-    const mult = r >= 2 ? CFG.synergy : 1;
+    const mult = r >= B.rel.friendly ? B.council.synergy : 1;
     lines.push(mult > 1 ? `Сошлись сразу, и раз они ${word}, вышло лучше обычного.` : `Сошлись во мнении.`);
     recordChoice(a, da.opt); recordChoice(b, db.opt);
-    addRel(w, a.id, b.id, 0.5);
+    addRel(w, a.id, b.id, B.council.agreeRel);
     const doer = a.exp >= b.exp ? a : b;
     return applyEffects(w, da.opt, mult, doer, lines);
   }
@@ -433,12 +441,12 @@ function council(w: World, ev: GameEvent, a: Person, b: Person, lines: string[])
   const head = w.head != null ? w.people[w.head] : undefined;
   if (head && head.id !== a.id && head.id !== b.id) {
     const ra = getRel(w, head.id, a.id), rb = getRel(w, head.id, b.id);
-    if (ra >= -1 && rb >= -1) {
+    if (ra >= B.council.headMinRel && rb >= B.council.headMinRel) {
       const sa = scoreOptions(w, head, ev, false).find((s) => s.opt.id === da.opt.id)!.base;
       const sb = scoreOptions(w, head, ev, false).find((s) => s.opt.id === db.opt.id)!.base;
       const [win, lose, opt] = sa >= sb ? [a, b, da.opt] : [b, a, db.opt];
       lines.push(`Спорили (${word}). Рассудил главный, ${head.name}: делать как хочет ${win.name}.`);
-      addRel(w, head.id, lose.id, -0.5);
+      addRel(w, head.id, lose.id, B.council.headJudgeRel);
       recordChoice(win, opt);
       return applyEffects(w, opt, 1, win, lines);
     }
@@ -447,51 +455,52 @@ function council(w: World, ev: GameEvent, a: Person, b: Person, lines: string[])
 
   const soft = (a.trait.mods.softness ?? 0) + (b.trait.mods.softness ?? 0);
   // кто сильнее в споре: главный, затем стаж и дерзость
-  const power = (p: Person) => (w.head === p.id ? 5 : 0) + p.tenure / 4 + p.star.derzost / 3 + w.rng.range(0, 2);
+  const power = (p: Person) => (w.head === p.id ? B.council.powerHead : 0) + p.tenure / B.council.powerTenureDiv
+    + p.star.derzost / B.council.powerDerzostDiv + w.rng.range(0, B.council.powerRandom);
   const [win, lose, wd] = power(a) >= power(b) ? [a, b, da] : [b, a, db];
   const ld = win === a ? db : da;
 
-  if (r >= 2) {
+  if (r >= B.rel.friendly) {
     // ладят — договариваются о лучшем для обоих
     const both = scoreOptions(w, a, ev, false).map((s, i) => ({ opt: s.opt, v: s.base + scoreOptions(w, b, ev, false)[i].base }));
     const opt = both.reduce((x, y) => (y.v > x.v ? y : x)).opt;
     lines.push(`Они ${word} — договорились: «${opt.text}».`);
     recordChoice(a, opt); recordChoice(b, opt);
-    addRel(w, a.id, b.id, 0.3);
+    addRel(w, a.id, b.id, B.council.dealRel);
     return applyEffects(w, opt, 1, win, lines);
   }
-  if (r > -2) {
+  if (r > B.rel.rival) {
     // терпят — компромисс или кто-то продавил
-    if (w.rng.chance(0.4 + soft * 0.1)) {
+    if (w.rng.chance(B.council.compromiseChance + soft * B.council.softness)) {
       lines.push(`Они ${word} друг друга — сделали наполовину, как хотел ${win.name}, но вполсилы.`);
       recordChoice(win, wd.opt);
-      return applyEffects(w, wd.opt, CFG.compromise, win, lines);
+      return applyEffects(w, wd.opt, B.council.compromise, win, lines);
     }
     lines.push(`Они ${word} друг друга. ${win.name} продавил${win.female ? "а" : ""} своё; ${lose.name} затаил${lose.female ? "а" : ""} обиду.`);
-    addRel(w, a.id, b.id, -0.7);
+    addRel(w, a.id, b.id, B.council.pushRel);
     recordChoice(win, wd.opt);
     return applyEffects(w, wd.opt, 1, win, lines);
   }
-  if (r > -6) {
+  if (r > B.rel.enemy) {
     lines.push(`Они соперники. ${win.name} настоял${win.female ? "а" : ""} на своём, ${lose.name} не простит.`);
-    addRel(w, a.id, b.id, -1);
+    addRel(w, a.id, b.id, B.council.rivalRel);
     recordChoice(win, wd.opt);
-    if (lose.loyalty < 3 || w.rng.chance(0.4)) lines.push(`📜 Жалоба: ${lose.name} ждёт Сенешаля с жалобой на ${win.name}.`);
+    if (lose.loyalty < B.council.complaintLoyalty || w.rng.chance(B.council.complaintChance)) lines.push(`📜 Жалоба: ${lose.name} ждёт Сенешаля с жалобой на ${win.name}.`);
     return applyEffects(w, wd.opt, 1, win, lines);
   }
   // враги
-  if (w.rng.chance(0.55)) {
+  if (w.rng.chance(B.council.sabotageChance)) {
     lines.push(`Они враги. ${win.name} сделал${win.female ? "а" : ""} по-своему, а ${lose.name} мешал${lose.female ? "а" : ""} назло: «${ld.opt.text}» — вот чего ${lose.female ? "она" : "он"} хотел${lose.female ? "а" : ""}. Саботаж.`);
-    addRel(w, a.id, b.id, -1);
+    addRel(w, a.id, b.id, B.council.sabotageRel);
     recordChoice(win, wd.opt);
-    const eff = applyEffects(w, wd.opt, CFG.sabotage, win, lines);
-    w.resources.poryadok = round1(w.resources.poryadok - 1);
-    eff.poryadok = round1((eff.poryadok ?? 0) - 1);
+    const eff = applyEffects(w, wd.opt, B.council.sabotage, win, lines);
+    w.resources.poryadok = round1(w.resources.poryadok - B.council.sabotageOrder);
+    eff.poryadok = round1((eff.poryadok ?? 0) - B.council.sabotageOrder);
     lines.push(`📜 Жалобы с обеих сторон ждут Сенешаля.`);
     return eff;
   }
   lines.push(`Они враги, но ${lose.name} на этот раз смолчал${lose.female ? "а" : ""}. ${win.name} сделал${win.female ? "а" : ""} по-своему.`);
-  addRel(w, a.id, b.id, -0.5);
+  addRel(w, a.id, b.id, B.council.silentRel);
   recordChoice(win, wd.opt);
   return applyEffects(w, wd.opt, 1, win, lines);
 }
@@ -508,11 +517,11 @@ export function forecast(w: World, p: Person): string {
 
 export function runSeason(w: World) {
   const pool = EVENTS.filter((e) => !e.adventurers || w.labOpen);
-  const evs = w.rng.shuffle(pool).slice(0, CFG.eventsPerSeason);
+  const evs = w.rng.shuffle(pool).slice(0, B.season.events);
   for (const ev of evs) runEvent(w, ev);
   upkeep(w);
   w.season++;
-  w.deedsLeft = CFG.personalDeeds;
+  w.deedsLeft = B.season.deeds;
 }
 
 export function runEvents(w: World, n: number) {
@@ -523,31 +532,31 @@ export function runEvents(w: World, n: number) {
 function upkeep(w: World) {
   const lines: string[] = [];
   // старые обиды и симпатии понемногу сглаживаются
-  for (const [k, v] of w.rel) w.rel.set(k, round1(v * CFG.relFade));
+  for (const [k, v] of w.rel) w.rel.set(k, round1(v * B.rel.fade));
   for (const p of w.people) {
     if (p.post) {
       p.tenure++;
-      p.exp = Math.min(p.exp + 1, CFG.expMaster);
-      if (p.tenure === CFG.expSettled) lines.push(`${p.name} освоил${p.female ? "ась" : "ся"} на должности.`);
-      if (p.tenure === CFG.expMaster) lines.push(`${p.name} — теперь мастер своего дела.`);
-      if (p.tenure === CFG.staleFrom) lines.push(`${p.name} засидел${p.female ? "ась" : "ся"} на месте: оброс своими людьми и делает всё больше по-своему.`);
-      if (isStale(p) && p.star.vygoda >= 6 && w.rng.chance(0.25)) {
-        w.resources.kazna = round1(w.resources.kazna - 0.5);
+      p.exp = Math.min(p.exp + 1, B.exp.master);
+      if (p.tenure === B.exp.settled) lines.push(`${p.name} освоил${p.female ? "ась" : "ся"} на должности.`);
+      if (p.tenure === B.exp.master) lines.push(`${p.name} — теперь мастер своего дела.`);
+      if (p.tenure === B.exp.staleFrom) lines.push(`${p.name} засидел${p.female ? "ась" : "ся"} на месте: оброс своими людьми и делает всё больше по-своему.`);
+      if (isStale(p) && p.star.vygoda >= B.decide.staleGreedFrom && w.rng.chance(B.season.theftChance)) {
+        w.resources.kazna = round1(w.resources.kazna - B.season.theft);
         lines.push(`Из казны что-то утекает — следы ведут к людям ${p.name}.`);
       }
     }
     const asp = p.aspiration?.post;
     if (asp) {
-      if (p.post === asp) p.loyalty += CFG.loyaltyDesiredPost;
-      else if (p.post) p.loyalty += CFG.loyaltyWrongPost * (1 + (p.trait.mods.ambition ?? 0) * 0.25) * (isStale(p) ? 1.5 : 1);
+      if (p.post === asp) p.loyalty += B.loyalty.desiredPost;
+      else if (p.post) p.loyalty += B.loyalty.wrongPost * (1 + (p.trait.mods.ambition ?? 0) * B.loyalty.ambition) * (isStale(p) ? B.loyalty.staleWrong : 1);
       else if (w.posts[asp] != null) {
-        p.loyalty += CFG.loyaltyBlocked;
+        p.loyalty += B.loyalty.blocked;
         const h = holder(w, asp)!;
-        if (isStale(h)) addRel(w, p.id, h.id, -0.3);
+        if (isStale(h)) addRel(w, p.id, h.id, B.loyalty.blockedStaleRel);
       }
     }
-    p.loyalty = round1(clamp(p.loyalty, -10, 10));
-    if (p.loyalty <= -6 && w.rng.chance(0.15)) lines.push(`⚠ ${p.name} озлоблен${p.female ? "а" : ""} и подумывает уйти.`);
+    p.loyalty = round1(clamp(p.loyalty, -REL_MAX, REL_MAX));
+    if (p.loyalty <= B.loyalty.bitter && w.rng.chance(B.loyalty.leaveChance)) lines.push(`⚠ ${p.name} озлоблен${p.female ? "а" : ""} и подумывает уйти.`);
   }
   w.log.push({ season: w.season, kind: "season", title: `Итог сезона ${w.season}`, lines: lines.length ? lines : ["Ничего особенного."] });
 }
