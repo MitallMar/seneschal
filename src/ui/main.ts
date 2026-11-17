@@ -3,6 +3,7 @@ import type { Axis, PostId, Star, Faction, Resource, Effect } from "../data/type
 import {
   newWorld, runSeason, assign, assignCost, setHead, talk, giveOrder, holder, getRel, relWord,
   loyaltyWord, expWord, isStale, forecast, consistency, fitness, topAxis, postName,
+  axisKnown, axisWord, fitWord, headOpinion, nextTalk, rumorCheck, traitLabel,
   type World, type Person,
 } from "../sim/sim";
 
@@ -28,26 +29,56 @@ function seasonLabel(n: number) {
 }
 
 // ---------- Звезда ----------
+// Игрок видит звезду только из известного: у известной оси луч до уровня слова, у неизвестной — «?». Настоящая форма — во «Взгляде дизайнера».
+const LEVEL: Record<string, number> = { "слабо": 3, "заметно": 6, "сильно": 9 };
+
 function starSvg(p: Person): string {
   const cx = 60, cy = 60, R = 44;
   const pt = (i: number, v: number) => {
     const ang = (-90 + i * 72) * (Math.PI / 180);
     return [cx + Math.cos(ang) * R * (v / 10), cy + Math.sin(ang) * R * (v / 10)];
   };
-  const poly = (s: Star) => AXES.map((a, i) => pt(i, s[a]).map((x) => x.toFixed(1)).join(",")).join(" ");
+  const xy = (i: number, v: number) => pt(i, v).map((x) => x.toFixed(1)).join(",");
+  const poly = (s: Star) => AXES.map((a, i) => xy(i, s[a])).join(" ");
   const grid = [2.5, 5, 7.5, 10]
-    .map((g) => `<polygon points="${AXES.map((_, i) => pt(i, g).join(",")).join(" ")}" fill="none" stroke="#e2d8c4" stroke-width="1"/>`)
+    .map((g) => `<polygon class="grid" points="${AXES.map((_, i) => pt(i, g).join(",")).join(" ")}" fill="none" stroke="#e2d8c4" stroke-width="1"/>`)
     .join("");
   const spokes = AXES.map((_, i) => `<line x1="${cx}" y1="${cy}" x2="${pt(i, 10)[0]}" y2="${pt(i, 10)[1]}" stroke="#e2d8c4"/>`).join("");
   const labels = AXES.map((a, i) => {
     const [x, y] = pt(i, 12.4);
-    return `<text x="${x}" y="${y + 3}" text-anchor="middle" font-size="9" fill="${AXIS_COLOR[a]}">${AXIS_NAMES[a].slice(0, 3)}</text>`;
+    const text = designer || axisKnown(p, a) ? AXIS_NAMES[a].slice(0, 3) : `${AXIS_NAMES[a].slice(0, 3)}?`;
+    return `<text x="${x}" y="${y + 3}" text-anchor="middle" font-size="9" fill="${AXIS_COLOR[a]}">${text}</text>`;
   }).join("");
-  const blur = designer ? 0 : (3 - p.knowledge) * 2.2;
-  const filt = blur ? `<defs><filter id="b${p.id}" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="${blur}"/></filter></defs>` : "";
-  const shape = `<polygon points="${poly(p.star)}" fill="rgba(124,58,29,.22)" stroke="var(--accent)" stroke-width="1.6" ${blur ? `filter="url(#b${p.id})"` : ""}/>`;
-  const start = designer ? `<polygon points="${poly(p.startStar)}" fill="none" stroke="#8a7a5c" stroke-dasharray="3 2" stroke-width="1"/>` : "";
-  return `<svg viewBox="0 0 120 120">${filt}${grid}${spokes}${start}${shape}${labels}</svg>`;
+  let shape: string;
+  if (designer) {
+    shape = `<polygon class="start" points="${poly(p.startStar)}" fill="none" stroke="#8a7a5c" stroke-dasharray="3 2" stroke-width="1"/>`
+      + `<polygon class="true" points="${poly(p.star)}" fill="rgba(124,58,29,.22)" stroke="var(--accent)" stroke-width="1.6"/>`;
+  } else {
+    const known = AXES.map((a, i) => ({ a, i, v: LEVEL[axisWord(p.star[a])] })).filter((k) => axisKnown(p, k.a));
+    const rays = known.map((k) => {
+      const [x, y] = pt(k.i, k.v);
+      const line = `<line class="ray" x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" stroke="${AXIS_COLOR[k.a]}" stroke-width="3" stroke-linecap="round"/>`;
+      return `${line}<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3" fill="${AXIS_COLOR[k.a]}"/>`;
+    }).join("");
+    const whole = known.length === AXES.length
+      ? `<polygon class="known" points="${known.map((k) => xy(k.i, k.v)).join(" ")}" fill="rgba(124,58,29,.14)" stroke="var(--accent)" stroke-width="1"/>` : "";
+    shape = whole + rays;
+  }
+  return `<svg viewBox="0 0 120 120">${grid}${spokes}${shape}${labels}</svg>`;
+}
+
+// Склонности строками: слово-уровень у известной оси, «?» у неизвестной, рядом — сколько раз видели в деле.
+function axisRows(p: Person): string {
+  return AXES.map((a) => {
+    const known = axisKnown(p, a);
+    const word = known ? axisWord(p.star[a]) : "?";
+    const seen = p.know.seen[a] ? `видели: ${p.know.seen[a]}` : "";
+    const real = designer ? ` <small>${p.star[a].toFixed(1)}</small>` : "";
+    return `<div class="axis-row" data-axis="${a}" data-known="${known ? 1 : 0}">
+      <span class="axis-name" style="color:${AXIS_COLOR[a]}">${AXIS_NAMES[a]}</span>
+      <span class="lvl ${known ? "" : "unknown"}">${word}${real}</span><span class="seen">${seen}</span>
+    </div>`;
+  }).join("");
 }
 
 // ---------- Совет ----------
@@ -59,8 +90,9 @@ function renderCouncil() {
         w.people.map((p) => {
           const sel = h?.id === p.id ? "selected" : "";
           const marks: string[] = [];
-          if (p.aspiration?.post === def.id) marks.push("хочет сюда");
+          if (p.aspiration?.post === def.id && (p.know.aspiration || designer)) marks.push("хочет сюда");
           if (p.post && p.post !== def.id) marks.push(`сейчас ${postName(p.post).toLowerCase()}`);
+          marks.push(fitWord(p, def.id));
           if (designer) marks.push(`годн. ${fitness(p, def.id).toFixed(1)}`);
           if (!sel) {
             const c = assignCost(w, p, def.id).cost;
@@ -77,7 +109,7 @@ function renderCouncil() {
       if (w.head === h.id) badges.push(`<span class="badge head">главный</span>`);
     }
     const headBtn = h && w.head !== h.id ? `<button data-head="${h.id}" style="padding:2px 8px;font-size:12px">сделать главным</button>` : "";
-    const fc = h ? `<div class="forecast">${esc(h.name)}: ${forecast(w, h)}${designer ? ` · ведущая ось: ${AXIS_NAMES[topAxis(h.star)]}` : ""}</div>` : "";
+    const fc = h ? `<div class="forecast">${esc(h.name)}: ${forecast(h)}${designer ? ` · ведущая ось: ${AXIS_NAMES[topAxis(h.star)]}` : ""}</div>` : "";
     return `<div class="post">
       <div class="post-head"><span class="post-name">${def.name}</span><span class="post-sphere">${def.sphere}</span></div>
       <div class="post-row"><select data-post="${def.id}">${opts}</select>${headBtn}</div>
@@ -128,35 +160,63 @@ function renderWorld() {
 }
 
 // ---------- Люди ----------
+function traitTags(p: Person): string {
+  const tags: string[] = [];
+  if (p.know.trait || designer) {
+    const secret = !p.know.trait ? " secret" : "";
+    tags.push(`<span class="tag trait key${secret}" title="${esc(p.trait.desc)}">${p.trait.name}${p.trait.hidden && designer ? " (скрытая)" : ""}</span>`);
+  } else {
+    tags.push(`<span class="tag trait key unknown">${p.know.traitAsked ? "черта скрыта: выдаст поступок" : "черта неизвестна"}</span>`);
+  }
+  for (const g of p.gained) {
+    if (!g.known && !designer) continue;
+    tags.push(`<span class="tag trait gained${g.known ? "" : " secret"}" title="${esc(g.trait.desc)}">${esc(traitLabel(w, g))}</span>`);
+  }
+  if (p.mark) tags.push(`<span class="tag mark" title="${esc(p.mark.desc)}">✶ ${p.mark.name}</span>`);
+  tags.push(p.aspiration && (p.know.aspiration || designer)
+    ? `<span class="tag asp">${esc(p.aspiration.text)}</span>` : `<span class="tag asp unknown">стремление неизвестно</span>`);
+  return tags.join("");
+}
+
+function rumorLine(p: Person): string {
+  if (!p.rumor) return "";
+  const check = rumorCheck(p);
+  const truth = designer ? ` <small>${p.rumor.wrong ? "молва неверная" : "молва верная"}</small>` : "";
+  return `<div class="rumor">${esc(p.rumor.text)}${check ? ` <span class="check">Молва ${check}.</span>` : ""}${truth}</div>`;
+}
+
+function opinionLine(p: Person): string {
+  const o = headOpinion(w, p);
+  if (!o) return "";
+  const bias = designer ? ` <small>пристрастие ${o.bias > 0 ? "+" : ""}${o.bias.toFixed(1)}</small>` : "";
+  const title = "Мнение главного — подсказка с пристрастием: друга похвалит, соперника очернит";
+  return `<div class="opinion" title="${title}">Главный, ${esc(o.head.name)}: «${o.text}».${bias}</div>`;
+}
+
 function renderPeople() {
   $("people").innerHTML = w.people.map((p) => {
-    const totalChoices = AXES.reduce((s, a) => s + p.choices[a], 0) || 1;
-    const bars = AXES.map((a) => {
-      const fill = `<div class="fill" style="width:${(p.choices[a] / totalChoices) * 100}%;background:${AXIS_COLOR[a]}"></div>`;
-      return `<div class="bar"><span>${AXIS_NAMES[a]}</span><div class="track">${fill}</div><span>${p.choices[a]}</span></div>`;
-    }).join("");
     const orderSel = `<select data-order="${p.id}" title="Наказ (во 2-м акте, стоит 1 авторитета)"><option value="">наказ: нет</option>${AXES.map((a) => `<option value="${a}" ${p.order === a ? "selected" : ""}>наказ: ${AXIS_NAMES[a]}</option>`).join("")}</select>`;
-    const knowWord = ["не знает", "немного знает", "знает", "знает хорошо"][p.knowledge];
-    return `<div class="card ${p.post ? "on-post" : ""}">
+    const topic = nextTalk(p);
+    const talkBtn = `<button data-talk="${p.id}" ${w.deedsLeft <= 0 || !topic ? "disabled" : ""}>${topic ? `Поговорить: ${topic}` : "Всё рассказал"}</button>`;
+    const match = designer && p.decisions ? ` · по ведущей оси (${AXIS_NAMES[topAxis(p.star)]}): <b>${consistency(p)}%</b>` : "";
+    return `<div class="card ${p.post ? "on-post" : ""}" data-id="${p.id}">
       <div class="card-head">
         <div><div class="card-name">${esc(p.name)}</div><div class="card-meta">${p.age} лет · ${p.post ? postName(p.post) : "без должности"}</div></div>
-        <div class="card-meta" style="text-align:right">${loyaltyWord(p.loyalty)}${designer ? ` (${p.loyalty.toFixed(1)})` : ""}<br>Сенешаль ${knowWord}</div>
+        <div class="card-meta" style="text-align:right">${loyaltyWord(p.loyalty)}${designer ? ` (${p.loyalty.toFixed(1)})` : ""}<br>разговоров: ${p.know.talks}</div>
       </div>
-      <div class="tags">
-        <span class="tag trait" title="${esc(p.trait.desc)}">${p.trait.name}</span>
-        ${p.mark ? `<span class="tag mark" title="${esc(p.mark.desc)}">✶ ${p.mark.name}</span>` : ""}
-        ${p.aspiration && (p.knowledge >= 1 || designer) ? `<span class="tag asp">${esc(p.aspiration.text)}</span>` : `<span class="tag asp" style="opacity:.5">стремление неизвестно</span>`}
-      </div>
+      <div class="tags">${traitTags(p)}</div>
+      ${rumorLine(p)}
       <div class="card-body">
         <div class="star">${starSvg(p)}</div>
         <div class="stats">
-          <div>Решений: <b>${p.decisions}</b>${p.decisions ? ` · по ведущей оси: <b>${consistency(p)}%</b>` : ""}</div>
-          <div class="bars">${bars}</div>
+          <div class="axes">${axisRows(p)}</div>
+          <div class="decisions">Решений: <b>${p.decisions}</b>${match}</div>
         </div>
       </div>
+      ${opinionLine(p)}
       <details class="bio"><summary>Биография</summary><ul>${p.bio.map((b) => `<li>${esc(b)}</li>`).join("")}</ul></details>
       <div class="card-actions">
-        <button data-talk="${p.id}" ${w.deedsLeft <= 0 || p.knowledge >= 3 ? "disabled" : ""}>Поговорить</button>
+        ${talkBtn}
         ${orderSel}
       </div>
     </div>`;

@@ -3,6 +3,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { AXES, AXIS_NAMES, AXIS_DAT, OPPOSED, POSTS, FACTION_NAMES, RESOURCE_NAMES, TRAITS, MARKS, ASPIRATIONS, ROSTER } from "../src/data/core";
 import { BACKSTORY } from "../src/data/backstory";
+import { RUMORS_AXIS, RUMORS_TRAIT } from "../src/data/rumors";
 import { EVENTS } from "../src/data/events";
 import { BALANCE } from "../src/sim/balance";
 
@@ -77,4 +78,20 @@ test("события совета: одна или две существующи
   assert.ok(usual.length >= BALANCE.season.events, "событий без приключенцев хватает на сезон");
   for (const post of postIds) assert.ok(usual.some((e) => e.posts.includes(post)), `у должности ${post} нет событий`);
   assert.ok(EVENTS.some((e) => e.adventurers) && usual.some((e) => e.posts.length === 2));
+});
+
+test("молва: несколько вариантов на каждую склонность и каждую ключевую черту, подстановки известны", () => {
+  for (const a of AXES) assert.ok(RUMORS_AXIS[a]?.length >= 2, a);
+  for (const t of TRAITS) assert.ok(RUMORS_TRAIT[t.id]?.length >= 2, t.id);
+  assert.ok(Object.keys(RUMORS_TRAIT).every((id) => TRAITS.some((t) => t.id === id)), "молва о несуществующей черте");
+  for (const text of [...Object.values(RUMORS_AXIS), ...Object.values(RUMORS_TRAIT)].flat()) {
+    const unknown = (text.match(/\{[^}]*\}/g) ?? []).filter((t) => !["{а}", "{его}", "{ему}", "{он}"].includes(t));
+    assert.deepEqual(unknown, [], text);
+    assert.ok(text.startsWith("Говорят, ") && text.endsWith("."), text);
+  }
+});
+
+test("скрытые черты: у каждой назван поступок, который её выдаёт", () => {
+  assert.ok(TRAITS.some((t) => t.hidden));
+  for (const t of TRAITS.filter((x) => x.hidden)) assert.ok(t.revealedBy, t.id);
 });

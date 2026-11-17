@@ -1,17 +1,35 @@
 // Ядро симуляции характеров и совета. Без интерфейса — можно гонять в браузере и в Node.
-import type { Axis, Star, PostId, Faction, Resource, Effect, Trait, Mark, AspirationDef, GameEvent, EventOption } from "../data/types";
-import { AXES, AXIS_DAT, OPPOSED, POSTS, TRAITS, MARKS, ASPIRATIONS, ROSTER } from "../data/core";
+import type { Axis, Star, PostId, Faction, Resource, Effect, Trait, TraitMods, Deed, Mark, AspirationDef, GameEvent, EventOption } from "../data/types";
+import { AXES, AXIS_NAMES, AXIS_DAT, OPPOSED, POSTS, TRAITS, LIFE_TRAITS, MARKS, ASPIRATIONS, ROSTER } from "../data/core";
+import { RUMORS_AXIS, RUMORS_TRAIT } from "../data/rumors";
 import { BACKSTORY } from "../data/backstory";
 import { EVENTS } from "../data/events";
 import { BALANCE as B } from "./balance";
 import { Rng } from "./rng";
+
+// Черта, приобретённая по ходу жизни. target — против кого она («Злопамятный к …»); known — знает ли о ней Сенешаль.
+export interface Gained { trait: Trait; target?: number; season: number; known: boolean }
+
+// Молва: строка, которую Сенешаль знает о человеке сразу. О черте (trait) или о склонности (axis); wrong — молва неверная.
+export interface Rumor { text: string; axis?: Axis; trait?: string; wrong: boolean }
+
+// Что Сенешаль знает о человеке. Числа звезды игрок не видит никогда: только слова по известным осям.
+export interface Knowledge {
+  talks: number;               // сколько было разговоров
+  trait: boolean;              // ключевая черта известна
+  traitAsked: boolean;         // о черте уже говорили: скрытую разговор не открывает
+  aspiration: boolean;         // стремление известно
+  axes: boolean;               // склонности рассказал сам (третий разговор)
+  seen: Record<Axis, number>;  // сколько решений по оси видели в деле
+}
 
 export interface Person {
   id: number;
   name: string;
   female: boolean;
   age: number;
-  trait: Trait;
+  trait: Trait;             // ключевая черта, с рождения
+  gained: Gained[];         // приобретённые черты, не больше B.traits.maxGained
   mark?: Mark;
   star: Star;
   startStar: Star;
@@ -21,7 +39,9 @@ export interface Person {
   post?: PostId;
   tenure: number;           // сезонов на текущей должности
   exp: number;              // опыт на текущей должности (сезоны, с потолком)
-  knowledge: number;        // насколько Сенешаль знает человека, 0..3
+  know: Knowledge;          // что Сенешаль знает о человеке
+  rumor?: Rumor;            // молва; нет — о человеке с начала известна черта
+  recent: { season: number; axes: Axis[] }[]; // решения последних сезонов: из них складывается привычка
   order?: Axis;             // наказ Сенешаля
   choices: Record<Axis, number>; // сколько раз выбирал вариант с этой осью
   decisions: number;
@@ -53,8 +73,8 @@ export interface World {
   log: LogEntry[];
 }
 
-// Шкалы (не баланс): звезда 0..10, отношения и лояльность −10..10, знание человека 0..3. На них рассчитаны экран и тексты.
-export const STAR_MAX = 10, REL_MAX = 10, KNOWLEDGE_MAX = 3;
+// Шкалы (не баланс): звезда 0..10, отношения и лояльность −10..10. На них рассчитаны экран и тексты.
+export const STAR_MAX = 10, REL_MAX = 10;
 
 const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
 const round1 = (v: number) => Math.round(v * 10) / 10;
@@ -67,9 +87,21 @@ export function getRel(w: World, a: number, b: number): number {
 export function setRel(w: World, a: number, b: number, v: number): void {
   w.rel.set(relKey(a, b), clamp(v, -REL_MAX, REL_MAX));
 }
+// Поправки черт человека: ключевая и приобретённые вместе. Черта с целью действует только против своей цели (vs).
+type ModKey = Exclude<keyof TraitMods, "grudge" | "loyalty">;
+function activeTraits(p: Person, vs?: Person): Trait[] {
+  return [p.trait, ...p.gained.filter((g) => !g.trait.targeted || g.target === vs?.id).map((g) => g.trait)];
+}
+function mod(p: Person, key: ModKey, vs?: Person): number {
+  return activeTraits(p, vs).reduce((s, t) => s + (t.mods[key] ?? 0), 0);
+}
+function grudge(p: Person, vs?: Person): number {
+  return activeTraits(p, vs).reduce((s, t) => s * (t.mods.grudge ?? 1), 1);
+}
+
 function addRel(w: World, a: number, b: number, d: number) {
   const pa = w.people[a], pb = w.people[b];
-  const g = d < 0 ? Math.max(pa.trait.mods.grudge ?? 1, pb.trait.mods.grudge ?? 1) : 1;
+  const g = d < 0 ? Math.max(grudge(pa, pb), grudge(pb, pa)) : 1;
   w.rel.set(relKey(a, b), clamp(getRel(w, a, b) + d * g, -REL_MAX, REL_MAX));
 }
 
@@ -115,12 +147,17 @@ function gender(text: string, p: Person, other?: Person): string {
     .replace(/\{а\}/g, p.female ? "а" : "")
     .replace(/\{ся\}|\{ась\}/g, p.female ? "ась" : "ся")
     .replace(/\{он\}/g, p.female ? "она" : "он")
-    .replace(/\{его\}/g, p.female ? "её" : "его");
+    .replace(/\{его\}/g, p.female ? "её" : "его")
+    .replace(/\{ему\}/g, p.female ? "ей" : "ему");
 }
 
 function addStar(star: Star, shift: Partial<Star>, k = 1) {
   for (const a of AXES) if (shift[a]) star[a] += shift[a]! * k;
 }
+const noAxes = (): Record<Axis, number> => ({ dolg: 0, vygoda: 0, zabota: 0, derzost: 0, obychai: 0 });
+// «к Остапу», «к Ведане»: дательный падеж имени для черты с целью
+const dative = (name: string) => (name.endsWith("а") ? `${name.slice(0, -1)}е` : `${name}у`);
+const lower = (text: string) => text.charAt(0).toLowerCase() + text.slice(1);
 
 // ---------- Генерация партии ----------
 
@@ -144,10 +181,11 @@ export function newWorld(seed: string, labOpen = false): World {
     addStar(star, trait.star);
     if (mark) addStar(star, mark.star);
     w.people.push({
-      id: i, name: r.name, female: r.female, age: r.age, trait, mark, star, startStar: star,
+      id: i, name: r.name, female: r.female, age: r.age, trait, gained: [], mark, star, startStar: star,
       bio: [], loyalty: B.loyalty.start + (trait.mods.loyalty ?? 0) + rng.range(-B.loyalty.startSpread, B.loyalty.startSpread),
-      tenure: 0, exp: 0, knowledge: 0,
-      choices: { dolg: 0, vygoda: 0, zabota: 0, derzost: 0, obychai: 0 }, decisions: 0, matchedTop: 0,
+      tenure: 0, exp: 0, recent: [],
+      know: { talks: 0, trait: false, traitAsked: false, aspiration: false, axes: false, seen: noAxes() },
+      choices: noAxes(), decisions: 0, matchedTop: 0,
     });
   });
 
@@ -204,8 +242,37 @@ export function newWorld(seed: string, labOpen = false): World {
   }
 
   autoAssign(w, true);
-  w.log.push({ season: 0, kind: "info", title: `Новая партия, семя «${seed}»`, lines: ["Совет расставлен по годности. Должности заняты давно — у людей есть стаж."] });
+  // Кто сидит на должности до потолка опыта, тот уже мастер: черта нажита до начала партии, Сенешаль о ней пока не знает.
+  for (const p of w.people) {
+    if (p.exp >= B.exp.master && p.gained.length < B.traits.maxGained) {
+      p.gained.push({ trait: LIFE_TRAITS.find((t) => t.id === "master_dela")!, season: 0, known: false });
+    }
+  }
+  // Первая посадка — обучающая: о каждом известна одна вещь. О члене совета — молва или ключевая черта, об остальных — молва.
+  for (const p of w.people) {
+    if (p.post && !p.trait.hidden && rng.chance(B.know.startTraitChance)) { p.know.trait = true; p.know.traitAsked = true; }
+    else p.rumor = makeRumor(w, p);
+  }
+  const lines = [
+    "Совет расставлен по годности. Должности заняты давно — у людей есть стаж.",
+    "О каждом известно что-то одно: молва или черта. Остальное откроют разговоры и дела.",
+  ];
+  w.log.push({ season: 0, kind: "info", title: `Новая партия, семя «${seed}»`, lines });
   return w;
+}
+
+// Молва о черте или о ведущей склонности; с шансом — неверная: тогда о чужой черте или о слабой склонности.
+function makeRumor(w: World, p: Person): Rumor {
+  const aboutTrait = w.rng.chance(B.know.rumorTraitChance);
+  let wrong = w.rng.chance(B.know.rumorFalseChance);
+  if (aboutTrait) {
+    const id = wrong ? w.rng.pick(Object.keys(RUMORS_TRAIT).filter((x) => x !== p.trait.id)) : p.trait.id;
+    return { text: gender(w.rng.pick(RUMORS_TRAIT[id]), p), trait: id, wrong };
+  }
+  const weak = AXES.filter((a) => p.star[a] < B.know.notable);
+  if (!weak.length) wrong = false;
+  const axis = wrong ? w.rng.pick(weak) : topAxis(p.star);
+  return { text: gender(w.rng.pick(RUMORS_AXIS[axis]), p), axis, wrong };
 }
 
 // Годность к должности: насколько звезда совпадает с осями должности + метка
@@ -284,12 +351,14 @@ export function assign(w: World, personId: number, post: PostId | null) {
     w.posts[post] = p.id;
     if (p.aspiration?.post === post) {
       p.loyalty = clamp(p.loyalty + B.staff.desiredLoyalty, -REL_MAX, REL_MAX);
+      p.know.aspiration = true;
       lines.push(`${p.name} получил${p.female ? "а" : ""} желанную должность «${postName(post)}» — благодарен${p.female ? "на" : ""}.`);
     } else lines.push(`${p.name} теперь «${postName(post)}».`);
     // обойдённые, кто хотел эту должность
     for (const o of w.people) {
       if (o.id !== p.id && o.aspiration?.post === post) {
         addRel(w, o.id, p.id, B.staff.bypassedRel);
+        o.know.aspiration = true;
         lines.push(`${o.name} сам${o.female ? "а" : ""} метил${o.female ? "а" : ""} на это место — отношения с ${p.name} хуже.`);
       }
     }
@@ -304,13 +373,40 @@ export function setHead(w: World, id: number | null) {
   if (id != null) w.log.push({ season: w.season, kind: "staff", title: "Главный на время отлучки", lines: [`За главного — ${w.people[id].name}.`] });
 }
 
+// Разговор — личное дело. Открывает по порядку: черты (ключевую, если она не скрытая, и нажитые) → стремление → склонности словами.
+export function nextTalk(p: Person): "черты" | "стремление" | "склонности" | null {
+  if (!p.know.traitAsked || p.gained.some((g) => !g.known)) return "черты";
+  if (!p.know.aspiration) return "стремление";
+  return p.know.axes ? null : "склонности";
+}
 export function talk(w: World, id: number): boolean {
-  if (w.deedsLeft <= 0) return false;
   const p = w.people[id];
+  const topic = nextTalk(p);
+  if (w.deedsLeft <= 0 || !topic) return false;
   w.deedsLeft--;
-  p.knowledge = Math.min(KNOWLEDGE_MAX, p.knowledge + 1);
+  p.know.talks++;
   p.loyalty = clamp(p.loyalty + B.staff.talkLoyalty, -REL_MAX, REL_MAX);
-  w.log.push({ season: w.season, kind: "info", title: "Разговор", lines: [`Сенешаль говорил с ${p.name}. Теперь он лучше понимает этого человека.`] });
+  const lines = [`Сенешаль говорил с ${p.name}.`];
+  if (topic === "черты") {
+    if (!p.know.trait && !p.trait.hidden) {
+      p.know.trait = true;
+      lines.push(`Ключевая черта: «${p.trait.name}» — ${lower(p.trait.desc)}.`);
+    } else if (!p.know.trait && !p.know.traitAsked) {
+      lines.push(`О главном в себе ${p.female ? "она" : "он"} молчит: такую черту выдаст только поступок.`);
+    }
+    p.know.traitAsked = true;
+    for (const g of p.gained.filter((x) => !x.known)) {
+      g.known = true;
+      lines.push(`Нажитая черта: «${traitLabel(w, g)}» — ${lower(g.trait.desc)}.`);
+    }
+  } else if (topic === "стремление") {
+    p.know.aspiration = true;
+    lines.push(`Стремление: ${p.aspiration ? p.aspiration.text : "ничего особенного не хочет"}.`);
+  } else {
+    p.know.axes = true;
+    lines.push(`Склонности: ${AXES.map((x) => `${AXIS_NAMES[x]} — ${axisWord(p.star[x])}`).join(", ")}.`);
+  }
+  w.log.push({ season: w.season, kind: "info", title: "Разговор", lines });
   return true;
 }
 
@@ -333,13 +429,16 @@ function scoreOptions(w: World, p: Person, ev: GameEvent, noisy = true): Scored[
     const lead = opt.axes.reduce((b, a) => (p.star[a] > p.star[b] ? a : b), opt.axes[0]);
     parts.push(`по ${AXIS_DAT[lead]}`);
     if (p.order && opt.axes.includes(p.order)) {
-      const obey = Math.max(0, p.loyalty + B.decide.orderObeyBase + (p.trait.mods.obedience ?? 0) - (stale ? B.decide.orderStalePenalty : 0));
+      const obey = Math.max(0, p.loyalty + B.decide.orderObeyBase + mod(p, "obedience") - (stale ? B.decide.orderStalePenalty : 0));
       const bonus = obey * B.decide.orderWeight;
       if (bonus > B.decide.orderMinBonus) { base += bonus; parts.push("по наказу"); }
     }
     if (stale && opt.axes.includes("vygoda") && p.star.vygoda >= B.decide.staleGreedFrom) { base += B.decide.staleGreedBonus; parts.push("в свою пользу"); }
     if (opt.risky && p.trait.id === "ostorozhny") base -= B.decide.cautiousRisk;
-    const noise = noisy ? w.rng.gauss() * (B.decide.noise + (p.trait.mods.random ?? 0)) : 0;
+    // приобретённые черты тянут к своим осям
+    const lean = activeTraits(p).reduce((sum, t) => sum + opt.axes.reduce((x, a) => x + (t.lean?.[a] ?? 0), 0) / opt.axes.length, 0);
+    if (lean) { base += lean; if (lean > 0) parts.push("по привычке"); }
+    const noise = noisy ? w.rng.gauss() * Math.max(0, B.decide.noise + mod(p, "random")) : 0;
     return { opt, score: base + noise, base, why: parts.join(", ") };
   });
 }
@@ -355,6 +454,7 @@ function competence(p: Person): number {
   let c = p.exp >= B.exp.master ? B.exp.masterSkill : p.exp >= B.exp.settled ? B.exp.settledSkill : B.exp.novice;
   if (p.post && p.mark?.goodPost === p.post) c += B.exp.markGood;
   if (p.post && p.mark?.badPost === p.post) c += B.exp.markBad;
+  c += mod(p, "skill");
   return clamp(c, B.exp.skillMin, B.exp.skillMax);
 }
 
@@ -379,14 +479,38 @@ function applyEffects(w: World, opt: EventOption, mult: number, doer: Person | u
   return out;
 }
 
-function recordChoice(p: Person, opt: EventOption) {
+// Решение состоялось: счётчики, дрейф звезды, запись для привычки и наблюдение — Сенешаль видел человека в деле.
+function recordChoice(w: World, p: Person, opt: EventOption, lines: string[]) {
   const top = topAxis(p.star);
   p.decisions++;
   if (opt.axes.includes(top)) p.matchedTop++;
+  p.recent.push({ season: w.season, axes: [...opt.axes] });
   for (const a of opt.axes) {
     p.choices[a]++;
     p.star[a] = round1(clamp(p.star[a] + B.star.drift, 0, STAR_MAX));
+    const was = axisKnown(p, a);
+    p.know.seen[a]++;
+    if (!was && axisKnown(p, a)) lines.push(`👁 Насмотрелись в деле: ${p.name}, ${AXIS_NAMES[a]} — ${axisWord(p.star[a])}.`);
   }
+}
+
+// Поступок выдаёт скрытую ключевую черту.
+function reveal(p: Person, deed: Deed, lines: string[]) {
+  if (p.know.trait || !p.trait.hidden || p.trait.revealedBy !== deed) return;
+  p.know.trait = true;
+  p.know.traitAsked = true;
+  lines.push(`👁 Поступок выдал черту: ${p.name} — «${p.trait.name}», ${lower(p.trait.desc)}.`);
+}
+
+// Обход: хитрый проиграл спор, для вида согласился, а сделал по-своему. Возвращает последствия, если обход случился.
+function bypass(w: World, win: Person, lose: Person, opt: EventOption, lines: string[]): Partial<Record<Effect, number>> | undefined {
+  if (mod(lose, "sly", win) <= 0 || !w.rng.chance(B.traits.bypassChance)) return undefined;
+  const f = lose.female;
+  lines.push(`Но ${lose.name} только для вида согласил${f ? "ась" : "ся"}, а сделал${f ? "а" : ""} по-своему, в обход: «${opt.text}».`);
+  reveal(lose, "bypass", lines);
+  addRel(w, win.id, lose.id, B.traits.bypassRel);
+  recordChoice(w, lose, opt, lines);
+  return applyEffects(w, opt, B.traits.bypass, lose, lines);
 }
 
 function toneOf(eff: Partial<Record<Effect, number>>): LogEntry["tone"] {
@@ -410,7 +534,7 @@ export function runEvent(w: World, ev: GameEvent): LogEntry {
     const d = decide(w, p, ev);
     lines.push(`${p.name} (${postName(p.post!)}): «${d.opt.text}» — ${d.why}${d.surprise ? ", неожиданно для себя" : ""}.`);
     if (ev.posts.length === 2) lines.push(`Вторая должность пуста — ${p.name} решал${p.female ? "а" : ""} в одиночку.`);
-    recordChoice(p, d.opt);
+    recordChoice(w, p, d.opt, lines);
     effects = applyEffects(w, d.opt, 1, p, lines);
   } else {
     effects = council(w, ev, holders[0], holders[1], lines);
@@ -431,7 +555,7 @@ function council(w: World, ev: GameEvent, a: Person, b: Person, lines: string[])
   if (da.opt.id === db.opt.id) {
     const mult = r >= B.rel.friendly ? B.council.synergy : 1;
     lines.push(mult > 1 ? `Сошлись сразу, и раз они ${word}, вышло лучше обычного.` : `Сошлись во мнении.`);
-    recordChoice(a, da.opt); recordChoice(b, db.opt);
+    recordChoice(w, a, da.opt, lines); recordChoice(w, b, db.opt, lines);
     addRel(w, a.id, b.id, B.council.agreeRel);
     const doer = a.exp >= b.exp ? a : b;
     return applyEffects(w, da.opt, mult, doer, lines);
@@ -447,16 +571,16 @@ function council(w: World, ev: GameEvent, a: Person, b: Person, lines: string[])
       const [win, lose, opt] = sa >= sb ? [a, b, da.opt] : [b, a, db.opt];
       lines.push(`Спорили (${word}). Рассудил главный, ${head.name}: делать как хочет ${win.name}.`);
       addRel(w, head.id, lose.id, B.council.headJudgeRel);
-      recordChoice(win, opt);
+      recordChoice(w, win, opt, lines);
       return applyEffects(w, opt, 1, win, lines);
     }
     lines.push(`Главного, ${head.name}, не признали — у него с кем-то из них плохие отношения.`);
   }
 
-  const soft = (a.trait.mods.softness ?? 0) + (b.trait.mods.softness ?? 0);
+  const soft = mod(a, "softness", b) + mod(b, "softness", a);
   // кто сильнее в споре: главный, затем стаж и дерзость
   const power = (p: Person) => (w.head === p.id ? B.council.powerHead : 0) + p.tenure / B.council.powerTenureDiv
-    + p.star.derzost / B.council.powerDerzostDiv + w.rng.range(0, B.council.powerRandom);
+    + p.star.derzost / B.council.powerDerzostDiv + mod(p, "clout") + w.rng.range(0, B.council.powerRandom);
   const [win, lose, wd] = power(a) >= power(b) ? [a, b, da] : [b, a, db];
   const ld = win === a ? db : da;
 
@@ -465,7 +589,7 @@ function council(w: World, ev: GameEvent, a: Person, b: Person, lines: string[])
     const both = scoreOptions(w, a, ev, false).map((s, i) => ({ opt: s.opt, v: s.base + scoreOptions(w, b, ev, false)[i].base }));
     const opt = both.reduce((x, y) => (y.v > x.v ? y : x)).opt;
     lines.push(`Они ${word} — договорились: «${opt.text}».`);
-    recordChoice(a, opt); recordChoice(b, opt);
+    recordChoice(w, a, opt, lines); recordChoice(w, b, opt, lines);
     addRel(w, a.id, b.id, B.council.dealRel);
     return applyEffects(w, opt, 1, win, lines);
   }
@@ -473,18 +597,22 @@ function council(w: World, ev: GameEvent, a: Person, b: Person, lines: string[])
     // терпят — компромисс или кто-то продавил
     if (w.rng.chance(B.council.compromiseChance + soft * B.council.softness)) {
       lines.push(`Они ${word} друг друга — сделали наполовину, как хотел ${win.name}, но вполсилы.`);
-      recordChoice(win, wd.opt);
+      recordChoice(w, win, wd.opt, lines);
       return applyEffects(w, wd.opt, B.council.compromise, win, lines);
     }
     lines.push(`Они ${word} друг друга. ${win.name} продавил${win.female ? "а" : ""} своё; ${lose.name} затаил${lose.female ? "а" : ""} обиду.`);
     addRel(w, a.id, b.id, B.council.pushRel);
-    recordChoice(win, wd.opt);
+    const around = bypass(w, win, lose, ld.opt, lines);
+    if (around) return around;
+    recordChoice(w, win, wd.opt, lines);
     return applyEffects(w, wd.opt, 1, win, lines);
   }
   if (r > B.rel.enemy) {
     lines.push(`Они соперники. ${win.name} настоял${win.female ? "а" : ""} на своём, ${lose.name} не простит.`);
     addRel(w, a.id, b.id, B.council.rivalRel);
-    recordChoice(win, wd.opt);
+    const around = bypass(w, win, lose, ld.opt, lines);
+    if (around) return around;
+    recordChoice(w, win, wd.opt, lines);
     if (lose.loyalty < B.council.complaintLoyalty || w.rng.chance(B.council.complaintChance)) lines.push(`📜 Жалоба: ${lose.name} ждёт Сенешаля с жалобой на ${win.name}.`);
     return applyEffects(w, wd.opt, 1, win, lines);
   }
@@ -492,7 +620,9 @@ function council(w: World, ev: GameEvent, a: Person, b: Person, lines: string[])
   if (w.rng.chance(B.council.sabotageChance)) {
     lines.push(`Они враги. ${win.name} сделал${win.female ? "а" : ""} по-своему, а ${lose.name} мешал${lose.female ? "а" : ""} назло: «${ld.opt.text}» — вот чего ${lose.female ? "она" : "он"} хотел${lose.female ? "а" : ""}. Саботаж.`);
     addRel(w, a.id, b.id, B.council.sabotageRel);
-    recordChoice(win, wd.opt);
+    reveal(lose, "sabotage", lines);
+    gainTrait(w, win, "zlopamyatny_k", lines, lose.id);
+    recordChoice(w, win, wd.opt, lines);
     const eff = applyEffects(w, wd.opt, B.council.sabotage, win, lines);
     w.resources.poryadok = round1(w.resources.poryadok - B.council.sabotageOrder);
     eff.poryadok = round1((eff.poryadok ?? 0) - B.council.sabotageOrder);
@@ -501,18 +631,19 @@ function council(w: World, ev: GameEvent, a: Person, b: Person, lines: string[])
   }
   lines.push(`Они враги, но ${lose.name} на этот раз смолчал${lose.female ? "а" : ""}. ${win.name} сделал${win.female ? "а" : ""} по-своему.`);
   addRel(w, a.id, b.id, B.council.silentRel);
-  recordChoice(win, wd.opt);
+  recordChoice(w, win, wd.opt, lines);
   return applyEffects(w, wd.opt, 1, win, lines);
 }
 
 // ---------- Сезон ----------
 
-export function forecast(w: World, p: Person): string {
-  // Что видит игрок: точность зависит от того, насколько он знает человека
-  if (p.knowledge === 0) return "пока непонятно, как поступит";
-  const top = topAxis(p.star);
-  if (p.knowledge === 1) return `кажется, тянется к ${AXIS_DAT[top]}`;
-  return `скорее всего, будет действовать по ${AXIS_DAT[top]}`;
+// Прогноз словами — только из того, что Сенешаль знает: самая сильная из известных склонностей.
+export function forecast(p: Person): string {
+  const known = AXES.filter((a) => axisKnown(p, a));
+  if (!known.length) return "пока непонятно, как поступит";
+  const best = known.reduce((x, a) => (p.star[a] > p.star[x] ? a : x), known[0]);
+  if (p.star[best] < B.know.strong) return "сильных склонностей пока не видно";
+  return `скорее всего, будет действовать по ${AXIS_DAT[best]}`;
 }
 
 export function runSeason(w: World) {
@@ -538,17 +669,17 @@ function upkeep(w: World) {
       p.tenure++;
       p.exp = Math.min(p.exp + 1, B.exp.master);
       if (p.tenure === B.exp.settled) lines.push(`${p.name} освоил${p.female ? "ась" : "ся"} на должности.`);
-      if (p.tenure === B.exp.master) lines.push(`${p.name} — теперь мастер своего дела.`);
       if (p.tenure === B.exp.staleFrom) lines.push(`${p.name} засидел${p.female ? "ась" : "ся"} на месте: оброс своими людьми и делает всё больше по-своему.`);
       if (isStale(p) && p.star.vygoda >= B.decide.staleGreedFrom && w.rng.chance(B.season.theftChance)) {
         w.resources.kazna = round1(w.resources.kazna - B.season.theft);
         lines.push(`Из казны что-то утекает — следы ведут к людям ${p.name}.`);
       }
     }
+    lifeTraits(w, p, lines);
     const asp = p.aspiration?.post;
     if (asp) {
       if (p.post === asp) p.loyalty += B.loyalty.desiredPost;
-      else if (p.post) p.loyalty += B.loyalty.wrongPost * (1 + (p.trait.mods.ambition ?? 0) * B.loyalty.ambition) * (isStale(p) ? B.loyalty.staleWrong : 1);
+      else if (p.post) p.loyalty += B.loyalty.wrongPost * (1 + mod(p, "ambition") * B.loyalty.ambition) * (isStale(p) ? B.loyalty.staleWrong : 1);
       else if (w.posts[asp] != null) {
         p.loyalty += B.loyalty.blocked;
         const h = holder(w, asp)!;
@@ -564,4 +695,92 @@ function upkeep(w: World) {
 // Сводка: читается ли персонаж как личность
 export function consistency(p: Person): number {
   return p.decisions ? Math.round((p.matchedTop / p.decisions) * 100) : 0;
+}
+
+// ---------- Знание о людях ----------
+// Всё, что экран показывает игроку о человеке, идёт через эти функции: числа звезды наружу не выходят.
+
+export function axisWord(v: number): string {
+  return v >= B.know.strong ? "сильно" : v >= B.know.notable ? "заметно" : "слабо";
+}
+// Ось известна: рассказал сам (третий разговор) или насмотрелись в деле.
+export function axisKnown(p: Person, a: Axis): boolean {
+  return p.know.axes || p.know.seen[a] >= B.know.seenToKnow;
+}
+export function traitLabel(w: World, g: { trait: Trait; target?: number }): string {
+  return g.trait.targeted && g.target != null ? `${g.trait.name} ${dative(w.people[g.target].name)}` : g.trait.name;
+}
+// Молва проверяется, когда становится известно то, о чём она: черта или склонность.
+export function rumorCheck(p: Person): "" | "подтвердилась" | "не подтвердилась" {
+  const r = p.rumor;
+  if (!r) return "";
+  if (r.trait) return !p.know.trait ? "" : r.trait === p.trait.id ? "подтвердилась" : "не подтвердилась";
+  if (!r.axis || !axisKnown(p, r.axis)) return "";
+  return p.star[r.axis] >= B.know.notable ? "подтвердилась" : "не подтвердилась";
+}
+// Годность словом — по тому, что известно: известные оси должности, метка (видна всегда), известное стремление.
+export function fitWord(p: Person, post: PostId): "подходит" | "сомнительно" | "не знаю" {
+  const def = POSTS.find((x) => x.id === post)!;
+  const known = def.axes.filter((a) => axisKnown(p, a));
+  const good = p.mark?.goodPost === post, bad = p.mark?.badPost === post;
+  if (!known.length && !good && !bad) return "не знаю";
+  let f = known.length ? known.reduce((s, a) => s + p.star[a], 0) / known.length : B.star.center;
+  if (good) f += B.exp.fitMarkGood;
+  if (bad) f -= B.exp.fitMarkBad;
+  if (p.know.aspiration && p.aspiration?.post === post) f += B.exp.fitAspiration;
+  return f >= B.know.fitGood ? "подходит" : "сомнительно";
+}
+// Мнение главного о человеке: куда бы он его поставил. С пристрастием: друга похвалит, соперника очернит.
+export function headOpinion(w: World, p: Person): { head: Person; text: string; bias: number } | undefined {
+  const head = w.head != null ? w.people[w.head] : undefined;
+  if (!head || head.id === p.id) return undefined;
+  const bias = round1(getRel(w, head.id, p.id) * B.know.opinionBias);
+  const best = POSTS.reduce((x, d) => (fitness(p, d.id) > fitness(p, x.id) ? d : x), POSTS[0]);
+  const text = fitness(p, best.id) + bias >= B.know.fitGood ? `годится в ${best.into}` : "ни на одну должность не годится";
+  return { head, text, bias };
+}
+
+// ---------- Черты в течение жизни ----------
+
+// Человек приобретает черту: не больше B.traits.maxGained сверх ключевой, одна и та же (с той же целью) — один раз.
+// Запись идёт в летопись (lines) и в биографию; сдвиг звезды черты применяется сразу. Сенешаль о новой черте знает: она нажита у него на глазах.
+export function gainTrait(w: World, p: Person, traitId: string, lines: string[], target?: number): boolean {
+  const trait = LIFE_TRAITS.find((t) => t.id === traitId);
+  if (!trait) throw new Error(`Нет приобретаемой черты ${traitId}`);
+  if (p.gained.length >= B.traits.maxGained) return false;
+  if (p.gained.some((g) => g.trait.id === traitId && g.target === target)) return false;
+  p.gained.push({ trait, target, season: w.season, known: true });
+  addStar(p.star, trait.star);
+  for (const a of AXES) p.star[a] = round1(clamp(p.star[a], 0, STAR_MAX));
+  const label = traitLabel(w, { trait, target });
+  lines.push(`✦ Новая черта: ${p.name} — «${label}». ${trait.desc}.`);
+  p.bio.push(`На службе у Сенешаля (сезон ${w.season}) нажил${p.female ? "а" : ""} черту «${label}»: ${lower(trait.desc)}.`);
+  return true;
+}
+
+// Перелом: резкий сдвиг звезды и новая черта («Ожесточился», «Стал набожен»). Заготовка: событий-поводов пока нет, зовут её тесты и будущие сцены.
+export function breakdown(w: World, id: number, traitId: string, why: string): boolean {
+  const p = w.people[id];
+  const lines = [why];
+  if (LIFE_TRAITS.find((t) => t.id === traitId)?.source !== "break") throw new Error(`Черта ${traitId} — не перелом`);
+  if (!gainTrait(w, p, traitId, lines)) return false;
+  w.log.push({ season: w.season, kind: "info", title: `Перелом: ${p.name}`, lines });
+  return true;
+}
+
+// Раз в сезон: черты из привычки и из должности.
+function lifeTraits(w: World, p: Person, lines: string[]) {
+  p.recent = p.recent.filter((r) => r.season > w.season - B.traits.habitSeasons);
+  const n = p.recent.length;
+  if (n >= B.traits.habitMinDecisions) {
+    for (const t of LIFE_TRAITS) {
+      if (t.source !== "habit" || !t.axis) continue;
+      if (p.recent.filter((r) => r.axes.includes(t.axis!)).length / n >= B.traits.habitShare) gainTrait(w, p, t.id, lines);
+    }
+  }
+  if (!p.post) return;
+  if (p.exp >= B.exp.master) gainTrait(w, p, "master_dela", lines);
+  if (isStale(p)) gainTrait(w, p, "obros_svyazyami", lines);
+  const asp = p.aspiration?.post;
+  if (asp && asp !== p.post && p.tenure >= B.traits.tiredFrom) gainTrait(w, p, "ustal_ot_sluzhby", lines);
 }

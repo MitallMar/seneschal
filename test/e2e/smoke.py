@@ -49,12 +49,25 @@ COUNCIL = """()=>[...document.querySelectorAll('#council .post')].map(p=>{const 
   post:s.dataset.post, name:p.querySelector('.post-name').textContent, holder:s.value, who:s.selectedOptions[0].textContent,
   badges:[...p.querySelectorAll('.badge')].map(b=>b.textContent), head:!!p.querySelector('.badge.head'),
   options:[...s.options].map(o=>({value:o.value,text:o.textContent}))}})"""
-CARDS = """()=>[...document.querySelectorAll('#people .card')].map(c=>({name:c.querySelector('.card-name').textContent,
+CARDS = """()=>[...document.querySelectorAll('#people .card')].map(c=>({name:c.querySelector('.card-name').textContent, id:c.dataset.id,
   meta:[...c.querySelectorAll('.card-meta')].map(m=>m.textContent).join(' | '), onPost:c.classList.contains('on-post'),
-  asp:c.querySelector('.tag.asp').textContent, blur:+(c.querySelector('feGaussianBlur')?.getAttribute('stdDeviation')||0),
-  polygons:c.querySelectorAll('.star polygon').length, bio:c.querySelectorAll('.bio li').length,
-  talk:!c.querySelector('button[data-talk]').disabled, id:c.querySelector('button[data-talk]').dataset.talk,
+  asp:c.querySelector('.tag.asp').textContent, trait:c.querySelector('.tag.trait.key').textContent,
+  traitKnown:!c.querySelector('.tag.trait.key.unknown'), gained:[...c.querySelectorAll('.tag.gained')].map(t=>t.textContent),
+  rumor:c.querySelector('.rumor')?.textContent||'', opinion:c.querySelector('.opinion')?.textContent||'',
+  axes:[...c.querySelectorAll('.axis-row')].map(r=>({axis:r.dataset.axis, known:r.dataset.known==='1',
+    lvl:r.querySelector('.lvl').textContent.trim(), seen:r.querySelector('.seen').textContent})),
+  grid:c.querySelectorAll('.star polygon.grid').length, rays:c.querySelectorAll('.star line.ray').length,
+  real:c.querySelectorAll('.star polygon.true').length, start:c.querySelectorAll('.star polygon.start').length,
+  bio:c.querySelectorAll('.bio li').length, talk:!c.querySelector('button[data-talk]').disabled,
+  talkText:c.querySelector('button[data-talk]').textContent,
   order:c.querySelector('select[data-order]').value, stats:c.querySelector('.stats').textContent}))"""
+WORDS = ('сильно', 'заметно', 'слабо')
+FIT = ('подходит', 'сомнительно', 'не знаю')
+HIDDEN = ('Неждан', 'Ярема')                           # у них ключевая черта скрытая: разговор её не открывает
+
+def closed(c):
+    """Склонности человека закрыты: у всех осей «?»."""
+    return all(not a['known'] and a['lvl'] == '?' for a in c['axes'])
 
 async def status(pg):
     """Строка состояния числами: сезон словами, авторитет, личные дела."""
@@ -86,10 +99,15 @@ async def s_base(br, errs):
        and st == {'season': 'весна, год 1', 'authority': 10.0, 'deeds': 3}, st)
     ok('в совете пять должностей, все заняты, главный один', len(council) == 5 and all(c['holder'] != '' for c in council)
        and sum(c['head'] for c in council) == 1, [(c['name'], c['who'], c['head']) for c in council])
-    ok('десять человек, у каждого биография из шести событий и звезда', len(cards) == 10
-       and all(c['bio'] == 6 and c['polygons'] >= 5 for c in cards), [(c['name'], c['bio'], c['polygons']) for c in cards])
+    ok('десять человек, у каждого биография из шести событий и сетка звезды', len(cards) == 10
+       and all(c['bio'] == 6 and c['grid'] == 4 for c in cards), [(c['name'], c['bio'], c['grid']) for c in cards])
     ok('пятеро в совете отмечены на карточках', sum(c['onPost'] for c in cards) == 5)
-    ok('до разговора звезда размыта, стремление неизвестно', all(c['blur'] > 0 and 'неизвестно' in c['asp'] for c in cards))
+    ok('до разговора склонности закрыты («?»), звезды нет, стремление неизвестно', all(closed(c) and c['rays'] == 0 and c['real'] == 0
+       and 'неизвестно' in c['asp'] for c in cards), [(c['name'], c['axes']) for c in cards][:2])
+    ok('о каждом известна одна вещь: молва или черта', all((c['rumor'] != '') != c['traitKnown'] for c in cards),
+       [(c['name'], c['rumor'], c['trait']) for c in cards])
+    ok('черта с начала известна только у членов совета', all(c['onPost'] for c in cards if c['traitKnown']))
+    ok('вверху строка-подсказка, как узнавать людей', 'поговорить' in await pg.inner_text('#tip') and 'в деле' in await pg.inner_text('#tip'))
     ok('отношения в совете: таблица пять на пять со словами', await pg.evaluate("()=>document.querySelectorAll('#relations .rel').length") == 20)
     ok('летопись начинается с записи о новой партии', await pg.evaluate(TITLES) == ['Новая партия, семя «замок»'])
     await shot(pg, 'start')
@@ -171,23 +189,34 @@ async def s_staff(br, errs):
         ok('получивший желанную должность благодарен', 'желанную должность' in log, log[:300])
         ok('перевод на желанную пустую должность бесплатен', holder_cost is None or after['authority'] == before['authority'], (before, after))
 
-@section('talk', 'личные дела: разговор открывает человека и тратит дело, наказ стоит авторитета, дела возвращаются с сезоном')
+@section('talk', 'личные дела: разговоры открывают черту, стремление и склонности по порядку и тратят дело, наказ стоит авторитета')
 async def s_talk(br, errs):
     pg = await open_game(br, errs, 'замок')
-    before = (await pg.evaluate(CARDS))[0]
-    await pg.click("button[data-talk='0']")
-    st = await status(pg); card = (await pg.evaluate(CARDS))[0]
+    who = next(c for c in await pg.evaluate(CARDS) if not c['onPost'] and c['name'] not in HIDDEN)   # о нём известна только молва
+    me = lambda cards: next(c for c in cards if c['id'] == who['id'])
+    btn = f"button[data-talk='{who['id']}']"
+    ok('до разговора: черта неизвестна, кнопка зовёт говорить о чертах', not who['traitKnown'] and who['talkText'] == 'Поговорить: черты', who)
+    await pg.click(btn)
+    st = await status(pg); card = me(await pg.evaluate(CARDS)); log = await pg.evaluate(LOG)
     ok('разговор потратил личное дело', st['deeds'] == 2, st)
-    ok('после разговора Сенешаль немного знает человека, стремление открылось, звезда чётче', 'немного знает' in card['meta']
-       and 'неизвестно' not in card['asp'] and 0 < card['blur'] < before['blur'], card)
-    ok('в летописи запись о разговоре', 'Разговор' in await pg.evaluate(LOG))
-    await pg.click("button[data-talk='0']"); await pg.click("button[data-talk='0']")
-    st = await status(pg); cards = await pg.evaluate(CARDS)
-    ok('три разговора: человека знает хорошо, звезда без размытия', 'знает хорошо' in cards[0]['meta'] and cards[0]['blur'] == 0, cards[0])
+    ok('первый разговор открыл ключевую черту — и только её', card['traitKnown'] and 'неизвестно' in card['asp'] and closed(card)
+       and 'разговоров: 1' in card['meta'], card)
+    ok('в летописи запись о разговоре с названием черты', 'Разговор' in log and 'Ключевая черта: «' + card['trait'] + '»' in log, log[:200])
+    await pg.click(btn)
+    card = me(await pg.evaluate(CARDS))
+    ok('второй разговор открыл стремление, склонности ещё закрыты', 'неизвестно' not in card['asp'] and closed(card)
+       and card['talkText'] == 'Поговорить: склонности', card)
+    await pg.click(btn)
+    st = await status(pg); cards = await pg.evaluate(CARDS); card = me(cards)
+    ok('третий разговор открыл склонности словами, без чисел', all(a['known'] and a['lvl'] in WORDS for a in card['axes'])
+       and card['rays'] == 5 and not re.search(r'\d\.\d', card['stats']), card['axes'])
+    ok('в летописи склонности названы словами', re.search(r'Склонности: Долг — (сильно|заметно|слабо)', await pg.evaluate(LOG)) is not None)
+    ok('рассказывать больше нечего: кнопка говорит об этом', card['talkText'] == 'Всё рассказал' and not card['talk'])
     ok('личные дела кончились: кнопки «Поговорить» выключены у всех', st['deeds'] == 0 and not any(c['talk'] for c in cards), st)
     council = await pg.evaluate(COUNCIL)
-    known = next((c for c in council if c['holder'] == '0'), None)
-    if known: ok('о знакомом члене совета есть прогноз', 'скорее всего' in await pg.inner_text(f"#council .post:has(select[data-post='{known['post']}']) .forecast"))
+    mine = [o['text'] for c in council for o in c['options'] if o['value'] == who['id']]
+    ok('о том, чьи склонности известны, в списках должностей сказано «подходит» или «сомнительно»', len(mine) == 5
+       and all('не знаю' not in t and ('подходит' in t or 'сомнительно' in t) for t in mine), mine)
     await shot(pg, 'talk')
 
     holder = next(c for c in council if c['holder'] != '')
@@ -203,21 +232,27 @@ async def s_talk(br, errs):
     await pg.click('#season')
     st = await status(pg); cards = await pg.evaluate(CARDS)
     ok('новый сезон вернул три личных дела; с кем не договорили — кнопка снова включена', st['deeds'] == 3
-       and not cards[0]['talk'] and all(c['talk'] for c in cards[1:]), st)
+       and not me(cards)['talk'] and all(c['talk'] for c in cards if c['id'] != who['id']), st)
 
 @section('designer', '«Взгляд дизайнера»: настоящие числа, стремления, годность, стартовая звезда; выключается обратно')
 async def s_designer(br, errs):
     pg = await open_game(br, errs, 'замок')
     await pg.click('#season5')
     plain = {'cards': await pg.evaluate(CARDS), 'council': await pg.evaluate(COUNCIL), 'rel': await pg.inner_text('#relations'), 'log': await pg.evaluate(LOG)}
-    ok('без взгляда дизайнера чисел отношений, лояльности и годности нет', not re.search(r'-?\d+\.\d', plain['rel'])
-       and not any(re.search(r'\(-?\d+\.\d\)', c['meta']) for c in plain['cards'])
+    ok('без взгляда дизайнера чисел отношений, лояльности, годности и склонностей нет', not re.search(r'-?\d+\.\d', plain['rel'])
+       and not any(re.search(r'\(-?\d+\.\d\)', c['meta']) or re.search(r'\d\.\d', c['stats']) for c in plain['cards'])
        and not any('годн.' in o['text'] for c in plain['council'] for o in c['options']))
+    ok('без взгляда дизайнера настоящей звезды нет, доля решений по ведущей оси скрыта', all(c['real'] == 0 and c['start'] == 0
+       and 'по ведущей оси' not in c['stats'] for c in plain['cards']))
     await pg.check('#designer')
     cards = await pg.evaluate(CARDS); council = await pg.evaluate(COUNCIL); rel = await pg.inner_text('#relations')
     ok('у каждого видна лояльность числом и стремление', all(re.search(r'\(-?\d+\.\d\)', c['meta']) and 'неизвестно' not in c['asp'] for c in cards),
        [(c['meta'], c['asp']) for c in cards][:3])
-    ok('звёзды без размытия, пунктиром — звезда на старте', all(c['blur'] == 0 and c['polygons'] == plain['cards'][i]['polygons'] + 1 for i, c in enumerate(cards)))
+    ok('настоящие звёзды, пунктиром — звезда на старте, у каждой оси число', all(c['real'] == 1 and c['start'] == 1
+       and len(re.findall(r'\d+\.\d', ' '.join(a['lvl'] for a in c['axes']))) == 5 for c in cards), cards[0]['axes'])
+    ok('ключевые черты видны у всех, скрытые помечены; про молву сказано, верная ли', all(c['traitKnown'] for c in cards)
+       and all('(скрытая)' in c['trait'] for c in cards if c['name'] in HIDDEN)
+       and all('молва верная' in c['rumor'] or 'молва неверная' in c['rumor'] for c in cards if c['rumor']), [(c['name'], c['trait'], c['rumor']) for c in cards])
     ok('в отношениях совета видны числа', len(re.findall(r'-?\d+\.\d', rel)) == 20, rel[:200])
     ok('в списках должностей видна годность каждого', all('годн.' in o['text'] for c in council for o in c['options'] if o['value'] != ''))
     ok('у члена совета названа ведущая ось', await pg.evaluate("()=>[...document.querySelectorAll('#council .forecast')].every(f=>f.textContent.includes('ведущая ось'))"))
@@ -229,7 +264,68 @@ async def s_designer(br, errs):
     await pg.uncheck('#designer')
     cards = await pg.evaluate(CARDS)
     ok('выключили — числа и чужие стремления снова скрыты', not re.search(r'-?\d+\.\d', await pg.inner_text('#relations'))
-       and all(c['blur'] > 0 and 'неизвестно' in c['asp'] for c in cards))
+       and all(c['real'] == 0 and 'неизвестно' in c['asp'] for c in cards) and any(not c['traitKnown'] for c in cards))
+
+@section('know', 'знание о людях: молва, скрытая черта, наблюдение в деле, годность словом, мнение главного, черты по ходу жизни')
+async def s_know(br, errs):
+    pg = await open_game(br, errs, 'замок')
+    council = await pg.evaluate(COUNCIL); cards = await pg.evaluate(CARDS)
+    people = [o for c in council for o in c['options'] if o['value'] != '']
+    ok('в списках должностей годность словом у каждого, чисел годности нет', len(people) == 50
+       and all(any(w in o['text'] for w in FIT) and 'годн.' not in o['text'] for o in people), people[:3])
+    ok('пока людей не знаем, почти про всех — «не знаю»; чужие стремления в списках не видны', sum('не знаю' in o['text'] for o in people) >= 40
+       and not any('хочет сюда' in o['text'] for o in people))
+    head = next(c for c in council if c['head'])
+    ok('мнение главного — подсказка на карточке у всех, кроме самого главного', all((c['opinion'] == '') == (c['id'] == head['holder']) for c in cards)
+       and all(re.search(r'Главный, .+: «(годится в |ни на одну должность не годится)', c['opinion']) for c in cards if c['opinion']),
+       [c['opinion'] for c in cards][:3])
+    ok('молва — строка «Говорят, …»', all(c['rumor'].startswith('Говорят, ') for c in cards if c['rumor']), [c['rumor'] for c in cards])
+
+    sly = next(c for c in cards if c['name'] == HIDDEN[0])
+    await pg.click(f"button[data-talk='{sly['id']}']")
+    card = next(c for c in await pg.evaluate(CARDS) if c['id'] == sly['id']); log = await pg.evaluate(LOG)
+    ok('скрытую черту разговор не открыл: дело потрачено, на карточке «выдаст поступок»', not card['traitKnown'] and 'выдаст поступок' in card['trait']
+       and (await status(pg))['deeds'] == 2 and 'выдаст только поступок' in log, card['trait'])
+    ok('следующий разговор со скрытным — уже о стремлении', card['talkText'] == 'Поговорить: стремление')
+
+    await pg.click('#season')
+    cards = await pg.evaluate(CARDS)
+    seen = [c for c in cards if any(a['seen'] for a in c['axes'])]
+    ok('после сезона у тех, кто решал, отметки «видели» у задетых осей', len(seen) >= 1 and all(c['onPost'] for c in seen)
+       and all(re.fullmatch(r'видели: \d+', a['seen']) for c in seen for a in c['axes'] if a['seen']), [(c['name'], c['axes']) for c in seen][:2])
+    await pg.click('#season5'); await pg.click('#season5')
+    cards = await pg.evaluate(CARDS); log = await pg.evaluate(LOG)
+    watched = [c for c in cards if 'разговоров: 0' in c['meta'] and any(a['known'] for a in c['axes'])]
+    ok('насмотрелись в деле: ось видна словом без единого разговора, остальные — «?»', len(watched) >= 1
+       and all(a['lvl'] in WORDS if a['known'] else a['lvl'] == '?' for c in watched for a in c['axes'])
+       and any(not a['known'] for c in watched for a in c['axes']) and 'Насмотрелись в деле' in log, [(c['name'], c['axes']) for c in watched][:2])
+    ok('звезда рисуется только из известного: лучей столько, сколько известных осей', all(c['rays'] == sum(a['known'] for a in c['axes']) for c in cards))
+    ok('кто не был в деле и с кем не говорили — по-прежнему закрыт', all(closed(c) for c in cards if not c['onPost'] and 'разговоров: 0' in c['meta']))
+    council = await pg.evaluate(COUNCIL)
+    w0 = watched[0] if watched else cards[0]
+    ok('по тому, что насмотрели, годность уже не везде «не знаю»', any('не знаю' not in o['text'] for c in council for o in c['options'] if o['value'] == w0['id']))
+    ok('о том, у кого видна сильная склонность, есть прогноз', 'скорее всего, будет действовать по' in await pg.inner_text('#council')
+       or not any(a['lvl'] == 'сильно' for c in cards if c['onPost'] for a in c['axes']))
+    await shot(pg, 'know')
+
+    for _ in range(3): await pg.click('#season5')
+    cards = await pg.evaluate(CARDS); log = await pg.evaluate(LOG)
+    grown = [c for c in cards if c['gained']]
+    ok('за четыре с лишним года люди нажили черты: метки на карточках, записи в летописи и биографии', len(grown) >= 2 and '✦ Новая черта:' in log
+       and all(c['bio'] == 6 + len(c['gained']) for c in grown), [(c['name'], c['gained'], c['bio']) for c in cards])
+    ok('приобретённых черт у человека не больше трёх', all(len(c['gained']) <= 3 for c in cards))
+    ok('мусора в летописи нет', not re.search(r'undefined|NaN|\{|\}', log))
+    await pg.check('#designer')
+    cards = await pg.evaluate(CARDS)
+    ok('взгляд дизайнера показывает и то, чего Сенешаль не знает', all(c['traitKnown'] and 'неизвестно' not in c['asp'] for c in cards))
+    await shot(pg, 'know-designer')
+
+    pg2 = await open_game(br, errs, 'лес')              # в этой партии о двоих в совете с начала известна черта
+    cards = await pg2.evaluate(CARDS)
+    known = [c for c in cards if c['traitKnown']]
+    ok('первая посадка: у кого известна черта, у того нет молвы, и первый разговор с ним — не о ключевой черте', len(known) >= 1
+       and all(c['onPost'] and c['rumor'] == '' for c in known) and any(c['talkText'] == 'Поговорить: стремление' for c in known),
+       [(c['name'], c['trait'], c['talkText']) for c in known])
 
 @section('lab', 'лабиринт: приключенцы приходят только при галочке «Лабиринт открыт»; долгая партия в 80 сезонов')
 async def s_lab(br, errs):
