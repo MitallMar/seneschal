@@ -1,0 +1,19 @@
+{
+  "name": "seneschal",
+  "version": "1.0.0",
+  "description": "Сенешаль — прототип характеров и совета",
+  "scripts": {
+    "build": "node tools/build.mjs",
+    "sim": "tsx tools/headless.ts",
+    "check": "tsc -p ."
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "esbuild": "^0.28.2",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  }
+}

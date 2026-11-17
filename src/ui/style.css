@@ -1,0 +1,127 @@
+:root {
+  --bg: #f3ede1;
+  --paper: #fbf7ee;
+  --ink: #2b2620;
+  --muted: #7a6f60;
+  --line: #ddd2bd;
+  --accent: #7c3a1d;
+  --good: #3f6b3a;
+  --bad: #9a3324;
+  --mixed: #9a6b1f;
+  --axis-dolg: #4b5d8a;
+  --axis-vygoda: #a0782a;
+  --axis-zabota: #4e7d4a;
+  --axis-derzost: #a1452e;
+  --axis-obychai: #6b4f86;
+  font-family: Georgia, "Iowan Old Style", "Times New Roman", serif;
+  color: var(--ink);
+  background: var(--bg);
+}
+* { box-sizing: border-box; }
+body { margin: 0; }
+button, input, select { font: inherit; font-size: 14px; }
+button {
+  background: var(--paper); border: 1px solid var(--line); border-radius: 6px;
+  padding: 6px 12px; cursor: pointer; color: var(--ink);
+}
+button:hover { border-color: var(--accent); }
+button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+button:disabled { opacity: .45; cursor: default; }
+select { background: var(--paper); border: 1px solid var(--line); border-radius: 6px; padding: 4px 6px; max-width: 100%; }
+
+.top {
+  position: sticky; top: 0; z-index: 5; background: var(--bg);
+  border-bottom: 1px solid var(--line); padding: 10px 16px;
+  display: flex; flex-wrap: wrap; gap: 8px 20px; align-items: center;
+}
+.brand h1 { margin: 0; font-size: 22px; letter-spacing: .02em; display: inline; }
+.brand .sub { color: var(--muted); margin-left: 8px; font-style: italic; }
+.controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.controls .sep { width: 1px; height: 22px; background: var(--line); }
+.seed input { width: 110px; border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; background: var(--paper); }
+.chk { display: inline-flex; gap: 4px; align-items: center; color: var(--muted); }
+.status { color: var(--muted); font-size: 14px; }
+.status b { color: var(--ink); }
+
+main {
+  display: grid; grid-template-columns: minmax(300px, 360px) 1fr minmax(320px, 420px);
+  gap: 14px; padding: 14px 16px; align-items: start;
+}
+@media (max-width: 1200px) { main { grid-template-columns: 1fr 1fr; } .right { grid-column: 1 / -1; } }
+@media (max-width: 760px) { main { grid-template-columns: 1fr; } }
+.panel {
+  background: var(--paper); border: 1px solid var(--line); border-radius: 10px;
+  padding: 12px 14px; margin-bottom: 14px;
+}
+.panel h2 { margin: 0 0 6px; font-size: 16px; text-transform: uppercase; letter-spacing: .08em; color: var(--accent); }
+.hint { margin: 0 0 10px; color: var(--muted); font-size: 13px; line-height: 1.35; }
+
+/* Совет */
+.post { border-top: 1px solid var(--line); padding: 8px 0; }
+.post:first-child { border-top: 0; }
+.post-head { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.post-name { font-weight: bold; }
+.post-sphere { color: var(--muted); font-size: 12px; }
+.post-row { display: flex; gap: 8px; align-items: center; margin-top: 4px; flex-wrap: wrap; }
+.post-row select { flex: 1; min-width: 150px; }
+.badge { font-size: 12px; padding: 1px 7px; border-radius: 10px; border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
+.badge.stale { color: var(--bad); border-color: var(--bad); }
+.badge.head { color: #fff; background: var(--accent); border-color: var(--accent); }
+.forecast { font-size: 13px; color: var(--muted); font-style: italic; margin-top: 3px; }
+.cost { font-size: 12px; color: var(--bad); }
+
+/* Отношения */
+.rel-table { border-collapse: collapse; font-size: 12px; width: 100%; }
+.rel-table th, .rel-table td { padding: 4px; text-align: center; border-bottom: 1px solid var(--line); }
+.rel-table th { font-weight: normal; color: var(--muted); }
+.rel { border-radius: 4px; padding: 1px 4px; }
+.rel-заодно { background: #dbe8d3; }
+.rel-ладят { background: #ecf1df; }
+.rel-терпят { background: transparent; color: var(--muted); }
+.rel-соперники { background: #f3e1cf; }
+.rel-враги { background: #ecc9bf; }
+
+/* Стороны */
+.kv { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; font-size: 14px; }
+.kv .v { text-align: right; font-variant-numeric: tabular-nums; }
+.pos { color: var(--good); } .neg { color: var(--bad); }
+
+/* Люди */
+.people { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 12px; }
+.card { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; background: #fffdf8; }
+.card.on-post { border-color: #c9b48f; }
+.card-head { display: flex; justify-content: space-between; gap: 6px; }
+.card-name { font-size: 18px; font-weight: bold; }
+.card-meta { color: var(--muted); font-size: 13px; }
+.tags { display: flex; flex-wrap: wrap; gap: 4px; margin: 6px 0; }
+.tag { font-size: 12px; border: 1px solid var(--line); border-radius: 10px; padding: 1px 7px; }
+.tag.trait { background: #efe6d4; }
+.tag.mark { background: #e7e0ef; border-color: #cfc3df; }
+.tag.asp { background: #e3ecf3; border-color: #c6d6e3; }
+.card-body { display: grid; grid-template-columns: 120px 1fr; gap: 8px; align-items: center; }
+.star svg { width: 120px; height: 120px; display: block; }
+.stats { font-size: 13px; line-height: 1.5; }
+.bars { margin-top: 4px; }
+.bar { display: grid; grid-template-columns: 62px 1fr 22px; align-items: center; gap: 4px; font-size: 11px; color: var(--muted); }
+.bar .track { height: 6px; background: #efe7d7; border-radius: 3px; overflow: hidden; }
+.bar .fill { height: 100%; }
+details.bio { margin-top: 6px; font-size: 13px; }
+details.bio summary { cursor: pointer; color: var(--accent); }
+details.bio ul { margin: 4px 0 0; padding-left: 18px; line-height: 1.4; }
+.card-actions { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; align-items: center; }
+.card-actions button { padding: 3px 9px; font-size: 13px; }
+.card-actions select { font-size: 13px; }
+
+/* Летопись */
+.log-panel { max-height: calc(100vh - 110px); overflow: auto; position: sticky; top: 72px; }
+.entry { border-left: 3px solid var(--line); padding: 4px 0 6px 10px; margin-bottom: 10px; font-size: 13.5px; line-height: 1.4; }
+.entry.good { border-left-color: var(--good); }
+.entry.bad { border-left-color: var(--bad); }
+.entry.mixed { border-left-color: var(--mixed); }
+.entry.season { border-left-color: var(--accent); background: #f5ecdc; border-radius: 0 6px 6px 0; }
+.entry.staff { border-left-color: #8a7a5c; }
+.entry-title { font-weight: bold; }
+.entry-title .s { color: var(--muted); font-weight: normal; font-size: 12px; margin-right: 6px; }
+.entry p { margin: 2px 0; }
+.eff { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 3px; }
+.eff span { font-size: 11.5px; border-radius: 8px; padding: 0 6px; background: #f0e9dc; }

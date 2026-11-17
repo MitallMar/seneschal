@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Сенешаль — прототип характеров и совета</title>
+<style>/*__CSS__*/</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <h1>Сенешаль</h1>
+    <span class="sub">прототип характеров и совета</span>
+  </div>
+  <div class="controls">
+    <label class="seed">Семя <input id="seed" value="замок"></label>
+    <button id="new">Новая партия</button>
+    <label class="chk"><input type="checkbox" id="lab"> Лабиринт открыт</label>
+    <span class="sep"></span>
+    <button id="season" class="primary">Прогнать сезон</button>
+    <button id="season5">+5 сезонов</button>
+    <label class="chk"><input type="checkbox" id="designer"> Взгляд дизайнера</label>
+  </div>
+  <div id="status" class="status"></div>
+</header>
+
+<main>
+  <section class="left">
+    <div class="panel">
+      <h2>Совет</h2>
+      <p class="hint">Кого поставить на должность и кто главный, пока Сенешаля нет. Перестановка против воли стоит авторитета.</p>
+      <div id="council"></div>
+    </div>
+    <div class="panel">
+      <h2>Отношения в совете</h2>
+      <div id="relations"></div>
+    </div>
+    <div class="panel">
+      <h2>Стороны и хозяйство</h2>
+      <div id="world"></div>
+    </div>
+  </section>
+
+  <section class="mid">
+    <div class="panel">
+      <h2>Люди</h2>
+      <p class="hint">Звезда размыта, пока Сенешаль не знает человека. «Поговорить» тратит личное дело (3 за сезон) и делает её чётче.</p>
+      <div id="people" class="people"></div>
+    </div>
+  </section>
+
+  <section class="right">
+    <div class="panel log-panel">
+      <h2>Летопись</h2>
+      <div id="log"></div>
+    </div>
+  </section>
+</main>
+<script>/*__JS__*/</script>
+</body>
+</html>
