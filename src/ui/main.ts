@@ -131,7 +131,10 @@ function renderWorld() {
 function renderPeople() {
   $("people").innerHTML = w.people.map((p) => {
     const totalChoices = AXES.reduce((s, a) => s + p.choices[a], 0) || 1;
-    const bars = AXES.map((a) => `<div class="bar"><span>${AXIS_NAMES[a]}</span><div class="track"><div class="fill" style="width:${(p.choices[a] / totalChoices) * 100}%;background:${AXIS_COLOR[a]}"></div></div><span>${p.choices[a]}</span></div>`).join("");
+    const bars = AXES.map((a) => {
+      const fill = `<div class="fill" style="width:${(p.choices[a] / totalChoices) * 100}%;background:${AXIS_COLOR[a]}"></div>`;
+      return `<div class="bar"><span>${AXIS_NAMES[a]}</span><div class="track">${fill}</div><span>${p.choices[a]}</span></div>`;
+    }).join("");
     const orderSel = `<select data-order="${p.id}" title="Наказ (во 2-м акте, стоит 1 авторитета)"><option value="">наказ: нет</option>${AXES.map((a) => `<option value="${a}" ${p.order === a ? "selected" : ""}>наказ: ${AXIS_NAMES[a]}</option>`).join("")}</select>`;
     const knowWord = ["не знает", "немного знает", "знает", "знает хорошо"][p.knowledge];
     return `<div class="card ${p.post ? "on-post" : ""}">

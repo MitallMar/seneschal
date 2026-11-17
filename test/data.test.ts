@@ -1,0 +1,80 @@
+// Данные: id не повторяются, ссылки ведут на существующее, у событий есть из чего выбирать.
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { AXES, AXIS_NAMES, AXIS_DAT, OPPOSED, POSTS, FACTION_NAMES, RESOURCE_NAMES, TRAITS, MARKS, ASPIRATIONS, ROSTER } from "../src/data/core";
+import { BACKSTORY } from "../src/data/backstory";
+import { EVENTS } from "../src/data/events";
+import { BALANCE } from "../src/sim/balance";
+
+const dup = (ids: string[]) => ids.filter((id, i) => ids.indexOf(id) !== i);
+const postIds = POSTS.map((p) => p.id);
+const isAxis = (a: string) => (AXES as string[]).includes(a);
+const starOk = (s: object) => Object.keys(s).every(isAxis);
+
+test("id не повторяются", () => {
+  assert.deepEqual(dup(TRAITS.map((x) => x.id)), []);
+  assert.deepEqual(dup(MARKS.map((x) => x.id)), []);
+  assert.deepEqual(dup(ASPIRATIONS.map((x) => x.id)), []);
+  assert.deepEqual(dup(BACKSTORY.map((x) => x.id)), []);
+  assert.deepEqual(dup(EVENTS.map((x) => x.id)), []);
+  assert.deepEqual(dup(postIds), []);
+  assert.deepEqual(dup(ROSTER.map((x) => x.name)), []);
+  for (const ev of EVENTS) assert.deepEqual(dup(ev.options.map((o) => o.id)), [], ev.id);
+});
+
+test("оси: пять, у каждой название и падеж; пары трения из существующих осей", () => {
+  assert.equal(AXES.length, 5);
+  for (const a of AXES) assert.ok(AXIS_NAMES[a] && AXIS_DAT[a], a);
+  assert.ok(OPPOSED.every(([x, y]) => isAxis(x) && isAxis(y) && x !== y));
+});
+
+test("должности, черты, метки и стремления ссылаются на существующее", () => {
+  assert.equal(POSTS.length, 5);
+  assert.ok(POSTS.every((p) => p.name && p.sphere && p.axes.length > 0 && p.axes.every(isAxis)));
+  assert.ok(TRAITS.every((t) => t.name && t.desc && starOk(t.star)));
+  assert.ok(MARKS.every((m) => m.name && m.desc && starOk(m.star)
+    && (!m.goodPost || postIds.includes(m.goodPost)) && (!m.badPost || postIds.includes(m.badPost))));
+  assert.ok(ASPIRATIONS.every((a) => a.text && (!a.post || postIds.includes(a.post))));
+  for (const post of postIds) assert.ok(ASPIRATIONS.some((a) => a.post === post), `на должность ${post} никто не может метить`);
+});
+
+test("ключевые персонажи: десять человек, черта и метка из списков, границы звезды внутри 0–10", () => {
+  assert.equal(ROSTER.length, 10);
+  assert.ok(ROSTER.length >= POSTS.length);
+  for (const r of ROSTER) {
+    assert.ok(TRAITS.some((t) => t.id === r.trait), `${r.name}: черта ${r.trait}`);
+    assert.ok(!r.mark || MARKS.some((m) => m.id === r.mark), `${r.name}: метка ${r.mark}`);
+    for (const [axis, range] of Object.entries(r.bounds ?? {})) {
+      assert.ok(isAxis(axis) && range[0] >= 0 && range[0] <= range[1] && range[1] <= 10, `${r.name}: границы ${axis}`);
+    }
+  }
+});
+
+test("предыстория: событий хватает на прогон, стремления из списка, сдвиги по существующим осям", () => {
+  assert.ok(BACKSTORY.length >= BALANCE.star.backstoryCount);
+  for (const ev of BACKSTORY) {
+    assert.ok(ev.text && starOk(ev.shift), ev.id);
+    assert.ok(!ev.aspiration || ASPIRATIONS.some((a) => a.id === ev.aspiration), `${ev.id}: стремление ${ev.aspiration}`);
+    assert.equal(ev.text.includes("{other}"), ev.link !== undefined, `${ev.id}: {other} в тексте и связь link идут вместе`);
+    const unknown = (ev.text.match(/\{[^}]*\}/g) ?? []).filter((t) => !["{name}", "{other}", "{а}", "{oа}", "{ся}", "{ась}", "{он}", "{его}"].includes(t));
+    assert.deepEqual(unknown, [], `${ev.id}: неизвестная подстановка`);
+  }
+});
+
+test("события совета: одна или две существующие должности, от двух вариантов, оси и последствия названы", () => {
+  const effects = [...Object.keys(FACTION_NAMES), ...Object.keys(RESOURCE_NAMES)];
+  for (const ev of EVENTS) {
+    assert.ok(ev.title && ev.text, ev.id);
+    assert.ok(ev.posts.length >= 1 && ev.posts.length <= 2 && ev.posts.every((p) => postIds.includes(p)), `${ev.id}: должности`);
+    assert.equal(new Set(ev.posts).size, ev.posts.length, `${ev.id}: должность названа дважды`);
+    assert.ok(ev.options.length >= 2, `${ev.id}: выбирать не из чего`);
+    for (const o of ev.options) {
+      assert.ok(o.text && o.axes.length >= 1 && o.axes.length <= 2 && o.axes.every(isAxis), `${ev.id}.${o.id}: оси`);
+      assert.ok(Object.keys(o.effects).every((key) => effects.includes(key)), `${ev.id}.${o.id}: последствия`);
+    }
+  }
+  const usual = EVENTS.filter((e) => !e.adventurers);
+  assert.ok(usual.length >= BALANCE.season.events, "событий без приключенцев хватает на сезон");
+  for (const post of postIds) assert.ok(usual.some((e) => e.posts.includes(post)), `у должности ${post} нет событий`);
+  assert.ok(EVENTS.some((e) => e.adventurers) && usual.some((e) => e.posts.length === 2));
+});
