@@ -16,10 +16,11 @@ export const star = (high: Axis[]): Star => Object.fromEntries(AXES.map((a) => [
 // Черта без поправок: решение считается только по звезде, без добавки к случайности и мягкости.
 const PLAIN: Trait = { id: "plain", name: "Ровный", desc: "черта для тестов", star: {}, mods: {} };
 
-// Человек, чьё решение известно заранее: звезда из десяток и нулей, мастер на должности, без метки, наказа и стремления.
+// Человек, чьё решение известно заранее: звезда из десяток и нулей, мастер на должности, без метки, наказа, стремления и нажитых черт.
 export function fix(p: Person, high: Axis[]): Person {
   p.star = star(high);
   p.trait = PLAIN;
+  p.gained = [];
   p.mark = undefined;
   p.order = undefined;
   p.aspiration = undefined;

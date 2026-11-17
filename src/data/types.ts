@@ -15,14 +15,28 @@ export interface TraitMods {
   softness?: number;      // склонность к компромиссу в споре
   ambition?: number;      // вес стремления
   loyalty?: number;       // стартовая добавка к отношению к Сенешалю
+  skill?: number;         // добавка к умению на должности
+  clout?: number;         // добавка к силе в споре
+  sly?: number;           // проиграв спор, может сделать по-своему в обход (0 или 1)
 }
+
+// Откуда черта: ключевая — с рождения; остальные человек приобретает по ходу жизни.
+export type TraitSource = "born" | "habit" | "post" | "rel" | "break";
+// Поступок, который выдаёт скрытую черту.
+export type Deed = "sabotage" | "bypass";
 
 export interface Trait {
   id: string;
   name: string;
   desc: string;
-  star: Partial<Star>;
+  star: Partial<Star>;    // сдвиг звезды: у ключевой черты — при рождении, у приобретённой — в момент появления
   mods: TraitMods;
+  source?: TraitSource;   // нет — ключевая черта (born)
+  lean?: Partial<Star>;   // прибавка к весу варианта по оси: черта тянет решения
+  axis?: Axis;            // для черты из привычки: по какой оси копится
+  hidden?: boolean;       // разговор не открывает, только поступок
+  revealedBy?: Deed;      // какой поступок выдаёт скрытую черту
+  targeted?: boolean;     // черта с целью («Злопамятный к …»): поправки действуют только против этого человека
 }
 
 export interface Mark {

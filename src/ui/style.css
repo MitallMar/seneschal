@@ -101,10 +101,21 @@ main {
 .card-body { display: grid; grid-template-columns: 120px 1fr; gap: 8px; align-items: center; }
 .star svg { width: 120px; height: 120px; display: block; }
 .stats { font-size: 13px; line-height: 1.5; }
-.bars { margin-top: 4px; }
-.bar { display: grid; grid-template-columns: 62px 1fr 22px; align-items: center; gap: 4px; font-size: 11px; color: var(--muted); }
-.bar .track { height: 6px; background: #efe7d7; border-radius: 3px; overflow: hidden; }
-.bar .fill { height: 100%; }
+.axes { margin-bottom: 4px; }
+.axis-row { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 6px; font-size: 12px; }
+.axis-row .axis-name { flex: 0 0 62px; }
+.stats { flex: 1; min-width: 0; }
+.axis-row .axis-name { font-weight: 600; }
+.axis-row .lvl.unknown { color: var(--muted); }
+.axis-row .seen { color: var(--muted); font-size: 11px; }
+.axis-row small, .rumor small, .opinion small { color: var(--muted); }
+.tag.unknown { opacity: .55; border-style: dashed; }
+.tag.secret { border-style: dotted; opacity: .8; }
+.tag.gained { background: #e6ecd9; border-color: #c9d4b3; }
+.rumor { font-size: 13px; font-style: italic; margin: 2px 0 6px; }
+.rumor .check { font-style: normal; color: var(--muted); }
+.opinion { font-size: 12px; color: var(--muted); margin-top: 6px; }
+.tip { flex-basis: 100%; font-size: 13px; line-height: 1.35; color: var(--muted); border-left: 3px solid var(--accent); padding: 2px 0 2px 8px; }
 details.bio { margin-top: 6px; font-size: 13px; }
 details.bio summary { cursor: pointer; color: var(--accent); }
 details.bio ul { margin: 4px 0 0; padding-left: 18px; line-height: 1.4; }

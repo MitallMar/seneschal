@@ -1,6 +1,6 @@
 // Прогон без экрана: генерирует партию, гоняет сезоны и печатает сводку.
 // Запуск: npm run sim -- [семя] [сезонов] [--log]
-import { newWorld, runSeason, consistency, topAxis, expWord, relWord, getRel, loyaltyWord, postName } from "../src/sim/sim";
+import { newWorld, runSeason, consistency, topAxis, expWord, relWord, getRel, loyaltyWord, postName, traitLabel, axisKnown } from "../src/sim/sim";
 import { AXES, AXIS_NAMES } from "../src/data/core";
 
 const seed = process.argv[2] ?? "test";
@@ -14,6 +14,12 @@ for (const p of w.people) {
   const who = `${p.name.padEnd(9)} ${p.trait.name.padEnd(13)} ${(p.post ? postName(p.post) : "—").padEnd(16)} ${expWord(p).padEnd(9)}`;
   const top = `топ:${AXIS_NAMES[topAxis(p.star)].padEnd(9)} совп:${String(consistency(p)).padStart(3)}% (${p.decisions})`;
   console.log(`${who} ${top} | ${star} | выборы ${ch} | ${loyaltyWord(p.loyalty)} ${p.loyalty} | ${p.aspiration?.text}`);
+}
+console.log("\nЧерты и знание (Ч — ключевая черта известна, в скобках — известные оси):");
+for (const p of w.people) {
+  const gained = p.gained.map((g) => `${traitLabel(w, g)} (сез. ${g.season})`).join(", ") || "—";
+  const known = AXES.filter((a) => axisKnown(p, a)).map((a) => AXIS_NAMES[a]).join(", ") || "ничего";
+  console.log(`  ${p.name.padEnd(9)} ${p.know.trait ? "Ч" : "·"} молва: ${p.rumor ? p.rumor.text + (p.rumor.wrong ? " [неверная]" : "") : "—"} | нажито: ${gained} | видно: (${known})`);
 }
 console.log("\nОтношения в совете:");
 const council = w.people.filter((p) => p.post);

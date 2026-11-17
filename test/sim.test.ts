@@ -78,7 +78,7 @@ test("генерация: 10 персонажей с биографией и с�
       assert.ok(p.aspiration && ASPIRATIONS.includes(p.aspiration), `${seed}, ${p.name}: стремление`);
       for (const a of AXES) assert.ok(p.star[a] >= 0 && p.star[a] <= 10, `${seed}, ${p.name}: ${a} = ${p.star[a]}`);
       assert.deepEqual(p.star, p.startStar);
-      assert.ok(p.loyalty >= -10 && p.loyalty <= 10 && p.knowledge === 0 && p.decisions === 0);
+      assert.ok(p.loyalty >= -10 && p.loyalty <= 10 && p.know.talks === 0 && p.decisions === 0);
     }
   }
 });
@@ -202,17 +202,16 @@ test("поставить человека на его же должность �
   assert.equal(dump(w), before);
 });
 
-test("разговор тратит личное дело и открывает человека; дела возвращаются с новым сезоном", () => {
+test("разговор тратит личное дело; дела возвращаются с новым сезоном", () => {
   const w = newWorld("разговор");
   const loyalty = w.people[0].loyalty;
   assert.equal(talk(w, 0), true);
-  assert.equal(w.people[0].knowledge, 1);
+  assert.equal(w.people[0].know.talks, 1);
   assert.equal(w.people[0].loyalty, Math.min(10, loyalty + BALANCE.staff.talkLoyalty));
   talk(w, 0); talk(w, 0);
-  assert.equal(w.people[0].knowledge, 3);
   assert.equal(w.deedsLeft, 0);
   assert.equal(talk(w, 1), false);
-  assert.equal(w.people[1].knowledge, 0);
+  assert.equal(w.people[1].know.talks, 0);
   runSeason(w);
   assert.equal(w.deedsLeft, BALANCE.season.deeds);
 });
@@ -432,7 +431,7 @@ test("сезон: три события, итог, стаж и опыт раст
   assert.equal(w.log.filter((e) => e.kind === "event").length, BALANCE.season.events);
   assert.equal(w.log.filter((e) => e.kind === "season").length, 1);
   assert.deepEqual([p.tenure, p.exp], [10, 10]);
-  assert.ok(said(w.log.at(-1)!.lines, `${p.name} — теперь мастер`));
+  assert.ok(said(w.log.at(-1)!.lines, `Новая черта: ${p.name} — «Мастер своего дела»`));
   runSeason(w);
   assert.deepEqual([p.tenure, p.exp], [11, 10]);
 });

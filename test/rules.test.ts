@@ -116,4 +116,5 @@ test("пороги слов идут по порядку: враги < сопе�
   assert.ok(L.bitter < L.unhappy && L.unhappy < L.trusts && L.trusts < L.devoted);
   assert.ok(BALANCE.exp.settled < BALANCE.exp.master && BALANCE.exp.master <= BALANCE.exp.staleFrom);
   assert.ok(BALANCE.staff.startTenureMin <= BALANCE.staff.startTenureMax);
+  assert.ok(BALANCE.know.notable < BALANCE.know.strong, "слабо < заметно < сильно");
 });

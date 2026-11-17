@@ -107,10 +107,21 @@ main {
 .card-body { display: grid; grid-template-columns: 120px 1fr; gap: 8px; align-items: center; }
 .star svg { width: 120px; height: 120px; display: block; }
 .stats { font-size: 13px; line-height: 1.5; }
-.bars { margin-top: 4px; }
-.bar { display: grid; grid-template-columns: 62px 1fr 22px; align-items: center; gap: 4px; font-size: 11px; color: var(--muted); }
-.bar .track { height: 6px; background: #efe7d7; border-radius: 3px; overflow: hidden; }
-.bar .fill { height: 100%; }
+.axes { margin-bottom: 4px; }
+.axis-row { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 6px; font-size: 12px; }
+.axis-row .axis-name { flex: 0 0 62px; }
+.stats { flex: 1; min-width: 0; }
+.axis-row .axis-name { font-weight: 600; }
+.axis-row .lvl.unknown { color: var(--muted); }
+.axis-row .seen { color: var(--muted); font-size: 11px; }
+.axis-row small, .rumor small, .opinion small { color: var(--muted); }
+.tag.unknown { opacity: .55; border-style: dashed; }
+.tag.secret { border-style: dotted; opacity: .8; }
+.tag.gained { background: #e6ecd9; border-color: #c9d4b3; }
+.rumor { font-size: 13px; font-style: italic; margin: 2px 0 6px; }
+.rumor .check { font-style: normal; color: var(--muted); }
+.opinion { font-size: 12px; color: var(--muted); margin-top: 6px; }
+.tip { flex-basis: 100%; font-size: 13px; line-height: 1.35; color: var(--muted); border-left: 3px solid var(--accent); padding: 2px 0 2px 8px; }
 details.bio { margin-top: 6px; font-size: 13px; }
 details.bio summary { cursor: pointer; color: var(--accent); }
 details.bio ul { margin: 4px 0 0; padding-left: 18px; line-height: 1.4; }
@@ -149,6 +160,7 @@ details.bio ul { margin: 4px 0 0; padding-left: 18px; line-height: 1.4; }
     <label class="chk"><input type="checkbox" id="designer"> Взгляд дизайнера</label>
   </div>
   <div id="status" class="status"></div>
+  <div id="tip" class="tip">О каждом известно что-то одно: молва или черта. Узнать человека можно двумя путями: <b>поговорить</b> (личное дело: сначала черты, потом стремление, потом склонности) или <b>посмотреть в деле</b> — каждое решение на должности показывает склонность, а скрытую черту выдаёт только поступок.</div>
 </header>
 
 <main>
@@ -171,7 +183,7 @@ details.bio ul { margin: 4px 0 0; padding-left: 18px; line-height: 1.4; }
   <section class="mid">
     <div class="panel">
       <h2>Люди</h2>
-      <p class="hint">Звезда размыта, пока Сенешаль не знает человека. «Поговорить» тратит личное дело (3 за сезон) и делает её чётче.</p>
+      <p class="hint">Молва — догадка, бывает неверной. Склонность видна словом («сильно / заметно / слабо»), когда человек о ней рассказал или его несколько раз видели в деле; иначе «?». «Поговорить» тратит личное дело (3 за сезон).</p>
       <div id="people" class="people"></div>
     </div>
   </section>
@@ -207,11 +219,11 @@ details.bio ul { margin: 4px 0 0; padding-left: 18px; line-height: 1.4; }
     ["dolg", "derzost"]
   ];
   var POSTS = [
-    { id: "starosta", name: "\u0421\u0442\u0430\u0440\u043E\u0441\u0442\u0430", sphere: "\u0434\u0435\u0440\u0435\u0432\u043D\u0438, \u043F\u043E\u043B\u044F, \u043A\u0440\u0435\u0441\u0442\u044C\u044F\u043D\u0435", axes: ["zabota", "obychai"] },
-    { id: "desyatnik", name: "\u0414\u0435\u0441\u044F\u0442\u043D\u0438\u043A", sphere: "\u0441\u0442\u0440\u0430\u0436\u0430, \u0434\u043E\u0440\u043E\u0433\u0438, \u043A\u0430\u0440\u0430\u0432\u0430\u043D\u044B", axes: ["dolg", "derzost"] },
-    { id: "klyuchnik", name: "\u041A\u043B\u044E\u0447\u043D\u0438\u043A", sphere: "\u0437\u0430\u043C\u043E\u043A, \u043F\u0440\u0438\u043F\u0430\u0441\u044B, \u0447\u0435\u043B\u044F\u0434\u044C, \u0441\u0442\u0440\u043E\u0439\u043A\u0430", axes: ["dolg", "vygoda"] },
-    { id: "pisar", name: "\u041F\u0438\u0441\u0430\u0440\u044C-\u043A\u0430\u0437\u043D\u0430\u0447\u0435\u0439", sphere: "\u0434\u0435\u043D\u044C\u0433\u0438, \u0442\u043E\u0440\u0433\u043E\u0432\u043B\u044F, \u0431\u0443\u043C\u0430\u0433\u0438, \u0434\u0432\u043E\u0440", axes: ["vygoda", "dolg"] },
-    { id: "lesnichiy", name: "\u041B\u0435\u0441\u043D\u0438\u0447\u0438\u0439", sphere: "\u043E\u043F\u0443\u0448\u043A\u0430, \u043B\u0435\u0441, \u043B\u0435\u0441\u043D\u043E\u0439 \u043D\u0430\u0440\u043E\u0434", axes: ["obychai", "zabota"] }
+    { id: "starosta", name: "\u0421\u0442\u0430\u0440\u043E\u0441\u0442\u0430", into: "\u0441\u0442\u0430\u0440\u043E\u0441\u0442\u044B", sphere: "\u0434\u0435\u0440\u0435\u0432\u043D\u0438, \u043F\u043E\u043B\u044F, \u043A\u0440\u0435\u0441\u0442\u044C\u044F\u043D\u0435", axes: ["zabota", "obychai"] },
+    { id: "desyatnik", name: "\u0414\u0435\u0441\u044F\u0442\u043D\u0438\u043A", into: "\u0434\u0435\u0441\u044F\u0442\u043D\u0438\u043A\u0438", sphere: "\u0441\u0442\u0440\u0430\u0436\u0430, \u0434\u043E\u0440\u043E\u0433\u0438, \u043A\u0430\u0440\u0430\u0432\u0430\u043D\u044B", axes: ["dolg", "derzost"] },
+    { id: "klyuchnik", name: "\u041A\u043B\u044E\u0447\u043D\u0438\u043A", into: "\u043A\u043B\u044E\u0447\u043D\u0438\u043A\u0438", sphere: "\u0437\u0430\u043C\u043E\u043A, \u043F\u0440\u0438\u043F\u0430\u0441\u044B, \u0447\u0435\u043B\u044F\u0434\u044C, \u0441\u0442\u0440\u043E\u0439\u043A\u0430", axes: ["dolg", "vygoda"] },
+    { id: "pisar", name: "\u041F\u0438\u0441\u0430\u0440\u044C-\u043A\u0430\u0437\u043D\u0430\u0447\u0435\u0439", into: "\u043F\u0438\u0441\u0430\u0440\u0438", sphere: "\u0434\u0435\u043D\u044C\u0433\u0438, \u0442\u043E\u0440\u0433\u043E\u0432\u043B\u044F, \u0431\u0443\u043C\u0430\u0433\u0438, \u0434\u0432\u043E\u0440", axes: ["vygoda", "dolg"] },
+    { id: "lesnichiy", name: "\u041B\u0435\u0441\u043D\u0438\u0447\u0438\u0439", into: "\u043B\u0435\u0441\u043D\u0438\u0447\u0438\u0435", sphere: "\u043E\u043F\u0443\u0448\u043A\u0430, \u043B\u0435\u0441, \u043B\u0435\u0441\u043D\u043E\u0439 \u043D\u0430\u0440\u043E\u0434", axes: ["obychai", "zabota"] }
   ];
   var FACTION_NAMES = {
     derevni: "\u0414\u0435\u0440\u0435\u0432\u043D\u0438",
@@ -232,10 +244,23 @@ details.bio ul { margin: 4px 0 0; padding-left: 18px; line-height: 1.4; }
     { id: "goryachiy", name: "\u0413\u043E\u0440\u044F\u0447\u0438\u0439", desc: "\u0420\u0435\u0448\u0430\u0435\u0442 \u0431\u044B\u0441\u0442\u0440\u043E \u0438 \u043D\u0435 \u0432\u0441\u0435\u0433\u0434\u0430 \u043F\u0440\u0435\u0434\u0441\u043A\u0430\u0437\u0443\u0435\u043C\u043E", star: { derzost: 3 }, mods: { random: 1.5, softness: -1 } },
     { id: "myagkiy", name: "\u041C\u044F\u0433\u043A\u0438\u0439", desc: "\u041D\u0435 \u043B\u044E\u0431\u0438\u0442 \u0441\u0441\u043E\u0440, \u0438\u0449\u0435\u0442 \u0441\u0435\u0440\u0435\u0434\u0438\u043D\u0443", star: { zabota: 2 }, mods: { softness: 2, grudge: 0.6 } },
     { id: "chestolyubivy", name: "\u0427\u0435\u0441\u0442\u043E\u043B\u044E\u0431\u0438\u0432\u044B\u0439", desc: "\u0425\u043E\u0447\u0435\u0442 \u0431\u043E\u043B\u044C\u0448\u0435\u0433\u043E \u0438 \u043F\u043E\u043C\u043D\u0438\u0442, \u043A\u0442\u043E \u043C\u0435\u0448\u0430\u043B", star: { derzost: 1, vygoda: 1 }, mods: { ambition: 2, grudge: 1.2 } },
-    { id: "zlopamyatny", name: "\u0417\u043B\u043E\u043F\u0430\u043C\u044F\u0442\u043D\u044B\u0439", desc: "\u041E\u0431\u0438\u0434\u044B \u043D\u0435 \u0437\u0430\u0431\u044B\u0432\u0430\u0435\u0442", star: {}, mods: { grudge: 1.8 } },
+    { id: "zlopamyatny", name: "\u0417\u043B\u043E\u043F\u0430\u043C\u044F\u0442\u043D\u044B\u0439", desc: "\u041E\u0431\u0438\u0434\u044B \u043D\u0435 \u0437\u0430\u0431\u044B\u0432\u0430\u0435\u0442", star: {}, mods: { grudge: 1.8 }, hidden: true, revealedBy: "sabotage" },
     { id: "verny", name: "\u0412\u0435\u0440\u043D\u044B\u0439", desc: "\u041F\u0440\u0435\u0434\u0430\u043D \u0421\u0435\u043D\u0435\u0448\u0430\u043B\u044E", star: { dolg: 2 }, mods: { obedience: 2, loyalty: 3 } },
-    { id: "khitry", name: "\u0425\u0438\u0442\u0440\u044B\u0439", desc: "\u0421\u0432\u043E\u0435\u0433\u043E \u0434\u043E\u0431\u0438\u0432\u0430\u0435\u0442\u0441\u044F \u043E\u0431\u0445\u043E\u0434\u043D\u044B\u043C\u0438 \u043F\u0443\u0442\u044F\u043C\u0438", star: { vygoda: 2 }, mods: { softness: 1, random: 0.5 } },
+    { id: "khitry", name: "\u0425\u0438\u0442\u0440\u044B\u0439", desc: "\u0421\u0432\u043E\u0435\u0433\u043E \u0434\u043E\u0431\u0438\u0432\u0430\u0435\u0442\u0441\u044F \u043E\u0431\u0445\u043E\u0434\u043D\u044B\u043C\u0438 \u043F\u0443\u0442\u044F\u043C\u0438", star: { vygoda: 2 }, mods: { softness: 1, random: 0.5, sly: 1 }, hidden: true, revealedBy: "bypass" },
     { id: "ostorozhny", name: "\u041E\u0441\u0442\u043E\u0440\u043E\u0436\u043D\u044B\u0439", desc: "\u0421\u0435\u043C\u044C \u0440\u0430\u0437 \u043E\u0442\u043C\u0435\u0440\u0438\u0442", star: { derzost: -3, obychai: 1 }, mods: { random: -0.5 } }
+  ];
+  var LIFE_TRAITS = [
+    { id: "sluzhaka", name: "\u0421\u043B\u0443\u0436\u0430\u043A\u0430", desc: "\u041F\u0440\u0438\u0432\u044B\u043A \u0434\u0435\u043B\u0430\u0442\u044C \u043A\u0430\u043A \u043F\u043E\u043B\u043E\u0436\u0435\u043D\u043E", source: "habit", axis: "dolg", star: {}, lean: { dolg: 1 }, mods: { obedience: 1 } },
+    { id: "prizhimisty", name: "\u041F\u0440\u0438\u0436\u0438\u043C\u0438\u0441\u0442\u044B\u0439", desc: "\u041F\u0440\u0438\u0432\u044B\u043A \u0432\u043E \u0432\u0441\u0451\u043C \u0438\u0441\u043A\u0430\u0442\u044C \u0432\u044B\u0433\u043E\u0434\u0443", source: "habit", axis: "vygoda", star: {}, lean: { vygoda: 1 }, mods: {} },
+    { id: "serdobolny", name: "\u0421\u0435\u0440\u0434\u043E\u0431\u043E\u043B\u044C\u043D\u044B\u0439", desc: "\u041F\u0440\u0438\u0432\u044B\u043A \u0436\u0430\u043B\u0435\u0442\u044C \u043B\u044E\u0434\u0435\u0439", source: "habit", axis: "zabota", star: {}, lean: { zabota: 1 }, mods: { softness: 1 } },
+    { id: "riskovy", name: "\u0420\u0438\u0441\u043A\u043E\u0432\u044B\u0439", desc: "\u041F\u0440\u0438\u0432\u044B\u043A \u0438\u0434\u0442\u0438 \u043D\u0430\u043F\u0440\u043E\u043B\u043E\u043C", source: "habit", axis: "derzost", star: {}, lean: { derzost: 1 }, mods: { random: 0.5 } },
+    { id: "starover", name: "\u0421\u0442\u0430\u0440\u043E\u0432\u0435\u0440", desc: "\u041F\u0440\u0438\u0432\u044B\u043A \u0434\u0435\u0440\u0436\u0430\u0442\u044C\u0441\u044F \u0441\u0442\u0430\u0440\u044B\u0445 \u043F\u0440\u0430\u0432\u0438\u043B", source: "habit", axis: "obychai", star: {}, lean: { obychai: 1 }, mods: { random: -0.3 } },
+    { id: "master_dela", name: "\u041C\u0430\u0441\u0442\u0435\u0440 \u0441\u0432\u043E\u0435\u0433\u043E \u0434\u0435\u043B\u0430", desc: "\u0414\u043E\u0448\u0451\u043B \u0434\u043E \u043F\u043E\u0442\u043E\u043B\u043A\u0430 \u043E\u043F\u044B\u0442\u0430: \u0434\u0435\u043B\u043E \u0441\u043F\u043E\u0440\u0438\u0442\u0441\u044F, \u043E\u0448\u0438\u0431\u043E\u043A \u043C\u0435\u043D\u044C\u0448\u0435", source: "post", star: {}, mods: { skill: 0.1, random: -0.3 } },
+    { id: "obros_svyazyami", name: "\u041E\u0431\u0440\u043E\u0441 \u0441\u0432\u044F\u0437\u044F\u043C\u0438", desc: "\u0417\u0430\u0441\u0438\u0434\u0435\u043B\u0441\u044F: \u0441\u0432\u043E\u0438 \u043B\u044E\u0434\u0438 \u043F\u043E\u0432\u0441\u044E\u0434\u0443, \u0432 \u0441\u043F\u043E\u0440\u0435 \u0435\u0433\u043E \u0442\u0440\u0443\u0434\u043D\u043E \u0441\u0434\u0432\u0438\u043D\u0443\u0442\u044C, \u043D\u0430\u043A\u0430\u0437\u044B \u0441\u043B\u0443\u0448\u0430\u0435\u0442 \u0445\u0443\u0436\u0435", source: "post", star: {}, mods: { clout: 2, obedience: -1 } },
+    { id: "ustal_ot_sluzhby", name: "\u0423\u0441\u0442\u0430\u043B \u043E\u0442 \u0441\u043B\u0443\u0436\u0431\u044B", desc: "\u0421\u043B\u0438\u0448\u043A\u043E\u043C \u0434\u043E\u043B\u0433\u043E \u043D\u0430 \u0434\u043E\u043B\u0436\u043D\u043E\u0441\u0442\u0438, \u043A\u043E\u0442\u043E\u0440\u043E\u0439 \u043D\u0435 \u0445\u043E\u0442\u0435\u043B: \u0442\u044F\u043D\u0435\u0442 \u043B\u044F\u043C\u043A\u0443", source: "post", star: {}, mods: { skill: -0.1, softness: 1 } },
+    { id: "zlopamyatny_k", name: "\u0417\u043B\u043E\u043F\u0430\u043C\u044F\u0442\u043D\u044B\u0439 \u043A", desc: "\u041F\u043E\u043C\u043D\u0438\u0442 \u0441\u0430\u0431\u043E\u0442\u0430\u0436 \u0438 \u043D\u0435 \u0443\u0441\u0442\u0443\u043F\u0438\u0442 \u044D\u0442\u043E\u043C\u0443 \u0447\u0435\u043B\u043E\u0432\u0435\u043A\u0443", source: "rel", targeted: true, star: {}, mods: { grudge: 1.8, softness: -2 } },
+    { id: "ozhestochilsya", name: "\u041E\u0436\u0435\u0441\u0442\u043E\u0447\u0438\u043B\u0441\u044F", desc: "\u041F\u0435\u0440\u0435\u043B\u043E\u043C: \u0436\u0430\u043B\u043E\u0441\u0442\u0438 \u0441\u0442\u0430\u043B\u043E \u043C\u0435\u043D\u044C\u0448\u0435, \u0441\u043F\u043E\u0440\u0438\u0442 \u0436\u0451\u0441\u0442\u0447\u0435", source: "break", star: { zabota: -3, derzost: 2 }, mods: { softness: -1, grudge: 1.3 } },
+    { id: "stal_nabozhen", name: "\u0421\u0442\u0430\u043B \u043D\u0430\u0431\u043E\u0436\u0435\u043D", desc: "\u041F\u0435\u0440\u0435\u043B\u043E\u043C: \u0438\u0449\u0435\u0442 \u043E\u043F\u043E\u0440\u0443 \u0432 \u0441\u0442\u0430\u0440\u044B\u0445 \u043F\u0440\u0430\u0432\u0438\u043B\u0430\u0445", source: "break", star: { obychai: 3, derzost: -1 }, mods: { random: -0.3 } }
   ];
   var MARKS = [
     { id: "slyshit_les", name: "\u0421\u043B\u044B\u0448\u0438\u0442 \u043B\u0435\u0441", desc: "\u0427\u0443\u0435\u0442 \u043D\u0430\u0441\u0442\u0440\u043E\u0435\u043D\u0438\u0435 \u043B\u0435\u0441\u0430, \u043D\u043E \u043B\u0430\u0431\u0438\u0440\u0438\u043D\u0442 \u0435\u0451 \u043F\u0443\u0433\u0430\u0435\u0442", star: { obychai: 2 }, goodPost: "lesnichiy" },
@@ -266,6 +291,27 @@ details.bio ul { margin: 4px 0 0; padding-left: 18px; line-height: 1.4; }
     { name: "\u042F\u0440\u0435\u043C\u0430", female: false, age: 23, trait: "zlopamyatny", mark: "ne_mozhet_lgat" },
     { name: "\u0412\u0441\u0435\u0441\u043B\u0430\u0432\u0430", female: true, age: 49, trait: "ostorozhny" }
   ];
+
+  // src/data/rumors.ts
+  var RUMORS_AXIS = {
+    dolg: ["\u0413\u043E\u0432\u043E\u0440\u044F\u0442, \u0441\u043B\u043E\u0432\u043E \u0434\u0435\u0440\u0436\u0438\u0442.", "\u0413\u043E\u0432\u043E\u0440\u044F\u0442, \u043F\u0440\u0438\u043A\u0430\u0437 \u0434\u043B\u044F {\u0435\u0433\u043E} \u2014 \u0437\u0430\u043A\u043E\u043D.", "\u0413\u043E\u0432\u043E\u0440\u044F\u0442, \u0441\u043B\u0443\u0436\u0431\u0443 \u0441\u0442\u0430\u0432\u0438\u0442 \u0432\u044B\u0448\u0435 \u0441\u0432\u043E\u0435\u0433\u043E."],
+    vygoda: ["\u0413\u043E\u0432\u043E\u0440\u044F\u0442, \u043F\u0440\u0438\u0436\u0438\u043C\u0438\u0441\u0442{\u0430}.", "\u0413\u043E\u0432\u043E\u0440\u044F\u0442, \u0441\u0432\u043E\u0435\u0433\u043E \u043D\u0435 \u0443\u043F\u0443\u0441\u0442\u0438\u0442.", "\u0413\u043E\u0432\u043E\u0440\u044F\u0442, \u0441\u0447\u0438\u0442\u0430\u0435\u0442 \u0447\u0443\u0436\u0438\u0435 \u0434\u0435\u043D\u044C\u0433\u0438 \u043D\u0435 \u0445\u0443\u0436\u0435 \u0441\u0432\u043E\u0438\u0445."],
+    zabota: ["\u0413\u043E\u0432\u043E\u0440\u044F\u0442, \u043B\u044E\u0434\u0435\u0439 \u0436\u0430\u043B\u0435\u0435\u0442.", "\u0413\u043E\u0432\u043E\u0440\u044F\u0442, \u043F\u043E\u0441\u043B\u0435\u0434\u043D\u0438\u043C \u043F\u043E\u0434\u0435\u043B\u0438\u0442\u0441\u044F.", "\u0413\u043E\u0432\u043E\u0440\u044F\u0442, \u0437\u0430 \u0441\u0432\u043E\u0438\u0445 \u043F\u0440\u043E\u0441\u0438\u0442 \u043F\u0435\u0440\u0435\u0434 \u043A\u0435\u043C \u0443\u0433\u043E\u0434\u043D\u043E."],
+    derzost: ["\u0413\u043E\u0432\u043E\u0440\u044F\u0442, \u043B\u0435\u0437\u0435\u0442 \u043D\u0430 \u0440\u043E\u0436\u043E\u043D.", "\u0413\u043E\u0432\u043E\u0440\u044F\u0442, \u0441\u043D\u0430\u0447\u0430\u043B\u0430 \u0434\u0435\u043B\u0430\u0435\u0442, \u043F\u043E\u0442\u043E\u043C \u0434\u0443\u043C\u0430\u0435\u0442.", "\u0413\u043E\u0432\u043E\u0440\u044F\u0442, \u0441\u0442\u0440\u0430\u0445\u0430 \u043D\u0435 \u0437\u043D\u0430\u0435\u0442."],
+    obychai: ["\u0413\u043E\u0432\u043E\u0440\u044F\u0442, \u0436\u0438\u0432\u0451\u0442 \u043F\u043E \u0441\u0442\u0430\u0440\u044B\u043C \u043F\u0440\u0430\u0432\u0438\u043B\u0430\u043C.", "\u0413\u043E\u0432\u043E\u0440\u044F\u0442, \u0431\u0435\u0437 \u043F\u0440\u0438\u043C\u0435\u0442\u044B \u0448\u0430\u0433\u0443 \u043D\u0435 \u0441\u0442\u0443\u043F\u0438\u0442.", "\u0413\u043E\u0432\u043E\u0440\u044F\u0442, \u043D\u043E\u0432\u043E\u0435 {\u0435\u043C\u0443} \u043D\u0435 \u043F\u043E \u0434\u0443\u0448\u0435."]
+  };
+  var RUMORS_TRAIT = {
+    upryamy: ["\u0413\u043E\u0432\u043E\u0440\u044F\u0442, {\u0435\u0433\u043E} \u043D\u0435 \u043F\u0435\u0440\u0435\u0441\u043F\u043E\u0440\u0438\u0448\u044C.", "\u0413\u043E\u0432\u043E\u0440\u044F\u0442, \u0443\u043F\u0440\u0451\u0442\u0441\u044F \u2014 \u043D\u0435 \u0441\u0434\u0432\u0438\u043D\u0435\u0448\u044C.", "\u0413\u043E\u0432\u043E\u0440\u044F\u0442, \u0447\u0443\u0436\u043E\u0439 \u0443\u043A\u0430\u0437 {\u0435\u043C\u0443} \u043F\u043E\u043F\u0435\u0440\u0451\u043A \u0433\u043E\u0440\u043B\u0430."],
+    nabozhny: ["\u0413\u043E\u0432\u043E\u0440\u044F\u0442, \u0447\u0442\u0438\u0442 \u043A\u0430\u0436\u0434\u0443\u044E \u043F\u0440\u0438\u043C\u0435\u0442\u0443.", "\u0413\u043E\u0432\u043E\u0440\u044F\u0442, \u0431\u0435\u0437 \u043C\u043E\u043B\u0438\u0442\u0432\u044B \u0437\u0430 \u0434\u0435\u043B\u043E \u043D\u0435 \u0431\u0435\u0440\u0451\u0442\u0441\u044F.", "\u0413\u043E\u0432\u043E\u0440\u044F\u0442, \u0431\u043E\u0438\u0442\u0441\u044F \u043F\u0440\u043E\u0433\u043D\u0435\u0432\u0438\u0442\u044C \u0441\u0442\u0430\u0440\u044B\u0445 \u0431\u043E\u0433\u043E\u0432."],
+    skupoy: ["\u0413\u043E\u0432\u043E\u0440\u044F\u0442, \u043D\u0430\u0434 \u043A\u0430\u0436\u0434\u043E\u0439 \u043C\u043E\u043D\u0435\u0442\u043E\u0439 \u0442\u0440\u044F\u0441\u0451\u0442\u0441\u044F.", "\u0413\u043E\u0432\u043E\u0440\u044F\u0442, \u0437\u0438\u043C\u043E\u0439 \u0441\u043D\u0435\u0433\u0430 \u043D\u0435 \u0432\u044B\u043F\u0440\u043E\u0441\u0438\u0448\u044C.", "\u0413\u043E\u0432\u043E\u0440\u044F\u0442, \u0441\u043A\u0443\u043F{\u0430} \u0434\u043E \u0441\u043C\u0435\u0448\u043D\u043E\u0433\u043E."],
+    goryachiy: ["\u0413\u043E\u0432\u043E\u0440\u044F\u0442, \u0432\u0441\u043F\u044B\u0445\u0438\u0432\u0430\u0435\u0442 \u043A\u0430\u043A \u0441\u043E\u043B\u043E\u043C\u0430.", "\u0413\u043E\u0432\u043E\u0440\u044F\u0442, \u043F\u043E\u0434 \u0433\u043E\u0440\u044F\u0447\u0443\u044E \u0440\u0443\u043A\u0443 \u043B\u0443\u0447\u0448\u0435 \u043D\u0435 \u043F\u043E\u043F\u0430\u0434\u0430\u0442\u044C\u0441\u044F.", "\u0413\u043E\u0432\u043E\u0440\u044F\u0442, \u0440\u0435\u0448\u0430\u0435\u0442 \u0441\u0433\u043E\u0440\u044F\u0447\u0430."],
+    myagkiy: ["\u0413\u043E\u0432\u043E\u0440\u044F\u0442, \u043C\u0443\u0445\u0438 \u043D\u0435 \u043E\u0431\u0438\u0434\u0438\u0442.", "\u0413\u043E\u0432\u043E\u0440\u044F\u0442, \u0441\u0441\u043E\u0440 \u043D\u0435 \u0432\u044B\u043D\u043E\u0441\u0438\u0442.", "\u0413\u043E\u0432\u043E\u0440\u044F\u0442, \u0432\u0441\u0435\u043C \u0441\u0442\u0430\u0440\u0430\u0435\u0442\u0441\u044F \u0443\u0433\u043E\u0434\u0438\u0442\u044C."],
+    chestolyubivy: ["\u0413\u043E\u0432\u043E\u0440\u044F\u0442, \u043C\u0435\u0442\u0438\u0442 \u0432\u044B\u0441\u043E\u043A\u043E.", "\u0413\u043E\u0432\u043E\u0440\u044F\u0442, {\u0435\u043C\u0443} \u0432\u0441\u0435\u0433\u0434\u0430 \u043C\u0430\u043B\u043E.", "\u0413\u043E\u0432\u043E\u0440\u044F\u0442, \u043F\u043E\u043C\u043D\u0438\u0442, \u043A\u0442\u043E \u043F\u0435\u0440\u0435\u0448\u0451\u043B \u0434\u043E\u0440\u043E\u0433\u0443."],
+    zlopamyatny: ["\u0413\u043E\u0432\u043E\u0440\u044F\u0442, \u043E\u0431\u0438\u0434 \u043D\u0435 \u043F\u0440\u043E\u0449\u0430\u0435\u0442.", "\u0413\u043E\u0432\u043E\u0440\u044F\u0442, \u0434\u043E\u043B\u0433\u043E \u043F\u043E\u043C\u043D\u0438\u0442 \u0437\u043B\u043E.", "\u0413\u043E\u0432\u043E\u0440\u044F\u0442, \u0441\u0441\u043E\u0440\u0438\u0442\u044C\u0441\u044F \u043D\u0435 \u0441\u0442\u043E\u0438\u0442: \u043F\u0440\u0438\u043F\u043E\u043C\u043D\u0438\u0442."],
+    verny: ["\u0413\u043E\u0432\u043E\u0440\u044F\u0442, \u0437\u0430 \u0421\u0435\u043D\u0435\u0448\u0430\u043B\u044F \u0432 \u043E\u0433\u043E\u043D\u044C \u043F\u043E\u0439\u0434\u0451\u0442.", "\u0413\u043E\u0432\u043E\u0440\u044F\u0442, \u0441\u043B\u0443\u0436\u0438\u0442 \u043D\u0435 \u0437\u0430 \u0441\u0442\u0440\u0430\u0445.", "\u0413\u043E\u0432\u043E\u0440\u044F\u0442, \u0432\u0435\u0440\u043D\u0435\u0435 \u0447\u0435\u043B\u043E\u0432\u0435\u043A\u0430 \u0432 \u0437\u0430\u043C\u043A\u0435 \u043D\u0435\u0442."],
+    khitry: ["\u0413\u043E\u0432\u043E\u0440\u044F\u0442, \u0441\u0435\u0431\u0435 \u043D\u0430 \u0443\u043C\u0435.", "\u0413\u043E\u0432\u043E\u0440\u044F\u0442, \u043F\u0440\u044F\u043C\u043E\u0439 \u0434\u043E\u0440\u043E\u0433\u043E\u0439 \u043D\u0435 \u0445\u043E\u0434\u0438\u0442.", "\u0413\u043E\u0432\u043E\u0440\u044F\u0442, \u0443\u043B\u044B\u0431\u0430\u0435\u0442\u0441\u044F, \u0430 \u0434\u0435\u043B\u0430\u0435\u0442 \u043F\u043E-\u0441\u0432\u043E\u0435\u043C\u0443."],
+    ostorozhny: ["\u0413\u043E\u0432\u043E\u0440\u044F\u0442, \u0441\u0435\u043C\u044C \u0440\u0430\u0437 \u043E\u0442\u043C\u0435\u0440\u0438\u0442.", "\u0413\u043E\u0432\u043E\u0440\u044F\u0442, \u043D\u0430 \u0440\u0438\u0441\u043A \u043D\u0435 \u043F\u043E\u0439\u0434\u0451\u0442.", "\u0413\u043E\u0432\u043E\u0440\u044F\u0442, \u0434\u0443\u0435\u0442 \u043D\u0430 \u0432\u043E\u0434\u0443."]
+  };
 
   // src/data/backstory.ts
   var BACKSTORY = [
@@ -643,6 +689,28 @@ details.bio ul { margin: 4px 0 0; padding-left: 18px; line-height: 1.4; }
       startTenureMin: k(2, 0, 20, 1, "\u0421\u0442\u0430\u0440\u0442: \u043D\u0430\u0438\u043C\u0435\u043D\u044C\u0448\u0438\u0439 \u0441\u0442\u0430\u0436 \u0432 \u0441\u043E\u0432\u0435\u0442\u0435, \u0441\u0435\u0437\u043E\u043D\u043E\u0432"),
       startTenureMax: k(14, 0, 40, 1, "\u0421\u0442\u0430\u0440\u0442: \u043D\u0430\u0438\u0431\u043E\u043B\u044C\u0448\u0438\u0439 \u0441\u0442\u0430\u0436 \u0432 \u0441\u043E\u0432\u0435\u0442\u0435, \u0441\u0435\u0437\u043E\u043D\u043E\u0432")
     },
+    // знание о людях: что видит игрок
+    know: {
+      strong: k(7, 5, 10, 0.5, "\u0421\u043A\u043B\u043E\u043D\u043D\u043E\u0441\u0442\u044C \u0441\u043B\u043E\u0432\u043E\u043C: \u043E\u0442 \u044D\u0442\u043E\u0433\u043E \u2014 \xAB\u0441\u0438\u043B\u044C\u043D\u043E\xBB"),
+      notable: k(4.5, 1, 7, 0.5, "\u0421\u043A\u043B\u043E\u043D\u043D\u043E\u0441\u0442\u044C \u0441\u043B\u043E\u0432\u043E\u043C: \u043E\u0442 \u044D\u0442\u043E\u0433\u043E \u2014 \xAB\u0437\u0430\u043C\u0435\u0442\u043D\u043E\xBB, \u043D\u0438\u0436\u0435 \u2014 \xAB\u0441\u043B\u0430\u0431\u043E\xBB"),
+      seenToKnow: k(3, 1, 12, 1, "\u041D\u0430\u0431\u043B\u044E\u0434\u0435\u043D\u0438\u0435: \u043F\u043E\u0441\u043B\u0435 \u0441\u0442\u043E\u043B\u044C\u043A\u0438\u0445 \u0440\u0435\u0448\u0435\u043D\u0438\u0439 \u043F\u043E \u043E\u0441\u0438 \u043E\u043D\u0430 \u0432\u0438\u0434\u043D\u0430 \u0441\u043B\u043E\u0432\u043E\u043C"),
+      rumorTraitChance: k(0.5, 0, 1, 0.05, "\u041C\u043E\u043B\u0432\u0430: \u0448\u0430\u043D\u0441, \u0447\u0442\u043E \u043E\u043D\u0430 \u043E \u0447\u0435\u0440\u0442\u0435, \u0430 \u043D\u0435 \u043E \u0432\u0435\u0434\u0443\u0449\u0435\u0439 \u0441\u043A\u043B\u043E\u043D\u043D\u043E\u0441\u0442\u0438"),
+      rumorFalseChance: k(0.25, 0, 1, 0.05, "\u041C\u043E\u043B\u0432\u0430: \u0448\u0430\u043D\u0441, \u0447\u0442\u043E \u043E\u043D\u0430 \u043D\u0435\u0432\u0435\u0440\u043D\u0430\u044F"),
+      startTraitChance: k(0.5, 0, 1, 0.05, "\u041F\u0435\u0440\u0432\u0430\u044F \u043F\u043E\u0441\u0430\u0434\u043A\u0430: \u0448\u0430\u043D\u0441, \u0447\u0442\u043E \u043E \u0447\u043B\u0435\u043D\u0435 \u0441\u043E\u0432\u0435\u0442\u0430 \u0438\u0437\u0432\u0435\u0441\u0442\u043D\u0430 \u0447\u0435\u0440\u0442\u0430, \u0430 \u043D\u0435 \u043C\u043E\u043B\u0432\u0430"),
+      fitGood: k(6, 3, 10, 0.5, "\u0413\u043E\u0434\u043D\u043E\u0441\u0442\u044C \u0441\u043B\u043E\u0432\u043E\u043C: \u043E\u0442 \u044D\u0442\u043E\u0433\u043E \u043F\u043E \u0438\u0437\u0432\u0435\u0441\u0442\u043D\u043E\u043C\u0443 \u2014 \xAB\u043F\u043E\u0434\u0445\u043E\u0434\u0438\u0442\xBB, \u043D\u0438\u0436\u0435 \u2014 \xAB\u0441\u043E\u043C\u043D\u0438\u0442\u0435\u043B\u044C\u043D\u043E\xBB"),
+      opinionBias: k(0.5, 0, 2, 0.1, "\u041C\u043D\u0435\u043D\u0438\u0435 \u0433\u043B\u0430\u0432\u043D\u043E\u0433\u043E: \u043F\u0440\u0438\u0441\u0442\u0440\u0430\u0441\u0442\u0438\u0435 \u0437\u0430 \u0435\u0434\u0438\u043D\u0438\u0446\u0443 \u0435\u0433\u043E \u043E\u0442\u043D\u043E\u0448\u0435\u043D\u0438\u0439 \u0441 \u0447\u0435\u043B\u043E\u0432\u0435\u043A\u043E\u043C")
+    },
+    // черты в течение жизни
+    traits: {
+      maxGained: k(3, 0, 6, 1, "\u041F\u0440\u0438\u043E\u0431\u0440\u0435\u0442\u0451\u043D\u043D\u044B\u0445 \u0447\u0435\u0440\u0442 \u0443 \u0447\u0435\u043B\u043E\u0432\u0435\u043A\u0430 \u043D\u0435 \u0431\u043E\u043B\u044C\u0448\u0435 (\u0441\u0432\u0435\u0440\u0445 \u043A\u043B\u044E\u0447\u0435\u0432\u043E\u0439)"),
+      habitSeasons: k(8, 2, 24, 1, "\u041F\u0440\u0438\u0432\u044B\u0447\u043A\u0430: \u0437\u0430 \u0441\u043A\u043E\u043B\u044C\u043A\u043E \u043F\u043E\u0441\u043B\u0435\u0434\u043D\u0438\u0445 \u0441\u0435\u0437\u043E\u043D\u043E\u0432 \u0441\u0447\u0438\u0442\u0430\u044E\u0442\u0441\u044F \u0440\u0435\u0448\u0435\u043D\u0438\u044F"),
+      habitMinDecisions: k(6, 1, 30, 1, "\u041F\u0440\u0438\u0432\u044B\u0447\u043A\u0430: \u043D\u0435 \u043C\u0435\u043D\u044C\u0448\u0435 \u0441\u0442\u043E\u043B\u044C\u043A\u0438\u0445 \u0440\u0435\u0448\u0435\u043D\u0438\u0439 \u0437\u0430 \u044D\u0442\u0438 \u0441\u0435\u0437\u043E\u043D\u044B"),
+      habitShare: k(0.6, 0.3, 1, 0.05, "\u041F\u0440\u0438\u0432\u044B\u0447\u043A\u0430: \u0434\u043E\u043B\u044F \u0440\u0435\u0448\u0435\u043D\u0438\u0439 \u043F\u043E \u043E\u0434\u043D\u043E\u0439 \u043E\u0441\u0438, \u043E\u0442 \u043A\u043E\u0442\u043E\u0440\u043E\u0439 \u043F\u043E\u044F\u0432\u043B\u044F\u0435\u0442\u0441\u044F \u0447\u0435\u0440\u0442\u0430"),
+      tiredFrom: k(12, 2, 60, 1, "\xAB\u0423\u0441\u0442\u0430\u043B \u043E\u0442 \u0441\u043B\u0443\u0436\u0431\u044B\xBB: \u0441\u0442\u043E\u043B\u044C\u043A\u043E \u0441\u0435\u0437\u043E\u043D\u043E\u0432 \u043D\u0430 \u043D\u0435\u0436\u0435\u043B\u0430\u043D\u043D\u043E\u0439 \u0434\u043E\u043B\u0436\u043D\u043E\u0441\u0442\u0438"),
+      bypassChance: k(0.5, 0, 1, 0.05, "\u0425\u0438\u0442\u0440\u044B\u0439 \u043F\u0440\u043E\u0438\u0433\u0440\u0430\u043B \u0441\u043F\u043E\u0440: \u0448\u0430\u043D\u0441, \u0447\u0442\u043E \u0441\u0434\u0435\u043B\u0430\u0435\u0442 \u043F\u043E-\u0441\u0432\u043E\u0435\u043C\u0443 \u0432 \u043E\u0431\u0445\u043E\u0434"),
+      bypass: k(0.7, 0.1, 1, 0.05, "\u041E\u0431\u0445\u043E\u0434: \u043C\u043D\u043E\u0436\u0438\u0442\u0435\u043B\u044C \u0438\u0441\u0445\u043E\u0434\u0430"),
+      bypassRel: k(-1, -3, 0, 0.1, "\u041E\u0431\u0445\u043E\u0434: \u043E\u0442\u043D\u043E\u0448\u0435\u043D\u0438\u044F \u0441 \u0442\u0435\u043C, \u043A\u043E\u0433\u043E \u043E\u0431\u043E\u0448\u043B\u0438")
+    },
     // сезон
     season: {
       events: k(3, 1, 8, 1, "\u0421\u043E\u0431\u044B\u0442\u0438\u0439 \u0437\u0430 \u0441\u0435\u0437\u043E\u043D"),
@@ -711,16 +779,24 @@ details.bio ul { margin: 4px 0 0; padding-left: 18px; line-height: 1.4; }
   // src/sim/sim.ts
   var STAR_MAX = 10;
   var REL_MAX = 10;
-  var KNOWLEDGE_MAX = 3;
   var clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   var round1 = (v) => Math.round(v * 10) / 10;
   var relKey = (a, b) => a < b ? `${a}|${b}` : `${b}|${a}`;
   function getRel(w2, a, b) {
     return w2.rel.get(relKey(a, b)) ?? 0;
   }
+  function activeTraits(p, vs) {
+    return [p.trait, ...p.gained.filter((g) => !g.trait.targeted || g.target === vs?.id).map((g) => g.trait)];
+  }
+  function mod(p, key, vs) {
+    return activeTraits(p, vs).reduce((s, t) => s + (t.mods[key] ?? 0), 0);
+  }
+  function grudge(p, vs) {
+    return activeTraits(p, vs).reduce((s, t) => s * (t.mods.grudge ?? 1), 1);
+  }
   function addRel(w2, a, b, d) {
     const pa = w2.people[a], pb = w2.people[b];
-    const g = d < 0 ? Math.max(pa.trait.mods.grudge ?? 1, pb.trait.mods.grudge ?? 1) : 1;
+    const g = d < 0 ? Math.max(grudge(pa, pb), grudge(pb, pa)) : 1;
     w2.rel.set(relKey(a, b), clamp(getRel(w2, a, b) + d * g, -REL_MAX, REL_MAX));
   }
   function relWord(v) {
@@ -757,11 +833,14 @@ details.bio ul { margin: 4px 0 0; padding-left: 18px; line-height: 1.4; }
     return id == null ? void 0 : w2.people[id];
   }
   function gender(text, p, other) {
-    return text.replace(/\{name\}/g, p.name).replace(/\{other\}/g, other ? other.name : "\u0441\u043E\u0441\u0435\u0434\u043E\u043C").replace(/\{oа\}/g, other?.female ? "\u0430" : "").replace(/\{а\}/g, p.female ? "\u0430" : "").replace(/\{ся\}|\{ась\}/g, p.female ? "\u0430\u0441\u044C" : "\u0441\u044F").replace(/\{он\}/g, p.female ? "\u043E\u043D\u0430" : "\u043E\u043D").replace(/\{его\}/g, p.female ? "\u0435\u0451" : "\u0435\u0433\u043E");
+    return text.replace(/\{name\}/g, p.name).replace(/\{other\}/g, other ? other.name : "\u0441\u043E\u0441\u0435\u0434\u043E\u043C").replace(/\{oа\}/g, other?.female ? "\u0430" : "").replace(/\{а\}/g, p.female ? "\u0430" : "").replace(/\{ся\}|\{ась\}/g, p.female ? "\u0430\u0441\u044C" : "\u0441\u044F").replace(/\{он\}/g, p.female ? "\u043E\u043D\u0430" : "\u043E\u043D").replace(/\{его\}/g, p.female ? "\u0435\u0451" : "\u0435\u0433\u043E").replace(/\{ему\}/g, p.female ? "\u0435\u0439" : "\u0435\u043C\u0443");
   }
   function addStar(star, shift, k2 = 1) {
     for (const a of AXES) if (shift[a]) star[a] += shift[a] * k2;
   }
+  var noAxes = () => ({ dolg: 0, vygoda: 0, zabota: 0, derzost: 0, obychai: 0 });
+  var dative = (name) => name.endsWith("\u0430") ? `${name.slice(0, -1)}\u0435` : `${name}\u0443`;
+  var lower = (text) => text.charAt(0).toLowerCase() + text.slice(1);
   function newWorld(seed, labOpen = false) {
     const rng = new Rng(seed);
     const w2 = {
@@ -792,6 +871,7 @@ details.bio ul { margin: 4px 0 0; padding-left: 18px; line-height: 1.4; }
         female: r.female,
         age: r.age,
         trait,
+        gained: [],
         mark,
         star,
         startStar: star,
@@ -799,8 +879,9 @@ details.bio ul { margin: 4px 0 0; padding-left: 18px; line-height: 1.4; }
         loyalty: BALANCE.loyalty.start + (trait.mods.loyalty ?? 0) + rng.range(-BALANCE.loyalty.startSpread, BALANCE.loyalty.startSpread),
         tenure: 0,
         exp: 0,
-        knowledge: 0,
-        choices: { dolg: 0, vygoda: 0, zabota: 0, derzost: 0, obychai: 0 },
+        recent: [],
+        know: { talks: 0, trait: false, traitAsked: false, aspiration: false, axes: false, seen: noAxes() },
+        choices: noAxes(),
         decisions: 0,
         matchedTop: 0
       });
@@ -855,8 +936,35 @@ details.bio ul { margin: 4px 0 0; padding-left: 18px; line-height: 1.4; }
       }
     }
     autoAssign(w2, true);
-    w2.log.push({ season: 0, kind: "info", title: `\u041D\u043E\u0432\u0430\u044F \u043F\u0430\u0440\u0442\u0438\u044F, \u0441\u0435\u043C\u044F \xAB${seed}\xBB`, lines: ["\u0421\u043E\u0432\u0435\u0442 \u0440\u0430\u0441\u0441\u0442\u0430\u0432\u043B\u0435\u043D \u043F\u043E \u0433\u043E\u0434\u043D\u043E\u0441\u0442\u0438. \u0414\u043E\u043B\u0436\u043D\u043E\u0441\u0442\u0438 \u0437\u0430\u043D\u044F\u0442\u044B \u0434\u0430\u0432\u043D\u043E \u2014 \u0443 \u043B\u044E\u0434\u0435\u0439 \u0435\u0441\u0442\u044C \u0441\u0442\u0430\u0436."] });
+    for (const p of w2.people) {
+      if (p.exp >= BALANCE.exp.master && p.gained.length < BALANCE.traits.maxGained) {
+        p.gained.push({ trait: LIFE_TRAITS.find((t) => t.id === "master_dela"), season: 0, known: false });
+      }
+    }
+    for (const p of w2.people) {
+      if (p.post && !p.trait.hidden && rng.chance(BALANCE.know.startTraitChance)) {
+        p.know.trait = true;
+        p.know.traitAsked = true;
+      } else p.rumor = makeRumor(w2, p);
+    }
+    const lines = [
+      "\u0421\u043E\u0432\u0435\u0442 \u0440\u0430\u0441\u0441\u0442\u0430\u0432\u043B\u0435\u043D \u043F\u043E \u0433\u043E\u0434\u043D\u043E\u0441\u0442\u0438. \u0414\u043E\u043B\u0436\u043D\u043E\u0441\u0442\u0438 \u0437\u0430\u043D\u044F\u0442\u044B \u0434\u0430\u0432\u043D\u043E \u2014 \u0443 \u043B\u044E\u0434\u0435\u0439 \u0435\u0441\u0442\u044C \u0441\u0442\u0430\u0436.",
+      "\u041E \u043A\u0430\u0436\u0434\u043E\u043C \u0438\u0437\u0432\u0435\u0441\u0442\u043D\u043E \u0447\u0442\u043E-\u0442\u043E \u043E\u0434\u043D\u043E: \u043C\u043E\u043B\u0432\u0430 \u0438\u043B\u0438 \u0447\u0435\u0440\u0442\u0430. \u041E\u0441\u0442\u0430\u043B\u044C\u043D\u043E\u0435 \u043E\u0442\u043A\u0440\u043E\u044E\u0442 \u0440\u0430\u0437\u0433\u043E\u0432\u043E\u0440\u044B \u0438 \u0434\u0435\u043B\u0430."
+    ];
+    w2.log.push({ season: 0, kind: "info", title: `\u041D\u043E\u0432\u0430\u044F \u043F\u0430\u0440\u0442\u0438\u044F, \u0441\u0435\u043C\u044F \xAB${seed}\xBB`, lines });
     return w2;
+  }
+  function makeRumor(w2, p) {
+    const aboutTrait = w2.rng.chance(BALANCE.know.rumorTraitChance);
+    let wrong = w2.rng.chance(BALANCE.know.rumorFalseChance);
+    if (aboutTrait) {
+      const id = wrong ? w2.rng.pick(Object.keys(RUMORS_TRAIT).filter((x) => x !== p.trait.id)) : p.trait.id;
+      return { text: gender(w2.rng.pick(RUMORS_TRAIT[id]), p), trait: id, wrong };
+    }
+    const weak = AXES.filter((a) => p.star[a] < BALANCE.know.notable);
+    if (!weak.length) wrong = false;
+    const axis = wrong ? w2.rng.pick(weak) : topAxis(p.star);
+    return { text: gender(w2.rng.pick(RUMORS_AXIS[axis]), p), axis, wrong };
   }
   function fitness(p, post) {
     const def = POSTS.find((x) => x.id === post);
@@ -938,11 +1046,13 @@ details.bio ul { margin: 4px 0 0; padding-left: 18px; line-height: 1.4; }
       w2.posts[post] = p.id;
       if (p.aspiration?.post === post) {
         p.loyalty = clamp(p.loyalty + BALANCE.staff.desiredLoyalty, -REL_MAX, REL_MAX);
+        p.know.aspiration = true;
         lines.push(`${p.name} \u043F\u043E\u043B\u0443\u0447\u0438\u043B${p.female ? "\u0430" : ""} \u0436\u0435\u043B\u0430\u043D\u043D\u0443\u044E \u0434\u043E\u043B\u0436\u043D\u043E\u0441\u0442\u044C \xAB${postName(post)}\xBB \u2014 \u0431\u043B\u0430\u0433\u043E\u0434\u0430\u0440\u0435\u043D${p.female ? "\u043D\u0430" : ""}.`);
       } else lines.push(`${p.name} \u0442\u0435\u043F\u0435\u0440\u044C \xAB${postName(post)}\xBB.`);
       for (const o of w2.people) {
         if (o.id !== p.id && o.aspiration?.post === post) {
           addRel(w2, o.id, p.id, BALANCE.staff.bypassedRel);
+          o.know.aspiration = true;
           lines.push(`${o.name} \u0441\u0430\u043C${o.female ? "\u0430" : ""} \u043C\u0435\u0442\u0438\u043B${o.female ? "\u0430" : ""} \u043D\u0430 \u044D\u0442\u043E \u043C\u0435\u0441\u0442\u043E \u2014 \u043E\u0442\u043D\u043E\u0448\u0435\u043D\u0438\u044F \u0441 ${p.name} \u0445\u0443\u0436\u0435.`);
         }
       }
@@ -955,13 +1065,39 @@ details.bio ul { margin: 4px 0 0; padding-left: 18px; line-height: 1.4; }
     w2.head = id;
     if (id != null) w2.log.push({ season: w2.season, kind: "staff", title: "\u0413\u043B\u0430\u0432\u043D\u044B\u0439 \u043D\u0430 \u0432\u0440\u0435\u043C\u044F \u043E\u0442\u043B\u0443\u0447\u043A\u0438", lines: [`\u0417\u0430 \u0433\u043B\u0430\u0432\u043D\u043E\u0433\u043E \u2014 ${w2.people[id].name}.`] });
   }
+  function nextTalk(p) {
+    if (!p.know.traitAsked || p.gained.some((g) => !g.known)) return "\u0447\u0435\u0440\u0442\u044B";
+    if (!p.know.aspiration) return "\u0441\u0442\u0440\u0435\u043C\u043B\u0435\u043D\u0438\u0435";
+    return p.know.axes ? null : "\u0441\u043A\u043B\u043E\u043D\u043D\u043E\u0441\u0442\u0438";
+  }
   function talk(w2, id) {
-    if (w2.deedsLeft <= 0) return false;
     const p = w2.people[id];
+    const topic = nextTalk(p);
+    if (w2.deedsLeft <= 0 || !topic) return false;
     w2.deedsLeft--;
-    p.knowledge = Math.min(KNOWLEDGE_MAX, p.knowledge + 1);
+    p.know.talks++;
     p.loyalty = clamp(p.loyalty + BALANCE.staff.talkLoyalty, -REL_MAX, REL_MAX);
-    w2.log.push({ season: w2.season, kind: "info", title: "\u0420\u0430\u0437\u0433\u043E\u0432\u043E\u0440", lines: [`\u0421\u0435\u043D\u0435\u0448\u0430\u043B\u044C \u0433\u043E\u0432\u043E\u0440\u0438\u043B \u0441 ${p.name}. \u0422\u0435\u043F\u0435\u0440\u044C \u043E\u043D \u043B\u0443\u0447\u0448\u0435 \u043F\u043E\u043D\u0438\u043C\u0430\u0435\u0442 \u044D\u0442\u043E\u0433\u043E \u0447\u0435\u043B\u043E\u0432\u0435\u043A\u0430.`] });
+    const lines = [`\u0421\u0435\u043D\u0435\u0448\u0430\u043B\u044C \u0433\u043E\u0432\u043E\u0440\u0438\u043B \u0441 ${p.name}.`];
+    if (topic === "\u0447\u0435\u0440\u0442\u044B") {
+      if (!p.know.trait && !p.trait.hidden) {
+        p.know.trait = true;
+        lines.push(`\u041A\u043B\u044E\u0447\u0435\u0432\u0430\u044F \u0447\u0435\u0440\u0442\u0430: \xAB${p.trait.name}\xBB \u2014 ${lower(p.trait.desc)}.`);
+      } else if (!p.know.trait && !p.know.traitAsked) {
+        lines.push(`\u041E \u0433\u043B\u0430\u0432\u043D\u043E\u043C \u0432 \u0441\u0435\u0431\u0435 ${p.female ? "\u043E\u043D\u0430" : "\u043E\u043D"} \u043C\u043E\u043B\u0447\u0438\u0442: \u0442\u0430\u043A\u0443\u044E \u0447\u0435\u0440\u0442\u0443 \u0432\u044B\u0434\u0430\u0441\u0442 \u0442\u043E\u043B\u044C\u043A\u043E \u043F\u043E\u0441\u0442\u0443\u043F\u043E\u043A.`);
+      }
+      p.know.traitAsked = true;
+      for (const g of p.gained.filter((x) => !x.known)) {
+        g.known = true;
+        lines.push(`\u041D\u0430\u0436\u0438\u0442\u0430\u044F \u0447\u0435\u0440\u0442\u0430: \xAB${traitLabel(w2, g)}\xBB \u2014 ${lower(g.trait.desc)}.`);
+      }
+    } else if (topic === "\u0441\u0442\u0440\u0435\u043C\u043B\u0435\u043D\u0438\u0435") {
+      p.know.aspiration = true;
+      lines.push(`\u0421\u0442\u0440\u0435\u043C\u043B\u0435\u043D\u0438\u0435: ${p.aspiration ? p.aspiration.text : "\u043D\u0438\u0447\u0435\u0433\u043E \u043E\u0441\u043E\u0431\u0435\u043D\u043D\u043E\u0433\u043E \u043D\u0435 \u0445\u043E\u0447\u0435\u0442"}.`);
+    } else {
+      p.know.axes = true;
+      lines.push(`\u0421\u043A\u043B\u043E\u043D\u043D\u043E\u0441\u0442\u0438: ${AXES.map((x) => `${AXIS_NAMES[x]} \u2014 ${axisWord(p.star[x])}`).join(", ")}.`);
+    }
+    w2.log.push({ season: w2.season, kind: "info", title: "\u0420\u0430\u0437\u0433\u043E\u0432\u043E\u0440", lines });
     return true;
   }
   function giveOrder(w2, id, axis) {
@@ -978,7 +1114,7 @@ details.bio ul { margin: 4px 0 0; padding-left: 18px; line-height: 1.4; }
       const lead = opt.axes.reduce((b, a) => p.star[a] > p.star[b] ? a : b, opt.axes[0]);
       parts.push(`\u043F\u043E ${AXIS_DAT[lead]}`);
       if (p.order && opt.axes.includes(p.order)) {
-        const obey = Math.max(0, p.loyalty + BALANCE.decide.orderObeyBase + (p.trait.mods.obedience ?? 0) - (stale ? BALANCE.decide.orderStalePenalty : 0));
+        const obey = Math.max(0, p.loyalty + BALANCE.decide.orderObeyBase + mod(p, "obedience") - (stale ? BALANCE.decide.orderStalePenalty : 0));
         const bonus = obey * BALANCE.decide.orderWeight;
         if (bonus > BALANCE.decide.orderMinBonus) {
           base += bonus;
@@ -990,7 +1126,12 @@ details.bio ul { margin: 4px 0 0; padding-left: 18px; line-height: 1.4; }
         parts.push("\u0432 \u0441\u0432\u043E\u044E \u043F\u043E\u043B\u044C\u0437\u0443");
       }
       if (opt.risky && p.trait.id === "ostorozhny") base -= BALANCE.decide.cautiousRisk;
-      const noise = noisy ? w2.rng.gauss() * (BALANCE.decide.noise + (p.trait.mods.random ?? 0)) : 0;
+      const lean = activeTraits(p).reduce((sum, t) => sum + opt.axes.reduce((x, a) => x + (t.lean?.[a] ?? 0), 0) / opt.axes.length, 0);
+      if (lean) {
+        base += lean;
+        if (lean > 0) parts.push("\u043F\u043E \u043F\u0440\u0438\u0432\u044B\u0447\u043A\u0435");
+      }
+      const noise = noisy ? w2.rng.gauss() * Math.max(0, BALANCE.decide.noise + mod(p, "random")) : 0;
       return { opt, score: base + noise, base, why: parts.join(", ") };
     });
   }
@@ -1004,6 +1145,7 @@ details.bio ul { margin: 4px 0 0; padding-left: 18px; line-height: 1.4; }
     let c = p.exp >= BALANCE.exp.master ? BALANCE.exp.masterSkill : p.exp >= BALANCE.exp.settled ? BALANCE.exp.settledSkill : BALANCE.exp.novice;
     if (p.post && p.mark?.goodPost === p.post) c += BALANCE.exp.markGood;
     if (p.post && p.mark?.badPost === p.post) c += BALANCE.exp.markBad;
+    c += mod(p, "skill");
     return clamp(c, BALANCE.exp.skillMin, BALANCE.exp.skillMax);
   }
   function applyEffects(w2, opt, mult, doer, lines) {
@@ -1026,14 +1168,33 @@ details.bio ul { margin: 4px 0 0; padding-left: 18px; line-height: 1.4; }
     if (failed) lines.push(`\u0420\u0438\u0441\u043A\u043E\u0432\u0430\u043D\u043D\u043E\u0435 \u0434\u0435\u043B\u043E \u043F\u0440\u043E\u0432\u0430\u043B\u0438\u043B\u043E\u0441\u044C \u2014 \u043D\u0435 \u0445\u0432\u0430\u0442\u0438\u043B\u043E \u043E\u043F\u044B\u0442\u0430 (${doer ? expWord(doer) : "?"}).`);
     return out;
   }
-  function recordChoice(p, opt) {
+  function recordChoice(w2, p, opt, lines) {
     const top = topAxis(p.star);
     p.decisions++;
     if (opt.axes.includes(top)) p.matchedTop++;
+    p.recent.push({ season: w2.season, axes: [...opt.axes] });
     for (const a of opt.axes) {
       p.choices[a]++;
       p.star[a] = round1(clamp(p.star[a] + BALANCE.star.drift, 0, STAR_MAX));
+      const was = axisKnown(p, a);
+      p.know.seen[a]++;
+      if (!was && axisKnown(p, a)) lines.push(`\u{1F441} \u041D\u0430\u0441\u043C\u043E\u0442\u0440\u0435\u043B\u0438\u0441\u044C \u0432 \u0434\u0435\u043B\u0435: ${p.name}, ${AXIS_NAMES[a]} \u2014 ${axisWord(p.star[a])}.`);
     }
+  }
+  function reveal(p, deed, lines) {
+    if (p.know.trait || !p.trait.hidden || p.trait.revealedBy !== deed) return;
+    p.know.trait = true;
+    p.know.traitAsked = true;
+    lines.push(`\u{1F441} \u041F\u043E\u0441\u0442\u0443\u043F\u043E\u043A \u0432\u044B\u0434\u0430\u043B \u0447\u0435\u0440\u0442\u0443: ${p.name} \u2014 \xAB${p.trait.name}\xBB, ${lower(p.trait.desc)}.`);
+  }
+  function bypass(w2, win, lose, opt, lines) {
+    if (mod(lose, "sly", win) <= 0 || !w2.rng.chance(BALANCE.traits.bypassChance)) return void 0;
+    const f = lose.female;
+    lines.push(`\u041D\u043E ${lose.name} \u0442\u043E\u043B\u044C\u043A\u043E \u0434\u043B\u044F \u0432\u0438\u0434\u0430 \u0441\u043E\u0433\u043B\u0430\u0441\u0438\u043B${f ? "\u0430\u0441\u044C" : "\u0441\u044F"}, \u0430 \u0441\u0434\u0435\u043B\u0430\u043B${f ? "\u0430" : ""} \u043F\u043E-\u0441\u0432\u043E\u0435\u043C\u0443, \u0432 \u043E\u0431\u0445\u043E\u0434: \xAB${opt.text}\xBB.`);
+    reveal(lose, "bypass", lines);
+    addRel(w2, win.id, lose.id, BALANCE.traits.bypassRel);
+    recordChoice(w2, lose, opt, lines);
+    return applyEffects(w2, opt, BALANCE.traits.bypass, lose, lines);
   }
   function toneOf(eff) {
     const vals = Object.values(eff);
@@ -1053,7 +1214,7 @@ details.bio ul { margin: 4px 0 0; padding-left: 18px; line-height: 1.4; }
       const d = decide(w2, p, ev);
       lines.push(`${p.name} (${postName(p.post)}): \xAB${d.opt.text}\xBB \u2014 ${d.why}${d.surprise ? ", \u043D\u0435\u043E\u0436\u0438\u0434\u0430\u043D\u043D\u043E \u0434\u043B\u044F \u0441\u0435\u0431\u044F" : ""}.`);
       if (ev.posts.length === 2) lines.push(`\u0412\u0442\u043E\u0440\u0430\u044F \u0434\u043E\u043B\u0436\u043D\u043E\u0441\u0442\u044C \u043F\u0443\u0441\u0442\u0430 \u2014 ${p.name} \u0440\u0435\u0448\u0430\u043B${p.female ? "\u0430" : ""} \u0432 \u043E\u0434\u0438\u043D\u043E\u0447\u043A\u0443.`);
-      recordChoice(p, d.opt);
+      recordChoice(w2, p, d.opt, lines);
       effects = applyEffects(w2, d.opt, 1, p, lines);
     } else {
       effects = council(w2, ev, holders[0], holders[1], lines);
@@ -1072,8 +1233,8 @@ details.bio ul { margin: 4px 0 0; padding-left: 18px; line-height: 1.4; }
     if (da.opt.id === db.opt.id) {
       const mult = r >= BALANCE.rel.friendly ? BALANCE.council.synergy : 1;
       lines.push(mult > 1 ? `\u0421\u043E\u0448\u043B\u0438\u0441\u044C \u0441\u0440\u0430\u0437\u0443, \u0438 \u0440\u0430\u0437 \u043E\u043D\u0438 ${word}, \u0432\u044B\u0448\u043B\u043E \u043B\u0443\u0447\u0448\u0435 \u043E\u0431\u044B\u0447\u043D\u043E\u0433\u043E.` : `\u0421\u043E\u0448\u043B\u0438\u0441\u044C \u0432\u043E \u043C\u043D\u0435\u043D\u0438\u0438.`);
-      recordChoice(a, da.opt);
-      recordChoice(b, db.opt);
+      recordChoice(w2, a, da.opt, lines);
+      recordChoice(w2, b, db.opt, lines);
       addRel(w2, a.id, b.id, BALANCE.council.agreeRel);
       const doer = a.exp >= b.exp ? a : b;
       return applyEffects(w2, da.opt, mult, doer, lines);
@@ -1087,46 +1248,52 @@ details.bio ul { margin: 4px 0 0; padding-left: 18px; line-height: 1.4; }
         const [win2, lose2, opt] = sa >= sb ? [a, b, da.opt] : [b, a, db.opt];
         lines.push(`\u0421\u043F\u043E\u0440\u0438\u043B\u0438 (${word}). \u0420\u0430\u0441\u0441\u0443\u0434\u0438\u043B \u0433\u043B\u0430\u0432\u043D\u044B\u0439, ${head.name}: \u0434\u0435\u043B\u0430\u0442\u044C \u043A\u0430\u043A \u0445\u043E\u0447\u0435\u0442 ${win2.name}.`);
         addRel(w2, head.id, lose2.id, BALANCE.council.headJudgeRel);
-        recordChoice(win2, opt);
+        recordChoice(w2, win2, opt, lines);
         return applyEffects(w2, opt, 1, win2, lines);
       }
       lines.push(`\u0413\u043B\u0430\u0432\u043D\u043E\u0433\u043E, ${head.name}, \u043D\u0435 \u043F\u0440\u0438\u0437\u043D\u0430\u043B\u0438 \u2014 \u0443 \u043D\u0435\u0433\u043E \u0441 \u043A\u0435\u043C-\u0442\u043E \u0438\u0437 \u043D\u0438\u0445 \u043F\u043B\u043E\u0445\u0438\u0435 \u043E\u0442\u043D\u043E\u0448\u0435\u043D\u0438\u044F.`);
     }
-    const soft = (a.trait.mods.softness ?? 0) + (b.trait.mods.softness ?? 0);
-    const power = (p) => (w2.head === p.id ? BALANCE.council.powerHead : 0) + p.tenure / BALANCE.council.powerTenureDiv + p.star.derzost / BALANCE.council.powerDerzostDiv + w2.rng.range(0, BALANCE.council.powerRandom);
+    const soft = mod(a, "softness", b) + mod(b, "softness", a);
+    const power = (p) => (w2.head === p.id ? BALANCE.council.powerHead : 0) + p.tenure / BALANCE.council.powerTenureDiv + p.star.derzost / BALANCE.council.powerDerzostDiv + mod(p, "clout") + w2.rng.range(0, BALANCE.council.powerRandom);
     const [win, lose, wd] = power(a) >= power(b) ? [a, b, da] : [b, a, db];
     const ld = win === a ? db : da;
     if (r >= BALANCE.rel.friendly) {
       const both = scoreOptions(w2, a, ev, false).map((s, i) => ({ opt: s.opt, v: s.base + scoreOptions(w2, b, ev, false)[i].base }));
       const opt = both.reduce((x, y) => y.v > x.v ? y : x).opt;
       lines.push(`\u041E\u043D\u0438 ${word} \u2014 \u0434\u043E\u0433\u043E\u0432\u043E\u0440\u0438\u043B\u0438\u0441\u044C: \xAB${opt.text}\xBB.`);
-      recordChoice(a, opt);
-      recordChoice(b, opt);
+      recordChoice(w2, a, opt, lines);
+      recordChoice(w2, b, opt, lines);
       addRel(w2, a.id, b.id, BALANCE.council.dealRel);
       return applyEffects(w2, opt, 1, win, lines);
     }
     if (r > BALANCE.rel.rival) {
       if (w2.rng.chance(BALANCE.council.compromiseChance + soft * BALANCE.council.softness)) {
         lines.push(`\u041E\u043D\u0438 ${word} \u0434\u0440\u0443\u0433 \u0434\u0440\u0443\u0433\u0430 \u2014 \u0441\u0434\u0435\u043B\u0430\u043B\u0438 \u043D\u0430\u043F\u043E\u043B\u043E\u0432\u0438\u043D\u0443, \u043A\u0430\u043A \u0445\u043E\u0442\u0435\u043B ${win.name}, \u043D\u043E \u0432\u043F\u043E\u043B\u0441\u0438\u043B\u044B.`);
-        recordChoice(win, wd.opt);
+        recordChoice(w2, win, wd.opt, lines);
         return applyEffects(w2, wd.opt, BALANCE.council.compromise, win, lines);
       }
       lines.push(`\u041E\u043D\u0438 ${word} \u0434\u0440\u0443\u0433 \u0434\u0440\u0443\u0433\u0430. ${win.name} \u043F\u0440\u043E\u0434\u0430\u0432\u0438\u043B${win.female ? "\u0430" : ""} \u0441\u0432\u043E\u0451; ${lose.name} \u0437\u0430\u0442\u0430\u0438\u043B${lose.female ? "\u0430" : ""} \u043E\u0431\u0438\u0434\u0443.`);
       addRel(w2, a.id, b.id, BALANCE.council.pushRel);
-      recordChoice(win, wd.opt);
+      const around = bypass(w2, win, lose, ld.opt, lines);
+      if (around) return around;
+      recordChoice(w2, win, wd.opt, lines);
       return applyEffects(w2, wd.opt, 1, win, lines);
     }
     if (r > BALANCE.rel.enemy) {
       lines.push(`\u041E\u043D\u0438 \u0441\u043E\u043F\u0435\u0440\u043D\u0438\u043A\u0438. ${win.name} \u043D\u0430\u0441\u0442\u043E\u044F\u043B${win.female ? "\u0430" : ""} \u043D\u0430 \u0441\u0432\u043E\u0451\u043C, ${lose.name} \u043D\u0435 \u043F\u0440\u043E\u0441\u0442\u0438\u0442.`);
       addRel(w2, a.id, b.id, BALANCE.council.rivalRel);
-      recordChoice(win, wd.opt);
+      const around = bypass(w2, win, lose, ld.opt, lines);
+      if (around) return around;
+      recordChoice(w2, win, wd.opt, lines);
       if (lose.loyalty < BALANCE.council.complaintLoyalty || w2.rng.chance(BALANCE.council.complaintChance)) lines.push(`\u{1F4DC} \u0416\u0430\u043B\u043E\u0431\u0430: ${lose.name} \u0436\u0434\u0451\u0442 \u0421\u0435\u043D\u0435\u0448\u0430\u043B\u044F \u0441 \u0436\u0430\u043B\u043E\u0431\u043E\u0439 \u043D\u0430 ${win.name}.`);
       return applyEffects(w2, wd.opt, 1, win, lines);
     }
     if (w2.rng.chance(BALANCE.council.sabotageChance)) {
       lines.push(`\u041E\u043D\u0438 \u0432\u0440\u0430\u0433\u0438. ${win.name} \u0441\u0434\u0435\u043B\u0430\u043B${win.female ? "\u0430" : ""} \u043F\u043E-\u0441\u0432\u043E\u0435\u043C\u0443, \u0430 ${lose.name} \u043C\u0435\u0448\u0430\u043B${lose.female ? "\u0430" : ""} \u043D\u0430\u0437\u043B\u043E: \xAB${ld.opt.text}\xBB \u2014 \u0432\u043E\u0442 \u0447\u0435\u0433\u043E ${lose.female ? "\u043E\u043D\u0430" : "\u043E\u043D"} \u0445\u043E\u0442\u0435\u043B${lose.female ? "\u0430" : ""}. \u0421\u0430\u0431\u043E\u0442\u0430\u0436.`);
       addRel(w2, a.id, b.id, BALANCE.council.sabotageRel);
-      recordChoice(win, wd.opt);
+      reveal(lose, "sabotage", lines);
+      gainTrait(w2, win, "zlopamyatny_k", lines, lose.id);
+      recordChoice(w2, win, wd.opt, lines);
       const eff = applyEffects(w2, wd.opt, BALANCE.council.sabotage, win, lines);
       w2.resources.poryadok = round1(w2.resources.poryadok - BALANCE.council.sabotageOrder);
       eff.poryadok = round1((eff.poryadok ?? 0) - BALANCE.council.sabotageOrder);
@@ -1135,14 +1302,15 @@ details.bio ul { margin: 4px 0 0; padding-left: 18px; line-height: 1.4; }
     }
     lines.push(`\u041E\u043D\u0438 \u0432\u0440\u0430\u0433\u0438, \u043D\u043E ${lose.name} \u043D\u0430 \u044D\u0442\u043E\u0442 \u0440\u0430\u0437 \u0441\u043C\u043E\u043B\u0447\u0430\u043B${lose.female ? "\u0430" : ""}. ${win.name} \u0441\u0434\u0435\u043B\u0430\u043B${win.female ? "\u0430" : ""} \u043F\u043E-\u0441\u0432\u043E\u0435\u043C\u0443.`);
     addRel(w2, a.id, b.id, BALANCE.council.silentRel);
-    recordChoice(win, wd.opt);
+    recordChoice(w2, win, wd.opt, lines);
     return applyEffects(w2, wd.opt, 1, win, lines);
   }
-  function forecast(w2, p) {
-    if (p.knowledge === 0) return "\u043F\u043E\u043A\u0430 \u043D\u0435\u043F\u043E\u043D\u044F\u0442\u043D\u043E, \u043A\u0430\u043A \u043F\u043E\u0441\u0442\u0443\u043F\u0438\u0442";
-    const top = topAxis(p.star);
-    if (p.knowledge === 1) return `\u043A\u0430\u0436\u0435\u0442\u0441\u044F, \u0442\u044F\u043D\u0435\u0442\u0441\u044F \u043A ${AXIS_DAT[top]}`;
-    return `\u0441\u043A\u043E\u0440\u0435\u0435 \u0432\u0441\u0435\u0433\u043E, \u0431\u0443\u0434\u0435\u0442 \u0434\u0435\u0439\u0441\u0442\u0432\u043E\u0432\u0430\u0442\u044C \u043F\u043E ${AXIS_DAT[top]}`;
+  function forecast(p) {
+    const known = AXES.filter((a) => axisKnown(p, a));
+    if (!known.length) return "\u043F\u043E\u043A\u0430 \u043D\u0435\u043F\u043E\u043D\u044F\u0442\u043D\u043E, \u043A\u0430\u043A \u043F\u043E\u0441\u0442\u0443\u043F\u0438\u0442";
+    const best = known.reduce((x, a) => p.star[a] > p.star[x] ? a : x, known[0]);
+    if (p.star[best] < BALANCE.know.strong) return "\u0441\u0438\u043B\u044C\u043D\u044B\u0445 \u0441\u043A\u043B\u043E\u043D\u043D\u043E\u0441\u0442\u0435\u0439 \u043F\u043E\u043A\u0430 \u043D\u0435 \u0432\u0438\u0434\u043D\u043E";
+    return `\u0441\u043A\u043E\u0440\u0435\u0435 \u0432\u0441\u0435\u0433\u043E, \u0431\u0443\u0434\u0435\u0442 \u0434\u0435\u0439\u0441\u0442\u0432\u043E\u0432\u0430\u0442\u044C \u043F\u043E ${AXIS_DAT[best]}`;
   }
   function runSeason(w2) {
     const pool = EVENTS.filter((e) => !e.adventurers || w2.labOpen);
@@ -1160,17 +1328,17 @@ details.bio ul { margin: 4px 0 0; padding-left: 18px; line-height: 1.4; }
         p.tenure++;
         p.exp = Math.min(p.exp + 1, BALANCE.exp.master);
         if (p.tenure === BALANCE.exp.settled) lines.push(`${p.name} \u043E\u0441\u0432\u043E\u0438\u043B${p.female ? "\u0430\u0441\u044C" : "\u0441\u044F"} \u043D\u0430 \u0434\u043E\u043B\u0436\u043D\u043E\u0441\u0442\u0438.`);
-        if (p.tenure === BALANCE.exp.master) lines.push(`${p.name} \u2014 \u0442\u0435\u043F\u0435\u0440\u044C \u043C\u0430\u0441\u0442\u0435\u0440 \u0441\u0432\u043E\u0435\u0433\u043E \u0434\u0435\u043B\u0430.`);
         if (p.tenure === BALANCE.exp.staleFrom) lines.push(`${p.name} \u0437\u0430\u0441\u0438\u0434\u0435\u043B${p.female ? "\u0430\u0441\u044C" : "\u0441\u044F"} \u043D\u0430 \u043C\u0435\u0441\u0442\u0435: \u043E\u0431\u0440\u043E\u0441 \u0441\u0432\u043E\u0438\u043C\u0438 \u043B\u044E\u0434\u044C\u043C\u0438 \u0438 \u0434\u0435\u043B\u0430\u0435\u0442 \u0432\u0441\u0451 \u0431\u043E\u043B\u044C\u0448\u0435 \u043F\u043E-\u0441\u0432\u043E\u0435\u043C\u0443.`);
         if (isStale(p) && p.star.vygoda >= BALANCE.decide.staleGreedFrom && w2.rng.chance(BALANCE.season.theftChance)) {
           w2.resources.kazna = round1(w2.resources.kazna - BALANCE.season.theft);
           lines.push(`\u0418\u0437 \u043A\u0430\u0437\u043D\u044B \u0447\u0442\u043E-\u0442\u043E \u0443\u0442\u0435\u043A\u0430\u0435\u0442 \u2014 \u0441\u043B\u0435\u0434\u044B \u0432\u0435\u0434\u0443\u0442 \u043A \u043B\u044E\u0434\u044F\u043C ${p.name}.`);
         }
       }
+      lifeTraits(w2, p, lines);
       const asp = p.aspiration?.post;
       if (asp) {
         if (p.post === asp) p.loyalty += BALANCE.loyalty.desiredPost;
-        else if (p.post) p.loyalty += BALANCE.loyalty.wrongPost * (1 + (p.trait.mods.ambition ?? 0) * BALANCE.loyalty.ambition) * (isStale(p) ? BALANCE.loyalty.staleWrong : 1);
+        else if (p.post) p.loyalty += BALANCE.loyalty.wrongPost * (1 + mod(p, "ambition") * BALANCE.loyalty.ambition) * (isStale(p) ? BALANCE.loyalty.staleWrong : 1);
         else if (w2.posts[asp] != null) {
           p.loyalty += BALANCE.loyalty.blocked;
           const h = holder(w2, asp);
@@ -1184,6 +1352,69 @@ details.bio ul { margin: 4px 0 0; padding-left: 18px; line-height: 1.4; }
   }
   function consistency(p) {
     return p.decisions ? Math.round(p.matchedTop / p.decisions * 100) : 0;
+  }
+  function axisWord(v) {
+    return v >= BALANCE.know.strong ? "\u0441\u0438\u043B\u044C\u043D\u043E" : v >= BALANCE.know.notable ? "\u0437\u0430\u043C\u0435\u0442\u043D\u043E" : "\u0441\u043B\u0430\u0431\u043E";
+  }
+  function axisKnown(p, a) {
+    return p.know.axes || p.know.seen[a] >= BALANCE.know.seenToKnow;
+  }
+  function traitLabel(w2, g) {
+    return g.trait.targeted && g.target != null ? `${g.trait.name} ${dative(w2.people[g.target].name)}` : g.trait.name;
+  }
+  function rumorCheck(p) {
+    const r = p.rumor;
+    if (!r) return "";
+    if (r.trait) return !p.know.trait ? "" : r.trait === p.trait.id ? "\u043F\u043E\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u043B\u0430\u0441\u044C" : "\u043D\u0435 \u043F\u043E\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u043B\u0430\u0441\u044C";
+    if (!r.axis || !axisKnown(p, r.axis)) return "";
+    return p.star[r.axis] >= BALANCE.know.notable ? "\u043F\u043E\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u043B\u0430\u0441\u044C" : "\u043D\u0435 \u043F\u043E\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u043B\u0430\u0441\u044C";
+  }
+  function fitWord(p, post) {
+    const def = POSTS.find((x) => x.id === post);
+    const known = def.axes.filter((a) => axisKnown(p, a));
+    const good = p.mark?.goodPost === post, bad = p.mark?.badPost === post;
+    if (!known.length && !good && !bad) return "\u043D\u0435 \u0437\u043D\u0430\u044E";
+    let f = known.length ? known.reduce((s, a) => s + p.star[a], 0) / known.length : BALANCE.star.center;
+    if (good) f += BALANCE.exp.fitMarkGood;
+    if (bad) f -= BALANCE.exp.fitMarkBad;
+    if (p.know.aspiration && p.aspiration?.post === post) f += BALANCE.exp.fitAspiration;
+    return f >= BALANCE.know.fitGood ? "\u043F\u043E\u0434\u0445\u043E\u0434\u0438\u0442" : "\u0441\u043E\u043C\u043D\u0438\u0442\u0435\u043B\u044C\u043D\u043E";
+  }
+  function headOpinion(w2, p) {
+    const head = w2.head != null ? w2.people[w2.head] : void 0;
+    if (!head || head.id === p.id) return void 0;
+    const bias = round1(getRel(w2, head.id, p.id) * BALANCE.know.opinionBias);
+    const best = POSTS.reduce((x, d) => fitness(p, d.id) > fitness(p, x.id) ? d : x, POSTS[0]);
+    const text = fitness(p, best.id) + bias >= BALANCE.know.fitGood ? `\u0433\u043E\u0434\u0438\u0442\u0441\u044F \u0432 ${best.into}` : "\u043D\u0438 \u043D\u0430 \u043E\u0434\u043D\u0443 \u0434\u043E\u043B\u0436\u043D\u043E\u0441\u0442\u044C \u043D\u0435 \u0433\u043E\u0434\u0438\u0442\u0441\u044F";
+    return { head, text, bias };
+  }
+  function gainTrait(w2, p, traitId, lines, target) {
+    const trait = LIFE_TRAITS.find((t) => t.id === traitId);
+    if (!trait) throw new Error(`\u041D\u0435\u0442 \u043F\u0440\u0438\u043E\u0431\u0440\u0435\u0442\u0430\u0435\u043C\u043E\u0439 \u0447\u0435\u0440\u0442\u044B ${traitId}`);
+    if (p.gained.length >= BALANCE.traits.maxGained) return false;
+    if (p.gained.some((g) => g.trait.id === traitId && g.target === target)) return false;
+    p.gained.push({ trait, target, season: w2.season, known: true });
+    addStar(p.star, trait.star);
+    for (const a of AXES) p.star[a] = round1(clamp(p.star[a], 0, STAR_MAX));
+    const label = traitLabel(w2, { trait, target });
+    lines.push(`\u2726 \u041D\u043E\u0432\u0430\u044F \u0447\u0435\u0440\u0442\u0430: ${p.name} \u2014 \xAB${label}\xBB. ${trait.desc}.`);
+    p.bio.push(`\u041D\u0430 \u0441\u043B\u0443\u0436\u0431\u0435 \u0443 \u0421\u0435\u043D\u0435\u0448\u0430\u043B\u044F (\u0441\u0435\u0437\u043E\u043D ${w2.season}) \u043D\u0430\u0436\u0438\u043B${p.female ? "\u0430" : ""} \u0447\u0435\u0440\u0442\u0443 \xAB${label}\xBB: ${lower(trait.desc)}.`);
+    return true;
+  }
+  function lifeTraits(w2, p, lines) {
+    p.recent = p.recent.filter((r) => r.season > w2.season - BALANCE.traits.habitSeasons);
+    const n = p.recent.length;
+    if (n >= BALANCE.traits.habitMinDecisions) {
+      for (const t of LIFE_TRAITS) {
+        if (t.source !== "habit" || !t.axis) continue;
+        if (p.recent.filter((r) => r.axes.includes(t.axis)).length / n >= BALANCE.traits.habitShare) gainTrait(w2, p, t.id, lines);
+      }
+    }
+    if (!p.post) return;
+    if (p.exp >= BALANCE.exp.master) gainTrait(w2, p, "master_dela", lines);
+    if (isStale(p)) gainTrait(w2, p, "obros_svyazyami", lines);
+    const asp = p.aspiration?.post;
+    if (asp && asp !== p.post && p.tenure >= BALANCE.traits.tiredFrom) gainTrait(w2, p, "ustal_ot_sluzhby", lines);
   }
 
   // src/ui/main.ts
@@ -1207,24 +1438,48 @@ details.bio ul { margin: 4px 0 0; padding-left: 18px; line-height: 1.4; }
   function seasonLabel(n) {
     return `${SEASONS[(n - 1) % 4]}, \u0433\u043E\u0434 ${Math.floor((n - 1) / 4) + 1}`;
   }
+  var LEVEL = { "\u0441\u043B\u0430\u0431\u043E": 3, "\u0437\u0430\u043C\u0435\u0442\u043D\u043E": 6, "\u0441\u0438\u043B\u044C\u043D\u043E": 9 };
   function starSvg(p) {
     const cx = 60, cy = 60, R = 44;
     const pt = (i, v) => {
       const ang = (-90 + i * 72) * (Math.PI / 180);
       return [cx + Math.cos(ang) * R * (v / 10), cy + Math.sin(ang) * R * (v / 10)];
     };
-    const poly = (s) => AXES.map((a, i) => pt(i, s[a]).map((x) => x.toFixed(1)).join(",")).join(" ");
-    const grid = [2.5, 5, 7.5, 10].map((g) => `<polygon points="${AXES.map((_, i) => pt(i, g).join(",")).join(" ")}" fill="none" stroke="#e2d8c4" stroke-width="1"/>`).join("");
+    const xy = (i, v) => pt(i, v).map((x) => x.toFixed(1)).join(",");
+    const poly = (s) => AXES.map((a, i) => xy(i, s[a])).join(" ");
+    const grid = [2.5, 5, 7.5, 10].map((g) => `<polygon class="grid" points="${AXES.map((_, i) => pt(i, g).join(",")).join(" ")}" fill="none" stroke="#e2d8c4" stroke-width="1"/>`).join("");
     const spokes = AXES.map((_, i) => `<line x1="${cx}" y1="${cy}" x2="${pt(i, 10)[0]}" y2="${pt(i, 10)[1]}" stroke="#e2d8c4"/>`).join("");
     const labels = AXES.map((a, i) => {
       const [x, y] = pt(i, 12.4);
-      return `<text x="${x}" y="${y + 3}" text-anchor="middle" font-size="9" fill="${AXIS_COLOR[a]}">${AXIS_NAMES[a].slice(0, 3)}</text>`;
+      const text = designer || axisKnown(p, a) ? AXIS_NAMES[a].slice(0, 3) : `${AXIS_NAMES[a].slice(0, 3)}?`;
+      return `<text x="${x}" y="${y + 3}" text-anchor="middle" font-size="9" fill="${AXIS_COLOR[a]}">${text}</text>`;
     }).join("");
-    const blur = designer ? 0 : (3 - p.knowledge) * 2.2;
-    const filt = blur ? `<defs><filter id="b${p.id}" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="${blur}"/></filter></defs>` : "";
-    const shape = `<polygon points="${poly(p.star)}" fill="rgba(124,58,29,.22)" stroke="var(--accent)" stroke-width="1.6" ${blur ? `filter="url(#b${p.id})"` : ""}/>`;
-    const start2 = designer ? `<polygon points="${poly(p.startStar)}" fill="none" stroke="#8a7a5c" stroke-dasharray="3 2" stroke-width="1"/>` : "";
-    return `<svg viewBox="0 0 120 120">${filt}${grid}${spokes}${start2}${shape}${labels}</svg>`;
+    let shape;
+    if (designer) {
+      shape = `<polygon class="start" points="${poly(p.startStar)}" fill="none" stroke="#8a7a5c" stroke-dasharray="3 2" stroke-width="1"/><polygon class="true" points="${poly(p.star)}" fill="rgba(124,58,29,.22)" stroke="var(--accent)" stroke-width="1.6"/>`;
+    } else {
+      const known = AXES.map((a, i) => ({ a, i, v: LEVEL[axisWord(p.star[a])] })).filter((k2) => axisKnown(p, k2.a));
+      const rays = known.map((k2) => {
+        const [x, y] = pt(k2.i, k2.v);
+        const line = `<line class="ray" x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" stroke="${AXIS_COLOR[k2.a]}" stroke-width="3" stroke-linecap="round"/>`;
+        return `${line}<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3" fill="${AXIS_COLOR[k2.a]}"/>`;
+      }).join("");
+      const whole = known.length === AXES.length ? `<polygon class="known" points="${known.map((k2) => xy(k2.i, k2.v)).join(" ")}" fill="rgba(124,58,29,.14)" stroke="var(--accent)" stroke-width="1"/>` : "";
+      shape = whole + rays;
+    }
+    return `<svg viewBox="0 0 120 120">${grid}${spokes}${shape}${labels}</svg>`;
+  }
+  function axisRows(p) {
+    return AXES.map((a) => {
+      const known = axisKnown(p, a);
+      const word = known ? axisWord(p.star[a]) : "?";
+      const seen = p.know.seen[a] ? `\u0432\u0438\u0434\u0435\u043B\u0438: ${p.know.seen[a]}` : "";
+      const real = designer ? ` <small>${p.star[a].toFixed(1)}</small>` : "";
+      return `<div class="axis-row" data-axis="${a}" data-known="${known ? 1 : 0}">
+      <span class="axis-name" style="color:${AXIS_COLOR[a]}">${AXIS_NAMES[a]}</span>
+      <span class="lvl ${known ? "" : "unknown"}">${word}${real}</span><span class="seen">${seen}</span>
+    </div>`;
+    }).join("");
   }
   function renderCouncil() {
     const html = POSTS.map((def) => {
@@ -1233,8 +1488,9 @@ details.bio ul { margin: 4px 0 0; padding-left: 18px; line-height: 1.4; }
         w.people.map((p) => {
           const sel = h?.id === p.id ? "selected" : "";
           const marks = [];
-          if (p.aspiration?.post === def.id) marks.push("\u0445\u043E\u0447\u0435\u0442 \u0441\u044E\u0434\u0430");
+          if (p.aspiration?.post === def.id && (p.know.aspiration || designer)) marks.push("\u0445\u043E\u0447\u0435\u0442 \u0441\u044E\u0434\u0430");
           if (p.post && p.post !== def.id) marks.push(`\u0441\u0435\u0439\u0447\u0430\u0441 ${postName(p.post).toLowerCase()}`);
+          marks.push(fitWord(p, def.id));
           if (designer) marks.push(`\u0433\u043E\u0434\u043D. ${fitness(p, def.id).toFixed(1)}`);
           if (!sel) {
             const c = assignCost(w, p, def.id).cost;
@@ -1250,7 +1506,7 @@ details.bio ul { margin: 4px 0 0; padding-left: 18px; line-height: 1.4; }
         if (w.head === h.id) badges.push(`<span class="badge head">\u0433\u043B\u0430\u0432\u043D\u044B\u0439</span>`);
       }
       const headBtn = h && w.head !== h.id ? `<button data-head="${h.id}" style="padding:2px 8px;font-size:12px">\u0441\u0434\u0435\u043B\u0430\u0442\u044C \u0433\u043B\u0430\u0432\u043D\u044B\u043C</button>` : "";
-      const fc = h ? `<div class="forecast">${esc(h.name)}: ${forecast(w, h)}${designer ? ` \xB7 \u0432\u0435\u0434\u0443\u0449\u0430\u044F \u043E\u0441\u044C: ${AXIS_NAMES[topAxis(h.star)]}` : ""}</div>` : "";
+      const fc = h ? `<div class="forecast">${esc(h.name)}: ${forecast(h)}${designer ? ` \xB7 \u0432\u0435\u0434\u0443\u0449\u0430\u044F \u043E\u0441\u044C: ${AXIS_NAMES[topAxis(h.star)]}` : ""}</div>` : "";
       return `<div class="post">
       <div class="post-head"><span class="post-name">${def.name}</span><span class="post-sphere">${def.sphere}</span></div>
       <div class="post-row"><select data-post="${def.id}">${opts}</select>${headBtn}</div>
@@ -1304,35 +1560,59 @@ details.bio ul { margin: 4px 0 0; padding-left: 18px; line-height: 1.4; }
     const rows = Object.keys(w.factions).map((f) => `<span>${FACTION_NAMES[f]}</span>${num(w.factions[f])}`).concat(Object.keys(w.resources).map((r) => `<span><i>${RESOURCE_NAMES[r]}</i></span>${num(w.resources[r])}`));
     $("world").innerHTML = `<div class="kv">${rows.join("")}</div><p class="hint" style="margin-top:8px">\u041D\u0430\u043A\u043E\u043F\u043B\u0435\u043D\u043D\u044B\u0435 \u0438\u0437\u043C\u0435\u043D\u0435\u043D\u0438\u044F \u0441 \u043D\u0430\u0447\u0430\u043B\u0430 \u043F\u0430\u0440\u0442\u0438\u0438: \u043D\u0430\u0441\u043A\u043E\u043B\u044C\u043A\u043E \u0441\u043E\u0432\u0435\u0442 \u0443\u0433\u043E\u0434\u0438\u043B \u043A\u0430\u0436\u0434\u043E\u0439 \u0441\u0442\u043E\u0440\u043E\u043D\u0435.</p>`;
   }
+  function traitTags(p) {
+    const tags = [];
+    if (p.know.trait || designer) {
+      const secret = !p.know.trait ? " secret" : "";
+      tags.push(`<span class="tag trait key${secret}" title="${esc(p.trait.desc)}">${p.trait.name}${p.trait.hidden && designer ? " (\u0441\u043A\u0440\u044B\u0442\u0430\u044F)" : ""}</span>`);
+    } else {
+      tags.push(`<span class="tag trait key unknown">${p.know.traitAsked ? "\u0447\u0435\u0440\u0442\u0430 \u0441\u043A\u0440\u044B\u0442\u0430: \u0432\u044B\u0434\u0430\u0441\u0442 \u043F\u043E\u0441\u0442\u0443\u043F\u043E\u043A" : "\u0447\u0435\u0440\u0442\u0430 \u043D\u0435\u0438\u0437\u0432\u0435\u0441\u0442\u043D\u0430"}</span>`);
+    }
+    for (const g of p.gained) {
+      if (!g.known && !designer) continue;
+      tags.push(`<span class="tag trait gained${g.known ? "" : " secret"}" title="${esc(g.trait.desc)}">${esc(traitLabel(w, g))}</span>`);
+    }
+    if (p.mark) tags.push(`<span class="tag mark" title="${esc(p.mark.desc)}">\u2736 ${p.mark.name}</span>`);
+    tags.push(p.aspiration && (p.know.aspiration || designer) ? `<span class="tag asp">${esc(p.aspiration.text)}</span>` : `<span class="tag asp unknown">\u0441\u0442\u0440\u0435\u043C\u043B\u0435\u043D\u0438\u0435 \u043D\u0435\u0438\u0437\u0432\u0435\u0441\u0442\u043D\u043E</span>`);
+    return tags.join("");
+  }
+  function rumorLine(p) {
+    if (!p.rumor) return "";
+    const check = rumorCheck(p);
+    const truth = designer ? ` <small>${p.rumor.wrong ? "\u043C\u043E\u043B\u0432\u0430 \u043D\u0435\u0432\u0435\u0440\u043D\u0430\u044F" : "\u043C\u043E\u043B\u0432\u0430 \u0432\u0435\u0440\u043D\u0430\u044F"}</small>` : "";
+    return `<div class="rumor">${esc(p.rumor.text)}${check ? ` <span class="check">\u041C\u043E\u043B\u0432\u0430 ${check}.</span>` : ""}${truth}</div>`;
+  }
+  function opinionLine(p) {
+    const o = headOpinion(w, p);
+    if (!o) return "";
+    const bias = designer ? ` <small>\u043F\u0440\u0438\u0441\u0442\u0440\u0430\u0441\u0442\u0438\u0435 ${o.bias > 0 ? "+" : ""}${o.bias.toFixed(1)}</small>` : "";
+    const title = "\u041C\u043D\u0435\u043D\u0438\u0435 \u0433\u043B\u0430\u0432\u043D\u043E\u0433\u043E \u2014 \u043F\u043E\u0434\u0441\u043A\u0430\u0437\u043A\u0430 \u0441 \u043F\u0440\u0438\u0441\u0442\u0440\u0430\u0441\u0442\u0438\u0435\u043C: \u0434\u0440\u0443\u0433\u0430 \u043F\u043E\u0445\u0432\u0430\u043B\u0438\u0442, \u0441\u043E\u043F\u0435\u0440\u043D\u0438\u043A\u0430 \u043E\u0447\u0435\u0440\u043D\u0438\u0442";
+    return `<div class="opinion" title="${title}">\u0413\u043B\u0430\u0432\u043D\u044B\u0439, ${esc(o.head.name)}: \xAB${o.text}\xBB.${bias}</div>`;
+  }
   function renderPeople() {
     $("people").innerHTML = w.people.map((p) => {
-      const totalChoices = AXES.reduce((s, a) => s + p.choices[a], 0) || 1;
-      const bars = AXES.map((a) => {
-        const fill = `<div class="fill" style="width:${p.choices[a] / totalChoices * 100}%;background:${AXIS_COLOR[a]}"></div>`;
-        return `<div class="bar"><span>${AXIS_NAMES[a]}</span><div class="track">${fill}</div><span>${p.choices[a]}</span></div>`;
-      }).join("");
       const orderSel = `<select data-order="${p.id}" title="\u041D\u0430\u043A\u0430\u0437 (\u0432\u043E 2-\u043C \u0430\u043A\u0442\u0435, \u0441\u0442\u043E\u0438\u0442 1 \u0430\u0432\u0442\u043E\u0440\u0438\u0442\u0435\u0442\u0430)"><option value="">\u043D\u0430\u043A\u0430\u0437: \u043D\u0435\u0442</option>${AXES.map((a) => `<option value="${a}" ${p.order === a ? "selected" : ""}>\u043D\u0430\u043A\u0430\u0437: ${AXIS_NAMES[a]}</option>`).join("")}</select>`;
-      const knowWord = ["\u043D\u0435 \u0437\u043D\u0430\u0435\u0442", "\u043D\u0435\u043C\u043D\u043E\u0433\u043E \u0437\u043D\u0430\u0435\u0442", "\u0437\u043D\u0430\u0435\u0442", "\u0437\u043D\u0430\u0435\u0442 \u0445\u043E\u0440\u043E\u0448\u043E"][p.knowledge];
-      return `<div class="card ${p.post ? "on-post" : ""}">
+      const topic = nextTalk(p);
+      const talkBtn = `<button data-talk="${p.id}" ${w.deedsLeft <= 0 || !topic ? "disabled" : ""}>${topic ? `\u041F\u043E\u0433\u043E\u0432\u043E\u0440\u0438\u0442\u044C: ${topic}` : "\u0412\u0441\u0451 \u0440\u0430\u0441\u0441\u043A\u0430\u0437\u0430\u043B"}</button>`;
+      const match = designer && p.decisions ? ` \xB7 \u043F\u043E \u0432\u0435\u0434\u0443\u0449\u0435\u0439 \u043E\u0441\u0438 (${AXIS_NAMES[topAxis(p.star)]}): <b>${consistency(p)}%</b>` : "";
+      return `<div class="card ${p.post ? "on-post" : ""}" data-id="${p.id}">
       <div class="card-head">
         <div><div class="card-name">${esc(p.name)}</div><div class="card-meta">${p.age} \u043B\u0435\u0442 \xB7 ${p.post ? postName(p.post) : "\u0431\u0435\u0437 \u0434\u043E\u043B\u0436\u043D\u043E\u0441\u0442\u0438"}</div></div>
-        <div class="card-meta" style="text-align:right">${loyaltyWord(p.loyalty)}${designer ? ` (${p.loyalty.toFixed(1)})` : ""}<br>\u0421\u0435\u043D\u0435\u0448\u0430\u043B\u044C ${knowWord}</div>
+        <div class="card-meta" style="text-align:right">${loyaltyWord(p.loyalty)}${designer ? ` (${p.loyalty.toFixed(1)})` : ""}<br>\u0440\u0430\u0437\u0433\u043E\u0432\u043E\u0440\u043E\u0432: ${p.know.talks}</div>
       </div>
-      <div class="tags">
-        <span class="tag trait" title="${esc(p.trait.desc)}">${p.trait.name}</span>
-        ${p.mark ? `<span class="tag mark" title="${esc(p.mark.desc)}">\u2736 ${p.mark.name}</span>` : ""}
-        ${p.aspiration && (p.knowledge >= 1 || designer) ? `<span class="tag asp">${esc(p.aspiration.text)}</span>` : `<span class="tag asp" style="opacity:.5">\u0441\u0442\u0440\u0435\u043C\u043B\u0435\u043D\u0438\u0435 \u043D\u0435\u0438\u0437\u0432\u0435\u0441\u0442\u043D\u043E</span>`}
-      </div>
+      <div class="tags">${traitTags(p)}</div>
+      ${rumorLine(p)}
       <div class="card-body">
         <div class="star">${starSvg(p)}</div>
         <div class="stats">
-          <div>\u0420\u0435\u0448\u0435\u043D\u0438\u0439: <b>${p.decisions}</b>${p.decisions ? ` \xB7 \u043F\u043E \u0432\u0435\u0434\u0443\u0449\u0435\u0439 \u043E\u0441\u0438: <b>${consistency(p)}%</b>` : ""}</div>
-          <div class="bars">${bars}</div>
+          <div class="axes">${axisRows(p)}</div>
+          <div class="decisions">\u0420\u0435\u0448\u0435\u043D\u0438\u0439: <b>${p.decisions}</b>${match}</div>
         </div>
       </div>
+      ${opinionLine(p)}
       <details class="bio"><summary>\u0411\u0438\u043E\u0433\u0440\u0430\u0444\u0438\u044F</summary><ul>${p.bio.map((b) => `<li>${esc(b)}</li>`).join("")}</ul></details>
       <div class="card-actions">
-        <button data-talk="${p.id}" ${w.deedsLeft <= 0 || p.knowledge >= 3 ? "disabled" : ""}>\u041F\u043E\u0433\u043E\u0432\u043E\u0440\u0438\u0442\u044C</button>
+        ${talkBtn}
         ${orderSel}
       </div>
     </div>`;
