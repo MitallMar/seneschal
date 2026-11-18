@@ -54,6 +54,10 @@ export interface Person {
   matchedTop: number;       // сколько раз выбор совпал с ведущей осью
 }
 
+// Чем кончилось событие: никого не было, решил один, сошлись, рассудил главный, договорились, компромисс, продавил,
+// соперник настоял, саботаж, враг смолчал, по приказу Сенешаля. bypass — проигравший сделал по-своему в обход.
+export type Outcome = "empty" | "alone" | "agree" | "judge" | "deal" | "compromise" | "push" | "rival" | "sabotage" | "silent" | "ordered";
+
 export interface LogEntry {
   season: number;
   kind: "event" | "season" | "staff" | "info";
@@ -62,6 +66,8 @@ export interface LogEntry {
   effects?: Partial<Record<Effect, number>>;
   tone?: "good" | "bad" | "mixed" | "neutral";
   weights?: string[];       // из чего сложился выбор: веса вариантов у каждого, кто решал («Взгляд дизайнера»)
+  outcome?: Outcome;        // чем кончилось дело в совете: по нему считают отчёты ботов
+  bypass?: boolean;         // проигравший спор сделал по-своему в обход
 }
 
 // Дело на столе Сенешаля: событие, которое придёт в этом сезоне. order — приказ: какой вариант исполнить.
@@ -510,6 +516,8 @@ function scoreOptions(w: World, p: Person, ev: GameEvent, noisy = true, mine = f
 
 // Веса вариантов последнего события: копятся в decide, runEvent забирает их в запись летописи.
 let trace: string[] = [];
+let outcome: Outcome = "alone";
+let bypassed = false;
 
 function decide(w: World, p: Person, ev: GameEvent): Scored & { surprise: boolean } {
   const scored = scoreOptions(w, p, ev, true, true);
@@ -594,6 +602,7 @@ function reveal(w: World, p: Person, deed: Deed, lines: string[]) {
 function bypass(w: World, ev: GameEvent, win: Person, lose: Person, opt: EventOption, lines: string[]): Partial<Record<Effect, number>> | undefined {
   if (mod(lose, "sly", win) <= 0 || !w.rng.chance(B.traits.bypassChance)) return undefined;
   const f = lose.female;
+  bypassed = true;
   lines.push(`Но ${lose.name} только для вида согласил${f ? "ась" : "ся"}, а сделал${f ? "а" : ""} по-своему, в обход: «${opt.text}».`);
   reveal(w, lose, "bypass", lines);
   addRel(w, win.id, lose.id, B.traits.bypassRel);
@@ -612,7 +621,8 @@ export function runEvent(w: World, ev: GameEvent): LogEntry {
   const holders = ev.posts.map((post) => holder(w, post)).filter((x): x is Person => !!x);
   const lines: string[] = [ev.text];
   let effects: Partial<Record<Effect, number>> = {};
-  trace = [];
+  trace = []; bypassed = false;
+  outcome = holders.length === 0 ? "empty" : "alone";
 
   if (holders.length === 0) {
     lines.push("Должности пусты — делом никто не занялся.");
@@ -629,7 +639,7 @@ export function runEvent(w: World, ev: GameEvent): LogEntry {
     effects = council(w, ev, holders[0], holders[1], lines);
   }
   const title = `${ev.title}${ev.adventurers ? " ⚔" : ""}`;
-  const entry: LogEntry = { season: w.season, kind: "event", title, lines, effects, tone: toneOf(effects), weights: trace };
+  const entry: LogEntry = { season: w.season, kind: "event", title, lines, effects, tone: toneOf(effects), weights: trace, outcome, ...(bypassed ? { bypass: true } : {}) };
   w.log.push(entry);
   return entry;
 }
@@ -643,6 +653,7 @@ function council(w: World, ev: GameEvent, a: Person, b: Person, lines: string[])
 
   if (da.opt.id === db.opt.id) {
     const mult = r >= B.rel.friendly ? B.council.synergy : 1;
+    outcome = "agree";
     lines.push(mult > 1 ? `Сошлись сразу, и раз они ${word}, вышло лучше обычного.` : `Сошлись во мнении.`);
     recordChoice(w, a, da.opt, lines); recordChoice(w, b, db.opt, lines);
     addRel(w, a.id, b.id, B.council.agreeRel);
@@ -658,6 +669,7 @@ function council(w: World, ev: GameEvent, a: Person, b: Person, lines: string[])
       const sa = scoreOptions(w, head, ev, false).find((s) => s.opt.id === da.opt.id)!.base;
       const sb = scoreOptions(w, head, ev, false).find((s) => s.opt.id === db.opt.id)!.base;
       const [win, lose, opt] = sa >= sb ? [a, b, da.opt] : [b, a, db.opt];
+      outcome = "judge";
       lines.push(`Спорили (${word}). Рассудил главный, ${head.name}: делать как хочет ${win.name}.`);
       addRel(w, head.id, lose.id, B.council.headJudgeRel);
       recordChoice(w, win, opt, lines);
@@ -679,6 +691,7 @@ function council(w: World, ev: GameEvent, a: Person, b: Person, lines: string[])
     const kept = all.filter((x) => !underFloor(w, x.opt));
     const both = kept.length ? kept : all;
     const opt = both.reduce((x, y) => (y.v > x.v ? y : x)).opt;
+    outcome = "deal";
     lines.push(`Они ${word} — договорились: «${opt.text}».`);
     recordChoice(w, a, opt, lines); recordChoice(w, b, opt, lines);
     addRel(w, a.id, b.id, B.council.dealRel);
@@ -687,10 +700,12 @@ function council(w: World, ev: GameEvent, a: Person, b: Person, lines: string[])
   if (r > B.rel.rival) {
     // терпят — компромисс или кто-то продавил
     if (w.rng.chance(B.council.compromiseChance + soft * B.council.softness)) {
+      outcome = "compromise";
       lines.push(`Они ${word} друг друга — сделали наполовину, как хотел ${win.name}, но вполсилы.`);
       recordChoice(w, win, wd.opt, lines);
       return applyEffects(w, ev, wd.opt, B.council.compromise, win, lines);
     }
+    outcome = "push";
     lines.push(`Они ${word} друг друга. ${win.name} продавил${win.female ? "а" : ""} своё; ${lose.name} затаил${lose.female ? "а" : ""} обиду.`);
     addRel(w, a.id, b.id, B.council.pushRel);
     const around = bypass(w, ev, win, lose, ld.opt, lines);
@@ -699,6 +714,7 @@ function council(w: World, ev: GameEvent, a: Person, b: Person, lines: string[])
     return applyEffects(w, ev, wd.opt, 1, win, lines);
   }
   if (r > B.rel.enemy) {
+    outcome = "rival";
     lines.push(`Они соперники. ${win.name} настоял${win.female ? "а" : ""} на своём, ${lose.name} не простит.`);
     addRel(w, a.id, b.id, B.council.rivalRel);
     const around = bypass(w, ev, win, lose, ld.opt, lines);
@@ -712,6 +728,7 @@ function council(w: World, ev: GameEvent, a: Person, b: Person, lines: string[])
   }
   // враги
   if (w.rng.chance(B.council.sabotageChance)) {
+    outcome = "sabotage";
     lines.push(`Они враги. ${win.name} сделал${win.female ? "а" : ""} по-своему, а ${lose.name} мешал${lose.female ? "а" : ""} назло: «${ld.opt.text}» — вот чего ${lose.female ? "она" : "он"} хотел${lose.female ? "а" : ""}. Саботаж.`);
     addRel(w, a.id, b.id, B.council.sabotageRel);
     reveal(w, lose, "sabotage", lines);
@@ -724,6 +741,7 @@ function council(w: World, ev: GameEvent, a: Person, b: Person, lines: string[])
     addComplaint(w, lose.id, win.id); addComplaint(w, win.id, lose.id);
     return eff;
   }
+  outcome = "silent";
   lines.push(`Они враги, но ${lose.name} на этот раз смолчал${lose.female ? "а" : ""}. ${win.name} сделал${win.female ? "а" : ""} по-своему.`);
   addRel(w, a.id, b.id, B.council.silentRel);
   recordChoice(w, win, wd.opt, lines);
@@ -786,7 +804,7 @@ function runOrdered(w: World, ev: GameEvent, opt: EventOption): LogEntry {
     addAuthority(w, -A.rightLoss, `приказ обернулся плохо: «${ev.title}» против мнения ${p.name}`, "order");
     lines.push(`Вышло плохо, а ${p.name} предупреждал${p.female ? "а" : ""}. Авторитет −${A.rightLoss}.`);
   }
-  const entry: LogEntry = { season: w.season, kind: "event", title: `${ev.title} — по приказу`, lines, effects, tone: toneOf(effects) };
+  const entry: LogEntry = { season: w.season, kind: "event", title: `${ev.title} — по приказу`, lines, effects, tone: toneOf(effects), outcome: "ordered" };
   w.log.push(entry);
   return entry;
 }

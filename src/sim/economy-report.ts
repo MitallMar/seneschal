@@ -1,20 +1,15 @@
 // Метрики хозяйства (docs/design/hozyaystvo.md): закрывается ли испытание, чем и с кого платят, как часто срабатывает недодача.
-// Зовут tools/economy.ts и тесты. Игрока нет: совет решает сам, подать платит выбранный плательщик.
-import type { CourseId, PayId, Side, Stock } from "../data/types";
+// Зовут tools/economy.ts и тесты. Партии играют боты (PAYERS).
+import type { PayId, Side, Stock } from "../data/types";
 import { SIDES, STOCKS, PAY } from "../data/economy";
 import { BALANCE as B } from "./balance";
-import { newWorld, runSeason, type World } from "./sim";
+import { newWorld, type World } from "./sim";
+import { bot, playBot, type Bot } from "./bots";
 import { authorityCap, type AuthKind } from "./authority";
-import { economySeason, payOptions, payTax, taxLeft, seasonKind, setCourse, zoneOf, patienceWord, type Zone } from "./economy";
+import { economySeason, zoneOf, patienceWord, type Zone } from "./economy";
 
-// Плательщик — привычка платить подать. Простые, для отчёта; привычки игрока целиком — боты (задача И3).
-export interface Payer { id: string; name: string; course: CourseId | null; extra: PayId[] }
-export const PAYERS: Payer[] = [
-  { id: "sovet", name: "совет сам: казна, потом амбар, не ниже черт", course: null, extra: [] },
-  { id: "kopit", name: "то же и курс «Копим к подати»", course: "kopim", extra: [] },
-  { id: "zhertvy", name: "с жертвами: ещё товары, сбор с купцов, зерно сверх оброка, вольные", course: null, extra: ["tovary", "sbor_kuptsy", "sverh_brod", "sverh_opushka", "volnye"] },
-  { id: "rekruty", name: "с жертвами и рекрутами с деревень", course: null, extra: ["tovary", "sbor_kuptsy", "sverh_brod", "sverh_opushka", "volnye", "rekruty_brod", "rekruty_opushka"] },
-];
+// Кто играет партии отчёта: боты (src/sim/bots.ts). «Ничего не трогает» — совет платит сам; «Хозяин» платит руками; дальше — его варианты платы.
+export const PAYERS: Bot[] = ["idle", "master", "Х11", "Х13", "Х14"].map(bot);
 
 export interface EconomyMetrics {
   seeds: number;
@@ -37,26 +32,8 @@ const KINDS: AuthKind[] = ["support", "tax", "judge", "complaint", "feast", "ord
 const r2 = (v: number) => Math.round(v * 100) / 100;
 const mean = (xs: number[]) => (xs.length ? xs.reduce((s, v) => s + v, 0) / xs.length : 0);
 
-// Осенью, перед приездом сборщицы, плательщик добирает остаток своими способами по порядку.
-function payExtra(w: World, payer: Payer): void {
-  if (seasonKind(w.season) !== 2) return;
-  payTax(w, "serebro", (w.eco.stock.serebro - w.eco.floor.serebro) / B.economy.rate.serebro);
-  payTax(w, "eda", (w.eco.stock.eda - w.eco.floor.eda) / B.economy.rate.eda);
-  for (const id of payer.extra) if (taxLeft(w) > 0) payTax(w, id, payOptions(w).find((o) => o.def.id === id)!.max);
-}
-
-export function playParty(seed: string, seasons: number, payer: Payer): World {
-  const w = newWorld(seed);
-  if (payer.course) setCourse(w, payer.course);
-  for (let s = 0; s < seasons; s++) {
-    if (payer.extra.length) payExtra(w, payer);
-    runSeason(w);
-  }
-  return w;
-}
-
-export function economyMetrics(seeds: number, seasons: number, payer: Payer = PAYERS[0], prefix = "хозяйство"): EconomyMetrics {
-  const worlds = Array.from({ length: seeds }, (_, i) => playParty(`${prefix}-${i}`, seasons, payer));
+export function economyMetrics(seeds: number, seasons: number, payer: Bot = PAYERS[0], prefix = "хозяйство"): EconomyMetrics {
+  const worlds = Array.from({ length: seeds }, (_, i) => playBot(`${prefix}-${i}`, payer, seasons).w);
   const years = Math.floor((seasons + 1) / 4);  // сборщица приезжает на третий сезон года
   const hist = worlds.map((w) => w.eco.tax.history);
   const share = (f: (w: World) => boolean) => r2(worlds.filter(f).length / Math.max(1, seeds));

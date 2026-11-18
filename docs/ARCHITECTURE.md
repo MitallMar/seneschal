@@ -37,7 +37,7 @@
 **`rng.ts`** — класс `Rng(seed)`: `next`, `range`, `int`, `pick`, `chance`, `gauss`, `shuffle`. Единственный источник случайности: одно семя и одни действия игрока дают одну и ту же партию. Порядок обращений к генератору — часть поведения: лишний вызов `rng` меняет все партии.
 
 **`balance.ts`** — все числа баланса. Каждое записано ручкой `k(значение, min, max, step, 'подпись')`; из одного описания собираются:
-- `BALANCE` — дерево чисел, его читает логика (`BALANCE.council.sabotage`); первый уровень — раздел (`star`, `decide`, `exp`, `rel`, `council`, `loyalty`, `staff`, `know`, `traits`, `report`, `natura`, `health`, `economy`, `authority`, `season`; `report` — цели отчёта `npm run axes`, `natura` — ручки генератора натур и цели его отчёта, `health` — ручки здоровья и цели его отчёта; все три на ход партии не влияют);
+- `BALANCE` — дерево чисел, его читает логика (`BALANCE.council.sabotage`); первый уровень — раздел (`star`, `decide`, `exp`, `rel`, `council`, `loyalty`, `staff`, `know`, `traits`, `report`, `bots`, `natura`, `health`, `economy`, `authority`, `season`; `report` — цели отчёта `npm run axes`, `natura` — ручки генератора натур и цели его отчёта, `health` — ручки здоровья и цели его отчёта; все три на ход партии не влияют);
 - `KNOBS` — список `{ path, def, min, max, step, label }` для ползунков эмулятора;
 - `getAt(path)`, `setAt(path, value)` (зажимает в диапазон и округляет до шага, меняет число прямо в `BALANCE`), `snapshotBalance()`, `restoreBalance(snap)`, `resetBalance()`.
 
@@ -63,7 +63,11 @@
 
 **`authority.ts`** — авторитет (замысел — `docs/design/avtoritet.md`, как сделано — его раздел 9). Состояние — `World.auth` (`AuthState`): строки текущего сезона `cur`, ведомость прошлого `last`, жалобы на столе `complaints`, сезоны пиров, итоги по источникам `totals`; само число — `World.authority`. Всякое изменение идёт через `addAuthority(w, v, текст, вид)`: строка в ведомость, излишек сверх `authorityCap` сгорает. `authoritySupport` считает опору сезона, `authoritySeason` (зовёт `upkeep` после хозяйства) списывает брошенные жалобы и начисляет опору; `judge` и `feast` — личные дела игрока; `addComplaint` зовёт спор в совете. Подать двигает авторитет из `economy.ts` (`collect`). В `sim.ts` рядом: `World.desk` — дело сезона (`pickDesk`, `deskView`, `command`, внутренняя `runOrdered`) и уговор (`persuade`, `persuadeStep`, поля `Person.persuade` и `agreed`).
 
-**`economy-report.ts`** — метрики для `npm run economy` и тестов: `economyMetrics` (партии без игрока с выбранным плательщиком `PAYERS`), `freeYear` (год без событий, все стороны в одной зоне), `economyNotes` (замечания по целям `economy.goal`).
+**`bots.ts`** — боты (задание и итоги — `docs/design/boty.md`). Привычка `Habit` — набор переключателей: главный, расстановка, курс, наказ, засидевшиеся, личные дела, плата подати, нижние черты. `BOTS` — 27 ботов: у варианта есть база (`base`) и вопрос (`asks`). `playBot(seed, bot, seasons, lab)` играет партию: `setup` до первого сезона, `turn` каждый сезон, потом `runSeason`. Бот зовёт только функции экрана; своя случайность — отдельный `Rng` с семенем `семя|бот`.
+
+**`bots-report.ts`** — `metricsOf` (34 метрики партии, список `METRICS`), `botStats` (средние и разброс по семенам), `pairStats` (разница «партия к партии», вердикт по порогам `bots.weak` и `bots.strong`; метрики `own` бота в вердикт не идут), `botsReport` (все боты выбранных уровней, пары, заготовки против обычной партии). Исход каждого события совет пишет в запись летописи (`LogEntry.outcome`) — по нему считаются споры.
+
+**`economy-report.ts`** — метрики для `npm run economy` и тестов: `economyMetrics` (партии играют боты `PAYERS`), `freeYear` (год без событий, все стороны в одной зоне), `economyNotes` (замечания по целям `economy.goal`).
 
 **`axes-report.ts`** — отчёт «должность и характер» для `npm run axes` и тестов данных: `postAxisTable` (должность × склонность по событиям), `axisEffects` (плюсы и минусы склонности), `axesWarnings` (что не дотягивает до целей раздела `report`), `runStats` (прогон партий без игрока: стороны и доля решений по ведущей склонности на своей и на чужой должности).
 

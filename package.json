@@ -15,7 +15,9 @@
     "axes": "tsx tools/axes.ts",
     "natura": "tsx tools/natura.ts",
     "health": "tsx tools/health.ts",
-    "economy": "tsx tools/economy.ts"
+    "economy": "tsx tools/economy.ts",
+    "bots": "tsx tools/bots.ts",
+    "balance": "tsx tools/bots.ts --brief"
   },
   "devDependencies": {
     "@types/node": "^26.6.6",

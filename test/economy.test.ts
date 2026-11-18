@@ -567,12 +567,13 @@ test("ручка хозяйства действует сразу", () => {
   assert.equal(payOptions(w).find((o) => o.def.id === "eda")!.max, 1);
 });
 
-test("отчёт о хозяйстве: метрики считаются, жертвы помогают закрыть испытание, год щедрее в лучшей зоне", () => {
-  const base = economyMetrics(8, 12, PAYERS[0]), best = economyMetrics(8, 12, PAYERS[PAYERS.length - 1]);
+test("отчёт о хозяйстве: метрики считаются по ботам, год щедрее в лучшей зоне", () => {
+  const base = economyMetrics(8, 12, PAYERS[0]), only = economyMetrics(8, 12, PAYERS[PAYERS.length - 1]);
   assert.equal(base.closedByYear.length, 3);
-  assert.ok(best.paidShare >= base.paidShare, `${best.paidShare} против ${base.paidShare}`);
+  assert.deepEqual(PAYERS.map((b) => b.id), ["idle", "master", "Х11", "Х13", "Х14"]);
   assert.ok(Object.keys(base.measuresBy).every((id) => id === "serebro" || id === "eda"), "совет сам платит только казной и амбаром");
-  assert.ok(Object.keys(best.measuresBy).length > 2);
+  assert.deepEqual(Object.keys(only.measuresBy), ["serebro"], "бот «платит только казной»");
+  assert.ok(only.paidShare < base.paidShare, `${only.paidShare} против ${base.paidShare}`);
   const free = ["заодно", "ладят", "терпят", "отказывают"].map((z) => freeYear(z as "ладят").free);
   assert.ok(free[0] > free[1] && free[1] > free[2] && free[2] > free[3], free.join(" > "));
   assert.ok(free[1] < E.tax.trial, "при «ладят» урок испытания без жертв не закрыть");
