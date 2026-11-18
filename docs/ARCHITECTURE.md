@@ -37,7 +37,7 @@
 **`rng.ts`** — класс `Rng(seed)`: `next`, `range`, `int`, `pick`, `chance`, `gauss`, `shuffle`. Единственный источник случайности: одно семя и одни действия игрока дают одну и ту же партию. Порядок обращений к генератору — часть поведения: лишний вызов `rng` меняет все партии.
 
 **`balance.ts`** — все числа баланса. Каждое записано ручкой `k(значение, min, max, step, 'подпись')`; из одного описания собираются:
-- `BALANCE` — дерево чисел, его читает логика (`BALANCE.council.sabotage`); первый уровень — раздел (`star`, `decide`, `exp`, `rel`, `council`, `loyalty`, `staff`, `know`, `traits`, `report`, `natura`, `health`, `season`; `report` — цели отчёта `npm run axes`, `natura` — ручки генератора натур и цели его отчёта, `health` — ручки здоровья и цели его отчёта; все три на ход партии не влияют);
+- `BALANCE` — дерево чисел, его читает логика (`BALANCE.council.sabotage`); первый уровень — раздел (`star`, `decide`, `exp`, `rel`, `council`, `loyalty`, `staff`, `know`, `traits`, `report`, `natura`, `health`, `economy`, `season`; `report` — цели отчёта `npm run axes`, `natura` — ручки генератора натур и цели его отчёта, `health` — ручки здоровья и цели его отчёта; все три на ход партии не влияют);
 - `KNOBS` — список `{ path, def, min, max, step, label }` для ползунков эмулятора;
 - `getAt(path)`, `setAt(path, value)` (зажимает в диапазон и округляет до шага, меняет число прямо в `BALANCE`), `snapshotBalance()`, `restoreBalance(snap)`, `resetBalance()`.
 
@@ -48,6 +48,20 @@
 **`health.ts`** — здоровье, отдельно от совета (замысел — `docs/design/zdorovye.md`). Данные — `src/data/health.ts`: черты здоровья `HEALTH_TRAITS` и то, как на здоровье действуют нажитые черты натуры (`NATURA_HEALTH`). `birthHealth` даёт крепость и черты при рождении (наследственные — от семьи `makeFamily`), `seasonCheck` — один сезон (старость, рана, болезнь, выбытие со службы), `liveThrough` — прожить партию или всю жизнь. **`health-report.ts`** — метрики для `npm run health`, эмулятора и тестов: `healthMetrics`, `healthWarnings`.
 
 **Эмулятор натуры** — `src/ui/natura.ts`, `natura.html`, `natura.css`, собирается в `dist/natura.html` (вторая запись в `tools/build.mjs`). Правил не считает: зовёт `rollAll`, `metricsOf`, `rollPerson`, `growParty` и рисует метрики, графики, древо одного человека и таблицы данных; ручки — `KNOBS` с путём `natura.*` и `health.*`, меняются через `setAt` и сразу пересчитывают прогон. Для автопроверок — `window.__emu` (`run`, `setKnob`, `metrics`, `people`).
+
+**`economy.ts`** — хозяйство и подать (замысел — `docs/design/hozyaystvo.md`, как сделано — его раздел 15). Данные — `src/data/economy.ts`: стороны `SIDES`, категории, курсы `COURSES`, старосты деревень `ELDERS`, способы платить `PAY`. Состояние — `World.eco` (`Economy`): запасы `stock`, нижние черты, курс, урок `tax`, старосты, ведомость прошлого сезона `last` и строки текущего `cur`; доверие сторон — `World.factions`. С `sim.ts` связан в обе стороны (импорты по кругу, но только функций): `sim.ts` зовёт `initEconomy` в `newWorld`, `addLine` и `addTrust` в `applyEffects` (последствия событий), `belowFloor` и `courseLean` в `scoreOptions`, `elderSaw` в `recordChoice`, `economySeason` в `upkeep`, `rollForecast` в `runSeason`; `economy.ts` берёт у `sim.ts` `holder`, `fitness`, `isStale`, `topAxis`.
+
+| Что | Функции | Что делает |
+|---|---|---|
+| Зоны | `zoneWord`, `zoneOf`, `zoneMult`, `addTrust`, `patienceWord` | слово и множитель потока по доверию стороны; терпение Герцога словом |
+| Исполнитель и курс | `doer`, `courseStrength`, `courseLean`, `setCourse`, `setFloor` | как держатель должности ведёт поток; сила курса и его инерция; шатание |
+| Люди | `handsNow`, `fieldHands` | руки по зонам за вычетом рекрутов; сколько в поле |
+| План сезона | `planSeason` | все обычные потоки сезона на копии запасов, без случайности: по нему идут и сезон, и прогноз |
+| Сезон | `economySeason`, `rollForecast` | применяет план, недодача, осенью `collect` (плательщик по умолчанию и сборщица), курс и старосты двигают доверие, зимой новый урок |
+| Подать | `payOptions`, `payTax`, `autoPayTax`, `taxLeft`, `lessonOf` | способы «чем и с кого» с курсом и пределом; плата меняет запасы, доверие, руки |
+| Что видит игрок | `forecastFork`, `ledgerOf`, `elderRel` | вилка прогноза по годности счетовода; строки ведомости без спрятанных |
+
+**`economy-report.ts`** — метрики для `npm run economy` и тестов: `economyMetrics` (партии без игрока с выбранным плательщиком `PAYERS`), `freeYear` (год без событий, все стороны в одной зоне), `economyNotes` (замечания по целям `economy.goal`).
 
 **`axes-report.ts`** — отчёт «должность и характер» для `npm run axes` и тестов данных: `postAxisTable` (должность × склонность по событиям), `axisEffects` (плюсы и минусы склонности), `axesWarnings` (что не дотягивает до целей раздела `report`), `runStats` (прогон партий без игрока: стороны и доля решений по ведущей склонности на своей и на чужой должности).
 

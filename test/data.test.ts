@@ -120,7 +120,7 @@ test("события: родные склонности должности вс�
   for (const a of AXES) assert.ok(eff[a].plus > 0 && eff[a].minus < 0 && eff[a].clean <= eff[a].options / 4, `${a}: ${JSON.stringify(eff[a])}`);
   // замечание появляется, когда цель не выполнена
   const onlyLes = EVENTS.filter((e) => e.posts.includes("lesnichiy") && e.posts.length === 1);
-  assert.ok(axesWarnings(onlyLes).some((x) => x.startsWith("Староста")));
+  assert.ok(axesWarnings(onlyLes).some((x) => x.startsWith("Тиун")));
 });
 
 test("характер читается в прогонах: по ведущей склонности решают не реже порога на чужой должности и чаще — на своей", () => {

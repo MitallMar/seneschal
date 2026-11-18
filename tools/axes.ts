@@ -1,6 +1,7 @@
 // Отчёт «должность и характер»: должность × склонность по событиям, плюсы и минусы склонностей, прогон партий.
 // Запуск: npm run axes -- [--seeds=20] [--seasons=20]
-import { AXES, AXIS_NAMES, POSTS, FACTION_NAMES, RESOURCE_NAMES } from "../src/data/core";
+import { AXES, AXIS_NAMES, POSTS } from "../src/data/core";
+import { SIDE_NAMES, CATEGORY_NAMES } from "../src/data/economy";
 import { EVENTS } from "../src/data/events";
 import { postAxisTable, axisEffects, axesWarnings, runStats } from "../src/sim/axes-report";
 import { BALANCE } from "../src/sim/balance";
@@ -27,9 +28,9 @@ for (const a of AXES) console.log(`  ${AXIS_NAMES[a].padEnd(9)} +${eff[a].plus} 
 const warnings = axesWarnings();
 for (const lab of [false, true]) {
   const r = runStats(seeds, seasons, lab);
-  const names = { ...FACTION_NAMES, ...RESOURCE_NAMES };
-  console.log(`\nПрогон ${seeds} семян × ${seasons} сезонов, лабиринт ${lab ? "открыт" : "закрыт"}. В среднем на партию:`);
-  console.log(`  ${Object.entries(names).map(([k, n]) => `${n} ${sign(r.sides[k as keyof typeof names])}`).join(" · ")}`);
+  const names: Record<string, string> = { ...SIDE_NAMES, poryadok: "Порядок", ...CATEGORY_NAMES };
+  console.log(`\nПрогон ${seeds} семян × ${seasons} сезонов, лабиринт ${lab ? "открыт" : "закрыт"}. В среднем на партию к концу (доверие сторон, порядок, запасы):`);
+  console.log(`  ${Object.entries(names).filter(([k]) => k in r.sides).map(([k, n]) => `${n} ${sign(r.sides[k])}`).join(" · ")}`);
   const share = (b: { matched: number; decisions: number }) => `${pct(b.decisions ? b.matched / b.decisions : 0).trim()} (${b.decisions} решений)`;
   console.log(`  Решений по ведущей склонности: на своей должности ${share(r.own)}, на чужой ${share(r.foreign)}`);
   const ownShare = r.own.matched / Math.max(1, r.own.decisions), foreignShare = r.foreign.matched / Math.max(1, r.foreign.decisions);

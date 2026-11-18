@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Сенешаль — прототип характеров и совета</title>
+<title>Сенешаль — прототип совета и хозяйства</title>
 <style>/*__CSS__*/</style>
 </head>
 <body>
 <header class="top">
   <div class="brand">
     <h1>Сенешаль</h1>
-    <span class="sub">прототип характеров и совета</span>
+    <span class="sub">прототип совета и хозяйства</span>
   </div>
   <div class="controls">
     <label class="seed">Семя <input id="seed" value="замок"></label>
@@ -26,6 +26,26 @@
   <div id="tip" class="tip">О каждом известно что-то одно: молва или черта. Узнать человека можно двумя путями: <b>поговорить</b> (личное дело: сначала черты, потом стремление, потом склонности) или <b>посмотреть в деле</b> — каждое решение на должности показывает склонность, а скрытую черту выдаёт только поступок.</div>
 </header>
 
+<section class="eco panel" id="economy">
+  <h2>Хозяйство и подать</h2>
+  <div id="eco-cats" class="eco-cats"></div>
+  <div class="eco-row">
+    <div class="eco-block eco-track-block">
+      <h3>Дорожка сезонов</h3>
+      <div id="eco-track" class="eco-track"></div>
+      <div id="eco-tax" class="eco-tax"></div>
+    </div>
+    <div class="eco-block">
+      <h3>Курс, нижние черты, очередь</h3>
+      <div id="eco-course"></div>
+    </div>
+    <div class="eco-block">
+      <h3>Стороны</h3>
+      <div id="eco-sides" class="eco-sides"></div>
+    </div>
+  </div>
+</section>
+
 <main>
   <section class="left">
     <div class="panel">
@@ -36,10 +56,6 @@
     <div class="panel">
       <h2>Отношения в совете</h2>
       <div id="relations"></div>
-    </div>
-    <div class="panel">
-      <h2>Стороны и хозяйство</h2>
-      <div id="world"></div>
     </div>
   </section>
 

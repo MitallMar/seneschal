@@ -4,9 +4,33 @@ export type Axis = "dolg" | "vygoda" | "zabota" | "derzost" | "obychai";
 export type Star = Record<Axis, number>; // 0..10
 
 export type PostId = "starosta" | "desyatnik" | "klyuchnik" | "pisar" | "lesnichiy";
+// Ключи последствий в событиях. derevni — «деревни вообще»: в мире это две стороны (Village), событие бьёт по обеим или по названной в village.
+// kazna и pripasy в мире — запасы серебра и еды (Category): id прежние, чтобы не переписывать события.
 export type Faction = "derevni" | "les" | "kuptsy" | "zamok" | "dvor";
 export type Resource = "kazna" | "pripasy" | "poryadok";
 export type Effect = Faction | Resource;
+
+// ---------- Хозяйство (задача И12, замысел — docs/design/hozyaystvo.md) ----------
+export type Village = "brod" | "opushka";
+export type Side = Village | "les" | "kuptsy" | "zamok" | "dvor";        // стороны мира: у каждой своя зона доверия
+export type Category = "lyudi" | "eda" | "tovary" | "serebro";            // люди — ёмкость на сезон, остальное — запасы
+export type Stock = Exclude<Category, "lyudi">;
+export type HandsFrom = Village | "zamok";                                // кто даёт рабочие руки
+export type CourseId = "kopim" | "polegche" | "dorogi" | "les" | "stroimsya" | "torguem";
+export interface CourseDef {
+  id: CourseId;
+  name: string;
+  desc: string;           // что курс делает с хозяйством — словами для игрока
+  pro: Axis[];            // по этим склонностям совет решает мелкие дела чаще
+  contra: Axis[];         // кому курс не по душе: исполняют без огонька
+}
+// Выборный староста деревни: внешняя фигура, в совет не входит; звезда — тем же способом, что у людей хозяйства.
+export interface ElderEntry { side: Village; name: string; female: boolean; age: number; trait: string }
+// Способ закрыть долю подати: «чем» и «с кого».
+export type PayId =
+  | "serebro" | "sbor_kuptsy" | "zaem" | "eda" | "sverh_brod" | "sverh_opushka"
+  | "rekruty_brod" | "rekruty_opushka" | "rekruty_zamok" | "volnye" | "tovary";
+export interface PayDef { id: PayId; name: string; what: Category; from: string; hurts: string; side?: Side }
 
 export interface TraitMods {
   random?: number;        // насколько решения непредсказуемы (добавка к шуму)
@@ -85,6 +109,7 @@ export interface GameEvent {
   text: string;
   posts: PostId[];        // одна или две сферы
   adventurers?: boolean;  // только когда открыт лабиринт
+  village?: Village;      // последствие derevni бьёт только по этой деревне; нет — по обеим
   options: EventOption[];
 }
 

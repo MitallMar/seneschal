@@ -14,7 +14,8 @@
     "sim": "tsx tools/headless.ts",
     "axes": "tsx tools/axes.ts",
     "natura": "tsx tools/natura.ts",
-    "health": "tsx tools/health.ts"
+    "health": "tsx tools/health.ts",
+    "economy": "tsx tools/economy.ts"
   },
   "devDependencies": {
     "@types/node": "^26.6.6",

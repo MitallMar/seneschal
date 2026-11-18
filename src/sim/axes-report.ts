@@ -1,6 +1,6 @@
 // Отчёт «должность и характер» (задача И6): как часто события каждой должности задевают каждую склонность,
 // что каждая склонность в сумме приносит и отнимает, и читается ли характер в прогонах. Без экрана: зовут тесты и tools/axes.ts.
-import type { Axis, Effect, PostId, GameEvent } from "../data/types";
+import type { Axis, PostId, GameEvent } from "../data/types";
 import { AXES, AXIS_NAMES, POSTS } from "../data/core";
 import { EVENTS } from "../data/events";
 import { BALANCE as B } from "./balance";
@@ -46,18 +46,18 @@ export function axisEffects(events: GameEvent[] = EVENTS): Record<Axis, AxisEffe
 }
 
 export interface RunStats {
-  sides: Record<Effect, number>;                  // в среднем на партию: что накопили стороны и ресурсы
+  sides: Record<string, number>;                  // в среднем на партию к концу: доверие сторон, порядок, запасы
   own: { matched: number; decisions: number };    // решения людей, чья ведущая склонность — родная для их должности
   foreign: { matched: number; decisions: number }; // остальные члены совета
 }
 // Прогон без игрока: seeds партий по seasons сезонов. Доля решений по ведущей склонности — отдельно на своей и на чужой должности.
 export function runStats(seeds: number, seasons: number, labOpen = false): RunStats {
-  const sides = {} as Record<Effect, number>;
+  const sides: Record<string, number> = {};
   const own = { matched: 0, decisions: 0 }, foreign = { matched: 0, decisions: 0 };
   for (let i = 0; i < seeds; i++) {
     const w = newWorld(`оси-${i + 1}`, labOpen);
     for (let s = 0; s < seasons; s++) runSeason(w);
-    for (const [k, v] of [...Object.entries(w.factions), ...Object.entries(w.resources)]) sides[k as Effect] = (sides[k as Effect] ?? 0) + v / seeds;
+    for (const [k, v] of [...Object.entries(w.factions), ...Object.entries(w.resources), ...Object.entries(w.eco.stock)]) sides[k] = (sides[k] ?? 0) + v / seeds;
     for (const p of w.people) {
       if (!p.post) continue;
       const native = POSTS.find((d) => d.id === p.post)!.native;

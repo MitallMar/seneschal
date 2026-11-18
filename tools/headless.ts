@@ -2,6 +2,8 @@
 // Запуск: npm run sim -- [семя] [сезонов] [--log]
 import { newWorld, runSeason, consistency, topAxis, expWord, relWord, getRel, loyaltyWord, postName, traitLabel, axisKnown } from "../src/sim/sim";
 import { AXES, AXIS_NAMES } from "../src/data/core";
+import { SIDES, SIDE_NAMES, STOCKS, CATEGORY_NAMES } from "../src/data/economy";
+import { zoneOf, patienceWord } from "../src/sim/economy";
 
 const seed = process.argv[2] ?? "test";
 const seasons = Number(process.argv[3] ?? 12);
@@ -26,7 +28,11 @@ const council = w.people.filter((p) => p.post);
 for (let i = 0; i < council.length; i++)
   for (let j = i + 1; j < council.length; j++)
     console.log(`  ${council[i].name} — ${council[j].name}: ${relWord(getRel(w, council[i].id, council[j].id))} (${getRel(w, council[i].id, council[j].id).toFixed(1)})`);
-console.log("\nСтороны:", w.factions, "\nРесурсы:", w.resources);
+console.log(`\nСтороны: ${SIDES.map((s) => `${SIDE_NAMES[s]} — ${zoneOf(w, s)} (${w.factions[s]})`).join(" · ")} · порядок ${w.resources.poryadok}`);
+const t = w.eco.tax;
+console.log(`Запасы: ${STOCKS.map((c) => `${CATEGORY_NAMES[c].toLowerCase()} ${w.eco.stock[c]}`).join(" · ")} · недодача в ${w.eco.shortages} сезонах`);
+console.log(`Подать: ${t.history.map((y) => `год ${y.year} — ${y.closed ? "закрыт" : "недоимка"} (${y.paid} из ${y.due})`).join(" · ")} · Герцог ${patienceWord(t.patience)} (${t.patience})`);
+if (w.eco.last) console.log(`Ведомость прошлого сезона:\n  ${w.eco.last.lines.map((l) => `${CATEGORY_NAMES[l.cat]} ${l.v > 0 ? "+" : ""}${l.v} ${l.text}${l.who ? ` — ${l.who}, ${l.how ?? ""}` : ""}`).join("\n  ")}`);
 if (process.argv.includes("--log")) for (const e of w.log) console.log(`\n[${e.season}] ${e.title}\n  ${e.lines.join("\n  ")}`);
 const bio = w.people[0];
 console.log(`\nБиография ${bio.name}:\n  ${bio.bio.join("\n  ")}`);

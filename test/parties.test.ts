@@ -8,13 +8,15 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { AXES, POSTS } from "../src/data/core";
 import { newWorld, runSeason, assign, giveOrder, holder, setHead, talk } from "../src/sim/sim";
+import { setCourse, setFloor, payTax } from "../src/sim/economy";
+import { COURSES, PAY } from "../src/data/economy";
 import { digest, dump } from "./_world";
 
 const FILE = fileURLToPath(new URL("./parties.snapshot.json", import.meta.url));
 const SEEDS = ["замок", "лес", "герцог", "test"];
 const postIds = POSTS.map((p) => p.id);
 
-// 16 сезонов с действиями игрока: разговоры, перестановки, снятие с должности, наказы, смена главного
+// 16 сезонов с действиями игрока: разговоры, перестановки, снятие с должности, наказы, смена главного, курс, нижняя черта, плата подати
 function party(seed: string, lab: boolean): string {
   const w = newWorld(seed, lab);
   for (let s = 0; s < 16; s++) {
@@ -30,6 +32,11 @@ function party(seed: string, lab: boolean): string {
       const council = w.people.filter((p) => p.post);
       if (council.length) setHead(w, council[s % council.length].id);
     }
+    if (s % 5 === 2) setCourse(w, COURSES[s % COURSES.length].id);
+    if (s === 6) setFloor(w, "eda", 3);
+    if (s === 9) w.eco.feedFirst = "derevni";
+    if (s % 4 !== 3) payTax(w, PAY[(s * 3) % PAY.length].id, 1);
+    if (s === 10) w.eco.autoPay = false;
     runSeason(w);
   }
   return digest(dump(w));
