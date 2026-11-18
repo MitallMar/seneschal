@@ -3,30 +3,84 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Сенешаль — прототип совета и хозяйства</title>
+<title>Сенешаль — эмулятор совета и хозяйства</title>
 <style>/*__CSS__*/</style>
 </head>
 <body>
 <header class="top">
   <div class="brand">
     <h1>Сенешаль</h1>
-    <span class="sub">прототип совета и хозяйства</span>
+    <span class="sub">эмулятор совета и хозяйства</span>
   </div>
   <div class="controls">
     <label class="seed">Семя <input id="seed" value="замок"></label>
-    <button id="new">Новая партия</button>
+    <select id="preset" title="Заготовка ситуации: партия, в которой сразу есть что смотреть"></select>
+    <button id="new" title="R">Новая партия</button>
     <label class="chk"><input type="checkbox" id="lab"> Лабиринт открыт</label>
     <span class="sep"></span>
-    <button id="season" class="primary">Прогнать сезон</button>
-    <button id="season5">+5 сезонов</button>
-    <label class="chk"><input type="checkbox" id="designer"> Взгляд дизайнера</label>
+    <button id="season" class="primary" title="Пробел">Прогнать сезон</button>
+    <button id="season5" title="F">+5 сезонов</button>
+    <label class="chk" title="D"><input type="checkbox" id="designer"> Взгляд дизайнера</label>
+    <button id="knobs-toggle" title="Tab">Ручки</button>
     <a id="to-emu" href="natura.html">Эмулятор натуры →</a>
   </div>
   <div id="status" class="status"></div>
-  <div id="tip" class="tip">О каждом известно что-то одно: молва или черта. Узнать человека можно двумя путями: <b>поговорить</b> (личное дело: сначала черты, потом стремление, потом склонности) или <b>посмотреть в деле</b> — каждое решение на должности показывает склонность, а скрытую черту выдаёт только поступок.</div>
+  <details class="help">
+    <summary>Подсказка и клавиши</summary>
+    <div id="tip" class="tip">О каждом известно что-то одно: молва или черта. Узнать человека можно двумя путями: <b>поговорить</b> (личное дело: сначала черты, потом стремление, потом склонности) или <b>посмотреть в деле</b> — каждое решение на должности показывает склонность, а скрытую черту выдаёт только поступок.</div>
+    <div class="tip" id="keys">Клавиши: <b>Пробел</b> — сезон, <b>F</b> — пять сезонов, <b>R</b> — заново с тем же семенем, <b>D</b> — взгляд дизайнера, <b>Tab</b> — ручки, <b>1</b> / <b>2</b> — «было» / «стало», <b>P</b> — выгрузить изменённые ручки. Адрес страницы помнит семя, заготовку и галочки: им можно поделиться.</div>
+  </details>
 </header>
 
-<section class="eco panel" id="economy">
+<aside id="knobs-panel" hidden>
+  <h2>Ручки баланса</h2>
+  <div class="knobs-bar">
+    <button id="ab1" title="1">было</button>
+    <button id="ab2" title="2">стало</button>
+    <button id="knobs-reset">Сброс</button>
+    <button id="knobs-dump" title="P">Выгрузить</button>
+  </div>
+  <p class="hint" id="knobs-state"></p>
+  <textarea id="dump-out" rows="5" readonly hidden></textarea>
+  <div id="knobs"></div>
+</aside>
+
+<main>
+  <section class="work">
+    <nav class="tabs">
+      <button data-tab="council">Совет и люди</button>
+      <button data-tab="eco">Хозяйство и подать</button>
+    </nav>
+    <div id="tab-council" class="tab council-tab">
+      <div class="left">
+    <div class="panel" id="desk-panel">
+      <h2>Стол Сенешаля</h2>
+      <div id="auth"></div>
+      <div id="desk"></div>
+      <div id="complaints"></div>
+      <div id="feasts"></div>
+    </div>
+    <div class="panel">
+      <h2>Совет</h2>
+      <p class="hint">Кого поставить на должность и кто главный, пока Сенешаля нет. Перестановка против воли стоит авторитета.</p>
+      <div id="council"></div>
+    </div>
+    <div class="panel">
+      <h2>Отношения в совете</h2>
+      <div id="relations"></div>
+    </div>
+  
+      </div>
+      <div class="mid">
+    <div class="panel">
+      <h2>Люди</h2>
+      <p class="hint">Молва — догадка, бывает неверной. Склонность видна словом («сильно / заметно / слабо»), когда человек о ней рассказал или его несколько раз видели в деле; иначе «?». «Поговорить» тратит личное дело (3 за сезон).</p>
+      <div id="people" class="people"></div>
+    </div>
+  </div>
+    </div>
+    <div id="tab-eco" class="tab" hidden>
+<div class="eco panel" id="economy">
   <h2>Хозяйство и подать</h2>
   <div id="eco-cats" class="eco-cats"></div>
   <div class="eco-row">
@@ -44,37 +98,15 @@
       <div id="eco-sides" class="eco-sides"></div>
     </div>
   </div>
-</section>
-
-<main>
-  <section class="left">
-    <div class="panel" id="desk-panel">
-      <h2>Стол Сенешаля</h2>
-      <div id="auth"></div>
-      <div id="desk"></div>
-      <div id="complaints"></div>
-      <div id="feasts"></div>
-    </div>
-    <div class="panel">
-      <h2>Совет</h2>
-      <p class="hint">Кого поставить на должность и кто главный, пока Сенешаля нет. Перестановка против воли стоит авторитета.</p>
-      <div id="council"></div>
-    </div>
-    <div class="panel">
-      <h2>Отношения в совете</h2>
-      <div id="relations"></div>
-    </div>
-  </section>
-
-  <section class="mid">
-    <div class="panel">
-      <h2>Люди</h2>
-      <p class="hint">Молва — догадка, бывает неверной. Склонность видна словом («сильно / заметно / слабо»), когда человек о ней рассказал или его несколько раз видели в деле; иначе «?». «Поговорить» тратит личное дело (3 за сезон).</p>
-      <div id="people" class="people"></div>
+</div>
     </div>
   </section>
 
   <section class="right">
+    <div class="panel" id="year-panel">
+      <h2>Сводка</h2>
+      <div id="year"></div>
+    </div>
     <div class="panel log-panel">
       <h2>Летопись</h2>
       <div id="log"></div>
