@@ -1,21 +1,25 @@
-// Собирает прототип в один самодостаточный файл dist/index.html
+// Собирает страницы в самодостаточные файлы: dist/index.html — прототип совета, dist/natura.html — эмулятор натуры.
 import { build } from "esbuild";
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 
-const result = await build({
-  entryPoints: ["src/ui/main.ts"],
-  bundle: true,
-  format: "iife",
-  target: "es2020",
-  minify: false,
-  write: false,
-});
-const js = result.outputFiles[0].text.replace(/<\/script>/g, "<\\/script>");
-const html = readFileSync("src/ui/index.html", "utf8");
-const css = readFileSync("src/ui/style.css", "utf8");
-const out = html
-  .replace("/*__CSS__*/", () => css)
-  .replace("/*__JS__*/", () => js);
+const PAGES = [
+  { entry: "src/ui/main.ts", html: "src/ui/index.html", css: "src/ui/style.css", out: "dist/index.html" },
+  { entry: "src/ui/natura.ts", html: "src/ui/natura.html", css: "src/ui/natura.css", out: "dist/natura.html" },
+];
 mkdirSync("dist", { recursive: true });
-writeFileSync("dist/index.html", out);
-console.log("dist/index.html", (out.length / 1024).toFixed(1), "KB");
+for (const page of PAGES) {
+  const result = await build({
+    entryPoints: [page.entry],
+    bundle: true,
+    format: "iife",
+    target: "es2020",
+    minify: false,
+    write: false,
+  });
+  const js = result.outputFiles[0].text.replace(/<\/script>/g, "<\\/script>");
+  const out = readFileSync(page.html, "utf8")
+    .replace("/*__CSS__*/", () => readFileSync(page.css, "utf8"))
+    .replace("/*__JS__*/", () => js);
+  writeFileSync(page.out, out);
+  console.log(page.out, (out.length / 1024).toFixed(1), "KB");
+}

@@ -19,6 +19,9 @@ export interface NaturaMetrics {
   signSpread: Record<Sign, number>;           // разброс признака среди рероллов одной натуры (в среднем по натурам)
   axes: Record<Axis, AxisDist>;               // деловые склонности из признаков
   axesNow: Record<Axis, AxisDist>;            // нынешняя звезда совета, для сравнения
+  perNature: Record<string, { jaccard: number; nn: number }>; // по id натуры: похожесть её рероллов и как часто её угадывают
+  count: Record<string, number>;              // по id черты: у скольких людей выпала
+  kinds: { born: number; life: number; perk: number }; // черт на человека по видам
 }
 
 const mean = (xs: number[]) => (xs.length ? xs.reduce((s, v) => s + v, 0) / xs.length : 0);
@@ -50,16 +53,22 @@ export function rollAll(rolls: number, seed = "натура"): NaturaPerson[] {
 }
 
 export function naturaMetrics(rolls: number, seed = "натура"): NaturaMetrics {
-  const people = rollAll(rolls, seed);
+  return metricsOf(rollAll(rolls, seed));
+}
+// Метрики по готовым людям; axesNow — нынешняя звезда совета, если её уже посчитали (эмулятор считает один раз).
+export function metricsOf(people: NaturaPerson[], axesNow: Record<Axis, AxisDist> = currentAxes()): NaturaMetrics {
+  const rolls = people.length;
   const sets = people.map((p) => new Set(p.traits.map((t) => t.id)));
   // похожесть рероллов одной натуры
   const all: number[] = [];
+  const perNature: NaturaMetrics["perNature"] = {};
   let worst = { nature: "", value: 0 };
   for (const n of NATURES) {
     const idx = people.map((p, i) => (p.nature === n ? i : -1)).filter((i) => i >= 0);
     const own: number[] = [];
     for (let a = 0; a < idx.length; a++) for (let b = a + 1; b < idx.length; b++) own.push(jaccard(sets[idx[a]], sets[idx[b]]));
     all.push(...own);
+    perNature[n.id] = { jaccard: round3(median(own)), nn: 0 };
     if (median(own) >= worst.value) worst = { nature: n.name, value: round3(median(own)) };
   }
   // различимость: ближайший сосед по набору черт; при равенстве — доля соседей той же натуры
@@ -73,7 +82,9 @@ export function naturaMetrics(rolls: number, seed = "натура"): NaturaMetri
       if (v === best) { total++; if (people[j].nature === people[i].nature) same++; }
     }
     hit += total ? same / total : 0;
+    perNature[people[i].nature.id].nn += total ? same / total : 0;
   }
+  for (const n of NATURES) perNature[n.id].nn = round3(perNature[n.id].nn / Math.max(1, people.filter((p) => p.nature === n).length));
   // покрытие мешка
   const count = new Map<string, number>();
   for (const p of people) for (const t of p.traits) count.set(t.id, (count.get(t.id) ?? 0) + 1);
@@ -93,7 +104,14 @@ export function naturaMetrics(rolls: number, seed = "натура"): NaturaMetri
     commonMax: common.reduce((a, b) => (b.share > a.share ? b : a), { trait: "", share: 0 }),
     signSpread,
     axes: axisDist(people.map((p) => p.star)),
-    axesNow: currentAxes(),
+    axesNow,
+    perNature,
+    count: Object.fromEntries(BAG.map((t) => [t.id, count.get(t.id) ?? 0])),
+    kinds: {
+      born: round3(mean(people.map((p) => p.traits.filter((t) => t.kind === "born").length))),
+      life: round3(mean(people.map((p) => p.traits.filter((t) => t.kind === "life").length))),
+      perk: round3(mean(people.map((p) => p.traits.filter((t) => t.kind === "perk").length))),
+    },
   };
 }
 

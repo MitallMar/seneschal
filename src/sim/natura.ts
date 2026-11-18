@@ -17,6 +17,7 @@ export interface NaturaPerson {
   anchors: string[];           // id черт-якорей из точек кристаллизации ядра
   far: string;                 // id дальнего якоря
   contra: string;              // id черты-противоречия (может совпасть с дальним якорем или вырасти от него)
+  from: Record<string, string>; // от какого якоря выросла черта: id черты → id якоря (у якорей и противоречия записи нет)
   events: SignVec[];           // события жизни, которые тянули рост
   signs: Record<Sign, number>; // признаки: ядро + черты
   star: Star;                  // деловые склонности, посчитанные из признаков
@@ -99,11 +100,18 @@ function allowed(traits: BagTrait[], kinds: BagTrait["kind"][]): BagTrait[] {
 }
 // Очередная черта растёт от одного из якорей: с шансом farShare — от дальнего, иначе от якоря ядра.
 function growFrom(rng: Rng, p: NaturaPerson, kinds: BagTrait["kind"][], opts: GrowOpts): BagTrait | undefined {
+  const t = pickFrom(rng, p, kinds, opts);
+  if (t) { p.traits.push(t.trait); p.from[t.trait.id] = t.anchor; }
+  return t?.trait;
+}
+function pickFrom(rng: Rng, p: NaturaPerson, kinds: BagTrait["kind"][], opts: GrowOpts): { trait: BagTrait; anchor: string } | undefined {
   const fromFar = rng.chance(B.natura.farShare) || !p.anchors.length;
-  const anchor = bagTrait(fromFar ? p.far : rng.pick(p.anchors)).vec;
+  const anchorId = fromFar ? p.far : rng.pick(p.anchors);
+  const anchor = bagTrait(anchorId).vec;
   // куст у якоря ядра тянется и к самому ядру (corePull); куст дальнего якоря растёт сам по себе
   const target = fromFar ? anchor : sum([unit(anchor), sum([unit(p.nature.core)], B.natura.corePull)]);
-  return pickWeighted(rng, allowed(p.traits, kinds), (t) => candidateWeight(p.nature, p.traits, t, target, opts));
+  const trait = pickWeighted(rng, allowed(p.traits, kinds), (t) => candidateWeight(p.nature, p.traits, t, target, opts));
+  return trait && { trait, anchor: anchorId };
 }
 function refresh(p: NaturaPerson): NaturaPerson {
   p.signs = signsOf(p.nature, p.traits);
@@ -114,7 +122,7 @@ function refresh(p: NaturaPerson): NaturaPerson {
 // Человек при рождении: якоря из точек кристаллизации ядра, один якорь из дальней области, рост от якорей, обязательное противоречие.
 export function growPerson(rng: Rng, nature: NatureDef, opts: GrowOpts = {}): NaturaPerson {
   const count = opts.count ?? rng.int(B.natura.birthMin, Math.max(B.natura.birthMin, B.natura.birthMax));
-  const p: NaturaPerson = { nature, traits: [], anchors: [], far: "", contra: "", events: opts.events ?? [], signs: signsOf(nature, []), star: businessStar(signsOf(nature, [])) };
+  const p: NaturaPerson = { nature, traits: [], anchors: [], far: "", contra: "", from: {}, events: opts.events ?? [], signs: signsOf(nature, []), star: businessStar(signsOf(nature, [])) };
   const born = () => allowed(p.traits, ["born"]);
   const w = (target?: SignVec) => (t: BagTrait) => candidateWeight(nature, p.traits, t, target, opts);
   // 1. якоря ядра: по одному от разных точек кристаллизации
@@ -128,9 +136,7 @@ export function growPerson(rng: Rng, nature: NatureDef, opts: GrowOpts = {}): Na
   // 3. рост от якорей; последнее место придержано под противоречие, пока его нет
   const hasContra = () => p.traits.find((x) => isContra(nature, x));
   while (p.traits.length < count - (hasContra() ? 0 : 1)) {
-    const t = growFrom(rng, p, ["born"], opts);
-    if (!t) break;
-    p.traits.push(t);
+    if (!growFrom(rng, p, ["born"], opts)) break;
   }
   // 4. обязательное противоречие: одна черта против ядра
   if (!hasContra()) {
@@ -145,7 +151,6 @@ export function growPerson(rng: Rng, nature: NatureDef, opts: GrowOpts = {}): Na
 export function growLife(rng: Rng, p: NaturaPerson, opts: GrowOpts = {}): BagTrait | undefined {
   const t = growFrom(rng, p, ["life", "perk"], opts);
   if (!t) return undefined;
-  p.traits.push(t);
   if (opts.events) p.events = [...p.events, ...opts.events];
   refresh(p);
   return t;
