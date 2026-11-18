@@ -2620,15 +2620,6 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
     return p;
   }
 
-  // src/sim/council/people.ts
-  function gender(text, p, other) {
-    return text.replace(/\{name\}/g, p.name).replace(/\{other\}/g, other ? other.name : "\u0441\u043E\u0441\u0435\u0434\u043E\u043C").replace(/\{oа\}/g, other?.female ? "\u0430" : "").replace(/\{а\}/g, p.female ? "\u0430" : "").replace(/\{ся\}|\{ась\}/g, p.female ? "\u0430\u0441\u044C" : "\u0441\u044F").replace(/\{он\}/g, p.female ? "\u043E\u043D\u0430" : "\u043E\u043D").replace(/\{его\}/g, p.female ? "\u0435\u0451" : "\u0435\u0433\u043E").replace(/\{ему\}/g, p.female ? "\u0435\u0439" : "\u0435\u043C\u0443");
-  }
-  function addStar(star, shift, k2 = 1) {
-    for (const a of AXES) if (shift[a]) star[a] += shift[a] * k2;
-  }
-  var noAxes = () => ({ dolg: 0, vygoda: 0, zabota: 0, derzost: 0, obychai: 0 });
-
   // src/data/rumors.ts
   var RUMORS_AXIS = {
     dolg: ["\u0413\u043E\u0432\u043E\u0440\u044F\u0442, \u0441\u043B\u043E\u0432\u043E \u0434\u0435\u0440\u0436\u0438\u0442.", "\u0413\u043E\u0432\u043E\u0440\u044F\u0442, \u043F\u0440\u0438\u043A\u0430\u0437 \u0434\u043B\u044F {\u0435\u0433\u043E} \u2014 \u0437\u0430\u043A\u043E\u043D.", "\u0413\u043E\u0432\u043E\u0440\u044F\u0442, \u0441\u043B\u0443\u0436\u0431\u0443 \u0441\u0442\u0430\u0432\u0438\u0442 \u0432\u044B\u0448\u0435 \u0441\u0432\u043E\u0435\u0433\u043E."],
@@ -2671,6 +2662,14 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
     return { cur: [], last: null, lastSeason: 0, feasts: [], complaints: [], nextId: 1, totals };
   }
 
+  // src/sim/probe.ts
+  var blank = () => ({
+    order: { fit: 0, worked: 0, already: 0, deaf: 0, weak: 0 },
+    autoPaid: 0,
+    short: { seasons: 0, food: 0, silver: 0, trust: 0, order: 0 }
+  });
+  var PROBE = blank();
+
   // src/data/handwriting.ts
   var h = (post, axis, good, plus, bad, minus) => ({ post, axis, plus, minus, good, bad });
   var HANDS = [
@@ -2705,14 +2704,6 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
     h("lesnichiy", "vygoda", "\u0442\u043E\u0432\u0430\u0440\u043E\u0432 \u0438\u0437 \u043B\u0435\u0441\u0430 \u0431\u043E\u043B\u044C\u0448\u0435", [["forestGoods", 1]], "\u043B\u0435\u0441 \u0434\u043E\u0432\u0435\u0440\u044F\u0435\u0442 \u043C\u0435\u043D\u044C\u0448\u0435", [["les", -1]]),
     h("lesnichiy", "derzost", "\u0445\u043E\u0434\u0438\u0442 \u0432\u0433\u043B\u0443\u0431\u044C: \u0442\u043E\u0432\u0430\u0440\u043E\u0432 \u0431\u043E\u043B\u044C\u0448\u0435", [["forestGoods", 1]], "\u0442\u0432\u0430\u0440\u0438 \u0438 \u0440\u0430\u043D\u0435\u043D\u044B\u0435", [["hands", -0.5], ["les", -0.5]])
   ];
-
-  // src/sim/probe.ts
-  var blank = () => ({
-    order: { fit: 0, worked: 0, already: 0, deaf: 0, weak: 0 },
-    autoPaid: 0,
-    short: { seasons: 0, food: 0, silver: 0, trust: 0, order: 0 }
-  });
-  var PROBE = blank();
 
   // src/sim/economy/tax.ts
   function lessonOf(year) {
@@ -2780,6 +2771,15 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
   function rollForecast(w) {
     for (const c of STOCKS) w.eco.fc[c] = round2(w.rng.range(-1, 1));
   }
+
+  // src/sim/council/people.ts
+  function gender(text, p, other) {
+    return text.replace(/\{name\}/g, p.name).replace(/\{other\}/g, other ? other.name : "\u0441\u043E\u0441\u0435\u0434\u043E\u043C").replace(/\{oа\}/g, other?.female ? "\u0430" : "").replace(/\{а\}/g, p.female ? "\u0430" : "").replace(/\{ся\}|\{ась\}/g, p.female ? "\u0430\u0441\u044C" : "\u0441\u044F").replace(/\{он\}/g, p.female ? "\u043E\u043D\u0430" : "\u043E\u043D").replace(/\{его\}/g, p.female ? "\u0435\u0451" : "\u0435\u0433\u043E").replace(/\{ему\}/g, p.female ? "\u0435\u0439" : "\u0435\u043C\u0443");
+  }
+  function addStar(star, shift, k2 = 1) {
+    for (const a of AXES) if (shift[a]) star[a] += shift[a] * k2;
+  }
+  var noAxes = () => ({ dolg: 0, vygoda: 0, zabota: 0, derzost: 0, obychai: 0 });
 
   // src/data/events.ts
   var EVENTS = [

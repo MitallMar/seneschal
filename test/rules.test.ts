@@ -120,10 +120,7 @@ test("пороги слов идут по порядку: враги < сопе�
 });
 
 // Циклы импортов: модуль не должен тянуть сам себя через соседей. Импорты только типов (import type, export type) не в счёт: в сборку они не попадают.
-// Список известных циклов пуст и расти не должен: новый цикл разводится, а не записывается сюда (сам список уйдёт в И20г).
-const KNOWN_CYCLES: string[][] = [];
-
-test("в src/ нет циклов импортов, кроме известных", () => {
+test("в src/ нет циклов импортов", () => {
   const all = Object.keys(ALLOWED).flatMap(layerFiles);
   const runtime = (text: string) => imports(noComments(text).replace(/(?:import|export)\s+type\b[^;]*;/g, ""));
   const graph = new Map(all.map((f) => [f, runtime(readFileSync(f, "utf8")).map((t) => `${resolve(dirname(f), t)}.ts`).filter((t) => all.includes(t))]));
@@ -131,8 +128,12 @@ test("в src/ нет циклов импортов, кроме известны�
     for (const to of graph.get(from)!) if (!seen.has(to)) reach(to, seen.add(to));
     return seen;
   };
-  const reachable = new Map(all.map((f) => [f, reach(f)]));
-  // группа цикла: файлы, которые достают друг друга
-  const groups = new Set(all.filter((f) => reachable.get(f)!.has(f)).map((f) => all.filter((g) => reachable.get(f)!.has(g) && reachable.get(g)!.has(f)).map(name).sort().join(" ↔ ")));
-  assert.deepEqual([...groups].sort(), KNOWN_CYCLES.map((c) => c.join(" ↔ ")).sort());
+  assert.deepEqual(all.filter((f) => reach(f).has(f)).map(name), []);
+});
+
+// Фасады sim.ts и economy.ts — только для импортёров снаружи ядра, пока идёт рефакторинг И20: ядро берёт модуль напрямую, иначе фасад замыкает цикл.
+test("ядро не импортирует фасады sim.ts и economy.ts", () => {
+  const facades = [join(src, "sim/sim.ts"), join(src, "sim/economy.ts")];
+  const bad = layerFiles("sim").filter((f) => !facades.includes(f) && imports(readFileSync(f, "utf8")).some((t) => facades.includes(`${resolve(dirname(f), t)}.ts`))).map(name);
+  assert.deepEqual(bad, []);
 });

@@ -6,7 +6,7 @@ import { clamp, round1 } from "../util";
 import { STAR_MAX, getRel, topAxis, postName, holder } from "../state";
 import type { Person, Outcome, LogEntry, World } from "../state";
 import { councilSteady, councilFeud, addComplaint } from "../authority";
-import { elderSaw } from "../economy";
+import { elderSaw } from "../economy/season";
 import { mod, addRel, lower } from "./people";
 import { relWord, axisWord, axisKnown, traitLabel } from "./know";
 import { trace, resetTrace, underFloor, scoreOptions, decide } from "./decide";

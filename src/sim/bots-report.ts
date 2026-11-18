@@ -4,7 +4,7 @@ import { POSTS } from "../data/core";
 import { SIDES } from "../data/economy";
 import { BALANCE as B } from "./balance";
 import { getRel, topAxis, type Outcome } from "./state";
-import { zoneOf, patienceWord } from "./economy";
+import { zoneOf, patienceWord } from "./economy/zones";
 import { authorityCap } from "./authority";
 import { BOTS, bot, playBot, type Bot, type BotRun } from "./bots";
 import { PRESETS } from "./presets";

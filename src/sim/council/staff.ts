@@ -6,7 +6,7 @@ import { clamp, round1 } from "../util";
 import { REL_MAX, postName, holder } from "../state";
 import type { Person, World } from "../state";
 import { addAuthority, priceOf, authorityWeak } from "../authority";
-import { addTrust } from "../economy";
+import { addTrust } from "../economy/zones";
 import { addRel } from "./people";
 import { PATRON_SIDE } from "./generate";
 

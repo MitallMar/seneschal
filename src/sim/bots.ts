@@ -7,12 +7,16 @@ import { AXES, POSTS } from "../data/core";
 import { COURSES } from "../data/economy";
 import { BALANCE as B } from "./balance";
 import { Rng } from "./rng";
-import {
-  assign, setHead, talk, nextTalk, persuade, giveOrder, command, deskView, runSeason, holder, getRel, relWord, fitWord, fitness, isStale,
-  type World, type Person,
-} from "./sim";
+import { assign, setHead, giveOrder } from "./council/staff";
+import { talk, nextTalk, persuade } from "./council/talk";
+import { command, deskView, runSeason } from "./season";
+import { holder, getRel, fitness, isStale, type World, type Person } from "./state";
+import { relWord, fitWord } from "./council/know";
 import { newPreset } from "./presets";
-import { setCourse, setFloor, payTax, payOptions, taxLeft, seasonKind, forecastFork, courseDef } from "./economy";
+import { setCourse, setFloor, courseDef } from "./economy/doer";
+import { payTax, payOptions, taxLeft } from "./economy/pay";
+import { seasonKind } from "./economy/zones";
+import { forecastFork } from "./economy/view";
 import { judge, feast, feastCost, feastsThisYear, authorityCap, complaintLeft, councilSteady, FEASTS } from "./authority";
 import { PROBE, resetProbe, type Probe } from "./probe";
 

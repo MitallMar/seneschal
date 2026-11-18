@@ -6,7 +6,8 @@ import { clamp, round1 } from "../util";
 import { isStale } from "../state";
 import type { Person, World } from "../state";
 import { PROBE } from "../probe";
-import { belowFloor, courseLean } from "../economy";
+import { belowFloor } from "../economy/ledger";
+import { courseLean } from "../economy/doer";
 import { activeTraits, mod } from "./people";
 
 // bonus — прибавка наказа в этом весе (ноль, если наказа нет или его не послушали); heard — наказ к варианту подходил
