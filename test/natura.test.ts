@@ -306,6 +306,10 @@ test("предупреждения появляются, когда цель н�
 });
 
 test("совет натуру не зовёт: генератор стоит отдельно", async () => {
-  const { readFileSync } = await import("node:fs");
-  for (const f of ["src/sim/sim.ts", "src/ui/main.ts"]) assert.ok(!/natura/.test(readFileSync(f, "utf8")), f);
+  const { readFileSync, readdirSync } = await import("node:fs");
+  // совет и сезон в ядре и экран прототипа совета: все их модули
+  const dirs = ["src/sim/council", "src/ui/council"];
+  const files = ["src/sim/season.ts", ...dirs.flatMap((d) => readdirSync(d).map((x) => `${d}/${x}`))];
+  assert.ok(files.length > dirs.length + 1);
+  for (const f of files) assert.ok(!/natura/.test(readFileSync(f, "utf8")), f);
 });
