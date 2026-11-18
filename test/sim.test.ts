@@ -242,6 +242,8 @@ test("наказ склоняет решение лояльного челове
   assert.ok(!choice((p) => { p.loyalty = 0; p.order = "dolg"; p.tenure = BALANCE.exp.staleFrom; }).includes("по наказу"));
 });
 
+const start = BALANCE.economy.start.trust;
+
 // ---------- совет: исход спора зависит от отношений ----------
 // «Плотина» задевает старосту и десятника: «Все на плотину» (Забота, Обычай: деревни +2, порядок −1),
 // «Все в дозоры» (Долг, Дерзость: порядок +2, купцы +1, деревни −1), «Поделить пополам» (Выгода).
@@ -253,7 +255,8 @@ test("спор: думают одинаково и ладят — сошлись
     const e = runEvent(w, event("plotina"));
     assert.ok(said(e.lines, "Сошлись сразу"), `${seed}: ${e.lines.join(" | ")}`);
     assert.deepEqual(e.effects, { derevni: 2.5, poryadok: -1.2 });
-    assert.equal(w.factions.derevni, 2.5);
+    assert.equal(w.factions.brod, start + 2.5);
+    assert.equal(w.factions.opushka, start + 2.5, "событие без названной деревни задевает обе");
     assert.equal(getRel(w, a.id, b.id), 8.5);
     assert.deepEqual([a.decisions, b.decisions], [1, 1]);
   }
@@ -398,6 +401,7 @@ test("умение: новичок делает дело хуже мастера
     const p = fix(holder(w, "starosta")!, ["zabota"]);
     setAt("decide.noise", 0);
     setup(p);
+    w.eco.floor.eda = 0; // «Простить» стоит еды: нижняя черта не должна мешать
     return runEvent(w, event("nedoimka")).effects!.derevni;
   };
   assert.equal(derevni(() => {}), 2);

@@ -2,10 +2,11 @@ import type { GameEvent } from "./types";
 
 // События, которые совет решает без Сенешаля. posts — какие сферы задеты.
 // Если сферы две — держатели должностей могут разойтись во мнениях.
+// village — событие про одну деревню (Нижняя — у брода, Верхняя — у опушки): последствие derevni достаётся только ей.
 export const EVENTS: GameEvent[] = [
   // --- одна сфера ---
   {
-    id: "nedoimka", title: "Недоимка", text: "Нижняя деревня не довезла зерно к сроку: град побил поле.", posts: ["starosta"],
+    id: "nedoimka", title: "Недоимка", text: "Нижняя деревня не довезла зерно к сроку: град побил поле.", posts: ["starosta"], village: "brod",
     options: [
       { id: "prostit", text: "Простить в этот раз", axes: ["zabota"], effects: { derevni: 2, pripasy: -2 } },
       { id: "vzyskat", text: "Взыскать до последнего мешка", axes: ["dolg"], effects: { derevni: -2, pripasy: 2 } },
@@ -21,7 +22,7 @@ export const EVENTS: GameEvent[] = [
     ],
   },
   {
-    id: "brakonier", title: "Браконьер", text: "Пойман парень с оленем из заповедной рощи у опушки.", posts: ["lesnichiy"],
+    id: "brakonier", title: "Браконьер", text: "Пойман парень с оленем из заповедной рощи у опушки.", posts: ["lesnichiy"], village: "opushka",
     options: [
       { id: "vernut_lesu", text: "Оставить тушу лесу и выпороть", axes: ["obychai"], effects: { les: 1, derevni: -1 } },
       { id: "otpustit", text: "Отпустить с мясом — семья голодает", axes: ["zabota"], effects: { derevni: 1, les: -2 } },
@@ -37,7 +38,7 @@ export const EVENTS: GameEvent[] = [
     ],
   },
   {
-    id: "drak_v_kabake", title: "Драка у корчмы", text: "Стражник избил сына старосты Верхней деревни. Говорят, было за что.", posts: ["desyatnik"],
+    id: "drak_v_kabake", title: "Драка у корчмы", text: "Стражник избил сына старосты Верхней деревни. Говорят, было за что.", posts: ["desyatnik"], village: "opushka",
     options: [
       { id: "nakazat", text: "Наказать своего при всех", axes: ["dolg"], effects: { derevni: 2, zamok: -1 } },
       { id: "prikryt", text: "Прикрыть стражника", axes: ["derzost"], effects: { zamok: 1, derevni: -2 } },
@@ -53,7 +54,7 @@ export const EVENTS: GameEvent[] = [
     ],
   },
   {
-    id: "znamenie", title: "Знамение", text: "У опушки нашли круг из мёртвых ворон. Деревня в страхе.", posts: ["lesnichiy"],
+    id: "znamenie", title: "Знамение", text: "У опушки нашли круг из мёртвых ворон. Деревня в страхе.", posts: ["lesnichiy"], village: "opushka",
     options: [
       { id: "obryad", text: "Провести старый обряд с хлебом и солью", axes: ["obychai"], effects: { derevni: 2, pripasy: -1 } },
       { id: "razvedat", text: "Пойти в лес и разведать самому", axes: ["derzost"], effects: { les: -1, poryadok: 1 }, risky: true },
@@ -69,7 +70,7 @@ export const EVENTS: GameEvent[] = [
     ],
   },
   {
-    id: "mezha", title: "Спор о меже", text: "Две семьи в Нижней деревне не поделили полосу у ручья. Дошло до кольев.", posts: ["starosta"],
+    id: "mezha", title: "Спор о меже", text: "Две семьи в Нижней деревне не поделили полосу у ручья. Дошло до кольев.", posts: ["starosta"], village: "brod",
     options: [
       { id: "po_kamnyam", text: "Рассудить по старым межевым камням, как деды клали", axes: ["obychai"], effects: { derevni: 1, dvor: -1 } },
       { id: "po_knige", text: "Перемерить по писцовой книге", axes: ["dolg"], effects: { dvor: 1, derevni: -1 } },
@@ -141,7 +142,7 @@ export const EVENTS: GameEvent[] = [
     ],
   },
   {
-    id: "dar_opushki", title: "Дар опушки", text: "Лесной народ оставил на меже корзины с грибами и мёдом. По обычаю в ответ кладут хлеб — вдвое.", posts: ["lesnichiy"],
+    id: "dar_opushki", title: "Дар опушки", text: "Лесной народ оставил на меже корзины с грибами и мёдом. По обычаю в ответ кладут хлеб — вдвое.", posts: ["lesnichiy"], village: "opushka",
     options: [
       { id: "otvetit", text: "Ответить хлебом, как положено", axes: ["obychai"], effects: { les: 1, pripasy: -1 } },
       { id: "razdat", text: "Раздать дар деревенским, ответ отложить", axes: ["zabota"], effects: { derevni: 1, les: -1 } },
@@ -198,7 +199,7 @@ export const EVENTS: GameEvent[] = [
     ],
   },
   {
-    id: "mor", title: "Падёж скота", text: "В Верхней деревне падёж коров. Знахарка говорит — от леса.", posts: ["starosta", "lesnichiy"],
+    id: "mor", title: "Падёж скота", text: "В Верхней деревне падёж коров. Знахарка говорит — от леса.", posts: ["starosta", "lesnichiy"], village: "opushka",
     options: [
       { id: "zhech", text: "Сжечь туши и окурить дворы", axes: ["dolg"], effects: { poryadok: 1, derevni: -1 } },
       { id: "dar_lesu", text: "Отнести дар лесу", axes: ["obychai"], effects: { les: 1, pripasy: -1 } },
@@ -239,7 +240,7 @@ export const EVENTS: GameEvent[] = [
     ],
   },
   {
-    id: "prikl_tvar", title: "Увязалась тварь", text: "За отрядом снизу кто-то пришёл: ночью задрали овец у Нижней деревни.", posts: ["desyatnik", "lesnichiy"], adventurers: true,
+    id: "prikl_tvar", title: "Увязалась тварь", text: "За отрядом снизу кто-то пришёл: ночью задрали овец у Нижней деревни.", posts: ["desyatnik", "lesnichiy"], village: "brod", adventurers: true,
     options: [
       { id: "oblava", text: "Облава всей стражей", axes: ["derzost", "dolg"], effects: { poryadok: 2, les: -1 }, risky: true },
       { id: "prikl_platyat", text: "Заставить отряд самому её выследить", axes: ["dolg"], effects: { poryadok: 1 } },

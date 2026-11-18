@@ -137,3 +137,59 @@ details.bio ul { margin: 4px 0 0; padding-left: 18px; line-height: 1.4; }
 .eff { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 3px; }
 .eff span { font-size: 11.5px; border-radius: 8px; padding: 0 6px; background: #f0e9dc; }
 .controls a { color: var(--accent); font-size: 14px; }
+
+/* Хозяйство и подать */
+.eco { margin: 14px 16px 0; }
+.eco h3 { margin: 0 0 6px; font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: normal; }
+.eco-cats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+@media (max-width: 900px) { .eco-cats { grid-template-columns: 1fr 1fr; } }
+.cat { position: relative; border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; background: #fffdf8; cursor: help; }
+.cat:hover, .cat:focus { border-color: var(--accent); outline: none; }
+.cat-head { display: flex; align-items: baseline; gap: 6px; }
+.cat-name { font-weight: bold; }
+.cat-v { font-size: 20px; font-variant-numeric: tabular-nums; margin-left: auto; }
+.cat-unit { color: var(--muted); font-size: 12px; }
+.bar { position: relative; height: 10px; border-radius: 5px; background: #eadfca; margin: 5px 0; overflow: visible; }
+.bar .fill { display: block; height: 100%; border-radius: 5px; background: var(--accent); opacity: .75; }
+.cat[data-cat="lyudi"] .fill { background: var(--axis-dolg); }
+.cat[data-cat="eda"] .fill { background: var(--axis-zabota); }
+.cat[data-cat="tovary"] .fill { background: var(--axis-obychai); }
+.cat[data-cat="serebro"] .fill { background: var(--axis-vygoda); }
+.bar .floor { position: absolute; top: -3px; width: 2px; height: 16px; background: var(--bad); }
+.cat-note { font-size: 12px; color: var(--muted); line-height: 1.35; }
+.cat-note small { opacity: .8; }
+.fc-не-хватит, .fc-пусто { color: var(--bad); } .fc-впритык { color: var(--mixed); } .fc-с-запасом { color: var(--good); }
+.ledger {
+  display: none; position: absolute; z-index: 6; left: 0; top: 100%; margin-top: 4px; min-width: 100%; width: max-content; max-width: min(560px, 92vw);
+  background: var(--paper); border: 1px solid var(--accent); border-radius: 8px; padding: 8px 10px; font-size: 12px; box-shadow: 0 6px 18px rgba(0, 0, 0, .15); cursor: default;
+}
+.cat:hover .ledger, .cat:focus .ledger, .cat:focus-within .ledger { display: block; }
+.cat:nth-child(n+3) .ledger { left: auto; right: 0; }
+.ledger p { margin: 4px 0 0; color: var(--muted); }
+.ll { display: grid; grid-template-columns: 44px 1fr; gap: 0 8px; padding: 2px 0; border-top: 1px dotted var(--line); }
+.ll .lv { text-align: right; font-variant-numeric: tabular-nums; }
+.ll .lm { grid-column: 2; color: var(--muted); font-size: 11px; }
+.ll.hidden-line { background: #f6e3dc; }
+.lfoot { margin-top: 4px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 3px; }
+.lfoot.mismatch { color: var(--bad); }
+.eco-row { display: grid; grid-template-columns: 1.3fr 1fr .8fr; gap: 14px; margin-top: 12px; }
+@media (max-width: 1100px) { .eco-row { grid-template-columns: 1fr; } }
+.eco-track .yrs, .eco-track .cells { display: grid; grid-template-columns: repeat(12, 1fr); gap: 3px; }
+.eco-track .yrs { grid-template-columns: repeat(3, 1fr); font-size: 11px; color: var(--muted); margin-bottom: 2px; }
+.cell { border: 1px solid var(--line); border-radius: 5px; padding: 3px 2px; min-height: 40px; font-size: 10px; text-align: center; background: #fffdf8; display: flex; flex-direction: column; gap: 1px; }
+.cell .cs { color: var(--muted); }
+.cell .cm { line-height: 1.15; }
+.cell.past { opacity: .55; }
+.cell.now { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); opacity: 1; }
+.cell.ok .cm { color: var(--good); } .cell.fail .cm { color: var(--bad); }
+.eco-tax { margin-top: 8px; font-size: 14px; }
+.pay { display: flex; gap: 6px; flex-wrap: wrap; margin: 6px 0 4px; }
+.pay select { flex: 1; min-width: 180px; }
+.pay input, .floors input { width: 64px; border: 1px solid var(--line); border-radius: 6px; padding: 4px 6px; background: var(--paper); }
+.eco .hint { margin: 2px 0 6px; }
+.floors { display: flex; flex-wrap: wrap; gap: 6px 12px; font-size: 13px; align-items: center; }
+.eco-sides .side { display: flex; justify-content: space-between; gap: 8px; font-size: 14px; padding: 1px 0; cursor: help; }
+.zone { border-radius: 4px; padding: 0 5px; font-size: 13px; }
+.zone-заодно { background: #dbe8d3; } .zone-ладят { background: #ecf1df; } .zone-терпят { background: #f3e1cf; } .zone-отказывают { background: #ecc9bf; }
+.elder { font-size: 12px; color: var(--muted); margin-top: 3px; }
+.pat-благоволит { color: var(--good); } .pat-недоволен { color: var(--mixed); } .pat-на-исходе { color: var(--bad); }
