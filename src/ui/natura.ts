@@ -14,10 +14,9 @@ import { Rng } from "../sim/rng";
 import { birthHealth, makeFamily, liveThrough, krepostNow, healthTrait, SEASONS_IN_YEAR, WINTER, type Health, type SeasonState } from "../sim/health";
 import { healthMetrics, healthWarnings, type HealthMetrics } from "../sim/health-report";
 import { mean } from "../sim/util";
+import { $, esc } from "./dom";
 
-const $ = (id: string) => document.getElementById(id)!;
 const val = (id: string) => ($(id) as HTMLInputElement | HTMLSelectElement).value;
-const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]!));
 const pct = (v: number) => `${Math.round(v * 100)}%`;
 const f1 = (v: number) => v.toFixed(1).replace(".", ",");
 const f2 = (v: number) => v.toFixed(2).replace(".", ",");

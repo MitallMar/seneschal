@@ -4028,10 +4028,12 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
     return out;
   }
 
-  // src/ui/natura.ts
+  // src/ui/dom.ts
   var $ = (id) => document.getElementById(id);
-  var val = (id) => $(id).value;
   var esc = (s) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+
+  // src/ui/natura.ts
+  var val = (id) => $(id).value;
   var pct = (v) => `${Math.round(v * 100)}%`;
   var f1 = (v) => v.toFixed(1).replace(".", ",");
   var f2 = (v) => v.toFixed(2).replace(".", ",");
