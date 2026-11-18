@@ -34,6 +34,7 @@
 | Экран прототипа: совет, карточки людей, летопись, «Взгляд дизайнера» | `src/ui/main.ts`, `src/ui/index.html` | они же, `src/ui/style.css`; после правки `npm run e2e` |
 | Спортзал совета: панель ручек, заготовки ситуаций, горячие клавиши (задача И2) | `docs/design/backlog.md` (И2), `src/sim/balance.ts` (`KNOBS`, `setAt`, `snapshotBalance`) | `src/ui/`; раздел `gym` в `test/e2e/smoke.py` |
 | Боты и скрипты баланса (задача И3) | `docs/design/backlog.md` (И3), `tools/headless.ts` | `src/sim/` (боты), `tools/` |
+| Натура: признаки, натуры, мешок черт и перков, рост древа | `docs/design/natura.md` (раздел 9 — как сделано); `src/data/natura.ts`, `src/sim/natura.ts` | они же, числа — раздел `natura` в `balance.ts`; тест в `test/natura.test.ts`; после правки `npm run natura -- --diff --save` без предупреждений, числа в разделе 9 обновить. Совет (`sim.ts`) натуру не зовёт |
 | Прогон без экрана, сводка по партии | `tools/headless.ts` | он же |
 | Сборка в один HTML | `tools/build.mjs` | он же |
 | Проверка в браузере | шапка `test/e2e/smoke.py`, `docs/TESTING.md` | `test/e2e/smoke.py`: к теме раздела — дописать в него, новая тема — новый раздел |

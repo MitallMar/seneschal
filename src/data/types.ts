@@ -87,3 +87,40 @@ export interface GameEvent {
   adventurers?: boolean;  // только когда открыт лабиринт
   options: EventOption[];
 }
+
+// ---------- Натура: глубокий слой личности (задача И8, замысел — docs/design/natura.md) ----------
+
+// Признак — глубокое измерение личности, двухполюсное, −5…+5: плюс — первый полюс, минус — второй.
+export type Sign =
+  | "gordost" | "shchedrost" | "smelost" | "vera" | "lyubopytstvo" | "zhestkost"
+  | "privyazannost" | "chestolyubie" | "chestnost" | "terpenie" | "obshchitelnost" | "poryadok";
+export type SignVec = Partial<Record<Sign, number>>;
+
+export interface SignDef { id: Sign; plus: string; minus: string }
+
+// Натура — архетип: ядро (2–4 сильных признака) и точки кристаллизации — области мешка, из которых берутся якоря.
+export interface NatureDef {
+  id: string;
+  name: string;
+  core: SignVec;
+  crystals: SignVec[];
+}
+
+export type BagKind = "born" | "life" | "perk";       // черта рождения, черта жизни, перк (умение, открывается делом)
+export type Rarity = "common" | "rare" | "exceptional";
+export type BagSource = "birth" | "backstory" | "life" | "post";
+
+// Черта или перк из мешка. Вектор по признакам — 1–3 ненулевых значения.
+export interface BagTrait {
+  id: string;
+  name: string;
+  desc: string;
+  kind: BagKind;
+  vec: SignVec;
+  rarity: Rarity;
+  effect: string;          // как черта действует — пока словами: совет к натуре не подключён
+  source: BagSource[];     // откуда может взяться
+  conflicts?: string[];    // с чем не уживается (достаточно назвать с одной стороны)
+  requires?: string[];     // для перков: нужна хотя бы одна из этих черт
+  hidden?: boolean;        // открывается только поступком
+}
