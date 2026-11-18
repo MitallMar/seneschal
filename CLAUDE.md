@@ -35,6 +35,7 @@
 | Эмулятор совета: панель ручек, заготовки ситуаций, горячие клавиши (задача И2) | `docs/design/backlog.md` (И2), `src/sim/balance.ts` (`KNOBS`, `setAt`, `snapshotBalance`) | `src/ui/`; раздел `emu` в `test/e2e/smoke.py` |
 | Боты и скрипты баланса (задача И3) | `docs/design/backlog.md` (И3), `tools/headless.ts` | `src/sim/` (боты), `tools/` |
 | Натура: признаки, натуры, мешок черт и перков, рост древа | `docs/design/natura.md` (раздел 9 — как сделано); `src/data/natura.ts`, `src/sim/natura.ts` | они же, числа — раздел `natura` в `balance.ts`; тест в `test/natura.test.ts`; после правки `npm run natura -- --diff --save` без предупреждений, числа в разделе 9 обновить. Совет (`sim.ts`) натуру не зовёт |
+| Здоровье: крепость, черты здоровья, сезонная проверка | `docs/design/zdorovye.md`; `src/data/health.ts`, `src/sim/health.ts` | они же, числа — раздел `health` в `balance.ts`; тест в `test/health.test.ts`; после правки `npm run health -- --diff --save` без предупреждений, числа в `zdorovye.md` обновить. Совет здоровье не зовёт |
 | Эмулятор натуры: графики, таблицы, панель ручек | `src/ui/natura.ts`, `src/ui/natura.html` | они же, `src/ui/natura.css`; новая метрика — в `src/sim/natura-report.ts`; в браузере — `npm run e2e -- natura` |
 | Прогон без экрана, сводка по партии | `tools/headless.ts` | он же |
 | Сборка страниц (каждая — один HTML) | `tools/build.mjs` | он же |

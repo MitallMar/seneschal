@@ -379,6 +379,16 @@ async def s_natura(br, errs):
     await pg.click('#reset')
     m3 = await pg.evaluate("()=>window.__emu.metrics()")
     ok('«Сброс» возвращает ручки и те же числа', await n('#knobs .knob.changed') == 0 and m3['jaccard'] == m['jaccard'] and m3['nn'] == m['nn'])
+    h = await pg.evaluate("()=>window.__emu.health()")
+    ok('здоровье: восемь карточек без красных, предупреждений нет, за партию выбывает 15–30%', await n('#health-cards .card') == 8 and await n('#health-cards .card.bad') == 0
+       and 'Предупреждений нет' in await pg.inner_text('#health-warnings') and 0.15 <= h['removed'] <= 0.3 and h['life']['median'] >= 175, (h['removed'], h['life']['median']))
+    ok('здоровье: графики, лента двадцати лет человека, семьи в партии, таблица из 21 черты', await n('#chart-curve polyline') == 1 and await n('#chart-life rect') >= 15
+       and await n('#chart-causes .track') == 4 and await n('#health-person .strip i') == 80 and await n('#health-party tr') == 11 and await n('#table-health tr') == 22)
+    await pg.evaluate("()=>window.__emu.setKnob('health.illBase', 0.1)")
+    h2 = await pg.evaluate("()=>window.__emu.health()")
+    ok('ручка здоровья действует: болеют впятеро чаще — в постели больше, карточка краснеет', h2['offShare'] > h['offShare'] * 2 and await n('#health-cards .card.bad') >= 1
+       and await n('#health-warnings .warn') >= 1, (h['offShare'], h2['offShare']))
+    await pg.click('#reset')
     await pg.select_option('#rolls', '300')
     ok('число рероллов меняется', await pg.evaluate("()=>window.__emu.people()") == 300)
     await shot(pg, 'natura')

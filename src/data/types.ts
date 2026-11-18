@@ -129,3 +129,25 @@ export interface BagTrait {
   council?: boolean;       // та же черта уже работает в совете под этим id (LIFE_TRAITS)
   hidden?: boolean;        // открывается только поступком
 }
+
+// ---------- Здоровье (задача И10, замысел — docs/design/zdorovye.md) ----------
+
+// Откуда черта здоровья: врождённая, наследственная (идёт по семье) или нажитая (остаётся после болезни, раны, со старостью).
+export type HealthOrigin = "born" | "hereditary" | "gained";
+export type HealthCause = "illness" | "wound" | "age";
+
+export interface HealthTrait {
+  id: string;
+  name: string;
+  desc: string;
+  origin: HealthOrigin;
+  good?: boolean;       // черта на пользу здоровью
+  cause?: HealthCause;  // у нажитой: после чего остаётся
+  weight: number;       // как часто выпадает среди черт своего происхождения
+  krepost?: number;     // сдвиг крепости
+  risk?: number;        // множитель шанса заболеть
+  winter?: number;      // дополнительный множитель шанса заболеть зимой
+  death?: number;       // множитель шанса умереть от тяжёлой болезни или раны
+  aging?: number;       // множитель скорости старения (меньше единицы — стареет медленнее)
+  effect: string;       // как скажется на службе — пока словами
+}

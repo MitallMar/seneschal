@@ -16,7 +16,7 @@
   <button id="run" class="primary">Прогнать</button>
   <span id="state" class="muted"></span>
   <nav>
-    <a href="#metrics">Метрики</a><a href="#charts">Графики</a><a href="#person">Человек</a><a href="#party">Партия</a>
+    <a href="#metrics">Метрики</a><a href="#charts">Графики</a><a href="#person">Человек</a><a href="#party">Партия</a><a href="#health">Здоровье</a>
     <a href="#t-natures">Натуры</a><a href="#t-bag">Мешок</a><a href="#t-signs">Признаки</a><a href="#t-council">Совет</a>
     <a href="index.html">← прототип совета</a>
   </nav>
@@ -67,6 +67,25 @@
       <h2>Партия из десяти</h2>
       <p class="muted">Люди растут по очереди: черта, уже взятая кем-то в партии, следующему выпадает реже.</p>
       <div id="party-view"></div>
+    </section>
+    <section id="health">
+      <h2>Здоровье</h2>
+      <p class="muted">Отдельный слой: крепость при рождении, черты здоровья, проверка каждый сезон. Прогон — люди разного возраста проживают партию; срок жизни считается отдельно, от взрослости до смерти.</p>
+      <div id="health-cards" class="cards"></div><div id="health-warnings"></div>
+      <div class="split">
+        <div><h3>Кто ещё служит, по годам партии</h3><div id="chart-curve"></div></div>
+        <div><h3>До скольких лет живут</h3><div id="chart-life"></div></div>
+      </div>
+      <div class="split">
+        <div><h3>Отчего выбывают за партию</h3><div id="chart-causes"></div></div>
+        <div><h3>Выбывают за партию — по возрасту на её начало</h3><div id="chart-byage"></div></div>
+      </div>
+      <h3>Здоровье человека из раздела «Один человек» и его двадцать лет</h3>
+      <div id="health-person"></div>
+      <h3>Партия из десяти: семьи и здоровье</h3>
+      <div id="health-party" class="scroll"></div>
+      <h3>Черты здоровья</h3>
+      <div id="table-health" class="scroll"></div>
     </section>
     <section id="t-natures"><h2>Натуры: ядро и точки кристаллизации</h2><div id="table-natures" class="scroll"></div></section>
     <section id="t-bag">
