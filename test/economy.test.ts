@@ -8,12 +8,20 @@ import { EVENTS } from "../src/data/events";
 import { SIDES, COURSES, PAY, ELDERS } from "../src/data/economy";
 import { HANDS, LEVERS } from "../src/data/handwriting";
 import { BALANCE, resetBalance, setAt } from "../src/sim/balance";
-import { newWorld, runSeason, runEvent, assign, holder, setRel, type World } from "../src/sim/sim";
+import { newWorld } from "../src/sim/council/generate";
+import { runSeason } from "../src/sim/season";
+import { runEvent } from "../src/sim/council/council";
+import { assign } from "../src/sim/council/staff";
+import { holder, setRel, type World } from "../src/sim/state";
 import { councilSteady } from "../src/sim/authority";
-import {
-  zoneWord, zoneOf, zoneMult, patienceWord, doer, setCourse, setFloor, courseStrength, handsNow, fieldHands, planSeason, economySeason,
-  payOptions, payTax, taxLeft, lessonOf, forecastFork, ledgerOf, elderRel, elderSaw, addLine, seasonKind, mastery, handsOf, handText, levers,
-} from "../src/sim/economy";
+import { zoneWord, zoneOf, zoneMult, patienceWord, seasonKind } from "../src/sim/economy/zones";
+import { doer, setCourse, setFloor, courseStrength, mastery, handsOf, handText, levers } from "../src/sim/economy/doer";
+import { handsNow, fieldHands, planSeason } from "../src/sim/economy/plan";
+import { economySeason, elderSaw } from "../src/sim/economy/season";
+import { payOptions, payTax, taxLeft } from "../src/sim/economy/pay";
+import { lessonOf } from "../src/sim/economy/tax";
+import { forecastFork, ledgerOf, elderRel } from "../src/sim/economy/view";
+import { addLine } from "../src/sim/economy/ledger";
 import { economyMetrics, freeYear, PAYERS } from "../src/sim/economy-report";
 import { dump, fix } from "./_world";
 

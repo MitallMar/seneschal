@@ -5,10 +5,14 @@ import type { Axis, Trait } from "../src/data/types";
 import { AXES, ASPIRATIONS, LIFE_TRAITS, POSTS, TRAITS } from "../src/data/core";
 import { EVENTS } from "../src/data/events";
 import { BALANCE, resetBalance, setAt } from "../src/sim/balance";
-import {
-  newWorld, runSeason, runEvent, assign, talk, nextTalk, holder, getRel, setRel, topAxis, axisKnown, axisWord, fitWord, headOpinion,
-  rumorCheck, forecast, traitLabel, gainTrait, breakdown, type Person, type World,
-} from "../src/sim/sim";
+import { newWorld } from "../src/sim/council/generate";
+import { runSeason } from "../src/sim/season";
+import { runEvent } from "../src/sim/council/council";
+import { assign } from "../src/sim/council/staff";
+import { talk, nextTalk } from "../src/sim/council/talk";
+import { holder, getRel, setRel, topAxis, type Person, type World } from "../src/sim/state";
+import { axisKnown, axisWord, fitWord, headOpinion, rumorCheck, forecast, traitLabel } from "../src/sim/council/know";
+import { gainTrait, breakdown } from "../src/sim/council/traits";
 import { fix, pair } from "./_world";
 
 const SEEDS = ["замок", "лес", "герцог", "test", "7", "осень-3", "Ведана", "x"];

@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import type { Axis, PostId, Star, Trait } from "../src/data/types";
 import { AXES } from "../src/data/core";
 import { BALANCE } from "../src/sim/balance";
-import { holder, setRel, type Person, type World } from "../src/sim/sim";
+import { holder, setRel, type Person, type World } from "../src/sim/state";
 
 // Партия одним текстом: всё состояние, кроме генератора случайных чисел.
 export function dump(w: World): string {

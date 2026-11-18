@@ -6,8 +6,13 @@ import { POSTS } from "../src/data/core";
 import { EVENTS } from "../src/data/events";
 import { SIDES } from "../src/data/economy";
 import { BALANCE, resetBalance, setAt } from "../src/sim/balance";
-import { newWorld, runSeason, assign, assignCost, giveOrder, holder, setRel, persuade, persuadeStep, command, deskView, orderCost, type World } from "../src/sim/sim";
-import { economySeason, payTax } from "../src/sim/economy";
+import { newWorld } from "../src/sim/council/generate";
+import { runSeason, command, deskView } from "../src/sim/season";
+import { assign, assignCost, giveOrder, orderCost } from "../src/sim/council/staff";
+import { holder, setRel, type World } from "../src/sim/state";
+import { persuade, persuadeStep } from "../src/sim/council/talk";
+import { economySeason } from "../src/sim/economy/season";
+import { payTax } from "../src/sim/economy/pay";
 import {
   addAuthority, authorityCap, authorityWeak, complaintLeft, authoritySupport, authoritySeason, councilSteady, addComplaint, judge, feast, feastGain, feastsThisYear, FEASTS,
 } from "../src/sim/authority";

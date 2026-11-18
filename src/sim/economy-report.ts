@@ -4,12 +4,11 @@ import type { PayId, Side, Stock } from "../data/types";
 import { SIDES, STOCKS, PAY } from "../data/economy";
 import { BALANCE as B } from "./balance";
 import { newWorld } from "./council/generate";
-import type { World } from "./state";
+import type { World, AuthKind, Zone } from "./state";
 import { bot, playBot, type Bot } from "./bots";
-import { authorityCap, type AuthKind } from "./authority";
+import { authorityCap } from "./authority";
 import { economySeason } from "./economy/season";
 import { zoneOf, patienceWord } from "./economy/zones";
-import { type Zone } from "./state";
 import { mean, round2 } from "./util";
 
 // Кто играет партии отчёта: боты (src/sim/bots.ts). «Ничего не трогает» — совет платит сам; «Хозяин» платит руками; дальше — его варианты платы.

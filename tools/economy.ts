@@ -8,8 +8,9 @@ import { fileURLToPath } from "node:url";
 import { PAY, SIDES, SIDE_NAMES, CATEGORY_NAMES, STOCKS } from "../src/data/economy";
 import { BALANCE } from "../src/sim/balance";
 import { economyMetrics, economyNotes, freeYear, PAYERS, type EconomyMetrics } from "../src/sim/economy-report";
-import type { Zone } from "../src/sim/economy";
-import { AUTH_KIND_NAMES, type AuthKind } from "../src/sim/authority";
+import type { Zone } from "../src/sim/state";
+import { AUTH_KIND_NAMES } from "../src/sim/authority";
+import type { AuthKind } from "../src/sim/state";
 
 const arg = (name: string, def: string) => process.argv.find((a) => a.startsWith(`--${name}=`))?.split("=")[1] ?? def;
 const seeds = Number(arg("seeds", String(BALANCE.bots.seeds))), seasons = Number(arg("seasons", "12"));

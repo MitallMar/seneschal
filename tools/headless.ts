@@ -1,9 +1,12 @@
 // Прогон без экрана: генерирует партию, гоняет сезоны и печатает сводку.
 // Запуск: npm run sim -- [семя] [сезонов] [--log]
-import { newWorld, runSeason, consistency, topAxis, expWord, relWord, getRel, loyaltyWord, postName, traitLabel, axisKnown } from "../src/sim/sim";
+import { newWorld } from "../src/sim/council/generate";
+import { runSeason } from "../src/sim/season";
+import { consistency, expWord, relWord, loyaltyWord, traitLabel, axisKnown } from "../src/sim/council/know";
+import { topAxis, getRel, postName } from "../src/sim/state";
 import { AXES, AXIS_NAMES } from "../src/data/core";
 import { SIDES, SIDE_NAMES, STOCKS, CATEGORY_NAMES } from "../src/data/economy";
-import { zoneOf, patienceWord } from "../src/sim/economy";
+import { zoneOf, patienceWord } from "../src/sim/economy/zones";
 
 const seed = process.argv[2] ?? "test";
 const seasons = Number(process.argv[3] ?? 12);

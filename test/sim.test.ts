@@ -4,10 +4,13 @@ import assert from "node:assert/strict";
 import { AXES, ASPIRATIONS, POSTS } from "../src/data/core";
 import { EVENTS } from "../src/data/events";
 import { BALANCE, resetBalance, setAt } from "../src/sim/balance";
-import {
-  newWorld, runSeason, runEvent, assign, assignCost, talk, giveOrder, holder, getRel, setRel, fitness, isStale, expWord, patronOf, patronText,
-  relWord, loyaltyWord, type Person, type World,
-} from "../src/sim/sim";
+import { newWorld, patronOf, patronText } from "../src/sim/council/generate";
+import { runSeason } from "../src/sim/season";
+import { runEvent } from "../src/sim/council/council";
+import { assign, assignCost, giveOrder } from "../src/sim/council/staff";
+import { talk } from "../src/sim/council/talk";
+import { holder, getRel, setRel, fitness, isStale, type Person, type World } from "../src/sim/state";
+import { expWord, relWord, loyaltyWord } from "../src/sim/council/know";
 import { dump, fix, pair } from "./_world";
 
 const SEEDS = ["замок", "лес", "герцог", "test", "7", "осень-3", "Ведана", "x"];
