@@ -68,12 +68,44 @@ test("ручка действует сразу: логика читает BALANC
 
 // ---------- генерация ----------
 
+test("наследство прежних баронов: одна-две должности на старте заняты не по годности, причина видна, одно семя — одна расстановка", () => {
+  const seen = new Set<number>(), hows = new Set<string>();
+  for (let i = 0; i < 60; i++) {
+    const seed = `наследство-${i}`, w = newWorld(seed);
+    assert.equal(dump(w), dump(newWorld(seed)), `${seed}: расстановка та же`);
+    setAt("staff.legacyMin", 0); setAt("staff.legacyMax", 0);
+    const plain = newWorld(seed);   // тот же совет, но весь по годности
+    resetBalance();
+    assert.equal(plain.legacy.length, 0);
+    assert.ok(plain.log[0].lines[0].includes("Все сидят по годности"));
+    const changed = POSTS.filter((d) => holder(w, d.id)!.id !== holder(plain, d.id)!.id).map((d) => d.id);
+    assert.ok(changed.length >= 1 && changed.length <= 2, `${seed}: не по годности ${changed.length}`);
+    assert.deepEqual(w.legacy.map((l) => l.post).sort(), [...changed].sort());
+    assert.equal(w.people.filter((p) => p.post).length, POSTS.length, "пустых должностей нет");
+    assert.ok(w.head != null && w.people[w.head].post, "главный — из совета");
+    for (const l of w.legacy) {
+      const p = holder(w, l.post)!, best = holder(plain, l.post)!;
+      assert.ok(fitness(p, l.post) < fitness(best, l.post), `${seed}, ${l.post}: посаженный годен меньше обойдённого`);
+      assert.equal(w.people[best.id].post, undefined, "обойдённый остался без должности");
+      assert.equal(p.tenure, best.tenure, "сидит так же давно");
+      assert.ok(p.bio[p.bio.length - 1].includes(l.how) && !/[{}]/.test(p.bio[p.bio.length - 1]), "причина — строкой в биографии");
+      assert.ok(w.log[0].lines.some((x) => x.includes(p.name) && x.includes(l.how) && x.includes("не по годности")), "и в летописи старта");
+      if (l.how === "по старшинству") assert.ok(w.people.filter((x) => !x.post && !plain.people[x.id].post).every((x) => x.age <= p.age), "по старшинству — самый старый из свободных");
+      hows.add(l.how);
+    }
+    seen.add(changed.length);
+  }
+  assert.deepEqual([...seen].sort(), [1, 2], "бывает и одна, и две");
+  assert.deepEqual([...hows].sort(), ["по милости", "по родству", "по старшинству"]);
+});
+
 test("генерация: 10 персонажей с биографией и стремлением, звезда в пределах 0–10", () => {
   for (const seed of SEEDS) {
     const w = newWorld(seed);
     assert.equal(w.people.length, 10);
     for (const p of w.people) {
-      assert.equal(p.bio.length, BALANCE.star.backstoryCount, `${seed}, ${p.name}: событий в биографии`);
+      const seated = w.legacy.some((l) => holder(w, l.post) === p) ? 1 : 0;   // посаженному прежним бароном — строка о том, как он получил должность
+      assert.equal(p.bio.length, BALANCE.star.backstoryCount + seated, `${seed}, ${p.name}: событий в биографии`);
       assert.ok(p.bio.every((line) => line.length > 10 && !/[{}]/.test(line)), `${seed}, ${p.name}: в биографии осталась подстановка`);
       assert.ok(p.aspiration && ASPIRATIONS.includes(p.aspiration), `${seed}, ${p.name}: стремление`);
       for (const a of AXES) assert.ok(p.star[a] >= 0 && p.star[a] <= 10, `${seed}, ${p.name}: ${a} = ${p.star[a]}`);
@@ -208,7 +240,7 @@ test("разговор тратит личное дело; дела возвра
   assert.equal(talk(w, 0), true);
   assert.equal(w.people[0].know.talks, 1);
   assert.equal(w.people[0].loyalty, Math.min(10, loyalty + BALANCE.staff.talkLoyalty));
-  talk(w, 0); talk(w, 0);
+  for (const p of w.people.slice(2)) while (talk(w, p.id)) { /* остаток личных дел уходит на разговоры с другими */ }
   assert.equal(w.deedsLeft, 0);
   assert.equal(talk(w, 1), false);
   assert.equal(w.people[1].know.talks, 0);
@@ -280,7 +312,7 @@ test("спор: разошлись, главный третий и с обоим
     setRel(w, head.id, b.id, 0);
     const e = runEvent(w, event("plotina"));
     assert.ok(said(e.lines, `Рассудил главный, ${head.name}: делать как хочет ${b.name}`), `${seed}: ${e.lines.join(" | ")}`);
-    assert.deepEqual(e.effects, { poryadok: 1.8, kuptsy: 0.9, derevni: -0.9 }, "спорщики — враги: дело двух сфер идёт хуже, ×0,9");
+    assert.deepEqual(e.effects, { poryadok: 1.5, kuptsy: 0.8, derevni: -0.7 }, "спорщики — враги: дело двух сфер идёт хуже, ×0,75");
     assert.equal(getRel(w, head.id, a.id), BALANCE.council.headJudgeRel);
     assert.equal(getRel(w, a.id, b.id), -8, "спорщики при суде главного не ссорятся сильнее");
     assert.deepEqual([a.decisions, b.decisions, head.decisions], [0, 1, 0]);
@@ -303,7 +335,7 @@ test("спор: главного не признают, если он с кем-
   assert.ok(!said(e2.lines, "Рассудил главный") && !said(e2.lines, "не признали"));
 });
 
-test("спор: враги — саботаж: дело сделано на треть, порядок падает, жалобы с обеих сторон", () => {
+test("спор: враги — саботаж: польза на треть, цена целиком, порядок падает, жалобы с обеих сторон", () => {
   for (const seed of SEEDS) {
     const w = newWorld(seed);
     const [a, b] = pair(w, "starosta", ["zabota", "obychai"], "desyatnik", ["dolg"], -8);
@@ -311,8 +343,9 @@ test("спор: враги — саботаж: дело сделано на тр
     setAt("council.sabotageChance", 1);
     const e = runEvent(w, event("plotina"));
     assert.ok(said(e.lines, "Саботаж") && said(e.lines, "Жалобы с обеих сторон"), `${seed}: ${e.lines.join(" | ")}`);
-    assert.deepEqual(e.effects, { derevni: 0.5, poryadok: -1.3 });
-    assert.equal(w.resources.poryadok, -1.3);
+    // польза срезана до доли саботажа и вражды (2 × 0,3 × 0,75), цена дела — целиком (−1) и ещё порядок от самой ссоры (−1)
+    assert.deepEqual(e.effects, { derevni: 0.5, poryadok: -2 });
+    assert.equal(w.resources.poryadok, -2);
     assert.equal(getRel(w, a.id, b.id), -9);
     assert.deepEqual([a.decisions, b.decisions], [1, 0]);
   }
@@ -325,7 +358,7 @@ test("спор: враги, но саботажа не случилось — п
   setAt("council.sabotageChance", 0);
   const e = runEvent(w, event("plotina"));
   assert.ok(said(e.lines, "смолчал") && !said(e.lines, "Саботаж"));
-  assert.deepEqual(e.effects, { derevni: 1.4, poryadok: -0.7 }, "враг смолчал ×0,75 и вражда в совете ×0,9"); // 2 × 0,675 = 1,35 → 1,4
+  assert.deepEqual(e.effects, { derevni: 1.1, poryadok: -0.6 }, "враг смолчал ×0,75 и вражда в совете ×0,75"); // 2 × 0,5625 = 1,125 → 1,1
   assert.equal(getRel(w, a.id, b.id), -8.5);
 });
 

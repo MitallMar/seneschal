@@ -55,13 +55,16 @@ export const PRESETS: Preset[] = [
     t.patience = Math.max(0, B.economy.tax.displeased - 1);
   } },
   { id: "nasledstvo", name: "Наследство прежних баронов", desc: "совет собирали по родству и милости: на трёх должностях из пяти — люди не по годности", apply: (w) => {
-    // три должности по жребию (генератор мира, до первого хода): на каждую — наименее годный из тех, кто без должности
-    for (const d of w.rng.shuffle(POSTS).slice(0, Math.ceil(POSTS.length / 2))) {
+    // должности по жребию (генератор мира, до первого хода): на каждую — наименее годный из тех, кто без должности
+    // вместе с тем, что уже досталось от прежних баронов при создании партии, — три из пяти
+    const more = Math.max(0, Math.ceil(POSTS.length / 2) - w.legacy.length);
+    for (const d of w.rng.shuffle(POSTS.filter((x) => !w.legacy.some((l) => l.post === x.id))).slice(0, more)) {
       const free = w.people.filter((p) => !p.post);
       const next = free.reduce((a, b) => (fitness(b, d.id) < fitness(a, d.id) ? b : a));
       const tenure = w.rng.int(B.staff.startTenureMin, B.staff.startTenureMax);
       vacate(w, d.id);
       w.posts[d.id] = next.id; next.post = d.id; next.tenure = tenure; next.exp = Math.min(tenure, B.exp.master);
+      w.legacy.push({ post: d.id, how: "по милости" });
     }
     w.head ??= council(w).reduce((a, b) => (b.loyalty > a.loyalty ? b : a)).id;
   } },

@@ -2,7 +2,7 @@
 import type { Axis, Star, PostId, Side, Effect, Trait, TraitMods, Deed, Mark, AspirationDef, GameEvent, EventOption } from "../data/types";
 import { AXES, AXIS_NAMES, AXIS_DAT, OPPOSED, POSTS, TRAITS, LIFE_TRAITS, MARKS, ASPIRATIONS, ROSTER } from "../data/core";
 import { RUMORS_AXIS, RUMORS_TRAIT } from "../data/rumors";
-import { BACKSTORY } from "../data/backstory";
+import { BACKSTORY, LEGACY } from "../data/backstory";
 import { EVENTS } from "../data/events";
 import { BALANCE as B } from "./balance";
 import { Rng } from "./rng";
@@ -92,6 +92,7 @@ export interface World {
   desk: Desk | null;                       // дело на столе: событие будущего сезона, по которому Сенешаль может отдать приказ
   authority: number;
   deedsLeft: number;
+  legacy: { post: PostId; how: string }[];  // наследство прежних баронов: должности, занятые не по годности, и почему
   log: LogEntry[];
 }
 
@@ -191,7 +192,7 @@ export function newWorld(seed: string, labOpen = false): World {
     head: null, labOpen, season: 1,
     factions: Object.fromEntries(SIDES.map((s) => [s, B.economy.start.trust])) as Record<Side, number>,
     resources: { poryadok: 0 }, eco: undefined as unknown as Economy, auth: initAuthority(), desk: null,
-    authority: B.staff.authorityStart, deedsLeft: B.season.deeds, log: [],
+    authority: B.staff.authorityStart, deedsLeft: B.season.deeds, legacy: [], log: [],
   };
 
   // 1. Персонажи: авторская черта и метка, базовая звезда
@@ -264,6 +265,7 @@ export function newWorld(seed: string, labOpen = false): World {
   }
 
   autoAssign(w, true);
+  inherit(w);
   // Кто сидит на должности до потолка опыта, тот уже мастер: черта нажита до начала партии, Сенешаль о ней пока не знает.
   for (const p of w.people) {
     if (p.exp >= B.exp.master) {
@@ -277,8 +279,13 @@ export function newWorld(seed: string, labOpen = false): World {
   }
   initEconomy(w);
   pickDesk(w);
+  const legacy = w.legacy.map((l) => {
+    const p = holder(w, l.post)!;
+    return `Наследство прежних баронов: ${postName(l.post).toLowerCase()} ${p.name} посажен${p.female ? "а" : ""} ${l.how}, а не по годности.`;
+  });
   const lines = [
-    "Совет расставлен по годности. Должности заняты давно — у людей есть стаж.",
+    `Совет достался от прежних баронов. Должности заняты давно — у людей есть стаж. ${legacy.length ? "По годности сидят не все." : "Все сидят по годности."}`,
+    ...legacy,
     "О каждом известно что-то одно: молва или черта. Остальное откроют разговоры и дела.",
     `Герцог назначил испытание: урок ${w.eco.tax.lesson} мер в год, ${B.economy.tax.trialYears} года подряд. Сборщица приезжает осенью.`,
   ];
@@ -325,6 +332,27 @@ export function autoAssign(w: World, initial = false) {
   // главный — самый лояльный из совета
   const council = w.people.filter((p) => p.post);
   w.head = council.sort((a, b) => b.loyalty - a.loyalty)[0]?.id ?? null;
+}
+
+// Наследство прежних баронов: одна-две должности заняты не по годности — по родству, по старшинству или по милости.
+// Годный, которого обошли, остаётся в замке без должности; причина — строкой в биографии посаженного и в летописи старта.
+function inherit(w: World) {
+  const n = w.rng.int(B.staff.legacyMin, Math.max(B.staff.legacyMin, B.staff.legacyMax));
+  const passed = new Set<number>();   // обойдённые: на другую должность их не сажают — там они могли бы оказаться и годнее
+  for (const d of w.rng.shuffle(POSTS).slice(0, n)) {
+    const free = w.people.filter((p) => !p.post && !passed.has(p.id)), prev = holder(w, d.id);
+    if (!free.length || !prev) continue;
+    const why = w.rng.pick(LEGACY);
+    // по старшинству — самый старый из тех, кто без должности; по родству и по милости — кто придётся
+    const next = why.id === "starshinstvo" ? free.reduce((a, b) => (b.age > a.age ? b : a)) : w.rng.pick(free);
+    next.post = d.id; next.tenure = prev.tenure; next.exp = prev.exp;
+    prev.post = undefined; prev.tenure = 0; prev.exp = 0;
+    passed.add(prev.id);
+    w.posts[d.id] = next.id;
+    next.bio.push(gender(why.text.replace("{post}", postName(d.id)), next));
+    w.legacy.push({ post: d.id, how: why.how });
+  }
+  if (w.legacy.length) w.head = w.people.filter((p) => p.post).reduce((a, b) => (b.loyalty > a.loyalty ? b : a)).id;
 }
 
 // ---------- Перестановки ----------
@@ -561,7 +589,8 @@ function competence(p: Person): number {
 
 // Последствия варианта. Доверие сторон: derevni — обеим деревням или той, что названа в событии. kazna и pripasy — запасы серебра и еды
 // со строкой в ведомости; ниже нуля запас не опускается, в запись идёт то, что вышло на деле.
-function applyEffects(w: World, ev: GameEvent, opt: EventOption, mult: number, doer: Person | undefined, lines: string[]): Partial<Record<Effect, number>> {
+// plus — доля пользы: множитель только к плюсам и к отдаче вложения. Саботаж срывает дело, а цена (минусы, руки) платится целиком.
+function applyEffects(w: World, ev: GameEvent, opt: EventOption, mult: number, doer: Person | undefined, lines: string[], plus = 1): Partial<Record<Effect, number>> {
   let k = mult;
   if (doer) k *= competence(doer);
   if (opt.careful) k *= B.exp.carefulGain;
@@ -574,7 +603,7 @@ function applyEffects(w: World, ev: GameEvent, opt: EventOption, mult: number, d
   const gain = opt.risky && !failed ? B.exp.boldGain : 1;
   const out: Partial<Record<Effect, number>> = {};
   for (const [key, v] of Object.entries(opt.effects) as [Effect, number][]) {
-    let val = v * k * (v > 0 ? gain : 1);
+    let val = v * k * (v > 0 ? gain * plus : 1);
     if (failed && val > 0) val = -val * B.exp.failBackfire;
     val = round1(val);
     out[key] = val;
@@ -590,7 +619,7 @@ function applyEffects(w: World, ev: GameEvent, opt: EventOption, mult: number, d
     else addTrust(w, key, val * B.economy.trust.event);
   }
   if (opt.hands) takeHands(w, opt.hands);
-  if (opt.later && !failed) invest(w, ev, opt.later, k * gain, lines);
+  if (opt.later && !failed) invest(w, ev, opt.later, k * gain * plus, lines);
   if (opt.later && failed) lines.push("Вложение пропало: отдачи не будет.");
   if (failed) lines.push(`Рискованное дело провалилось — не хватило опыта (${doer ? expWord(doer) : "?"}).`);
   return out;
@@ -765,7 +794,7 @@ function council(w: World, ev: GameEvent, a: Person, b: Person, lines: string[])
     reveal(w, lose, "sabotage", lines);
     gainTrait(w, win, "zlopamyatny_k", lines, lose.id);
     recordChoice(w, win, wd.opt, lines);
-    const eff = applyEffects(w, ev, wd.opt, B.council.sabotage * co, win, lines);
+    const eff = applyEffects(w, ev, wd.opt, 1, win, lines, B.council.sabotage * co);
     w.resources.poryadok = round1(w.resources.poryadok - B.council.sabotageOrder);
     eff.poryadok = round1((eff.poryadok ?? 0) - B.council.sabotageOrder);
     lines.push(`📜 Жалобы с обеих сторон ждут Сенешаля.`);

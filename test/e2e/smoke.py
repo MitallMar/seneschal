@@ -102,8 +102,13 @@ async def s_base(br, errs):
        and st == {'season': 'весна, год 1', 'authority': 10.0, 'deeds': 3}, st)
     ok('в совете пять должностей, все заняты, главный один', len(council) == 5 and all(c['holder'] != '' for c in council)
        and sum(c['head'] for c in council) == 1, [(c['name'], c['who'], c['head']) for c in council])
-    ok('десять человек, у каждого биография из шести событий и сетка звезды', len(cards) == 10
-       and all(c['bio'] == 6 and c['grid'] == 4 for c in cards), [(c['name'], c['bio'], c['grid']) for c in cards])
+    # наследство прежних баронов: у одного-двух из совета седьмая строка — как он получил должность
+    seated = [c for c in cards if c['bio'] == 7]
+    ok('десять человек, у каждого биография из шести событий и сетка звезды; у посаженных прежним бароном — седьмая строка',
+       len(cards) == 10 and all(c['bio'] in (6, 7) and c['grid'] == 4 for c in cards) and 1 <= len(seated) <= 2 and all(c['onPost'] for c in seated),
+       [(c['name'], c['bio'], c['grid']) for c in cards])
+    start_log = await pg.evaluate("document.body.innerText")
+    ok('летопись старта называет, кто посажен не по годности', 'Наследство прежних баронов:' in start_log and 'а не по годности' in start_log)
     ok('пятеро в совете отмечены на карточках', sum(c['onPost'] for c in cards) == 5)
     ok('до разговора склонности закрыты («?»), звезды нет, стремление неизвестно', all(closed(c) and c['rays'] == 0 and c['real'] == 0
        and 'неизвестно' in c['asp'] for c in cards), [(c['name'], c['axes']) for c in cards][:2])

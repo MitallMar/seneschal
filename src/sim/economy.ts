@@ -264,7 +264,7 @@ export function planSeason(w: World): Plan {
 
   // товары, что лежали на складе, уходят купцам
   const seasonPrice = [E.year.priceSpring, E.year.priceSummer, E.year.priceAutumn, E.year.priceWinter][kind];
-  const price = F.price * seasonPrice * zoneMult(w, "kuptsy") * pisar.mult * (1 + courseStrength(w, "torguem")) * by("price");
+  const price = F.scale * F.price * seasonPrice * zoneMult(w, "kuptsy") * pisar.mult * (1 + courseStrength(w, "torguem")) * by("price");
   if (stock.tovary > 0) {
     const sold = stock.tovary, how = pisar.note;
     if (price > 0) {
@@ -275,17 +275,17 @@ export function planSeason(w: World): Plan {
   // пошлины
   const seasonDuty = [E.year.dutySpring, E.year.dutySummer, E.year.dutyAutumn, E.year.dutyWinter][kind];
   const levy = w.season < e.dutyCutUntil ? E.pay.levyDuty : 1;
-  const duties = F.duties * seasonDuty * zoneMult(w, "kuptsy") * pisar.mult * (1 + courseStrength(w, "dorogi")) * levy * by("duties");
+  const duties = F.scale * F.duties * seasonDuty * zoneMult(w, "kuptsy") * pisar.mult * (1 + courseStrength(w, "dorogi")) * levy * by("duties");
   const dutyText = `пошлины${levy < 1 ? " (ниже после особого сбора)" : ""}`;
   if (duties > 0) add("serebro", duties, dutyText, { side: "kuptsy", who: whoOf(pisar, "pisar"), how: pisar.note });
   else lines.push({ cat: "serebro", v: 0, text: "пошлин нет: купцы отказывают", side: "kuptsy" });
   // лес
   const zl = zoneMult(w, "les");
   if (e.course === "les") lines.push({ cat: "tovary", v: 0, text: "брёвен нет: бережём лес", side: "les" });
-  else if (zl > 0) add("tovary", F.forestGoods * zl * les.mult * by("forestGoods"), "шкуры, мёд, брёвна из леса", { side: "les", who: whoOf(les, "lesnichiy"), how: les.note });
+  else if (zl > 0) add("tovary", F.scale * F.forestGoods * zl * les.mult * by("forestGoods"), "шкуры, мёд, брёвна из леса", { side: "les", who: whoOf(les, "lesnichiy"), how: les.note });
   if (kind === SUMMER && zl > 0) {
     const rites = zoneOf(w, "opushka") === "отказывают" ? E.zone.noRites : 1;
-    const gifts = F.forestFood * zl * les.mult * (1 + courseStrength(w, "les")) * rites * by("forestFood");
+    const gifts = F.scale * F.forestFood * zl * les.mult * (1 + courseStrength(w, "les")) * rites * by("forestFood");
     add("eda", gifts, `дары леса${rites < 1 ? " (обрядов нет: деревня у опушки отказывает)" : ""}`, { side: "les", who: whoOf(les, "lesnichiy"), how: les.note });
   }
   // осень: урожай и оброк
@@ -295,12 +295,12 @@ export function planSeason(w: World): Plan {
     for (const v of VILLAGES) {
       const z = zoneMult(w, v), who = whoOf(tiun, "starosta"), share = v === "brod" ? F.brodShare : 1 - F.brodShare;
       if (z <= 0) { lines.push({ cat: "eda", v: 0, text: "ни урожая, ни оброка: деревня отказывает", side: v }); continue; }
-      const crop = (F.harvest / VILLAGES.length) * z * tiun.mult * sown * fieldShare * by("harvest");
+      const crop = F.scale * (F.harvest / VILLAGES.length) * z * tiun.mult * sown * fieldShare * by("harvest");
       harvest += crop;
       const field = sown < 1 || fieldShare < 1 ? ` (посеяно ${Math.round(sown * 100)}%, сжато ${Math.round(fieldShare * 100)}%)` : "";
       add("eda", crop, `урожай${field}`, { side: v, who, how: tiun.note });
-      add("serebro", F.quitrentSilver * share * z * tiun.mult * quit * by("quitrent") * by("quitrentSilver"), "оброк серебром", { side: v, who, how });
-      add("tovary", F.quitrentGoods * share * z * tiun.mult * quit * by("quitrent"), "оброк товарами", { side: v, who, how });
+      add("serebro", F.scale * F.quitrentSilver * share * z * tiun.mult * quit * by("quitrent") * by("quitrentSilver"), "оброк серебром", { side: v, who, how });
+      add("tovary", F.scale * F.quitrentGoods * share * z * tiun.mult * quit * by("quitrent"), "оброк товарами", { side: v, who, how });
     }
   }
   // расходы: долги, жалованье, прокорм

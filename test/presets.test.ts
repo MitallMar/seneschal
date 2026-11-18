@@ -1,7 +1,7 @@
 // Заготовки ситуаций эмулятора (задача И2) и веса вариантов в летописи.
 import { test, afterEach } from "node:test";
 import assert from "node:assert/strict";
-import { BALANCE, resetBalance } from "../src/sim/balance";
+import { BALANCE, resetBalance, setAt } from "../src/sim/balance";
 import { newWorld, runSeason, runEvent, holder, getRel, isStale, fitness } from "../src/sim/sim";
 import { EVENTS } from "../src/data/events";
 import { PRESETS, newPreset } from "../src/sim/presets";
@@ -71,14 +71,20 @@ test("веса вариантов: у решения в летописи зап�
   assert.ok(cut.weights!.some((l) => l.includes("под нижней чертой")), cut.weights!.join(" | "));
 });
 
-test("заготовка «Наследство прежних баронов»: три должности из пяти у людей не по годности, детерминирована", () => {
+test("заготовка «Наследство прежних баронов»: вместе со стартовым наследством — три должности из пяти не по годности, детерминирована", () => {
+  const POSTS5 = ["starosta", "desyatnik", "klyuchnik", "pisar", "lesnichiy"] as const;
   for (const seed of ["наследство", "лес", "x"]) {
-    const plain = newWorld(seed), w = newPreset(seed, "nasledstvo");
+    const w = newPreset(seed, "nasledstvo"), start = newWorld(seed);
     assert.equal(dump(w), dump(newPreset(seed, "nasledstvo")), seed);
-    const changed = (["starosta", "desyatnik", "klyuchnik", "pisar", "lesnichiy"] as const).filter((post) => holder(w, post)!.id !== holder(plain, post)!.id);
-    assert.equal(changed.length, 3, `${seed}: сменились три должности`);
+    setAt("staff.legacyMin", 0); setAt("staff.legacyMax", 0);
+    const plain = newWorld(seed);   // тот же совет, но весь по годности
+    resetBalance();
+    const changed = POSTS5.filter((post) => holder(w, post)!.id !== holder(plain, post)!.id);
+    assert.equal(changed.length, 3, `${seed}: не по годности — три должности`);
+    assert.deepEqual(w.legacy.map((l) => l.post).sort(), [...changed].sort(), `${seed}: они же записаны как наследство`);
+    for (const l of start.legacy) assert.equal(holder(w, l.post)!.id, holder(start, l.post)!.id, `${seed}, ${l.post}: стартовое наследство заготовка не трогает`);
     assert.equal(w.people.filter((p) => p.post).length, 5, "пустых должностей нет");
-    for (const post of changed) assert.ok(fitness(holder(w, post)!, post) < fitness(holder(plain, post)!, post), `${seed}, ${post}: новый держатель годен меньше`);
+    for (const post of changed) assert.ok(fitness(holder(w, post)!, post) < fitness(holder(plain, post)!, post), `${seed}, ${post}: держатель годен меньше`);
     assert.ok(w.head != null && w.people[w.head].post, "главный — из совета");
   }
 });
