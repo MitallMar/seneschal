@@ -496,6 +496,27 @@ async def s_authority(br, errs):
     ok('жалоба пришла на стол и была разобрана', judged)
     await shot(pg, 'authority')
 
+    # слово весит меньше: траты до порога, потом надбавка; без авторитета перестановка недоступна
+    pg = await open_game(br, errs, 'лес')
+    ORDERS = "()=>[...document.querySelectorAll('#people select[data-order]')].filter(s=>!s.value&&!s.options[1].disabled).map(s=>s.closest('.card').dataset.id)"
+    for _ in range(6):
+        ids = await pg.evaluate(ORDERS)
+        await pg.select_option(f"#people .card[data-id='{ids[0]}'] select[data-order]", 'dolg')
+    st = await status(pg)
+    ok('шесть наказов по единице: авторитет 4, слово весит меньше', st['authority'] == 4 and 'каждая трата дороже на 1' in await pg.evaluate("()=>document.getElementById('auth-weak')?.textContent||''"), st)
+    ids = await pg.evaluate(ORDERS)
+    await pg.select_option(f"#people .card[data-id='{ids[0]}'] select[data-order]", 'dolg')
+    ok('ниже порога наказ стоит уже 2', (await status(pg))['authority'] == 2, await status(pg))
+    ids = await pg.evaluate(ORDERS)
+    await pg.select_option(f"#people .card[data-id='{ids[0]}'] select[data-order]", 'dolg')
+    ok('авторитет дошёл до нуля и ниже не идёт', (await status(pg))['authority'] == 0)
+    ok('без авторитета новый наказ недоступен', await pg.evaluate(ORDERS) == [])
+    council = await pg.evaluate(COUNCIL)
+    ok('без авторитета снять с должности нельзя: пункт «пусто» закрыт и подписан',
+       all('не хватает' in c['options'][0]['text'] for c in council)
+       and await pg.evaluate("()=>[...document.querySelectorAll('#council select')].every(s=>s.options[0].disabled)"), council[0]['options'][0])
+    ok('уговорить уйти по-прежнему можно', await pg.evaluate("()=>document.querySelectorAll('button[data-persuade]:not([disabled])').length") == 5)
+
 @section('natura', 'эмулятор натуры: прогон, метрики и цели, графики, человек с древом, таблицы наполнения, ручки действуют сразу')
 async def s_natura(br, errs):
     pg = await br.new_page()

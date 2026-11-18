@@ -7,7 +7,7 @@ import { EVENTS } from "../data/events";
 import { BALANCE as B } from "./balance";
 import { Rng } from "./rng";
 import { SIDES, VILLAGES } from "../data/economy";
-import { initAuthority, addAuthority, addComplaint, authoritySeason, type AuthState } from "./authority";
+import { initAuthority, addAuthority, priceOf, authorityWeak, addComplaint, authoritySeason, type AuthState } from "./authority";
 import { initEconomy, economySeason, rollForecast, addLine, addTrust, belowFloor, courseLean, elderSaw, type Economy } from "./economy";
 
 // Черта, приобретённая по ходу жизни. target — против кого она («Злопамятный к …»); known — знает ли о ней Сенешаль.
@@ -338,7 +338,8 @@ export function assignCost(w: World, p: Person, post: PostId | null): { cost: nu
       if (c.cost) why.push(c.why);
     }
   }
-  return { cost, why: why.join("; ") || "бесплатно" };
+  if (cost > 0 && authorityWeak(w)) why.push(`слово весит меньше: +${B.authority.weakExtra}`);
+  return { cost: priceOf(w, cost), why: why.join("; ") || "бесплатно" };
 }
 function removeCost(p: Person): { cost: number; why: string } {
   if (!p.post || p.agreed) return { cost: 0, why: "" };
@@ -346,10 +347,12 @@ function removeCost(p: Person): { cost: number; why: string } {
   return { cost, why: `снять ${p.name} против воли (${p.tenure} сез. на месте) — ${cost}` };
 }
 
-export function assign(w: World, personId: number, post: PostId | null) {
+// Возвращает false, если на перестановку не хватает авторитета: тогда ничего не меняется (остаётся медленный путь — уговорить).
+export function assign(w: World, personId: number, post: PostId | null): boolean {
   const p = w.people[personId];
-  if (post && w.posts[post] === personId) return;
+  if (post && w.posts[post] === personId) return true;
   const { cost, why } = assignCost(w, p, post);
+  if (cost > w.authority) return false;
   addAuthority(w, -cost, `перестановка: ${why}`, "staff");
   const lines: string[] = [];
   if (post) {
@@ -386,6 +389,7 @@ export function assign(w: World, personId: number, post: PostId | null) {
   if (cost) lines.push(`Авторитет −${cost}.`);
   if (w.head === p.id && !post) w.head = null;
   w.log.push({ season: w.season, kind: "staff", title: "Перестановка", lines });
+  return true;
 }
 
 export function setHead(w: World, id: number | null) {
@@ -457,11 +461,16 @@ export function persuade(w: World, id: number): boolean {
   return true;
 }
 
-export function giveOrder(w: World, id: number, axis: Axis | null) {
-  const p = w.people[id];
-  if (axis && !p.order) addAuthority(w, -B.staff.orderCost, `наказ: ${p.name}`, "staff");
+// Цена нового наказа сейчас (сменить и снять — бесплатно).
+export const orderCost = (w: World): number => priceOf(w, B.staff.orderCost);
+// Возвращает false, если на новый наказ не хватает авторитета.
+export function giveOrder(w: World, id: number, axis: Axis | null): boolean {
+  const p = w.people[id], cost = axis && !p.order ? orderCost(w) : 0;
+  if (cost > w.authority) return false;
+  addAuthority(w, -cost, `наказ: ${p.name}`, "staff");
   p.order = axis ?? undefined;
-  if (axis) w.log.push({ season: w.season, kind: "staff", title: "Наказ", lines: [`${p.name}: «действуй по ${AXIS_DAT[axis]}». Авторитет −${B.staff.orderCost}.`] });
+  if (axis) w.log.push({ season: w.season, kind: "staff", title: "Наказ", lines: [`${p.name}: «действуй по ${AXIS_DAT[axis]}».${cost ? ` Авторитет −${cost}.` : ""}`] });
+  return true;
 }
 
 // ---------- Решения ----------

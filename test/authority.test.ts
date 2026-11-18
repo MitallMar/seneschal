@@ -6,10 +6,10 @@ import { POSTS } from "../src/data/core";
 import { EVENTS } from "../src/data/events";
 import { SIDES } from "../src/data/economy";
 import { BALANCE, resetBalance, setAt } from "../src/sim/balance";
-import { newWorld, runSeason, assign, assignCost, giveOrder, holder, setRel, persuade, persuadeStep, command, deskView, type World } from "../src/sim/sim";
+import { newWorld, runSeason, assign, assignCost, giveOrder, holder, setRel, persuade, persuadeStep, command, deskView, orderCost, type World } from "../src/sim/sim";
 import { economySeason, payTax } from "../src/sim/economy";
 import {
-  addAuthority, authorityCap, authoritySupport, authoritySeason, councilSteady, addComplaint, judge, feast, feastGain, feastsThisYear, FEASTS,
+  addAuthority, authorityCap, authorityWeak, complaintLeft, authoritySupport, authoritySeason, councilSteady, addComplaint, judge, feast, feastGain, feastsThisYear, FEASTS,
 } from "../src/sim/authority";
 import { economyMetrics, PAYERS } from "../src/sim/economy-report";
 import { dump, fix } from "./_world";
@@ -132,19 +132,67 @@ test("суд лично: жалоба — дело на столе; разобр
   assert.equal(w.auth.complaints.length, 1);
 });
 
-test("брошенная жалоба: пролежала сезон — авторитет падает, жалобщик обижен; свежая ждёт", () => {
+test("жалоба ждёт год: в конце — авторитет падает, жалобщик обижен, жалоба уходит; до того штрафа нет", () => {
   const w = calm();
   addComplaint(w, 2, 5);
-  const loyalty = w.people[2].loyalty;
-  authoritySeason(w, []);
-  assert.equal(w.auth.totals.complaint, 0, "жалоба этого сезона ещё ждёт");
-  w.season++;
+  const c = w.auth.complaints[0], loyalty = w.people[2].loyalty;
+  assert.equal(complaintLeft(w, c), A.complaintSeasons);
+  for (let i = 0; i < A.complaintSeasons; i++) {
+    authoritySeason(w, []);
+    assert.equal(w.auth.totals.complaint, 0, `сезон ${i + 1}: ещё ждёт`);
+    w.season++;
+    assert.equal(complaintLeft(w, c), A.complaintSeasons - i - 1);
+  }
+  assert.equal(w.auth.complaints.length, 1, "весь год жалобу можно разобрать");
   const lines: string[] = [];
   authoritySeason(w, lines);
   assert.equal(w.auth.totals.complaint, -A.complaintLeft);
   assert.equal(w.people[2].loyalty, loyalty - A.leftLoyalty);
-  assert.ok(said(lines, "пролежала сезон"));
+  assert.ok(said(lines, "пролежала год"));
   assert.deepEqual(w.auth.complaints, []);
+});
+
+test("ниже нуля авторитет не уходит", () => {
+  const w = calm();
+  w.authority = 1;
+  addAuthority(w, -A.taxArrears, "недоимка", "tax");
+  assert.equal(w.authority, 0);
+  assert.equal(w.auth.totals.tax, -A.taxArrears, "в ведомости потеря записана целиком");
+});
+
+test("слово весит меньше: ниже порога каждая трата дороже, бесплатное остаётся бесплатным", () => {
+  const w = calm();
+  const p = holder(w, "pisar")!, free = w.people.find((x) => !x.post)!;
+  const base = assignCost(w, p, null).cost;
+  assert.ok(!authorityWeak(w));
+  assert.equal(orderCost(w), BALANCE.staff.orderCost);
+  w.authority = A.weakBelow;
+  assert.equal(assignCost(w, p, null).cost, base, "ровно на пороге цена прежняя");
+  w.authority = A.weakBelow - 1;
+  assert.ok(authorityWeak(w));
+  assert.equal(assignCost(w, p, null).cost, base + A.weakExtra);
+  assert.ok(assignCost(w, p, null).why.includes("слово весит меньше"));
+  assert.equal(orderCost(w), BALANCE.staff.orderCost + A.weakExtra);
+  assign(w, holder(w, "klyuchnik")!.id, null);
+  assert.equal(assignCost(w, free, "klyuchnik").cost, 0, "на пустую должность — бесплатно и при слабом слове");
+  p.agreed = true;
+  assert.equal(assignCost(w, p, null).cost, 0, "уговорённого снять — бесплатно");
+});
+
+test("не хватает авторитета — трата не проходит, остаётся уговор", () => {
+  const w = calm();
+  const p = holder(w, "pisar")!;
+  w.authority = 0;
+  assert.equal(assign(w, p.id, null), false);
+  assert.equal(p.post, "pisar");
+  assert.equal(giveOrder(w, p.id, "dolg"), false);
+  assert.equal(p.order, undefined);
+  assert.equal(w.authority, 0);
+  assert.deepEqual(w.auth.cur, []);
+  p.loyalty = 10;
+  persuade(w, p.id);
+  assert.equal(assign(w, p.id, null), true, "уговорил — снял без авторитета");
+  assert.equal(p.post, undefined);
 });
 
 test("спор соперников и саботаж кладут жалобы на стол", () => {
