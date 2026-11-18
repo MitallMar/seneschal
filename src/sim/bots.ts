@@ -13,26 +13,36 @@ import {
 } from "./sim";
 import { newPreset } from "./presets";
 import { setCourse, setFloor, payTax, payOptions, taxLeft, seasonKind, forecastFork, courseDef } from "./economy";
-import { judge, feast, complaintLeft, councilSteady, FEASTS } from "./authority";
+import { judge, feast, feastCost, feastsThisYear, authorityCap, complaintLeft, councilSteady, FEASTS } from "./authority";
+import { PROBE, resetProbe, type Probe } from "./probe";
+
+const WINTER = 3;
 
 // Привычка: что бот делает до первого сезона и каждый сезон.
 export interface Habit {
   head: "keep" | "best" | "worst" | "none";               // главный: как на старте, самый признанный, наименее признанный, никого
-  place: "start" | "seen" | "aspiration" | "true";         // расстановка: как на старте, по видимой годности, по стремлениям, по настоящей годности
+  place: "start" | "seen" | "aspiration" | "true" | "known";        // расстановка: как на старте, по видимой годности, по стремлениям, по настоящей годности
   course: "none" | "kopim" | "trial" | "flip";             // курс: нет, «Копим к подати» всегда, «Копим» в годы испытания, новый каждый сезон
-  mandate: boolean;                                        // наказ главному по оси курса
+  mandate: false | "course" | "weak" | "all" | "fixed";    // наказ: главному по оси курса; главному по его слабейшей оси; каждому против курса; главному по оси «Копим» без курса
+  //                                        // наказ главному по оси курса
   dropRival: boolean;                                      // одного из пары соперников снять до первого сезона
   stale: "keep" | "authority" | "persuade";                // засидевшихся: не трогать, снять за авторитет, уговорить
   active: boolean;                                         // тратит личные дела каждый сезон
-  judge: boolean; command: boolean; talk: boolean; feast: boolean;
-  pay: "council" | "master" | "early" | "silver";          // подать: совет сам; сам осенью и совет после жатвы; ещё и летом; только казной
+  judge: boolean; command: boolean; talk: boolean;
+  talkFirst?: "aspiration";                                // свободное дело — сначала на тех, чьё стремление неизвестно
+  feast: false | "rich" | "after" | "winter";             // пир: когда запас вдвое выше черты; после закрытого урока, если авторитет не у потолка; зимой из остатка
+  pay: "council" | "master" | "early" | "silver" | "hands" | "ahead"; // hands — только руками осенью, без автоплаты; ahead — без автоплаты, платит заранее с весны
+  //         // подать: совет сам; сам осенью и совет после жатвы; ещё и летом; только казной
   extra: PayId | null;                                     // чем добирает то, чего не хватит и после жатвы
-  floors: "default" | "zero";
+  floors: "default" | "zero" | "double";
   random?: boolean;                                        // бот «Случайный»
   idleRng?: boolean;                                       // для теста: тянет свой генератор, но ничего не делает
 }
 // own — метрики, которые записывают само действие бота (цена наказа, пустая должность): в вердикт пары они не идут.
-export interface Bot { id: string; name: string; level: 1 | 2 | 3; habit: Habit; base?: string; asks?: string; preset?: string; needsRival?: boolean; own?: string[] }
+// versus — с кем ещё сравнить, кроме базы. Уровень 4 — перепроверки (boty.md, раздел 11).
+export interface Bot {
+  id: string; name: string; level: 1 | 2 | 3 | 4; habit: Habit; base?: string; asks?: string; preset?: string; needsRival?: boolean; own?: string[]; versus?: string[];
+}
 
 const IDLE: Habit = {
   head: "keep", place: "start", course: "none", mandate: false, dropRival: false, stale: "keep", active: false,
@@ -43,6 +53,7 @@ const MASTER: Habit = { ...IDLE, head: "best", place: "seen", course: "trial", a
 
 const o = (id: string, name: string, asks: string, habit: Partial<Habit>, more: Partial<Bot> = {}): Bot => ({ id, name, level: 2, base: "left", asks, habit: { ...LEFT, ...habit }, ...more });
 const x = (id: string, name: string, asks: string, habit: Partial<Habit>, own?: string[]): Bot => ({ id, name, level: 3, base: "master", asks, habit: { ...MASTER, ...habit }, own });
+const y = (id: string, name: string, asks: string, habit: Partial<Habit>, more: Partial<Bot> = {}): Bot => ({ ...x(id, name, asks, habit), level: 4, ...more });
 // счёт авторитета: цена действия и то, что из неё прямо следует
 const BILL = ["spent", "burned", "authority", "atCap", "weak"];
 
@@ -53,7 +64,7 @@ export const BOTS: Bot[] = [
   o("О2", "главного нет", "держится ли совет без старшего", { head: "none" }),
   o("О3", "одного из соперников снял до отъезда", "сколько стоит оставить ссору дома и сколько — пустая должность", { dropRival: true }, { needsRival: true, own: ["vacant", ...BILL] }),
   o("О4", "расставил по стремлениям", "кто лучше ведёт дела без присмотра: годные или довольные", { place: "aspiration" }, { own: BILL }),
-  o("О5", "наказ главному по оси курса", "держится ли наказ, когда Сенешаля нет", { mandate: true }, { own: BILL }),
+  o("О5", "наказ главному по оси курса", "держится ли наказ, когда Сенешаля нет", { mandate: "course" }, { own: BILL }),
   o("О6", "без курса", "тянет ли курс мелкие дела без хозяина", { course: "none" }),
   { id: "master", name: "Хозяин", level: 3, base: "idle", asks: "сколько вообще даёт игра руками", habit: MASTER },
   x("Х1", "главного не назначает", "цена опоры совета", { head: "none" }),
@@ -61,10 +72,10 @@ export const BOTS: Bot[] = [
   x("Х3", "расставляет по настоящей годности", "цена незнания людей", { place: "true" }),
   x("Х4", "засидевшихся снимает за авторитет", "воровство и «по-своему» против цены перестановки", { stale: "authority" }),
   x("Х5", "засидевшихся снимает уговором", "окупается ли медленный путь", { stale: "persuade" }),
-  x("Х6", "наказ главному по оси курса", "меняет ли наказ что-нибудь, кроме счёта авторитета", { mandate: true }, BILL),
+  x("Х6", "наказ главному по оси курса", "меняет ли наказ что-нибудь, кроме счёта авторитета", { mandate: "course" }, BILL),
   x("Х7", "никогда не приказывает", "риск приказа и доля «оказался прав»", { command: false }),
   x("Х8", "жалобы не судит", "цена брошенной жалобы против потраченного дела", { judge: false }),
-  x("Х9", "пир, когда запас вдвое больше нижней черты", "превращение хозяйства в авторитет", { feast: true }),
+  x("Х9", "пир, когда запас вдвое больше нижней черты", "превращение хозяйства в авторитет", { feast: "rich" }),
   x("Х10", "не говорит ни с кем", "лояльность от разговоров сама по себе", { talk: false }),
   x("Х11", "недостающее — рекрутами с деревни у опушки", "есть ли смысл выбирать, кто платит", { extra: "rekruty_opushka" }),
   x("Х12", "платит досрочно, летом", "бонус досрочной платы против риска остаться без запаса", { pay: "early" }),
@@ -73,6 +84,23 @@ export const BOTS: Bot[] = [
   x("Х15", "меняет курс каждый сезон", "шатание: насколько оно портит исполнение", { course: "flip" }),
   x("Х16", "нижние черты нулевые", "черта как страховка: недодачи против невнесённых мер", { floors: "zero" }),
   { id: "random", name: "Случайный", level: 3, habit: { ...IDLE, random: true } },
+  // ---------- перепроверки (boty.md, раздел 11) ----------
+  o("О5б", "наказ главному по его слабейшей склонности", "пуст ли наказ, когда он не дублирует курс", { mandate: "weak" }, { own: BILL, level: 4 }),
+  o("О5в", "наказ каждому против курса", "слышит ли совет наказ, идущий против курса", { mandate: "all" }, { own: BILL, level: 4 }),
+  o("О5г", "наказ главному по Выгоде, курса нет", "что даёт наказ сам по себе, без курса", { mandate: "fixed", course: "none" }, { own: BILL, level: 4, base: "О6" }),
+  y("Х6б", "наказ главному по его слабейшей склонности", "пуст ли наказ, когда он не дублирует курс", { mandate: "weak" }, { own: BILL }),
+  y("Х6в", "наказ каждому против курса", "слышит ли совет наказ, идущий против курса", { mandate: "all" }, { own: BILL }),
+  y("Х2б", "по стремлениям, открытым разговором", "что дают разговоры через стремления и сколько стоит не знать заранее", { place: "known" }, { versus: ["Х2"] }),
+  y("Х2в", "то же, разговоры сначала о стремлениях", "окупается ли выспрашивать стремления в первую очередь", { place: "known", talkFirst: "aspiration" }, { versus: ["Х2"] }),
+  y("Х17", "без автоплаты: платит только руками осенью", "сколько игрок теряет из-за порядка «ход → жатва → сборщица»", { pay: "hands" }),
+  y("Х17б", "без автоплаты: платит заранее, с весны", "можно ли жить с нынешним порядком, если платить заранее", { pay: "ahead" }),
+  y("Х9б", "пир после закрытого урока, если авторитет не у потолка", "ловушка ли пиры или глупость бота", { feast: "after" }),
+  y("Х9в", "пир зимой из остатка сверх черты", "ловушка ли пиры или глупость бота", { feast: "winter" }),
+  y("Х16б", "нижние черты вдвое выше", "третья точка для нижних черт: ноль, умолчание, вдвое", { floors: "double" }),
+  { id: "Н0", name: "«Наследство»: ничего не трогает", level: 4, habit: IDLE, preset: "nasledstvo" },
+  { id: "Н1", name: "«Наследство»: Хозяин", level: 4, base: "Н0", asks: "что даёт игра руками, когда старт плохой", habit: MASTER, preset: "nasledstvo" },
+  { id: "Н3", name: "«Наследство»: по настоящей годности", level: 4, base: "Н1", asks: "цена незнания людей при плохом старте", habit: { ...MASTER, place: "true" }, preset: "nasledstvo" },
+  { id: "Н10", name: "«Наследство»: не говорит ни с кем", level: 4, base: "Н1", asks: "окупаются ли разговоры при плохом старте", habit: { ...MASTER, talk: false }, preset: "nasledstvo" },
 ];
 export const bot = (id: string): Bot => {
   const b = BOTS.find((q) => q.id === id);
@@ -113,12 +141,15 @@ function place(w: World, how: Habit["place"]) {
       const h = holder(w, d.id), cand = spare(w, d.id);
       if (cand && (!h || seenFit(cand, d.id) > seenFit(h, d.id))) assign(w, cand.id, d.id);
     }
-  } else if (how === "aspiration") {
+  } else if (how === "aspiration" || how === "known") {
+    // known — только стремления, открытые разговором или делом; остальных — по видимой годности
+    const wants = (p: Person, post: PostId) => p.aspiration?.post === post && (how === "aspiration" || p.know.aspiration);
     for (const d of POSTS) {
       const h = holder(w, d.id);
-      if (h?.aspiration?.post === d.id) continue;
-      const want = w.people.find((p) => p.aspiration?.post === d.id);
+      if (h && wants(h, d.id)) continue;
+      const want = w.people.find((p) => wants(p, d.id)), cand = spare(w, d.id);
       if (want) assign(w, want.id, d.id);
+      else if (how === "known" && cand && (!h || seenFit(cand, d.id) > seenFit(h, d.id))) assign(w, cand.id, d.id);
     }
   } else if (how === "true") {
     const pairs = w.people.flatMap((p) => POSTS.map((d) => ({ p, post: d.id, f: fitness(p, d.id) }))).sort((a, b) => b.f - a.f);
@@ -147,10 +178,16 @@ function chooseCourse(w: World, how: Habit["course"], n: number) {
   const want: CourseId | null = how === "kopim" || (how === "trial" && trial) ? "kopim" : how === "flip" ? COURSES[n % COURSES.length].id : null;
   if (w.eco.course !== want) setCourse(w, want);
 }
-// Наказ главному по первой склонности курса; курса нет — наказа нет.
-function mandate(w: World) {
-  const head = w.head != null ? w.people[w.head] : undefined, axis = courseDef(w)?.pro[0];
-  if (head && axis && head.order !== axis) giveOrder(w, head.id, axis);
+// Наказ. course — главному по первой склонности курса (курса нет — наказа нет); fixed — главному по первой склонности «Копим к подати», хотя курса нет;
+// weak — главному по его слабейшей склонности (бот знает настоящую звезду: это замер, а не привычка игрока);
+// all — каждому в совете по склонности, противной курсу; на кого авторитета не хватило — пропускает.
+function mandate(w: World, how: Habit["mandate"]) {
+  const head = w.head != null ? w.people[w.head] : undefined, course = courseDef(w);
+  const give = (p: Person | undefined, axis: Axis | undefined) => { if (p && axis && p.order !== axis) giveOrder(w, p.id, axis); };
+  if (how === "course") give(head, course?.pro[0]);
+  else if (how === "fixed") give(head, COURSES.find((c) => c.id === "kopim")!.pro[0]);
+  else if (how === "weak" && head) give(head, AXES.reduce((a, x) => (head.star[x] < head.star[a] ? x : a)));
+  else if (how === "all") for (const p of council(w)) give(p, course?.contra[0]);
 }
 
 // ---------- сезон ----------
@@ -172,14 +209,25 @@ function deeds(w: World, h: Habit) {
     const best = d.ev.options.reduce((a, b) => (share(b.axes) > share(a.axes) ? b : a));
     if (share(d.opinion.axes) === 0 && share(best.axes) > 0) command(w, best.id);
   }
-  if (h.feast) {
+  const spareFor = (q: typeof FEASTS[number]) => w.eco.stock[q.pay] - w.eco.floor[q.pay] >= feastCost(q.id);
+  if (h.feast === "rich") {
     const f = FEASTS.find((q) => w.eco.stock[q.pay] > Math.max(w.eco.floor[q.pay], B.economy.flow.upkeep) * B.bots.feastOver);
+    if (f) feast(w, f.id);
+  } else if (h.feast === "after" && taxLeft(w) <= 0 && w.authority <= authorityCap() - B.bots.feastOver && feastsThisYear(w) === 0) {
+    const f = FEASTS.find(spareFor);
+    if (f) feast(w, f.id);
+  } else if (h.feast === "winter" && seasonKind(w.season) === WINTER && feastsThisYear(w) === 0) {
+    const f = FEASTS.find(spareFor);
     if (f) feast(w, f.id);
   }
   while (h.talk && w.deedsLeft > 0) {
     const open = w.people.filter((p) => nextTalk(p));
     if (!open.length) break;
-    const who = open.reduce((a, b) => (b.know.talks < a.know.talks || (b.know.talks === a.know.talks && !!b.post && !a.post) ? b : a));
+    // сначала о стремлениях: совет вперёд, и того, с кем уже говорили, — до конца
+    const dark = h.talkFirst ? open.filter((p) => !p.know.aspiration) : [];
+    const who = dark.length
+      ? dark.reduce((a, b) => (!!b.post !== !!a.post ? (b.post ? b : a) : b.know.talks > a.know.talks ? b : a))
+      : open.reduce((a, b) => (b.know.talks < a.know.talks || (b.know.talks === a.know.talks && !!b.post && !a.post) ? b : a));
     if (!talk(w, who.id)) break;
   }
 }
@@ -194,6 +242,8 @@ function pay(w: World, h: Habit) {
   const kind = seasonKind(w.season), autumn = kind === 2;
   if (h.pay === "council") return;
   if (h.pay === "silver") { if (autumn) payTax(w, "serebro", (w.eco.stock.serebro - w.eco.floor.serebro) / B.economy.rate.serebro); return; }
+  if (h.pay === "hands") { if (autumn) payAbove(w); return; }
+  if (h.pay === "ahead") { if (kind !== WINTER) payAbove(w); return; } // зимой урок ещё прошлогодний: новый объявят только к весне
   if (autumn || (h.pay === "early" && kind === 1)) payAbove(w);
   if (!autumn || !h.extra) return;
   // чего не хватит и после жатвы — по прогнозу счетоводов (нижний край вилки): его видит игрок
@@ -204,17 +254,18 @@ function pay(w: World, h: Habit) {
 
 function setup(w: World, h: Habit) {
   if (h.floors === "zero") { setFloor(w, "eda", 0); setFloor(w, "serebro", 0); }
-  if (h.pay === "silver") w.eco.autoPay = false;
+  if (h.floors === "double") { setFloor(w, "eda", w.eco.floor.eda + w.eco.floor.eda); setFloor(w, "serebro", w.eco.floor.serebro + w.eco.floor.serebro); }
+  if (h.pay === "silver" || h.pay === "hands" || h.pay === "ahead") w.eco.autoPay = false;
   place(w, h.place);
   const pair = h.dropRival ? rivals(w) : undefined;
   if (pair) { const out = pair[0].tenure <= pair[1].tenure ? pair[0] : pair[1]; assign(w, out.id, null); }
   chooseHead(w, h.head);
   chooseCourse(w, h.course, 0);
-  if (h.mandate) mandate(w);
+  if (h.mandate) mandate(w, h.mandate);
 }
 function turn(w: World, h: Habit, n: number) {
   chooseCourse(w, h.course, n);
-  if (h.mandate) mandate(w);
+  if (h.mandate) mandate(w, h.mandate);
   if (!h.active) return;
   if (n > 0 && seasonKind(w.season) === 0) { place(w, h.place); chooseHead(w, h.head); }
   if (h.stale !== "keep") removeStale(w, h.stale);
@@ -242,18 +293,21 @@ function randomTurn(w: World, rng: Rng) {
   for (let i = rng.int(0, B.bots.randomActs); i > 0; i--) rng.pick(acts)();
 }
 
-export interface BotRun { w: World; calm: number; applicable: boolean; seasons: number }
+// probe — счётчики зонда за партию; aspAt — к какому сезону известны стремления всего совета (не узнал — сезонов партии плюс один).
+export interface BotRun { w: World; calm: number; applicable: boolean; seasons: number; probe: Probe; aspAt: number }
 // Одна партия бота. applicable — годится ли партия для пары (О3 играется только там, где в совете есть соперники).
 export function playBot(seed: string, b: Bot, seasons = B.bots.seasons, lab = false): BotRun {
+  resetProbe();
   const w = newPreset(seed, b.preset ?? null, lab), rng = new Rng(`${seed}|бот`), h = b.habit;
   const applicable = !b.needsRival || !!rivals(w);
   setup(w, h);
-  let calm = 0;
+  let calm = 0, aspAt = seasons + 1;
   for (let n = 0; n < seasons; n++) {
     if (h.random) randomTurn(w, rng);
     else { if (h.idleRng) rng.range(0, 1); turn(w, h, n); }
+    if (aspAt > seasons && council(w).every((p) => p.know.aspiration)) aspAt = n + 1;
     runSeason(w);
     if (councilSteady(w).ok) calm++;
   }
-  return { w, calm, applicable, seasons };
+  return { w, calm, applicable, seasons, probe: structuredClone(PROBE), aspAt };
 }

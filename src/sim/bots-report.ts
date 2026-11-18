@@ -10,7 +10,8 @@ import { BOTS, bot, playBot, type Bot, type BotRun } from "./bots";
 import { PRESETS } from "./presets";
 
 // Метрика партии: id, подпись для таблицы, сколько знаков после запятой, доля ли это (печатать процентами).
-export interface MetricDef { id: string; name: string; digits: number; pct?: boolean; group: "совет" | "хозяйство" | "авторитет" }
+// diag — замер, а не исход партии: в вердикт пары не идёт.
+export interface MetricDef { id: string; name: string; digits: number; pct?: boolean; group: "совет" | "хозяйство" | "авторитет" | "замеры"; diag?: boolean }
 export const METRICS: MetricDef[] = [
   { id: "lead", name: "решений по ведущей склонности", digits: 0, pct: true, group: "совет" },
   { id: "leadOwn", name: "…на своей должности", digits: 0, pct: true, group: "совет" },
@@ -46,6 +47,16 @@ export const METRICS: MetricDef[] = [
   { id: "earned", name: "добыто делами (суд, пир, приказ, подать)", digits: 1, group: "авторитет" },
   { id: "burned", name: "сгорело сверх потолка", digits: 1, group: "авторитет" },
   { id: "right", name: "авторитет от приказов против совета", digits: 2, group: "авторитет" },
+  { id: "orderFit", name: "наказ был применим (у события есть вариант по его оси)", digits: 1, group: "замеры", diag: true },
+  { id: "orderWorked", name: "…наказ поменял выбор", digits: 2, group: "замеры", diag: true },
+  { id: "orderAlready", name: "…и без наказа выбрал бы так", digits: 1, group: "замеры", diag: true },
+  { id: "orderDeaf", name: "…не услышан: послушания не хватило", digits: 2, group: "замеры", diag: true },
+  { id: "orderWeak", name: "…услышан, но прибавки не хватило", digits: 2, group: "замеры", diag: true },
+  { id: "autoPaid", name: "мер внесено автоплатой совета после жатвы", digits: 1, group: "замеры", diag: true },
+  { id: "aspAt", name: "сезон, к которому известны стремления совета", digits: 1, group: "замеры", diag: true },
+  { id: "shortFood", name: "недодано еды за партию", digits: 2, group: "замеры", diag: true },
+  { id: "shortSilver", name: "недодано серебра за партию", digits: 2, group: "замеры", diag: true },
+  { id: "shortTrust", name: "доверия ушло из-за недодач", digits: 2, group: "замеры", diag: true },
 ];
 export type Metrics = Record<string, number>;
 
@@ -77,6 +88,9 @@ export function metricsOf(run: BotRun): Metrics {
     edge: patienceWord(t.patience) === "на исходе" ? 1 : 0, trust: mean(SIDES.map((s) => w.factions[s])),
     refuse: SIDES.filter((s) => zoneOf(w, s) === "отказывают").length, eda: w.eco.stock.eda, serebro: w.eco.stock.serebro, order: w.resources.poryadok,
     authority: w.authority, atCap: w.authority >= authorityCap() ? 1 : 0, weak: w.authority < B.authority.weakBelow ? 1 : 0,
+    orderFit: run.probe.order.fit, orderWorked: run.probe.order.worked, orderAlready: run.probe.order.already,
+    orderDeaf: run.probe.order.deaf, orderWeak: run.probe.order.weak, autoPaid: run.probe.autoPaid, aspAt: run.aspAt,
+    shortFood: run.probe.short.food, shortSilver: run.probe.short.silver, shortTrust: run.probe.short.trust,
     support: a.support, spent: -a.staff, earned: a.judge + a.feast + a.order + a.tax + a.complaint, burned: -a.burn, right: a.order,
   };
 }
@@ -107,10 +121,11 @@ export function pairStats(base: BotStats, variant: BotStats, only?: boolean[]): 
     const d = idx.map((i) => variant.runs[i][def.id] - base.runs[i][def.id]);
     const diff = mean(d), se = sd(d) / Math.sqrt(Math.max(1, d.length));
     const z = se > 0 ? diff / se : diff === 0 ? 0 : Infinity;
-    return { id: def.id, diff, se, z, luck: sd(idx.map((i) => base.runs[i][def.id])), own: (variant.bot.own ?? []).includes(def.id) };
+    return { id: def.id, diff, se, z, luck: sd(idx.map((i) => base.runs[i][def.id])), own: (variant.bot.own ?? []).includes(def.id) || !!def.diag };
   });
   const own = variant.bot.own ?? [];
-  const max = Math.max(0, ...diffs.filter((d) => !own.includes(d.id)).map((d) => Math.abs(d.z)));
+  const counts = (d: PairDiff) => !own.includes(d.id) && !METRICS.find((m) => m.id === d.id)!.diag;
+  const max = Math.max(0, ...diffs.filter(counts).map((d) => Math.abs(d.z)));
   const verdict = max < B.bots.weak ? "пустое" : max < B.bots.strong ? "слабо" : "расходится";
   // разошедшиеся метрики — по силе: разница в долях разброса базы по семенам
   const force = (d: PairDiff) => (d.luck > 0 ? Math.abs(d.diff) / d.luck : Math.abs(d.diff));
@@ -119,23 +134,56 @@ export function pairStats(base: BotStats, variant: BotStats, only?: boolean[]): 
 }
 
 export interface BotsReport { seeds: number; seasons: number; lab: boolean; stats: BotStats[]; pairs: PairStats[]; presets: PairStats[] }
-// Весь отчёт: боты выбранных уровней, пары к базе, заготовки ситуаций против обычной партии.
-export function botsReport(seeds = B.bots.seeds, seasons = B.bots.seasons, lab = false, levels: number[] = [1, 2, 3], onlyPair?: string): BotsReport {
-  const need = new Set<string>(["idle"]);
+// Весь отчёт: боты выбранных уровней, пары к базе (и к ботам из versus), заготовки ситуаций против обычной партии.
+// onlyPair — один бот по id или одна заготовка («заготовка:pisar»).
+export function botsReport(seeds = B.bots.seeds, seasons = B.bots.seasons, lab = false, levels: number[] = [1, 2, 3, 4], onlyPair?: string): BotsReport {
+  const need = new Set<string>(["idle"]), onePreset = onlyPair?.startsWith("заготовка:") ? onlyPair.split(":")[1] : undefined;
   for (const b of BOTS) {
     if (!levels.includes(b.level) || (onlyPair && b.id !== onlyPair)) continue;
-    need.add(b.id);
-    if (b.base) need.add(b.base);
+    for (const id of [b.id, b.base, ...(b.versus ?? [])]) if (id) need.add(id);
   }
+  // перепроверки сравнивают свои замеры с ботами прежних уровней
+  if (levels.includes(4) && !onlyPair) for (const id of ["left", "master", "О5", "О6", "Х2", "Х6", "Х12", "Х16"]) need.add(id);
+  // база базы тоже нужна: пара считается к ней
+  for (const id of [...need]) { const base = bot(id).base; if (base && !onlyPair) need.add(base); }
   const stats = BOTS.filter((b) => need.has(b.id)).map((b) => botStats(b, seeds, seasons, lab));
   const of = (id: string) => stats.find((s) => s.bot.id === id)!;
-  const pairs = stats.filter((s) => s.bot.base).map((s) => {
+  const pairs: PairStats[] = [];
+  for (const s of stats) {
     const only = s.bot.needsRival ? Array.from({ length: seeds }, (_, i) => playBot(seedName(i), s.bot, 0, lab).applicable) : undefined;
-    return pairStats(of(s.bot.base!), s, only);
-  });
-  const presets = levels.includes(1) && !onlyPair ? PRESETS.map((p) => {
+    for (const base of [s.bot.base, ...(s.bot.versus ?? [])]) if (base && need.has(base)) pairs.push(pairStats(of(base), s, only));
+  }
+  const wanted = PRESETS.filter((p) => (onlyPair ? p.id === onePreset : levels.includes(1)));
+  const presets = wanted.map((p) => {
     const b: Bot = { ...bot("idle"), id: `заготовка:${p.id}`, name: `заготовка «${p.name}»`, preset: p.id, base: "idle" };
     return pairStats(of("idle"), botStats(b, seeds, seasons, lab));
-  }) : [];
+  });
   return { seeds, seasons, lab, stats, pairs, presets };
+}
+
+// Исходы дел совета: сколько раз за партию и что они оставляют в запасах и доверии сторон (boty.md, 11.4).
+// size — сумма модулей последствий в запасах и доверии на одно дело; stock и trust — суммы со знаком; none — доля дел, не тронувших ни запасов, ни доверия.
+export interface OutcomeRow { outcome: Outcome; perParty: number; size: number; stock: number; trust: number; order: number; none: number }
+const STOCK_KEYS = ["kazna", "pripasy"], OUTCOMES: Outcome[] = ["alone", "agree", "deal", "judge", "compromise", "push", "rival", "sabotage", "silent", "ordered", "empty"];
+export function outcomeStats(b: Bot, seeds = B.bots.seeds, seasons = B.bots.seasons): OutcomeRow[] {
+  const acc = new Map<Outcome, { n: number; size: number; stock: number; trust: number; order: number; none: number }>();
+  for (let i = 0; i < seeds; i++) {
+    for (const e of playBot(seedName(i), b, seasons).w.log) {
+      if (!e.outcome) continue;
+      const row = acc.get(e.outcome) ?? { n: 0, size: 0, stock: 0, trust: 0, order: 0, none: 0 };
+      let size = 0;
+      for (const [key, v] of Object.entries(e.effects ?? {})) {
+        if (key === "poryadok") { row.order += v; continue; }
+        size += Math.abs(v);
+        if (STOCK_KEYS.includes(key)) row.stock += v; else row.trust += v;
+      }
+      row.n++; row.size += size;
+      if (!size) row.none++;
+      acc.set(e.outcome, row);
+    }
+  }
+  return OUTCOMES.filter((o) => acc.has(o)).map((o) => {
+    const r = acc.get(o)!;
+    return { outcome: o, perParty: r.n / seeds, size: r.size / r.n, stock: r.stock / r.n, trust: r.trust / r.n, order: r.order / r.n, none: r.none / r.n };
+  });
 }

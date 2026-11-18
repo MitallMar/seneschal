@@ -1,9 +1,9 @@
 // Заготовки ситуаций для эмулятора совета (задача И2): партия по семени, в которой сразу есть что смотреть.
 // Заготовка правит готовую партию после newWorld; ручки баланса не трогает. Зовут экран (?preset=…), тесты и боты.
 import type { PostId } from "../data/types";
-import { LIFE_TRAITS } from "../data/core";
+import { LIFE_TRAITS, POSTS } from "../data/core";
 import { BALANCE as B } from "./balance";
-import { newWorld, holder, setRel, STAR_MAX, type World, type Person } from "./sim";
+import { newWorld, holder, setRel, fitness, STAR_MAX, type World, type Person } from "./sim";
 
 export interface Preset { id: string; name: string; desc: string; apply: (w: World) => void }
 
@@ -53,6 +53,17 @@ export const PRESETS: Preset[] = [
     t.carried = Math.round(t.lesson * (1 + B.economy.tax.arrears) / 2);
     t.due = t.lesson + t.carried;
     t.patience = Math.max(0, B.economy.tax.displeased - 1);
+  } },
+  { id: "nasledstvo", name: "Наследство прежних баронов", desc: "совет собирали по родству и милости: на трёх должностях из пяти — люди не по годности", apply: (w) => {
+    // три должности по жребию (генератор мира, до первого хода): на каждую — наименее годный из тех, кто без должности
+    for (const d of w.rng.shuffle(POSTS).slice(0, Math.ceil(POSTS.length / 2))) {
+      const free = w.people.filter((p) => !p.post);
+      const next = free.reduce((a, b) => (fitness(b, d.id) < fitness(a, d.id) ? b : a));
+      const tenure = w.rng.int(B.staff.startTenureMin, B.staff.startTenureMax);
+      vacate(w, d.id);
+      w.posts[d.id] = next.id; next.post = d.id; next.tenure = tenure; next.exp = Math.min(tenure, B.exp.master);
+    }
+    w.head ??= council(w).reduce((a, b) => (b.loyalty > a.loyalty ? b : a)).id;
   } },
 ];
 

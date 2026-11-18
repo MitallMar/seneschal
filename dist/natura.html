@@ -2750,6 +2750,14 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
     }
   ];
 
+  // src/sim/probe.ts
+  var blank = () => ({
+    order: { fit: 0, worked: 0, already: 0, deaf: 0, weak: 0 },
+    autoPaid: 0,
+    short: { seasons: 0, food: 0, silver: 0, trust: 0, order: 0 }
+  });
+  var PROBE = blank();
+
   // src/data/economy.ts
   var SIDES = ["brod", "opushka", "les", "kuptsy", "zamok", "dvor"];
   var STOCKS = ["eda", "tovary", "serebro"];

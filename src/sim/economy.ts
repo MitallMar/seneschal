@@ -6,6 +6,7 @@ import { AXES, OPPOSED, TRAITS } from "../data/core";
 import { SIDES, VILLAGES, SIDE_NAMES, CATEGORY_NAMES, COURSES, ELDERS, PAY, HANDS_FROM, STOCKS, SEASON_NAMES } from "../data/economy";
 import { BALANCE as B } from "./balance";
 import { addAuthority } from "./authority";
+import { PROBE } from "./probe";
 import { holder, fitness, isStale, topAxis, postName, STAR_MAX, REL_MAX, type World, type Person } from "./sim";
 
 // Строка ведомости: что пришло или ушло, от какой стороны, кто отвечал и как исполнял. hidden — строку спрятал тот, кто ведёт счёт.
@@ -387,7 +388,9 @@ function collect(w: World, lines: string[]): void {
   const T = B.economy.tax, t = w.eco.tax, left = taxLeft(w);
   if (left > 0 && w.eco.autoPay) {
     const sub: string[] = [];
-    if (autoPayTax(w, sub)) lines.push(`Совет сам закрывает урок, не трогая нижних черт. ${sub.filter((x) => !x.startsWith("Осталось") && !x.startsWith("Урок")).join(" ")}`);
+    const auto = autoPayTax(w, sub);
+    PROBE.autoPaid += auto;
+    if (auto) lines.push(`Совет сам закрывает урок, не трогая нижних черт. ${sub.filter((x) => !x.startsWith("Осталось") && !x.startsWith("Урок")).join(" ")}`);
   }
   const rest = taxLeft(w), closed = rest <= 0;
   if (closed) {
@@ -431,11 +434,14 @@ export function economySeason(w: World, lines: string[]): void {
   if (kind === AUTUMN) lines.push(`Жатва: в амбар легло ${plan.harvest} еды.`);
   // недодача: сторона обижена
   if (plan.short.length) e.shortages++;
+  if (plan.short.length) PROBE.short.seasons++;
   for (const s of plan.short) {
-    addTrust(w, s.side, -E.trust.short * s.v);
+    PROBE.short[s.cat === "eda" ? "food" : "silver"] += s.v;
+    PROBE.short.trust += -addTrust(w, s.side, -E.trust.short * s.v);
     let note = `⚠ Недодача: ${s.what} — не хватило ${s.v} (${CATEGORY_NAMES[s.cat].toLowerCase()}). ${SIDE_NAMES[s.side]}: доверие падает.`;
     if (s.cat === "serebro" && s.side === "zamok") {
       w.resources.poryadok = r1(w.resources.poryadok - E.trust.shortOrder * s.v);
+      PROBE.short.order += E.trust.shortOrder * s.v;
       note += " Стража расходится — порядка меньше.";
     }
     if (s.side === "kuptsy") { addTrust(w, "kuptsy", -E.pay.loanDefault * s.v); note += " Долг не вернули — купцы этого не простят."; }
