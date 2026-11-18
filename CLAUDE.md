@@ -23,7 +23,7 @@
 | Задача | Читать | Править |
 |---|---|---|
 | Число баланса: шанс, порог, цена, множитель | шапка `src/sim/balance.ts` | `src/sim/balance.ts` (ручка `k(значение, min, max, step, 'подпись')`); если ход партий изменился — `UPDATE_SNAPSHOT=1 npm test` и строка об этом в коммите |
-| Новое событие совета | `docs/ARCHITECTURE.md`, раздел «Данные»; два похожих события из `src/data/events.ts` | `src/data/events.ts` (дописать в конец своего блока) |
+| Новое событие совета | `docs/ARCHITECTURE.md`, раздел «Данные»; два похожих события из `src/data/events.ts`; родные склонности должности — `docs/design/dolzhnost-i-harakter.md` | `src/data/events.ts` (дописать в конец своего блока); после правки `npm run axes` — без замечаний, числа в `dolzhnost-i-harakter.md` обновить |
 | Новое событие предыстории, черта, метка, стремление, персонаж | `src/data/types.ts`, нужный список в `src/data/core.ts` или `src/data/backstory.ts` | они же; подстановки в тексте — шапка `backstory.ts` |
 | Знание о людях: молва, разговоры, наблюдение, скрытые черты, годность словом | `docs/design/koncept-2.md`, «Что видит игрок: знание о людях»; `src/sim/sim.ts`, раздел «Знание о людях» и `talk` | он же, числа — раздел `know` в `balance.ts`, строки молвы — `src/data/rumors.ts`; тест в `test/know.test.ts`, в браузере — `npm run e2e -- know talk` |
 | Черты в течение жизни: новая черта, источник, порог | `docs/design/koncept-2.md`, «Черты в течение жизни»; `LIFE_TRAITS` в `src/data/core.ts`; `src/sim/sim.ts`, раздел «Черты в течение жизни» | они же, числа — раздел `traits` в `balance.ts`; тест в `test/know.test.ts` |

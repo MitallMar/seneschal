@@ -6,6 +6,7 @@ import { BACKSTORY } from "../src/data/backstory";
 import { RUMORS_AXIS, RUMORS_TRAIT } from "../src/data/rumors";
 import { EVENTS } from "../src/data/events";
 import { BALANCE } from "../src/sim/balance";
+import { postAxisTable, axisEffects, axesWarnings, runStats } from "../src/sim/axes-report";
 
 const dup = (ids: string[]) => ids.filter((id, i) => ids.indexOf(id) !== i);
 const postIds = POSTS.map((p) => p.id);
@@ -94,4 +95,39 @@ test("молва: несколько вариантов на каждую скл
 test("скрытые черты: у каждой назван поступок, который её выдаёт", () => {
   assert.ok(TRAITS.some((t) => t.hidden));
   for (const t of TRAITS.filter((x) => x.hidden)) assert.ok(t.revealedBy, t.id);
+});
+
+// ---------- должность и характер (задача И6) ----------
+
+test("у каждой должности 2–3 родные склонности, оси годности — среди них", () => {
+  for (const post of POSTS) {
+    assert.ok(post.native.length >= 2 && post.native.length <= 3 && post.native.every(isAxis), post.id);
+    assert.equal(new Set(post.native).size, post.native.length, post.id);
+    assert.ok(post.axes.every((a) => post.native.includes(a)), `${post.id}: ось годности не родная`);
+  }
+});
+
+test("события: родные склонности должности встречаются часто, остальные — изредка, но реже родных; у каждой оси и плюсы, и минусы", () => {
+  assert.deepEqual(axesWarnings(), []);
+  const table = postAxisTable();
+  for (const post of POSTS) {
+    for (const a of AXES) {
+      const v = table[post.id].axes[a].events;
+      assert.ok(v >= (post.native.includes(a) ? BALANCE.report.nativeEvents : BALANCE.report.otherEvents), `${post.id}, ${a}: ${v}`);
+    }
+  }
+  const eff = axisEffects();
+  for (const a of AXES) assert.ok(eff[a].plus > 0 && eff[a].minus < 0 && eff[a].clean <= eff[a].options / 4, `${a}: ${JSON.stringify(eff[a])}`);
+  // замечание появляется, когда цель не выполнена
+  const onlyLes = EVENTS.filter((e) => e.posts.includes("lesnichiy") && e.posts.length === 1);
+  assert.ok(axesWarnings(onlyLes).some((x) => x.startsWith("Староста")));
+});
+
+test("характер читается в прогонах: по ведущей склонности решают не реже порога на чужой должности и чаще — на своей", () => {
+  for (const lab of [false, true]) {
+    const r = runStats(20, 20, lab);
+    const own = r.own.matched / r.own.decisions, foreign = r.foreign.matched / r.foreign.decisions;
+    assert.ok(foreign >= BALANCE.report.leadForeign, `лабиринт ${lab}: на чужой ${foreign}`);
+    assert.ok(own > foreign, `лабиринт ${lab}: на своей ${own}, на чужой ${foreign}`);
+  }
 });
