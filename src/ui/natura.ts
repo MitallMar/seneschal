@@ -3,6 +3,7 @@
 import type { Axis, Sign, SignVec, BagTrait, NatureDef, Star } from "../data/types";
 import { AXES, AXIS_NAMES, POSTS, TRAITS, LIFE_TRAITS } from "../data/core";
 import { SIGNS, NATURES, BAG } from "../data/natura";
+import { BACKSTORY } from "../data/backstory";
 import { BALANCE, KNOBS, getAt, setAt, resetBalance, type KnobInfo } from "../sim/balance";
 import { growParty, rollPerson, bagTrait, cos, isFar, isContra, type NaturaPerson } from "../sim/natura";
 import { rollAll, metricsOf, naturaWarnings, currentAxes, type NaturaMetrics } from "../sim/natura-report";
@@ -15,7 +16,8 @@ const pct = (v: number) => `${Math.round(v * 100)}%`;
 const f1 = (v: number) => v.toFixed(1).replace(".", ",");
 const f2 = (v: number) => v.toFixed(2).replace(".", ",");
 const mean = (xs: number[]) => (xs.length ? xs.reduce((s, v) => s + v, 0) / xs.length : 0);
-const KIND: Record<BagTrait["kind"], string> = { born: "рождение", life: "жизнь", perk: "перк" };
+const KIND: Record<BagTrait["kind"], string> = { born: "врождённая", life: "нажитая", perk: "перк" };
+const TRIGGER: Record<string, string> = { habit: "привычка", post: "должность", rel: "отношения", break: "перелом", deed: "поступок" };
 const RARITY: Record<BagTrait["rarity"], string> = { common: "", rare: " ★", exceptional: " ★★" };
 const AXIS_RGB: Record<Axis, string> = { dolg: "75,93,138", vygoda: "160,120,42", zabota: "78,125,74", derzost: "161,69,46", obychai: "107,79,134" };
 const signDef = (id: Sign) => SIGNS.find((s) => s.id === id)!;
@@ -32,15 +34,18 @@ const traitTag = (t: BagTrait, role = "") => {
   const title = `${t.desc}. ${t.effect}`;
   return `<span class="tag ${t.kind}" title="${esc(title)}">${esc(t.name)}${RARITY[t.rarity]}</span>${role ? `<span class="tag role">${role}</span>` : ""}`;
 };
-const roleOf = (p: NaturaPerson, id: string) => (id === p.contra ? "против натуры" : id === p.far ? "издалека" : p.anchors.includes(id) ? "якорь" : "");
+const roleOf = (p: NaturaPerson, id: string) => (id === p.contra ? "против натуры" : id === p.far ? "издалека" : p.inGame.includes(id) ? "в игре" : "");
+// Текст события предыстории без подстановок рода: для подписи, откуда черта.
+const storyText = (id: string) => (BACKSTORY.find((ev) => ev.id === id)?.text ?? "").replace(/\{name\}/g, "он").replace(/\{other\}/g, "другой").replace(/\{[^}]*\}/g, "");
 const track = (share: number, color: string, extra = "") =>
   `<div class="track">${extra}<div class="fill" style="width:${Math.min(100, Math.max(0, share * 100)).toFixed(1)}%;background:${color}"></div></div>`;
 const starLine = (s: Star) => AXES.map((a) => `<span style="color:var(--axis-${a})"><b>${AXIS_NAMES[a]}</b> ${f1(s[a])}</span>`).join(" · ");
 
 // ---------- ручки ----------
 const GROUPS: { title: string; open: boolean; has: (path: string) => boolean }[] = [
-  { title: "Рост древа", open: true, has: (p) => p.split(".").length === 2 && !/lifeSteps|fate/.test(p) },
-  { title: "Жизнь и судьба в прогоне", open: true, has: (p) => /lifeSteps|fate/.test(p) },
+  { title: "Сколько черт и откуда", open: true, has: (p) => /innate|before|adultAge|eventList|lifeSteps|ageM|perkWeight/.test(p) },
+  { title: "Рост древа", open: true, has: (p) => p.split(".").length === 2 && !/innate|before|adultAge|eventList|lifeSteps|ageM|perkWeight|signSoft|coreScale|axisGain/.test(p) },
+  { title: "Признаки и склонности", open: false, has: (p) => /signSoft|coreScale|axisGain/.test(p) },
   { title: "Веса деловых склонностей", open: false, has: (p) => p.startsWith("natura.w.") },
   { title: "Поправки середины склонностей", open: false, has: (p) => p.startsWith("natura.shift.") },
   { title: "Цели отчёта", open: false, has: (p) => p.startsWith("natura.goal.") },
@@ -89,11 +94,13 @@ function renderMetrics() {
     `<div class="card${ok === null ? " info" : ok ? "" : " bad"}"><div>${title}</div><div class="v">${v}</div><div class="goal">${goal}</div></div>`;
   $("metric-cards").innerHTML = [
     card("Похожесть рероллов одной натуры", f2(m.jaccard), `цель: не больше ${G.jaccard} · худшая: ${esc(m.jaccardWorst.nature)}, ${f2(m.jaccardWorst.value)}`, m.jaccard <= G.jaccard),
-    card("Натура угадывается по чертам", pct(m.nn), `цель: ${pct(G.nnMin)}–${pct(G.nnMax)}`, m.nn >= G.nnMin && m.nn <= G.nnMax),
+    card("Доля нажитого у человека", pct(m.lifeShare), `цель: не меньше ${pct(G.lifeShare)}`, m.lifeShare >= G.lifeShare),
+    card("Натура угадывается по признакам", pct(m.signNn), `цель: не меньше ${pct(G.signNn)}`, m.signNn >= G.signNn),
+    card("Натура угадывается по набору черт", pct(m.nn), `цель: ${pct(G.nnMin)}–${pct(G.nnMax)} — ниже черты случайны, выше шаблон`, m.nn >= G.nnMin && m.nn <= G.nnMax),
     card("Не выпали ни разу", String(m.never.length), m.never.length ? esc(m.never.join(", ")) : "цель: таких нет", !m.never.length),
     card("Самая частая обычная черта", pct(m.commonMax.share), `«${esc(m.commonMax.trait)}» · цель: не больше ${pct(G.commonShare)}`, m.commonMax.share <= G.commonShare),
     card("Наименьший разброс признака", f2(minSpread), `цель: не ниже ${G.signSpread}`, minSpread >= G.signSpread),
-    card("Черт на человека", f1(m.traitsMean), `рождение ${f1(m.kinds.born)} · жизнь ${f1(m.kinds.life)} · перки ${f1(m.kinds.perk)}`, null),
+    card("Черт на человека", f1(m.traitsMean), `врождённых ${f1(m.kinds.born)} · нажитых ${f1(m.kinds.life)} · перков ${f1(m.kinds.perk)}`, null),
     card("В мешке", String(BAG.length), (["born", "life", "perk"] as const).map((k) => `${KIND[k]} ${BAG.filter((t) => t.kind === k).length}`).join(" · "), null),
   ].join("");
   const warns = naturaWarnings(m);
@@ -120,11 +127,13 @@ function renderCharts() {
   // натуры
   const band = `<div class="band" style="left:${G.nnMin * 100}%;width:${(G.nnMax - G.nnMin) * 100}%"></div>`;
   const jmark = `<div class="mark" style="left:${G.jaccard * 100}%"></div>`;
-  $("chart-natures").innerHTML = `<div class="bars two">${NATURES.map((x) => {
+  $("chart-natures").innerHTML = `<div class="bars three"><div></div><div class="muted">похожесть рероллов</div><div></div>
+    <div class="muted">угадывается по набору черт</div><div></div><div class="muted">угадывается по признакам</div><div></div>${NATURES.map((x) => {
     const r = m.perNature[x.id];
     const okNn = r.nn >= G.nnMin && r.nn <= G.nnMax;
     return `<div>${esc(x.name)}</div>${track(r.jaccard, r.jaccard <= G.jaccard ? "var(--born)" : "var(--bad)", jmark)}<div class="num">${f2(r.jaccard)}</div>
-      ${track(r.nn, okNn ? "var(--good)" : "var(--perk)", band)}<div class="num">${pct(r.nn)}</div>`;
+      ${track(r.nn, okNn ? "var(--good)" : "var(--perk)", band)}<div class="num">${pct(r.nn)}</div>
+      ${track(r.signNn, r.signNn >= G.signNn ? "var(--good)" : "var(--bad)", `<div class="mark" style="left:${G.signNn * 100}%"></div>`)}<div class="num">${pct(r.signNn)}</div>`;
   }).join("")}</div>`;
   // тепловые карты
   const byNature = (x: NatureDef) => people.filter((p) => p.nature === x);
@@ -150,13 +159,18 @@ function renderCharts() {
 }
 
 // ---------- один человек ----------
-function traitBlock(t: BagTrait, role = "") {
-  return `<div class="trait">${traitTag(t, role)} ${vecTags(t.vec)}<small>${esc(t.desc)}. ${esc(t.effect)}.</small></div>`;
+function traitBlock(p: NaturaPerson, t: BagTrait) {
+  const origin = t.kind === "born" ? "врождённая" : p.inGame.includes(t.id) ? `в игре, повод — ${TRIGGER[t.trigger ?? ""]}` : `до игры: ${storyText(p.via[t.id])}`;
+  return `<div class="trait">${traitTag(t)} ${vecTags(t.vec)}<small><b>${esc(origin)}</b></small><small>${esc(t.desc)}. ${esc(t.effect)}.</small></div>`;
 }
 function personHtml(p: NaturaPerson) {
   const grown = (anchor: string) => p.traits.filter((t) => p.from[t.id] === anchor && t.id !== p.contra);
-  const bush = (title: string, id: string) => `<div class="bush"><h4>${title}</h4>${traitBlock(bagTrait(id))}${grown(id).map((t) => traitBlock(t, t.kind === "born" ? "" : KIND[t.kind])).join("")}</div>`;
-  const contra = p.contra && p.contra !== p.far ? `<div class="bush"><h4>Противоречие: против ядра</h4>${traitBlock(bagTrait(p.contra))}</div>` : "";
+  const has = (id: string) => p.traits.some((t) => t.id === id);
+  const bush = (title: string, id: string) => `<div class="bush"><h4>${title}</h4>${has(id) ? traitBlock(p, bagTrait(id)) : ""}${grown(id).map((t) => traitBlock(p, t)).join("")}</div>`;
+  const contra = p.contra && p.contra !== p.far && has(p.contra) ? `<div class="bush"><h4>Противоречие: против ядра</h4>${traitBlock(p, bagTrait(p.contra))}</div>` : "";
+  const loose = p.traits.filter((t) => !p.anchors.includes(t.id) && t.id !== p.far && t.id !== p.contra && !p.from[t.id]);
+  const rest = loose.length ? `<div class="bush"><h4>Само по себе: след события, к якорям не тянется</h4>${loose.map((t) => traitBlock(p, t)).join("")}</div>` : "";
+  const lost = p.lost.length ? `<p class="muted">Вытеснено новыми чертами: ${p.lost.map((id) => esc(bagTrait(id).name)).join(", ")}</p>` : "";
   const signs = SIGNS.map((s) => {
     const v = p.signs[s.id], core = (p.nature.core[s.id] ?? 0) * BALANCE.natura.coreScale;
     const w = Math.abs(v) * 10, left = v >= 0 ? 50 : 50 - w;
@@ -165,41 +179,42 @@ function personHtml(p: NaturaPerson) {
       <div>${esc(s.plus)}</div><div class="num">${v > 0 ? "+" : ""}${f1(v)}</div>`;
   }).join("");
   const star = AXES.map((a) => `<div>${AXIS_NAMES[a]}</div>${track(p.star[a] / 10, `var(--axis-${a})`)}<div class="num">${f1(p.star[a])}</div>`).join("");
-  const events = p.events.length ? `<p class="muted">Судьба тянула к: ${p.events.map(vecTags).join(" ")}</p>` : "";
-  return `<p><b>${esc(p.nature.name)}</b> · ядро: ${vecTags(p.nature.core)} · черт: ${p.traits.length}</p>${events}
-    <div class="tree">${p.anchors.map((id, i) => bush(`Якорь ядра ${i + 1} и его куст`, id)).join("")}${p.far ? bush("Дальний якорь и его куст", p.far) : ""}${contra}</div>
+  const kinds = (["born", "life", "perk"] as const).map((k) => `${KIND[k]}: ${p.traits.filter((t) => t.kind === k).length}`).join(", ");
+  return `<p><b>${esc(p.nature.name)}</b>, ${p.age} лет · ядро: ${vecTags(p.nature.core)} · черт: ${p.traits.length} (${kinds})</p>${lost}
+    <div class="tree">${p.anchors.map((id, i) => bush(`Врождённый якорь ${i + 1} и его куст`, id)).join("")}${p.far ? bush("Дальний якорь (нажит) и его куст", p.far) : ""}${contra}${rest}</div>
     <div class="split"><div><h3>Признаки (чёрная метка — ядро)</h3><div class="bipolar">${signs}</div></div>
     <div><h3>Деловые склонности из признаков</h3><div class="bars">${star}</div></div></div>`;
 }
 function renderPerson() {
   const nature = NATURES.find((x) => x.id === val("nature")) ?? NATURES[0];
   const seed = `${val("seed")}-человек-${personRoll}`;
-  $("person-view").innerHTML = personHtml(rollPerson(seed, nature));
+  const age = val("age") ? Number(val("age")) : undefined;
+  $("person-view").innerHTML = personHtml(rollPerson(seed, nature, age));
   $("person-rerolls").innerHTML = Array.from({ length: 12 }, (_, i) => {
-    const p = rollPerson(`${seed}-${i}`, nature);
-    return `<div class="reroll">${p.traits.map((t) => traitTag(t, roleOf(p, t.id))).join("")}<div class="muted">${starLine(p.star)}</div></div>`;
+    const p = rollPerson(`${seed}-${i}`, nature, age);
+    return `<div class="reroll"><span class="muted">${p.age} лет</span> ${p.traits.map((t) => traitTag(t, roleOf(p, t.id))).join("")}<div class="muted">${starLine(p.star)}</div></div>`;
   }).join("");
 }
 function renderParty() {
   const party = growParty(val("seed"), 10);
-  $("party-view").innerHTML = `<table><tr><th>Натура</th><th>Черты</th><th>Склонности</th></tr>${party
-    .map((p) => `<tr><td><b>${esc(p.nature.name)}</b></td><td>${p.traits.map((t) => traitTag(t, roleOf(p, t.id))).join("")}</td><td>${starLine(p.star)}</td></tr>`).join("")}</table>`;
+  $("party-view").innerHTML = `<table><tr><th>Натура</th><th>Возраст</th><th>Черты</th><th>Склонности</th></tr>${party
+    .map((p) => `<tr><td><b>${esc(p.nature.name)}</b></td><td class="c">${p.age}</td><td>${p.traits.map((t) => traitTag(t, roleOf(p, t.id))).join("")}</td><td>${starLine(p.star)}</td></tr>`).join("")}</table>`;
 }
 
 // ---------- таблицы ----------
 function renderTables() {
   const n = Math.max(1, people.length);
-  const born = BAG.filter((t) => t.kind === "born");
+  const born = BAG.filter((t) => t.kind === "born"), lifeBag = BAG.filter((t) => t.kind === "life");
   const names = (list?: string[]) => (list ?? []).map((id) => esc(bagTrait(id).name)).join(", ");
   // натуры
-  $("table-natures").innerHTML = `<table><tr><th>Натура</th><th>Ядро</th><th>Точки кристаллизации: сколько черт рождения у каждой</th>
-    <th>Дальняя область</th><th>Против ядра</th><th>Чаще всего выпадает в прогоне</th><th>Ведущая склонность</th></tr>${NATURES.map((x) => {
+  $("table-natures").innerHTML = `<table><tr><th>Натура</th><th>Ядро</th><th>Точки кристаллизации: сколько врождённых черт у каждой</th>
+    <th>Дальняя область (нажитых)</th><th>Против ядра (нажитых)</th><th>Чаще всего выпадает в прогоне</th><th>Ведущая склонность</th></tr>${NATURES.map((x) => {
     const own = people.filter((p) => p.nature === x);
     const freq = BAG.map((t) => ({ t, share: own.filter((p) => p.traits.includes(t)).length / Math.max(1, own.length) })).sort((a, b) => b.share - a.share).slice(0, 6);
     const crystals = x.crystals.map((c) => `${vecTags(c)} ${born.filter((t) => cos(t.vec, c) > 0).length}`).join(" ");
     const topAxis = AXES.reduce((best, a) => (mean(own.map((p) => p.star[a])) > mean(own.map((p) => p.star[best])) ? a : best), AXES[0]);
     return `<tr><td><b>${esc(x.name)}</b><br><span class="muted">${x.id}</span></td><td>${vecTags(x.core)}</td><td>${crystals}</td>
-      <td class="c">${born.filter((t) => isFar(x, t)).length}</td><td class="c">${born.filter((t) => isContra(x, t)).length}</td>
+      <td class="c">${lifeBag.filter((t) => isFar(x, t)).length}</td><td class="c">${lifeBag.filter((t) => isContra(x, t)).length}</td>
       <td>${freq.map((r) => `${traitTag(r.t)} ${pct(r.share)}`).join(" ")}</td><td>${AXIS_NAMES[topAxis]} ${f1(mean(own.map((p) => p.star[topAxis])))}</td></tr>`;
   }).join("")}</table>`;
   // мешок
@@ -207,19 +222,20 @@ function renderTables() {
   let bag = BAG.filter((t) => !kind || t.kind === kind);
   if (sort === "freq") bag = [...bag].sort((a, b) => m.count[b.id] - m.count[a.id]);
   if (sort === "name") bag = [...bag].sort((a, b) => a.name.localeCompare(b.name, "ru"));
-  $("table-bag").innerHTML = `<table><tr><th>Черта</th><th>Вид</th><th>Вектор</th><th>Что это</th><th>Как действует</th><th>Не уживается с</th><th>Нужна одна из</th>
+  $("table-bag").innerHTML = `<table><tr><th>Черта</th><th>Вид</th><th>Вектор</th><th>Что это</th><th>Как действует</th><th>Повод в игре</th><th>Не уживается с</th><th>Вытесняет</th><th>Нужна одна из</th>
     <th>Выпадает</th><th>У каких натур чаще</th></tr>${bag.map((t) => {
     const conflicts = BAG.filter((x) => x.conflicts?.includes(t.id) || t.conflicts?.includes(x.id)).map((x) => esc(x.name)).join(", ");
     const at = NATURES.map((x) => ({ x, c: people.filter((p) => p.nature === x && p.traits.includes(t)).length })).filter((r) => r.c).sort((a, b) => b.c - a.c).slice(0, 3);
-    return `<tr><td>${traitTag(t)}${t.hidden ? `<span class="tag role">скрытая</span>` : ""}<br><span class="muted">${t.id}</span></td><td>${KIND[t.kind]}</td><td>${vecTags(t.vec)}</td>
-      <td>${esc(t.desc)}</td><td>${esc(t.effect)}</td><td>${conflicts}</td><td>${names(t.requires)}</td>
+    const flags = `${t.hidden ? `<span class="tag role">скрытая</span>` : ""}${t.council ? `<span class="tag role">уже в совете</span>` : ""}`;
+    return `<tr><td>${traitTag(t)}${flags}<br><span class="muted">${t.id}</span></td><td>${KIND[t.kind]}</td><td>${vecTags(t.vec)}</td>
+      <td>${esc(t.desc)}</td><td>${esc(t.effect)}</td><td>${TRIGGER[t.trigger ?? ""] ?? ""}</td><td>${conflicts}</td><td>${names(t.replaces)}</td><td>${names(t.requires)}</td>
       <td class="c${m.count[t.id] ? "" : " zero"}">${pct(m.count[t.id] / n)}</td><td>${at.map((r) => esc(r.x.name)).join(", ")}</td></tr>`;
   }).join("")}</table>`;
   // признаки
   const w = BALANCE.natura.w as Record<Axis, SignVec>;
   const poleCount = (s: Sign, dir: number, k: BagTrait["kind"]) => BAG.filter((t) => t.kind === k && (t.vec[s] ?? 0) * dir > 0).length;
   const poles = (s: Sign, dir: number) => `${poleCount(s, dir, "born")} / ${poleCount(s, dir, "life")} / ${poleCount(s, dir, "perk")}`;
-  $("table-signs").innerHTML = `<table><tr><th>Признак</th><th>Плюс</th><th>Минус</th><th>Черт у плюса<br>рожд. / жизнь / перки</th><th>Черт у минуса</th>
+  $("table-signs").innerHTML = `<table><tr><th>Признак</th><th>Плюс</th><th>Минус</th><th>Черт у плюса<br>врожд. / нажитые / перки</th><th>Черт у минуса</th>
     <th>Натур с плюсом в ядре</th><th>Натур с минусом</th>${AXES.map((a) => `<th>вес в ${AXIS_NAMES[a]}</th>`).join("")}</tr>${SIGNS.map((s) => `<tr>
     <td class="muted">${s.id}</td><td>${esc(s.plus)}</td><td>${esc(s.minus)}</td><td class="c">${poles(s.id, 1)}</td><td class="c">${poles(s.id, -1)}</td>
     <td class="c">${NATURES.filter((x) => (x.core[s.id] ?? 0) > 0).length}</td><td class="c">${NATURES.filter((x) => (x.core[s.id] ?? 0) < 0).length}</td>
@@ -266,6 +282,7 @@ $("seed").addEventListener("change", run);
 $("reset").addEventListener("click", () => { resetBalance(); renderKnobs(); run(); });
 $("export").addEventListener("click", exportKnobs);
 $("nature").addEventListener("change", () => { personRoll = 0; renderPerson(); });
+$("age").addEventListener("change", renderPerson);
 $("reroll").addEventListener("click", () => { personRoll++; renderPerson(); });
 $("bag-kind").addEventListener("change", renderTables);
 $("bag-sort").addEventListener("change", renderTables);
