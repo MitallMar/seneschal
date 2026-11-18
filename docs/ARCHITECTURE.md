@@ -37,11 +37,13 @@
 **`rng.ts`** — класс `Rng(seed)`: `next`, `range`, `int`, `pick`, `chance`, `gauss`, `shuffle`. Единственный источник случайности: одно семя и одни действия игрока дают одну и ту же партию. Порядок обращений к генератору — часть поведения: лишний вызов `rng` меняет все партии.
 
 **`balance.ts`** — все числа баланса. Каждое записано ручкой `k(значение, min, max, step, 'подпись')`; из одного описания собираются:
-- `BALANCE` — дерево чисел, его читает логика (`BALANCE.council.sabotage`); первый уровень — раздел (`star`, `decide`, `exp`, `rel`, `council`, `loyalty`, `staff`, `know`, `traits`, `report`, `season`; `report` — цели отчёта `npm run axes`, на ход партии не влияют);
+- `BALANCE` — дерево чисел, его читает логика (`BALANCE.council.sabotage`); первый уровень — раздел (`star`, `decide`, `exp`, `rel`, `council`, `loyalty`, `staff`, `know`, `traits`, `report`, `natura`, `season`; `report` — цели отчёта `npm run axes`, `natura` — ручки генератора натур и цели его отчёта; оба на ход партии не влияют);
 - `KNOBS` — список `{ path, def, min, max, step, label }` для ползунков спортзала;
 - `getAt(path)`, `setAt(path, value)` (зажимает в диапазон и округляет до шага, меняет число прямо в `BALANCE`), `snapshotBalance()`, `restoreBalance(snap)`, `resetBalance()`.
 
 Логика читает `BALANCE` каждый раз заново и копий не держит, поэтому ручка действует со следующего же решения.
+
+**`natura.ts`** — генератор натур, отдельно от совета (`sim.ts` его не зовёт; замысел — `docs/design/natura.md`). Данные — `src/data/natura.ts`: признаки `SIGNS`, натуры `NATURES` (ядро и точки кристаллизации), мешок `BAG` (черты рождения, жизни и перки с вектором по признакам, редкостью, конфликтами). `growPerson` растит человека при рождении (якоря ядра, дальний якорь, рост по весам `candidateWeight`, обязательное противоречие), `growLife` — черту жизни или перк, `growParty` — партию со штрафом за повтор, `signsOf` и `businessStar` считают признаки и деловые склонности. **`natura-report.ts`** — метрики для `npm run natura` и тестов: `naturaMetrics`, `naturaWarnings`.
 
 **`axes-report.ts`** — отчёт «должность и характер» для `npm run axes` и тестов данных: `postAxisTable` (должность × склонность по событиям), `axisEffects` (плюсы и минусы склонности), `axesWarnings` (что не дотягивает до целей раздела `report`), `runStats` (прогон партий без игрока: стороны и доля решений по ведущей склонности на своей и на чужой должности).
 
