@@ -8,7 +8,8 @@ import { getRel } from "./state";
 import type { World, AuthKind, AuthLine, Complaint, AuthState } from "./state";
 
 export type { AuthKind, AuthLine, Complaint, AuthState } from "./state";
-import { zoneOf, patienceWord, addLine, seasonKind } from "./economy";
+import { zoneOf, patienceWord, seasonKind } from "./economy/zones";
+import { addLine } from "./economy/ledger";
 
 export const AUTH_KIND_NAMES: Record<AuthKind, string> = {
   support: "опора", tax: "подать", judge: "суд лично", complaint: "брошенные жалобы", feast: "обычаи и пиры",
