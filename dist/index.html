@@ -1035,6 +1035,135 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
     restoreBalance(Object.fromEntries(KNOBS.map((q) => [q.path, q.def])), B);
   }
 
+  // src/sim/util.ts
+  var clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  var round1 = (v) => Math.round(v * 10) / 10;
+  var round2 = (v) => Math.round(v * 100) / 100;
+
+  // src/sim/state.ts
+  var STAR_MAX = 10;
+  var REL_MAX = 10;
+  var relKey = (a, b) => a < b ? `${a}|${b}` : `${b}|${a}`;
+  function getRel(w2, a, b) {
+    return w2.rel.get(relKey(a, b)) ?? 0;
+  }
+  function setRel(w2, a, b, v) {
+    w2.rel.set(relKey(a, b), clamp(v, -REL_MAX, REL_MAX));
+  }
+  function isStale(p) {
+    return !!p.post && p.tenure >= BALANCE.exp.staleFrom;
+  }
+  function topAxis(star) {
+    return AXES.reduce((best, a) => star[a] > star[best] ? a : best, AXES[0]);
+  }
+  function postName(id) {
+    return POSTS.find((p) => p.id === id).name;
+  }
+  function holder(w2, post) {
+    const id = w2.posts[post];
+    return id == null ? void 0 : w2.people[id];
+  }
+  function fitness(p, post) {
+    const def = POSTS.find((x) => x.id === post);
+    let f = def.axes.reduce((s, a) => s + p.star[a], 0) / def.axes.length;
+    if (p.mark?.goodPost === post) f += BALANCE.exp.fitMarkGood;
+    if (p.mark?.badPost === post) f -= BALANCE.exp.fitMarkBad;
+    if (p.aspiration?.post === post) f += BALANCE.exp.fitAspiration;
+    return f;
+  }
+
+  // src/sim/council/people.ts
+  function activeTraits(p, vs) {
+    return [p.trait, ...p.gained.filter((g) => !g.trait.targeted || g.target === vs?.id).map((g) => g.trait)];
+  }
+  function mod(p, key, vs) {
+    return activeTraits(p, vs).reduce((s, t) => s + (t.mods[key] ?? 0), 0);
+  }
+  function grudge(p, vs) {
+    return activeTraits(p, vs).reduce((s, t) => s * (t.mods.grudge ?? 1), 1);
+  }
+  function addRel(w2, a, b, d) {
+    const pa = w2.people[a], pb = w2.people[b];
+    const g = d < 0 ? Math.max(grudge(pa, pb), grudge(pb, pa)) : 1;
+    w2.rel.set(relKey(a, b), clamp(getRel(w2, a, b) + d * g, -REL_MAX, REL_MAX));
+  }
+  function gender(text, p, other) {
+    return text.replace(/\{name\}/g, p.name).replace(/\{other\}/g, other ? other.name : "\u0441\u043E\u0441\u0435\u0434\u043E\u043C").replace(/\{oа\}/g, other?.female ? "\u0430" : "").replace(/\{а\}/g, p.female ? "\u0430" : "").replace(/\{ся\}|\{ась\}/g, p.female ? "\u0430\u0441\u044C" : "\u0441\u044F").replace(/\{он\}/g, p.female ? "\u043E\u043D\u0430" : "\u043E\u043D").replace(/\{его\}/g, p.female ? "\u0435\u0451" : "\u0435\u0433\u043E").replace(/\{ему\}/g, p.female ? "\u0435\u0439" : "\u0435\u043C\u0443");
+  }
+  function addStar(star, shift, k2 = 1) {
+    for (const a of AXES) if (shift[a]) star[a] += shift[a] * k2;
+  }
+  var noAxes = () => ({ dolg: 0, vygoda: 0, zabota: 0, derzost: 0, obychai: 0 });
+  var dative = (name) => name.endsWith("\u0430") ? `${name.slice(0, -1)}\u0435` : `${name}\u0443`;
+  var lower = (text) => text.charAt(0).toLowerCase() + text.slice(1);
+
+  // src/sim/council/know.ts
+  function relWord(v) {
+    if (v >= BALANCE.rel.ally) return "\u0437\u0430\u043E\u0434\u043D\u043E";
+    if (v >= BALANCE.rel.friendly) return "\u043B\u0430\u0434\u044F\u0442";
+    if (v > BALANCE.rel.rival) return "\u0442\u0435\u0440\u043F\u044F\u0442";
+    if (v > BALANCE.rel.enemy) return "\u0441\u043E\u043F\u0435\u0440\u043D\u0438\u043A\u0438";
+    return "\u0432\u0440\u0430\u0433\u0438";
+  }
+  function loyaltyWord(v) {
+    if (v >= BALANCE.loyalty.devoted) return "\u043F\u0440\u0435\u0434\u0430\u043D";
+    if (v >= BALANCE.loyalty.trusts) return "\u0434\u043E\u0432\u0435\u0440\u044F\u0435\u0442";
+    if (v > BALANCE.loyalty.unhappy) return "\u0441\u043B\u0443\u0436\u0438\u0442";
+    if (v > BALANCE.loyalty.bitter) return "\u043D\u0435\u0434\u043E\u0432\u043E\u043B\u0435\u043D";
+    return "\u043E\u0437\u043B\u043E\u0431\u043B\u0435\u043D";
+  }
+  function expWord(p) {
+    if (!p.post) return "\u2014";
+    if (p.exp >= BALANCE.exp.master) return "\u043C\u0430\u0441\u0442\u0435\u0440";
+    if (p.exp >= BALANCE.exp.settled) return "\u043E\u0441\u0432\u043E\u0438\u043B\u0441\u044F";
+    return "\u043D\u043E\u0432\u0438\u0447\u043E\u043A";
+  }
+  function forecast(p) {
+    const known = AXES.filter((a) => axisKnown(p, a));
+    if (!known.length) return "\u043F\u043E\u043A\u0430 \u043D\u0435\u043F\u043E\u043D\u044F\u0442\u043D\u043E, \u043A\u0430\u043A \u043F\u043E\u0441\u0442\u0443\u043F\u0438\u0442";
+    const best = known.reduce((x, a) => p.star[a] > p.star[x] ? a : x, known[0]);
+    if (p.star[best] < BALANCE.know.strong) return "\u0441\u0438\u043B\u044C\u043D\u044B\u0445 \u0441\u043A\u043B\u043E\u043D\u043D\u043E\u0441\u0442\u0435\u0439 \u043F\u043E\u043A\u0430 \u043D\u0435 \u0432\u0438\u0434\u043D\u043E";
+    return `\u0441\u043A\u043E\u0440\u0435\u0435 \u0432\u0441\u0435\u0433\u043E, \u0431\u0443\u0434\u0435\u0442 \u0434\u0435\u0439\u0441\u0442\u0432\u043E\u0432\u0430\u0442\u044C \u043F\u043E ${AXIS_DAT[best]}`;
+  }
+  function consistency(p) {
+    return p.decisions ? Math.round(p.matchedTop / p.decisions * 100) : 0;
+  }
+  function axisWord(v) {
+    return v >= BALANCE.know.strong ? "\u0441\u0438\u043B\u044C\u043D\u043E" : v >= BALANCE.know.notable ? "\u0437\u0430\u043C\u0435\u0442\u043D\u043E" : "\u0441\u043B\u0430\u0431\u043E";
+  }
+  function axisKnown(p, a) {
+    return p.know.axes || p.know.seen[a] >= BALANCE.know.seenToKnow;
+  }
+  function traitLabel(w2, g) {
+    return g.trait.targeted && g.target != null ? `${g.trait.name} ${dative(w2.people[g.target].name)}` : g.trait.name;
+  }
+  function rumorCheck(p) {
+    const r = p.rumor;
+    if (!r) return "";
+    if (r.trait) return !p.know.trait ? "" : r.trait === p.trait.id ? "\u043F\u043E\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u043B\u0430\u0441\u044C" : "\u043D\u0435 \u043F\u043E\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u043B\u0430\u0441\u044C";
+    if (!r.axis || !axisKnown(p, r.axis)) return "";
+    return p.star[r.axis] >= BALANCE.know.notable ? "\u043F\u043E\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u043B\u0430\u0441\u044C" : "\u043D\u0435 \u043F\u043E\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u043B\u0430\u0441\u044C";
+  }
+  function fitWord(p, post) {
+    const def = POSTS.find((x) => x.id === post);
+    const known = def.axes.filter((a) => axisKnown(p, a));
+    const good = p.mark?.goodPost === post, bad = p.mark?.badPost === post;
+    if (!known.length && !good && !bad) return "\u043D\u0435 \u0437\u043D\u0430\u044E";
+    let f = known.length ? known.reduce((s, a) => s + p.star[a], 0) / known.length : BALANCE.star.center;
+    if (good) f += BALANCE.exp.fitMarkGood;
+    if (bad) f -= BALANCE.exp.fitMarkBad;
+    if (p.know.aspiration && p.aspiration?.post === post) f += BALANCE.exp.fitAspiration;
+    return f >= BALANCE.know.fitGood ? "\u043F\u043E\u0434\u0445\u043E\u0434\u0438\u0442" : "\u0441\u043E\u043C\u043D\u0438\u0442\u0435\u043B\u044C\u043D\u043E";
+  }
+  function headOpinion(w2, p) {
+    const head = w2.head != null ? w2.people[w2.head] : void 0;
+    if (!head || head.id === p.id) return void 0;
+    const bias = round1(getRel(w2, head.id, p.id) * BALANCE.know.opinionBias);
+    const best = POSTS.reduce((x, d) => fitness(p, d.id) > fitness(p, x.id) ? d : x, POSTS[0]);
+    const text = fitness(p, best.id) + bias >= BALANCE.know.fitGood ? `\u0433\u043E\u0434\u0438\u0442\u0441\u044F \u0432 ${best.into}` : "\u043D\u0438 \u043D\u0430 \u043E\u0434\u043D\u0443 \u0434\u043E\u043B\u0436\u043D\u043E\u0441\u0442\u044C \u043D\u0435 \u0433\u043E\u0434\u0438\u0442\u0441\u044F";
+    return { head, text, bias };
+  }
+
   // src/data/rumors.ts
   var RUMORS_AXIS = {
     dolg: ["\u0413\u043E\u0432\u043E\u0440\u044F\u0442, \u0441\u043B\u043E\u0432\u043E \u0434\u0435\u0440\u0436\u0438\u0442.", "\u0413\u043E\u0432\u043E\u0440\u044F\u0442, \u043F\u0440\u0438\u043A\u0430\u0437 \u0434\u043B\u044F {\u0435\u0433\u043E} \u2014 \u0437\u0430\u043A\u043E\u043D.", "\u0413\u043E\u0432\u043E\u0440\u044F\u0442, \u0441\u043B\u0443\u0436\u0431\u0443 \u0441\u0442\u0430\u0432\u0438\u0442 \u0432\u044B\u0448\u0435 \u0441\u0432\u043E\u0435\u0433\u043E."],
@@ -1094,6 +1223,728 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
     { id: "starshinstvo", how: "\u043F\u043E \u0441\u0442\u0430\u0440\u0448\u0438\u043D\u0441\u0442\u0432\u0443", text: "\u0414\u043E\u043B\u0436\u043D\u043E\u0441\u0442\u044C \xAB{post}\xBB \u043F\u043E\u043B\u0443\u0447\u0438\u043B{\u0430} \u043F\u043E \u0441\u0442\u0430\u0440\u0448\u0438\u043D\u0441\u0442\u0432\u0443: \u043F\u0440\u0435\u0436\u043D\u0438\u0439 \u0431\u0430\u0440\u043E\u043D \u0447\u0442\u0438\u043B \u0441\u0435\u0434\u0438\u043D\u0443, \u0430 \u043D\u0435 \u0443\u043C\u0435\u043D\u0438\u0435." },
     { id: "milost", how: "\u043F\u043E \u043C\u0438\u043B\u043E\u0441\u0442\u0438", text: "\u0414\u043E\u043B\u0436\u043D\u043E\u0441\u0442\u044C \xAB{post}\xBB \u043F\u043E\u043B\u0443\u0447\u0438\u043B{\u0430} \u043F\u043E \u043C\u0438\u043B\u043E\u0441\u0442\u0438 \u043F\u0440\u0435\u0436\u043D\u0435\u0433\u043E \u0431\u0430\u0440\u043E\u043D\u0430: \u0443\u0433\u043E\u0434\u0438\u043B{\u0430} \u0435\u043C\u0443 \u043A\u043E\u0433\u0434\u0430-\u0442\u043E, \u0438 \u043D\u0435 \u0434\u0435\u043B\u043E\u043C." }
   ];
+
+  // src/sim/rng.ts
+  var Rng = class {
+    constructor(seed) {
+      let h2 = 1779033703 ^ seed.length;
+      for (let i = 0; i < seed.length; i++) {
+        h2 = Math.imul(h2 ^ seed.charCodeAt(i), 3432918353);
+        h2 = h2 << 13 | h2 >>> 19;
+      }
+      this.s = h2 >>> 0;
+    }
+    next() {
+      let t = this.s += 1831565813;
+      t = Math.imul(t ^ t >>> 15, t | 1);
+      t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    }
+    range(a, b) {
+      return a + (b - a) * this.next();
+    }
+    int(a, b) {
+      return Math.floor(this.range(a, b + 1));
+    }
+    pick(arr) {
+      return arr[Math.floor(this.next() * arr.length)];
+    }
+    chance(p) {
+      return this.next() < p;
+    }
+    gauss() {
+      const u = 1 - this.next();
+      const v = this.next();
+      return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+    }
+    shuffle(arr) {
+      const a = arr.slice();
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(this.next() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    }
+  };
+
+  // src/sim/economy/zones.ts
+  var seasonKind = (season) => (season - 1) % 4;
+  var AUTUMN = 2;
+  var WINTER = 3;
+  var SUMMER = 1;
+  var SPRING = 0;
+  function zoneWord(v) {
+    const T = BALANCE.economy.trust;
+    return v >= T.ally ? "\u0437\u0430\u043E\u0434\u043D\u043E" : v >= T.friendly ? "\u043B\u0430\u0434\u044F\u0442" : v > T.refuse ? "\u0442\u0435\u0440\u043F\u044F\u0442" : "\u043E\u0442\u043A\u0430\u0437\u044B\u0432\u0430\u044E\u0442";
+  }
+  var zoneOf = (w2, side) => zoneWord(w2.factions[side]);
+  function zoneMult(w2, side) {
+    const Z = BALANCE.economy.zone, z = zoneOf(w2, side);
+    return z === "\u0437\u0430\u043E\u0434\u043D\u043E" ? Z.ally : z === "\u043B\u0430\u0434\u044F\u0442" ? Z.friendly : z === "\u0442\u0435\u0440\u043F\u044F\u0442" ? Z.tolerate : Z.refuse;
+  }
+  function addTrust(w2, side, d) {
+    const max = BALANCE.economy.trust.max, was = w2.factions[side];
+    w2.factions[side] = round1(clamp(was + d, -max, max));
+    return round1(w2.factions[side] - was);
+  }
+  function patienceWord(v) {
+    const T = BALANCE.economy.tax;
+    return v >= T.favor ? "\u0431\u043B\u0430\u0433\u043E\u0432\u043E\u043B\u0438\u0442" : v >= T.waits ? "\u0436\u0434\u0451\u0442" : v >= T.displeased ? "\u043D\u0435\u0434\u043E\u0432\u043E\u043B\u0435\u043D" : "\u043D\u0430 \u0438\u0441\u0445\u043E\u0434\u0435";
+  }
+
+  // src/sim/economy/ledger.ts
+  var floor1 = (v) => Math.floor(v * 10 + 1e-9) / 10;
+  function addLine(w2, line) {
+    if (line.cat === "lyudi") {
+      w2.eco.cur.push(line);
+      return line.v;
+    }
+    const was = w2.eco.stock[line.cat];
+    w2.eco.stock[line.cat] = round2(Math.max(0, was + line.v));
+    const v = round2(w2.eco.stock[line.cat] - was);
+    w2.eco.cur.push({ ...line, v });
+    return v;
+  }
+  function belowFloor(w2, cat, v) {
+    return v < 0 && round2(w2.eco.stock[cat] + v) < w2.eco.floor[cat];
+  }
+  function takeHands(w2, hands) {
+    w2.eco.recruits.push({ from: "zamok", hands, until: w2.season + 1 });
+    w2.eco.cur.push({ cat: "lyudi", v: -hands, text: "\u0440\u0443\u043A\u0438 \u0437\u0430\u043D\u044F\u0442\u044B \u0434\u0435\u043B\u043E\u043C \u0441\u043E\u0432\u0435\u0442\u0430", side: "zamok" });
+  }
+  function invest(w2, ev, later, k2, lines) {
+    const effects = Object.fromEntries(Object.entries(later.effects).map(([key, v]) => [key, round1(v * k2)]));
+    w2.eco.pending.push({ due: w2.season + later.seasons, effects, text: `${later.text} (\u0434\u0435\u043B\u043E \xAB${ev.title}\xBB)`, village: ev.village });
+    lines.push(`\u0412\u043B\u043E\u0436\u0435\u043D\u0438\u0435: \u043E\u0442\u0434\u0430\u0447\u0430 \u0447\u0435\u0440\u0435\u0437 ${later.seasons} \u0441\u0435\u0437. \u2014 ${later.text}.`);
+  }
+  function settle(w2, lines) {
+    const due = w2.eco.pending.filter((x) => x.due <= w2.season);
+    w2.eco.pending = w2.eco.pending.filter((x) => x.due > w2.season);
+    for (const x of due) {
+      for (const [key, v] of Object.entries(x.effects)) {
+        if (key === "poryadok") w2.resources.poryadok = round1(w2.resources.poryadok + v);
+        else if (key === "kazna" || key === "pripasy") addLine(w2, { cat: key === "kazna" ? "serebro" : "eda", v, text: `\u043E\u0442\u0434\u0430\u0447\u0430 \u0432\u043B\u043E\u0436\u0435\u043D\u0438\u044F: ${x.text}` });
+        else if (key === "derevni") for (const v2 of x.village ? [x.village] : VILLAGES) addTrust(w2, v2, v * BALANCE.economy.trust.event);
+        else addTrust(w2, key, v * BALANCE.economy.trust.event);
+      }
+      lines.push(`\u{1F331} \u0412\u043B\u043E\u0436\u0435\u043D\u0438\u0435 \u0434\u0430\u043B\u043E \u043E\u0442\u0434\u0430\u0447\u0443: ${x.text}.`);
+    }
+  }
+
+  // src/sim/authority.ts
+  var FEASTS = [
+    { id: "prazdnik", name: "\u041F\u0440\u0430\u0437\u0434\u043D\u0438\u043A \u043F\u043E \u043E\u0431\u044B\u0447\u0430\u044E", pay: "eda", text: "\u0441\u0442\u043E\u043B \u0434\u043B\u044F \u0434\u0435\u0440\u0435\u0432\u0435\u043D\u044C \u0438 \u043E\u0431\u0440\u044F\u0434 \u0443 \u043E\u043F\u0443\u0448\u043A\u0438 \u2014 \u0438\u0437 \u0430\u043C\u0431\u0430\u0440\u0430" },
+    { id: "pir", name: "\u041F\u0438\u0440 \u0432 \u0437\u0430\u043C\u043A\u0435", pay: "serebro", text: "\u043F\u0438\u0440 \u0434\u043B\u044F \u043B\u044E\u0434\u0435\u0439 \u0437\u0430\u043C\u043A\u0430 \u0438 \u0433\u043E\u0441\u0442\u0435\u0439 \u2014 \u0438\u0437 \u043A\u0430\u0437\u043D\u044B" }
+  ];
+  function initAuthority() {
+    const totals = { support: 0, tax: 0, judge: 0, complaint: 0, feast: 0, order: 0, staff: 0, burn: 0 };
+    return { cur: [], last: null, lastSeason: 0, feasts: [], complaints: [], nextId: 1, totals };
+  }
+  var authorityCap = () => BALANCE.authority.cap;
+  var authorityWeak = (w2) => w2.authority < BALANCE.authority.weakBelow;
+  var priceOf = (w2, base) => base > 0 && authorityWeak(w2) ? base + BALANCE.authority.weakExtra : base;
+  var complaintLeft = (w2, c) => c.season + BALANCE.authority.complaintSeasons - w2.season;
+  function addAuthority(w2, v, text, kind) {
+    if (!v) return 0;
+    const a = w2.auth, cap = authorityCap(), next = round2(w2.authority + v);
+    a.cur.push({ v: round2(v), text, kind });
+    a.totals[kind] = round2(a.totals[kind] + v);
+    if (next > cap && v > 0) {
+      const burn = round2(next - Math.max(cap, w2.authority));
+      a.cur.push({ v: -burn, text: "\u0441\u0433\u043E\u0440\u0435\u043B\u043E \u0441\u0432\u0435\u0440\u0445 \u043F\u043E\u0442\u043E\u043B\u043A\u0430", kind: "burn" });
+      a.totals.burn = round2(a.totals.burn - burn);
+      w2.authority = Math.max(cap, w2.authority);
+    } else w2.authority = Math.max(0, next);
+    return v;
+  }
+  function councilSteady(w2) {
+    const council3 = w2.people.filter((p) => p.post);
+    const head = w2.head != null ? w2.people[w2.head] : void 0;
+    if (!head || !head.post) return { ok: false, why: "\u0433\u043B\u0430\u0432\u043D\u043E\u0433\u043E \u043D\u0435\u0442" };
+    const against = council3.find((p) => p.id !== head.id && getRel(w2, head.id, p.id) < BALANCE.council.headMinRel);
+    if (against) return { ok: false, why: `\u0433\u043B\u0430\u0432\u043D\u043E\u0433\u043E \u043D\u0435 \u043F\u0440\u0438\u0437\u043D\u0430\u0451\u0442 ${against.name}` };
+    for (const a of council3) for (const b of council3) if (a.id < b.id && getRel(w2, a.id, b.id) <= BALANCE.rel.enemy) return { ok: false, why: `${a.name} \u0438 ${b.name} \u2014 \u0432\u0440\u0430\u0433\u0438` };
+    return { ok: true, why: "\u0433\u043B\u0430\u0432\u043D\u044B\u0439 \u043F\u0440\u0438\u0437\u043D\u0430\u043D, \u0432\u0440\u0430\u0436\u0434\u044B \u043D\u0435\u0442" };
+  }
+  function councilFeud(w2) {
+    const council3 = w2.people.filter((p) => p.post);
+    return council3.some((a) => council3.some((b) => a.id < b.id && getRel(w2, a.id, b.id) <= BALANCE.rel.enemy));
+  }
+  function authoritySupport(w2) {
+    const A = BALANCE.authority, lines = [];
+    const ally = SIDES.filter((s) => zoneOf(w2, s) === "\u0437\u0430\u043E\u0434\u043D\u043E"), friendly = SIDES.filter((s) => zoneOf(w2, s) === "\u043B\u0430\u0434\u044F\u0442");
+    const names = (list) => list.map((s) => SIDE_NAMES[s].toLowerCase()).join(", ");
+    if (ally.length) lines.push({ v: round2(ally.length * A.sideAlly), text: `\u043E\u043F\u043E\u0440\u0430: \u0437\u0430\u043E\u0434\u043D\u043E \u2014 ${names(ally)}`, kind: "support" });
+    if (friendly.length) lines.push({ v: round2(friendly.length * A.sideFriendly), text: `\u043E\u043F\u043E\u0440\u0430: \u043B\u0430\u0434\u044F\u0442 \u2014 ${names(friendly)}`, kind: "support" });
+    const c = councilSteady(w2);
+    if (c.ok) lines.push({ v: A.council, text: `\u043E\u043F\u043E\u0440\u0430: \u0441\u043E\u0432\u0435\u0442 \u2014 ${c.why}`, kind: "support" });
+    const duke = patienceWord(w2.eco.tax.patience);
+    const dv = duke === "\u0431\u043B\u0430\u0433\u043E\u0432\u043E\u043B\u0438\u0442" ? A.dukeFavor : duke === "\u043D\u0435\u0434\u043E\u0432\u043E\u043B\u0435\u043D" ? -A.dukeDispleased : duke === "\u043D\u0430 \u0438\u0441\u0445\u043E\u0434\u0435" ? -A.dukeEdge : 0;
+    if (dv) lines.push({ v: dv, text: `\u043E\u043F\u043E\u0440\u0430: \u0413\u0435\u0440\u0446\u043E\u0433 ${duke}`, kind: "support" });
+    const sum = round2(lines.reduce((s, l) => s + l.v, 0));
+    if (sum < 0 && duke !== "\u043D\u0430 \u0438\u0441\u0445\u043E\u0434\u0435") return { lines: [], total: 0 };
+    return { lines, total: sum };
+  }
+  function authoritySeason(w2, lines) {
+    const A = BALANCE.authority, a = w2.auth;
+    const old = a.complaints.filter((c) => complaintLeft(w2, c) <= 0);
+    for (const c of old) {
+      const from = w2.people[c.from];
+      addAuthority(w2, -A.complaintLeft, `\u0436\u0430\u043B\u043E\u0431\u0430 ${from.name} \u043D\u0435 \u0434\u043E\u0436\u0434\u0430\u043B\u0430\u0441\u044C \u0440\u0430\u0437\u0431\u043E\u0440\u0430`, "complaint");
+      from.loyalty = Math.max(-10, Math.round((from.loyalty - A.leftLoyalty) * 10) / 10);
+      lines.push(`\u{1F4DC} \u0416\u0430\u043B\u043E\u0431\u0430 ${from.name} \u043D\u0430 ${w2.people[c.on].name} \u043F\u0440\u043E\u043B\u0435\u0436\u0430\u043B\u0430 \u0433\u043E\u0434: \u0421\u0435\u043D\u0435\u0448\u0430\u043B\u044C \u0435\u0451 \u0442\u0430\u043A \u0438 \u043D\u0435 \u0440\u0430\u0437\u043E\u0431\u0440\u0430\u043B. \u0410\u0432\u0442\u043E\u0440\u0438\u0442\u0435\u0442 \u2212${A.complaintLeft}.`);
+    }
+    a.complaints = a.complaints.filter((c) => complaintLeft(w2, c) > 0);
+    for (const l of authoritySupport(w2).lines) addAuthority(w2, l.v, l.text, "support");
+    a.last = a.cur;
+    a.lastSeason = w2.season;
+    a.cur = [];
+  }
+  function addComplaint(w2, from, on) {
+    w2.auth.complaints.push({ id: w2.auth.nextId++, from, on, season: w2.season });
+  }
+  function judge(w2, id) {
+    const A = BALANCE.authority, c = w2.auth.complaints.find((x) => x.id === id);
+    if (!c || w2.deedsLeft <= 0) return false;
+    w2.deedsLeft--;
+    w2.auth.complaints = w2.auth.complaints.filter((x) => x.id !== id);
+    const from = w2.people[c.from], on = w2.people[c.on];
+    from.loyalty = Math.min(10, Math.round((from.loyalty + A.judgeLoyalty) * 10) / 10);
+    addAuthority(w2, A.judge, `\u0441\u0443\u0434 \u043B\u0438\u0447\u043D\u043E: \u0436\u0430\u043B\u043E\u0431\u0430 ${from.name} \u043D\u0430 ${on.name}`, "judge");
+    w2.log.push({ season: w2.season, kind: "info", title: "\u0421\u0443\u0434 \u043B\u0438\u0447\u043D\u043E", lines: [`\u0421\u0435\u043D\u0435\u0448\u0430\u043B\u044C \u0441\u0430\u043C \u0440\u0430\u0437\u043E\u0431\u0440\u0430\u043B \u0436\u0430\u043B\u043E\u0431\u0443 ${from.name} \u043D\u0430 ${on.name}. ${from.name} \u0432\u044B\u0441\u043B\u0443\u0448\u0430\u043D${from.female ? "\u0430" : ""}. \u0410\u0432\u0442\u043E\u0440\u0438\u0442\u0435\u0442 +${A.judge}.`] });
+    return true;
+  }
+  function feastsThisYear(w2) {
+    const from = w2.season - seasonKind(w2.season);
+    return w2.auth.feasts.filter((s) => s >= from).length;
+  }
+  function feastGain(w2) {
+    return round2(BALANCE.authority.feast * Math.pow(BALANCE.authority.feastRepeat, feastsThisYear(w2)));
+  }
+  var feastCost = (id) => id === "prazdnik" ? BALANCE.authority.feastFood : BALANCE.authority.feastSilver;
+  function feast(w2, id) {
+    const def = FEASTS.find((f) => f.id === id), cost = feastCost(id);
+    if (w2.deedsLeft <= 0 || w2.eco.stock[def.pay] < cost) return false;
+    const gain = feastGain(w2);
+    w2.deedsLeft--;
+    addLine(w2, { cat: def.pay, v: -cost, text: `${def.name.toLowerCase()}: ${def.text}` });
+    w2.auth.feasts.push(w2.season);
+    addAuthority(w2, gain, `\u043E\u0431\u044B\u0447\u0430\u0439 \u0441\u043E\u0431\u043B\u044E\u0434\u0451\u043D: ${def.name.toLowerCase()}`, "feast");
+    const line = `${def.name}: ${def.text}. ${CATEGORY_NAMES[def.pay]} \u2212${cost}, \u0430\u0432\u0442\u043E\u0440\u0438\u0442\u0435\u0442 +${gain}.`;
+    w2.log.push({ season: w2.season, kind: "info", title: "\u041E\u0431\u044B\u0447\u0430\u0439 \u0441\u043E\u0431\u043B\u044E\u0434\u0451\u043D", lines: [line] });
+    return true;
+  }
+
+  // src/data/handwriting.ts
+  var LEVERS = [
+    "quitrent",
+    "quitrentSilver",
+    "harvest",
+    "hands",
+    "forestFood",
+    "forestGoods",
+    "duties",
+    "salary",
+    "spoil",
+    "upkeep",
+    "price",
+    "shortSoft",
+    "villages",
+    "opushka",
+    "zamok",
+    "kuptsy",
+    "les",
+    "dvor",
+    "order",
+    "silver",
+    "sellFood",
+    "loan",
+    "patience"
+  ];
+  var h = (post, axis, good, plus, bad, minus) => ({ post, axis, plus, minus, good, bad });
+  var HANDS = [
+    // тиун
+    h("starosta", "zabota", "\u0434\u043E\u0432\u0435\u0440\u0438\u0435 \u0434\u0435\u0440\u0435\u0432\u0435\u043D\u044C \u0440\u0430\u0441\u0442\u0451\u0442, \u043D\u0435\u0434\u043E\u0434\u0430\u0447\u0430 \u0434\u0435\u0440\u0435\u0432\u043D\u044F\u043C \u043C\u044F\u0433\u0447\u0435", [["villages", 1], ["shortSoft", -1]], "\u043E\u0431\u0440\u043E\u043A \u043C\u0435\u043D\u044C\u0448\u0435", [["quitrent", -1]]),
+    h("starosta", "obychai", "\u043E\u0431\u0440\u044F\u0434\u044B \u0434\u0435\u0440\u0436\u0430\u0442\u0441\u044F: \u0434\u0430\u0440\u044B \u043B\u0435\u0441\u0430 \u043F\u043E\u043B\u043D\u0435\u0435, \u043E\u043F\u0443\u0448\u043A\u0430 \u0434\u043E\u0432\u0435\u0440\u044F\u0435\u0442", [["forestFood", 1], ["opushka", 1]], "\u0443\u0440\u043E\u0436\u0430\u0439 \u043D\u0435 \u0440\u0430\u0441\u0442\u0451\u0442", [["harvest", -0.5]]),
+    h("starosta", "dolg", "\u043E\u0431\u0440\u043E\u043A \u0441\u043E\u0431\u0440\u0430\u043D \u0441\u043F\u043E\u043B\u043D\u0430", [["quitrent", 1]], "\u0434\u0435\u0440\u0435\u0432\u043D\u0438 \u0432\u043E\u0440\u0447\u0430\u0442", [["villages", -1]]),
+    h("starosta", "vygoda", "\u043E\u0431\u0440\u043E\u043A \u0441\u0435\u0440\u0435\u0431\u0440\u043E\u043C \u0431\u043E\u043B\u044C\u0448\u0435", [["quitrentSilver", 1]], "\u0434\u043E\u0432\u0435\u0440\u0438\u0435 \u0434\u0435\u0440\u0435\u0432\u0435\u043D\u044C \u043F\u0430\u0434\u0430\u0435\u0442", [["villages", -1]]),
+    h("starosta", "derzost", "\u0440\u0430\u0441\u043F\u0430\u0445\u0438\u0432\u0430\u0435\u0442 \u043D\u043E\u0432\u044B\u0435 \u043F\u043E\u043B\u044F: \u0443\u0440\u043E\u0436\u0430\u0439 \u0431\u043E\u043B\u044C\u0448\u0435", [["harvest", 1]], "\u0440\u0443\u043A\u0438 \u0443\u0445\u043E\u0434\u044F\u0442 \u043D\u0430 \u0440\u0430\u0441\u0447\u0438\u0441\u0442\u043A\u0443", [["hands", -1]]),
+    // десятник
+    h("desyatnik", "dolg", "\u043F\u043E\u0440\u044F\u0434\u043E\u043A \u0440\u0430\u0441\u0442\u0451\u0442", [["order", 1]], "\u0436\u0430\u043B\u043E\u0432\u0430\u043D\u044C\u0435 \u0441\u0442\u0440\u0430\u0436\u0435 \u0434\u043E\u0440\u043E\u0436\u0435", [["salary", 1]]),
+    h("desyatnik", "derzost", "\u043F\u043E\u0448\u043B\u0438\u043D\u044B \u0438 \u043A\u0430\u0440\u0430\u0432\u0430\u043D\u044B \u0431\u043E\u043B\u044C\u0448\u0435", [["duties", 1]], "\u0441\u0442\u044B\u0447\u043A\u0438: \u043F\u043E\u0440\u044F\u0434\u043E\u043A \u043D\u0438\u0436\u0435, \u0431\u044B\u0432\u0430\u044E\u0442 \u0440\u0430\u043D\u0435\u043D\u044B\u0435", [["order", -1], ["hands", -0.5]]),
+    h("desyatnik", "zabota", "\u043B\u044E\u0434\u0438 \u0437\u0430\u043C\u043A\u0430 \u0434\u043E\u0432\u043E\u043B\u044C\u043D\u044B", [["zamok", 1]], "\u043F\u043E\u0440\u044F\u0434\u043E\u043A \u043D\u0438\u0436\u0435", [["order", -1]]),
+    h("desyatnik", "vygoda", "\xAB\u0434\u043E\u0440\u043E\u0436\u043D\u044B\u0439 \u0441\u0431\u043E\u0440\xBB: \u0441\u0435\u0440\u0435\u0431\u0440\u043E \u0432 \u043A\u0430\u0437\u043D\u0443", [["silver", 1]], "\u043A\u0443\u043F\u0446\u044B \u043D\u0435\u0434\u043E\u0432\u043E\u043B\u044C\u043D\u044B, \u043F\u043E\u0440\u044F\u0434\u043E\u043A \u043D\u0438\u0436\u0435", [["kuptsy", -1], ["order", -0.5]]),
+    h("desyatnik", "obychai", "\u0441\u0442\u0430\u0440\u044B\u0435 \u0437\u0430\u0441\u0435\u043A\u0438 \u0438 \u043C\u0435\u0436\u0438: \u043B\u0435\u0441 \u0434\u043E\u0432\u0435\u0440\u044F\u0435\u0442", [["les", 1]], "\u0441\u0442\u0430\u0440\u044B\u0435 \u043B\u044C\u0433\u043E\u0442\u044B: \u043F\u043E\u0448\u043B\u0438\u043D\u044B \u043C\u0435\u043D\u044C\u0448\u0435", [["duties", -1]]),
+    // ключник
+    h("klyuchnik", "dolg", "\u043F\u043E\u0440\u0447\u0430 \u0437\u0430 \u0437\u0438\u043C\u0443 \u043C\u0435\u043D\u044C\u0448\u0435", [["spoil", -1]], "\u0447\u0435\u043B\u044F\u0434\u044C \u0434\u0435\u0440\u0436\u0430\u0442 \u0441\u0442\u0440\u043E\u0433\u043E: \u043B\u044E\u0434\u0438 \u0437\u0430\u043C\u043A\u0430 \u0432\u043E\u0440\u0447\u0430\u0442", [["zamok", -1]]),
+    h("klyuchnik", "vygoda", "\u0438\u0437\u043B\u0438\u0448\u0435\u043A \u0435\u0434\u044B \u043F\u0440\u043E\u0434\u0430\u0451\u0442 \u0441\u0430\u043C: \u0441\u0435\u0440\u0435\u0431\u0440\u043E \u0440\u0430\u0441\u0442\u0451\u0442", [["sellFood", 1]], "\u0437\u0430\u043F\u0430\u0441 \u0442\u043E\u043D\u044C\u0448\u0435: \u043D\u0435\u0434\u043E\u0434\u0430\u0447\u0430 \u0431\u043B\u0438\u0436\u0435", []),
+    h("klyuchnik", "zabota", "\u043F\u0440\u043E\u043A\u043E\u0440\u043C \u0449\u0435\u0434\u0440\u0435\u0435: \u043B\u044E\u0434\u0438 \u0437\u0430\u043C\u043A\u0430 \u0438 \u0434\u0435\u0440\u0435\u0432\u043D\u0438 \u0434\u043E\u0432\u043E\u043B\u044C\u043D\u044B", [["zamok", 1], ["villages", 0.5]], "\u0435\u0434\u044B \u0443\u0445\u043E\u0434\u0438\u0442 \u0431\u043E\u043B\u044C\u0448\u0435", [["upkeep", 1]]),
+    h("klyuchnik", "derzost", "\u043F\u043E\u0447\u0438\u043D\u043A\u0430 \u0438\u0434\u0451\u0442 \u0431\u044B\u0441\u0442\u0440\u043E: \u043B\u044E\u0434\u0438 \u0437\u0430\u043C\u043A\u0430 \u0434\u043E\u0432\u043E\u043B\u044C\u043D\u044B", [["zamok", 1]], "\u043F\u043E\u0440\u0447\u0430 \u0438 \u043D\u0435\u0441\u0447\u0430\u0441\u0442\u044C\u044F \u043D\u0430 \u0441\u0442\u0440\u043E\u0439\u043A\u0435", [["spoil", 1]]),
+    h("klyuchnik", "obychai", "\u0437\u0430\u043F\u0430\u0441 \u0432\u043F\u0440\u043E\u043A \u043F\u043E \u0441\u0442\u0430\u0440\u044B\u043C \u043F\u043E\u0433\u0440\u0435\u0431\u0430\u043C: \u043F\u0440\u043E\u043A\u043E\u0440\u043C \u0438 \u043F\u043E\u0440\u0447\u0430 \u043C\u0435\u043D\u044C\u0448\u0435", [["upkeep", -0.5], ["spoil", -0.5]], "\u043D\u0438\u0447\u0435\u0433\u043E \u043D\u0435 \u043F\u0440\u043E\u0434\u0430\u0451\u0442: \u0442\u043E\u0432\u0430\u0440\u044B \u0438\u0434\u0443\u0442 \u0434\u0435\u0448\u0435\u0432\u043B\u0435", [["price", -1]]),
+    // писарь
+    h("pisar", "vygoda", "\u0446\u0435\u043D\u0430 \u0442\u043E\u0432\u0430\u0440\u043E\u0432 \u0438 \u043F\u043E\u0448\u043B\u0438\u043D\u044B \u0432\u044B\u0448\u0435", [["price", 1], ["duties", 1]], "\u043A\u0443\u043F\u0446\u044B \u0434\u043E\u0432\u0435\u0440\u044F\u044E\u0442 \u043C\u0435\u043D\u044C\u0448\u0435", [["kuptsy", -1]]),
+    h("pisar", "dolg", "\u043A\u043D\u0438\u0433\u0438 \u0447\u0438\u0441\u0442\u044B: \u0434\u0432\u043E\u0440 \u0434\u043E\u0432\u043E\u043B\u0435\u043D", [["dvor", 1]], "\u0442\u043E\u0440\u0433\u043E\u0432\u043B\u044F \u043C\u0435\u0434\u043B\u0435\u043D\u043D\u0435\u0435: \u0446\u0435\u043D\u0430 \u043D\u0438\u0436\u0435", [["price", -1]]),
+    h("pisar", "derzost", "\u0437\u0430\u0451\u043C \u0434\u0435\u0448\u0435\u0432\u043B\u0435 \u0438 \u0431\u043E\u043B\u044C\u0448\u0435", [["loan", 1]], "\u0434\u043E\u043B\u0433\u0438 \u0440\u0430\u0441\u0442\u0443\u0442: \u0441\u0435\u0440\u0435\u0431\u0440\u043E \u0443\u0442\u0435\u043A\u0430\u0435\u0442 \u043D\u0430 \u043F\u0440\u043E\u0446\u0435\u043D\u0442\u044B", [["silver", -1]]),
+    h("pisar", "zabota", "\u0442\u043E\u0440\u0433\u0443\u0435\u0442 \u043C\u044F\u0433\u043A\u043E: \u043A\u0443\u043F\u0446\u044B \u0434\u043E\u0432\u043E\u043B\u044C\u043D\u044B", [["kuptsy", 1]], "\u0446\u0435\u043D\u0430 \u043D\u0438\u0436\u0435", [["price", -1]]),
+    h("pisar", "obychai", "\u0441\u0442\u0430\u0440\u044B\u0435 \u0433\u0440\u0430\u043C\u043E\u0442\u044B: \u0413\u0435\u0440\u0446\u043E\u0433 \u0442\u0435\u0440\u043F\u0435\u043B\u0438\u0432\u0435\u0435", [["patience", 1]], "\u043D\u043E\u0432\u044B\u0445 \u0441\u0434\u0435\u043B\u043E\u043A \u043D\u0435\u0442: \u043F\u043E\u0448\u043B\u0438\u043D\u044B \u043D\u0438\u0436\u0435", [["duties", -1]]),
+    // лесничий
+    h("lesnichiy", "obychai", "\u043B\u0435\u0441 \u0434\u043E\u0432\u0435\u0440\u044F\u0435\u0442, \u0434\u0430\u0440\u044B \u043B\u0435\u0441\u0430 \u0431\u043E\u043B\u044C\u0448\u0435", [["les", 1], ["forestFood", 1]], "\u0431\u0440\u0451\u0432\u0435\u043D \u0438 \u0448\u043A\u0443\u0440 \u043C\u0435\u043D\u044C\u0448\u0435", [["forestGoods", -1]]),
+    h("lesnichiy", "zabota", "\u0434\u0435\u0440\u0435\u0432\u043D\u044F \u0443 \u043E\u043F\u0443\u0448\u043A\u0438 \u0434\u043E\u0432\u043E\u043B\u044C\u043D\u0430", [["opushka", 1]], "\u043B\u0435\u0441 \u0442\u0435\u0440\u043F\u0438\u0442 \u0431\u0440\u0430\u043A\u043E\u043D\u044C\u0435\u0440\u043E\u0432: \u0435\u0433\u043E \u0434\u043E\u0432\u0435\u0440\u0438\u0435 \u043F\u0430\u0434\u0430\u0435\u0442", [["les", -1]]),
+    h("lesnichiy", "dolg", "\u0440\u043E\u0449\u0438 \u0441\u0442\u0435\u0440\u0435\u0436\u0451\u0442 \u0441\u0442\u0440\u043E\u0433\u043E: \u043B\u0435\u0441 \u0434\u043E\u0432\u0435\u0440\u044F\u0435\u0442", [["les", 1]], "\u043E\u043F\u0443\u0448\u043A\u0430 \u043D\u0435\u0434\u043E\u0432\u043E\u043B\u044C\u043D\u0430", [["opushka", -1]]),
+    h("lesnichiy", "vygoda", "\u0442\u043E\u0432\u0430\u0440\u043E\u0432 \u0438\u0437 \u043B\u0435\u0441\u0430 \u0431\u043E\u043B\u044C\u0448\u0435", [["forestGoods", 1]], "\u043B\u0435\u0441 \u0434\u043E\u0432\u0435\u0440\u044F\u0435\u0442 \u043C\u0435\u043D\u044C\u0448\u0435", [["les", -1]]),
+    h("lesnichiy", "derzost", "\u0445\u043E\u0434\u0438\u0442 \u0432\u0433\u043B\u0443\u0431\u044C: \u0442\u043E\u0432\u0430\u0440\u043E\u0432 \u0431\u043E\u043B\u044C\u0448\u0435", [["forestGoods", 1]], "\u0442\u0432\u0430\u0440\u0438 \u0438 \u0440\u0430\u043D\u0435\u043D\u044B\u0435", [["hands", -0.5], ["les", -0.5]])
+  ];
+
+  // src/sim/economy/doer.ts
+  function mastery(p, post) {
+    const D = BALANCE.economy.doer, t = clamp((fitness(p, post) - D.masteryFrom) / Math.max(1, D.masteryTo - D.masteryFrom), 0, 1);
+    const mult = round2(D.masteryMin + (D.masteryMax - D.masteryMin) * t);
+    const third = (D.masteryMax - D.masteryMin) / 3;
+    return { mult, word: mult < D.masteryMin + third ? "\u043D\u0435\u0433\u043E\u0434\u0435\u043D" : mult > D.masteryMax - third ? "\u043F\u0440\u0438\u0440\u043E\u0436\u0434\u0451\u043D\u043D\u044B\u0439" : "\u0433\u043E\u0434\u0435\u043D" };
+  }
+  function expOf(p) {
+    const D = BALANCE.economy.doer;
+    if (isStale(p)) return { mult: D.expStale, word: "\u0437\u0430\u0441\u0438\u0434\u0435\u043B\u0441\u044F" };
+    return p.exp >= BALANCE.exp.master ? { mult: D.expMaster, word: "\u043C\u0430\u0441\u0442\u0435\u0440" } : p.exp >= BALANCE.exp.settled ? { mult: D.expSettled, word: "\u043E\u0441\u0432\u043E\u0438\u043B\u0441\u044F" } : { mult: D.expNovice, word: "\u043D\u043E\u0432\u0438\u0447\u043E\u043A" };
+  }
+  var courseDef = (w2) => COURSES.find((c) => c.id === w2.eco.course);
+  function courseStrength(w2, id) {
+    if (w2.eco.course !== id) return 0;
+    return BALANCE.economy.course.effect * (w2.eco.courseSeasons >= 1 ? BALANCE.economy.course.inertia : 1);
+  }
+  function doer(w2, post) {
+    const D = BALANCE.economy.doer, p = holder(w2, post);
+    if (!p) return { mult: D.empty, how: "\u0434\u043E\u043B\u0436\u043D\u043E\u0441\u0442\u044C \u043F\u0443\u0441\u0442\u0430", note: "\u0434\u043E\u043B\u0436\u043D\u043E\u0441\u0442\u044C \u043F\u0443\u0441\u0442\u0430", mastery: 1, exp: 1, mood: D.empty, hand: "" };
+    const m = mastery(p, post), x = expOf(p), mine = handsOf(p, post).map((q) => AXIS_NAMES[q.hand.axis]);
+    const hand = mine.length ? `\u043F\u043E\u0447\u0435\u0440\u043A${isStale(p) ? " \u0432\u0434\u0432\u043E\u0435 \u0441\u0438\u043B\u044C\u043D\u0435\u0435" : ""} \u2014 ${mine.join(", \u0441 \u043E\u0442\u0442\u0435\u043D\u043A\u043E\u043C: ")}` : "";
+    const stale2 = isStale(p);
+    const made = (how, mood) => ({ p, mult: round2(m.mult * x.mult * mood), how, note: `${m.word}, ${x.word}, ${how}`, mastery: m.mult, exp: x.mult, mood, stale: stale2, hand });
+    let score = 0;
+    if (p.loyalty >= BALANCE.loyalty.trusts) score++;
+    if (p.loyalty <= BALANCE.loyalty.unhappy) score--;
+    if (p.aspiration?.post === post) score++;
+    const c = courseDef(w2), top = topAxis(p.star);
+    if (c?.pro.includes(top) && !stale2) score++;
+    if (c?.contra.includes(top)) score -= w2.eco.shaky ? 2 : 1;
+    score += councilSteady(w2).ok ? D.headFor : -D.headAgainst;
+    if (score >= D.fireFrom) return made("\u0441 \u043E\u0433\u043E\u043D\u044C\u043A\u043E\u043C", D.fire);
+    if (score <= D.dullFrom) return made("\u0431\u0435\u0437 \u043E\u0433\u043E\u043D\u044C\u043A\u0430", D.dull);
+    return made("\u043A\u0430\u043A \u0432\u0435\u043B\u0435\u043D\u043E", D.plain);
+  }
+  function handsOf(p, post) {
+    const strong = AXES.filter((a) => p.star[a] >= BALANCE.know.strong).sort((a, b) => p.star[b] - p.star[a]).slice(0, 2);
+    const stale2 = isStale(p) ? BALANCE.economy.hand.stale : 1;
+    return strong.map((axis, i) => ({ hand: HANDS.find((x) => x.post === post && x.axis === axis), weight: (i ? BALANCE.economy.hand.second : 1) * stale2 }));
+  }
+  function levers(w2) {
+    const H = BALANCE.economy.hand, out = Object.fromEntries(LEVERS.map((l) => [l, 0]));
+    for (const d of POSTS) {
+      const p = holder(w2, d.id);
+      if (!p) continue;
+      for (const { hand, weight } of handsOf(p, d.id)) {
+        const native = d.native.includes(hand.axis);
+        for (const [lever, v] of hand.plus) out[lever] += v * weight * (native ? H.nativePlus : 1);
+        for (const [lever, v] of hand.minus) out[lever] += v * weight * (native ? H.nativeMinus : H.foreignMinus);
+      }
+    }
+    return out;
+  }
+  function handText(p) {
+    if (!p.post) return [];
+    return handsOf(p, p.post).map(({ hand }, i) => ({ axis: hand.axis, shade: i > 0, text: `${hand.good}; ${hand.bad}` }));
+  }
+  var whoOf = (d, post) => d.p ? `${postName(post).toLowerCase()} ${d.p.name}` : `${postName(post).toLowerCase()}: \u0434\u043E\u043B\u0436\u043D\u043E\u0441\u0442\u044C \u043F\u0443\u0441\u0442\u0430`;
+  function courseLean(w2, axes) {
+    const c = courseDef(w2);
+    if (!c || !c.pro.length) return 0;
+    const share = axes.filter((a) => c.pro.includes(a)).length / axes.length;
+    return share * BALANCE.economy.course.lean * (w2.eco.courseSeasons >= 1 ? BALANCE.economy.course.inertia : 1);
+  }
+  function setCourse(w2, id) {
+    const e = w2.eco;
+    if (e.course === id) return;
+    e.shaky = e.course !== null && e.courseSeasons < BALANCE.economy.course.shaky;
+    e.course = id;
+    e.courseSeasons = 0;
+    const c = courseDef(w2);
+    const lines = [c ? `\u041A\u0443\u0440\u0441 \u043D\u0430 \u0441\u0435\u0437\u043E\u043D: \xAB${c.name}\xBB \u2014 ${c.desc}.` : "\u041A\u0443\u0440\u0441\u0430 \u043D\u0435\u0442: \u0445\u043E\u0437\u044F\u0439\u0441\u0442\u0432\u043E \u0438\u0434\u0451\u0442 \u043A\u0430\u043A \u0437\u0430\u0432\u0435\u0434\u0435\u043D\u043E."];
+    if (e.shaky) lines.push("\u041A\u0443\u0440\u0441 \u0441\u043C\u0435\u043D\u0438\u043B\u0438 \u0441\u043B\u0438\u0448\u043A\u043E\u043C \u0431\u044B\u0441\u0442\u0440\u043E \u2014 \u0448\u0430\u0442\u0430\u043D\u0438\u0435: \u043D\u0435\u0441\u043E\u0433\u043B\u0430\u0441\u043D\u044B\u0435 \u0438\u0441\u043F\u043E\u043B\u043D\u044F\u044E\u0442 \u0431\u0435\u0437 \u043E\u0433\u043E\u043D\u044C\u043A\u0430.");
+    w2.log.push({ season: w2.season, kind: "staff", title: "\u041A\u0443\u0440\u0441", lines });
+  }
+  function setFloor(w2, cat, v) {
+    w2.eco.floor[cat] = round2(Math.max(0, Number(v) || 0));
+  }
+
+  // src/sim/economy/plan.ts
+  function handsNow(w2) {
+    const out = {};
+    for (const f of HANDS_FROM) {
+      const away = w2.eco.recruits.filter((r) => r.from === f && w2.season < r.until).reduce((s, r) => s + r.hands, 0);
+      out[f] = round1(Math.max(0, BALANCE.economy.hands[f] * zoneMult(w2, f) - away));
+    }
+    return out;
+  }
+  function fieldHands(w2) {
+    const lost = Math.min(0, levers(w2).hands) * BALANCE.economy.hand.hands;
+    const h2 = handsNow(w2), total = round1(Math.max(0, HANDS_FROM.reduce((s, f) => s + h2[f], 0) + lost));
+    if (seasonKind(w2.season) === WINTER) return { total, field: 0, free: total, build: 0 };
+    const build = w2.eco.course === "stroimsya" ? Math.min(total, BALANCE.economy.course.buildHands) : 0;
+    const field = round1(Math.min(BALANCE.economy.hands.field, total - build));
+    return { total, field, free: round1(total - field), build };
+  }
+  function planSeason(w2) {
+    const E = BALANCE.economy, F = E.flow, e = w2.eco, kind = seasonKind(w2.season);
+    const stock = { ...e.stock }, lines = [], short = [];
+    const add = (cat, v, text, extra2 = {}) => {
+      const val = round2(v);
+      stock[cat] = round2(stock[cat] + val);
+      lines.push({ cat, v: val, text, ...extra2 });
+    };
+    const spend = (cat, v, text, side, extra2 = {}) => {
+      const need = round2(v), got = Math.min(need, stock[cat]);
+      if (need <= 0) return;
+      if (got > 0) add(cat, -got, text, { side, ...extra2 });
+      if (need - got > 0) short.push({ side, cat, v: round2(need - got), what: text });
+    };
+    const tiun = doer(w2, "starosta"), pisar = doer(w2, "pisar"), les = doer(w2, "lesnichiy"), klyuch = doer(w2, "klyuchnik");
+    const hands = fieldHands(w2), fieldShare = clamp(hands.field / E.hands.field, 0, 1);
+    const L = levers(w2), by = (lever) => Math.max(0, 1 + L[lever] * E.hand.flow);
+    const sown = kind === SPRING ? fieldShare : e.sown;
+    const seasonPrice = [E.year.priceSpring, E.year.priceSummer, E.year.priceAutumn, E.year.priceWinter][kind];
+    const price = F.scale * F.price * seasonPrice * zoneMult(w2, "kuptsy") * pisar.mult * (1 + courseStrength(w2, "torguem")) * by("price");
+    if (stock.tovary > 0) {
+      const sold = stock.tovary, how = pisar.note;
+      if (price > 0) {
+        add("tovary", -sold, "\u043F\u0440\u043E\u0434\u0430\u043D\u043E \u043A\u0443\u043F\u0446\u0430\u043C", { side: "kuptsy", who: whoOf(pisar, "pisar"), how });
+        add("serebro", sold * price, `\u0437\u0430 \u0442\u043E\u0432\u0430\u0440\u044B, ${round2(price)} \u0437\u0430 \u0432\u043E\u0437`, { side: "kuptsy", who: whoOf(pisar, "pisar"), how });
+      } else lines.push({ cat: "tovary", v: 0, text: "\u043A\u0443\u043F\u0446\u044B \u043E\u0442\u043A\u0430\u0437\u044B\u0432\u0430\u044E\u0442: \u0442\u043E\u0432\u0430\u0440\u044B \u043B\u0435\u0436\u0430\u0442 \u043D\u0430 \u0441\u043A\u043B\u0430\u0434\u0435", side: "kuptsy" });
+    }
+    const seasonDuty = [E.year.dutySpring, E.year.dutySummer, E.year.dutyAutumn, E.year.dutyWinter][kind];
+    const levy = w2.season < e.dutyCutUntil ? E.pay.levyDuty : 1;
+    const duties = F.scale * F.duties * seasonDuty * zoneMult(w2, "kuptsy") * pisar.mult * (1 + courseStrength(w2, "dorogi")) * levy * by("duties");
+    const dutyText = `\u043F\u043E\u0448\u043B\u0438\u043D\u044B${levy < 1 ? " (\u043D\u0438\u0436\u0435 \u043F\u043E\u0441\u043B\u0435 \u043E\u0441\u043E\u0431\u043E\u0433\u043E \u0441\u0431\u043E\u0440\u0430)" : ""}`;
+    if (duties > 0) add("serebro", duties, dutyText, { side: "kuptsy", who: whoOf(pisar, "pisar"), how: pisar.note });
+    else lines.push({ cat: "serebro", v: 0, text: "\u043F\u043E\u0448\u043B\u0438\u043D \u043D\u0435\u0442: \u043A\u0443\u043F\u0446\u044B \u043E\u0442\u043A\u0430\u0437\u044B\u0432\u0430\u044E\u0442", side: "kuptsy" });
+    const zl = zoneMult(w2, "les");
+    if (e.course === "les") lines.push({ cat: "tovary", v: 0, text: "\u0431\u0440\u0451\u0432\u0435\u043D \u043D\u0435\u0442: \u0431\u0435\u0440\u0435\u0436\u0451\u043C \u043B\u0435\u0441", side: "les" });
+    else if (zl > 0) add("tovary", F.scale * F.forestGoods * zl * les.mult * by("forestGoods"), "\u0448\u043A\u0443\u0440\u044B, \u043C\u0451\u0434, \u0431\u0440\u0451\u0432\u043D\u0430 \u0438\u0437 \u043B\u0435\u0441\u0430", { side: "les", who: whoOf(les, "lesnichiy"), how: les.note });
+    if (kind === SUMMER && zl > 0) {
+      const rites = zoneOf(w2, "opushka") === "\u043E\u0442\u043A\u0430\u0437\u044B\u0432\u0430\u044E\u0442" ? E.zone.noRites : 1;
+      const gifts = F.scale * F.forestFood * zl * les.mult * (1 + courseStrength(w2, "les")) * rites * by("forestFood");
+      add("eda", gifts, `\u0434\u0430\u0440\u044B \u043B\u0435\u0441\u0430${rites < 1 ? " (\u043E\u0431\u0440\u044F\u0434\u043E\u0432 \u043D\u0435\u0442: \u0434\u0435\u0440\u0435\u0432\u043D\u044F \u0443 \u043E\u043F\u0443\u0448\u043A\u0438 \u043E\u0442\u043A\u0430\u0437\u044B\u0432\u0430\u0435\u0442)" : ""}`, { side: "les", who: whoOf(les, "lesnichiy"), how: les.note });
+    }
+    let harvest = 0;
+    if (kind === AUTUMN) {
+      const quit = 1 + courseStrength(w2, "kopim") - courseStrength(w2, "polegche"), how = tiun.note;
+      for (const v of VILLAGES) {
+        const z = zoneMult(w2, v), who = whoOf(tiun, "starosta"), share = v === "brod" ? F.brodShare : 1 - F.brodShare;
+        if (z <= 0) {
+          lines.push({ cat: "eda", v: 0, text: "\u043D\u0438 \u0443\u0440\u043E\u0436\u0430\u044F, \u043D\u0438 \u043E\u0431\u0440\u043E\u043A\u0430: \u0434\u0435\u0440\u0435\u0432\u043D\u044F \u043E\u0442\u043A\u0430\u0437\u044B\u0432\u0430\u0435\u0442", side: v });
+          continue;
+        }
+        const crop = F.scale * (F.harvest / VILLAGES.length) * z * tiun.mult * sown * fieldShare * by("harvest");
+        harvest += crop;
+        const field = sown < 1 || fieldShare < 1 ? ` (\u043F\u043E\u0441\u0435\u044F\u043D\u043E ${Math.round(sown * 100)}%, \u0441\u0436\u0430\u0442\u043E ${Math.round(fieldShare * 100)}%)` : "";
+        add("eda", crop, `\u0443\u0440\u043E\u0436\u0430\u0439${field}`, { side: v, who, how: tiun.note });
+        add("serebro", F.scale * F.quitrentSilver * share * z * tiun.mult * quit * by("quitrent") * by("quitrentSilver"), "\u043E\u0431\u0440\u043E\u043A \u0441\u0435\u0440\u0435\u0431\u0440\u043E\u043C", { side: v, who, how });
+        add("tovary", F.scale * F.quitrentGoods * share * z * tiun.mult * quit * by("quitrent"), "\u043E\u0431\u0440\u043E\u043A \u0442\u043E\u0432\u0430\u0440\u0430\u043C\u0438", { side: v, who, how });
+      }
+    }
+    const debt = e.debts.filter((d) => d.due <= w2.season).reduce((s, d) => s + d.sum, 0);
+    if (debt > 0) spend("serebro", debt, "\u0432\u043E\u0437\u0432\u0440\u0430\u0442 \u0437\u0430\u0439\u043C\u0430 \u0441 \u043B\u0438\u0445\u0432\u043E\u0439", "kuptsy");
+    const purse = L.silver * E.hand.silver;
+    if (purse > 0) add("serebro", purse, "\u0434\u043E\u0440\u043E\u0436\u043D\u044B\u0439 \u0441\u0431\u043E\u0440", { side: "kuptsy" });
+    if (purse < 0) add("serebro", -Math.min(stock.serebro, -purse), "\u043F\u0440\u043E\u0446\u0435\u043D\u0442\u044B \u043F\u043E \u0441\u0442\u0430\u0440\u044B\u043C \u0434\u043E\u043B\u0433\u0430\u043C");
+    spend("serebro", F.salary * (1 + courseStrength(w2, "dorogi")) * by("salary"), "\u0436\u0430\u043B\u043E\u0432\u0430\u043D\u044C\u0435 \u0441\u0442\u0440\u0430\u0436\u0435 \u0438 \u0447\u0435\u043B\u044F\u0434\u0438", "zamok");
+    const upkeep2 = (kind === WINTER ? F.upkeepWinter : F.upkeep) * by("upkeep");
+    const feed = [["zamok", upkeep2 * F.castleShare, "\u043F\u0440\u043E\u043A\u043E\u0440\u043C \u0437\u0430\u043C\u043A\u0430"]];
+    for (const v of VILLAGES) feed.push([v, upkeep2 * (1 - F.castleShare) / VILLAGES.length, "\u043F\u0440\u043E\u043A\u043E\u0440\u043C \u0440\u0430\u0431\u043E\u0442\u043D\u0438\u043A\u043E\u0432 \u043D\u0430 \u0431\u0430\u0440\u0449\u0438\u043D\u0435"]);
+    if (e.feedFirst === "derevni") feed.push(feed.shift());
+    for (const [side, v, text] of feed) spend("eda", v, text, side);
+    if (zoneOf(w2, "les") === "\u043E\u0442\u043A\u0430\u0437\u044B\u0432\u0430\u044E\u0442") spend("eda", E.zone.lesHarm, "\u043F\u043E\u0442\u0440\u0430\u0432\u044B \u0438 \u0442\u0432\u0430\u0440\u0438 \u0438\u0437 \u043B\u0435\u0441\u0430", "les");
+    if (kind === WINTER && stock.eda > 0) {
+      const spoil = stock.eda * F.spoil * (1 - courseStrength(w2, "stroimsya")) * by("spoil") / klyuch.mult;
+      add("eda", -Math.min(stock.eda, spoil), "\u0438\u0441\u043F\u043E\u0440\u0447\u0435\u043D\u043E \u0437\u0430 \u0437\u0438\u043C\u0443", { who: whoOf(klyuch, "klyuchnik"), how: klyuch.note });
+    }
+    const spare = stock.eda - e.floor.eda - F.upkeepWinter;
+    if (e.course === "torguem" && spare > 0 && zoneMult(w2, "kuptsy") > 0) {
+      add("eda", -spare, "\u0438\u0437\u043B\u0438\u0448\u0435\u043A \u043F\u0440\u043E\u0434\u0430\u043D \u043A\u0443\u043F\u0446\u0430\u043C", { side: "kuptsy", who: whoOf(pisar, "pisar"), how: pisar.note });
+      add("serebro", spare * F.foodPrice * zoneMult(w2, "kuptsy") * pisar.mult, "\u0437\u0430 \u0438\u0437\u043B\u0438\u0448\u0435\u043A \u0435\u0434\u044B", { side: "kuptsy", who: whoOf(pisar, "pisar"), how: pisar.note });
+    }
+    const extra = (stock.eda - e.floor.eda - F.upkeepWinter) * clamp(L.sellFood * E.hand.sell, 0, 1);
+    if (extra > 0 && zoneMult(w2, "kuptsy") > 0) {
+      add("eda", -extra, "\u0438\u0437\u043B\u0438\u0448\u0435\u043A \u043F\u0440\u043E\u0434\u0430\u043D \u043A\u043B\u044E\u0447\u043D\u0438\u043A\u043E\u043C", { side: "kuptsy", who: whoOf(klyuch, "klyuchnik"), how: klyuch.note });
+      add("serebro", extra * F.foodPrice * zoneMult(w2, "kuptsy"), "\u0437\u0430 \u0438\u0437\u043B\u0438\u0448\u0435\u043A \u0435\u0434\u044B", { side: "kuptsy", who: whoOf(klyuch, "klyuchnik"), how: klyuch.note });
+    }
+    return { lines, short, stock, sown, harvest: round2(harvest) };
+  }
+
+  // src/sim/probe.ts
+  var blank = () => ({
+    order: { fit: 0, worked: 0, already: 0, deaf: 0, weak: 0 },
+    autoPaid: 0,
+    short: { seasons: 0, food: 0, silver: 0, trust: 0, order: 0 }
+  });
+  var PROBE = blank();
+
+  // src/sim/economy/pay.ts
+  var taxLeft = (w2) => round1(Math.max(0, w2.eco.tax.due - w2.eco.tax.paid));
+  var loanEase = (w2) => Math.max(1, 1 + levers(w2).loan * BALANCE.economy.hand.flow * 2);
+  function payOptions(w2) {
+    const E = BALANCE.economy, e = w2.eco, left = taxLeft(w2), hands = handsNow(w2);
+    const used = (id) => e.tax.by[id] ?? 0;
+    return PAY.map((def) => {
+      let rate = E.rate[def.what === "lyudi" ? "lyudi" : def.what], max = 0, blocked;
+      const refuses = def.side && zoneOf(w2, def.side) === "\u043E\u0442\u043A\u0430\u0437\u044B\u0432\u0430\u044E\u0442";
+      if (def.id === "serebro" || def.id === "eda" || def.id === "tovary") max = e.stock[def.what] / rate;
+      else if (def.id === "sbor_kuptsy") max = E.pay.levyCap - used(def.id);
+      else if (def.id === "zaem") {
+        max = E.pay.loanCap * loanEase(w2) - e.debts.reduce((s, d) => s + d.sum, 0) / (1 + E.pay.loanInterest);
+        if (zoneMult(w2, "kuptsy") < E.zone.friendly) blocked = "\u0432 \u0434\u043E\u043B\u0433 \u0434\u0430\u044E\u0442 \u0442\u043E\u043B\u044C\u043A\u043E \u0442\u0435\u043C, \u0441 \u043A\u0435\u043C \u043B\u0430\u0434\u044F\u0442";
+      } else if (def.id === "sverh_brod" || def.id === "sverh_opushka") max = E.pay.extraCap - used(def.id);
+      else if (def.id === "volnye") {
+        rate = E.rate.volnye;
+        max = E.pay.vagrantCap - used(def.id);
+      } else max = hands[def.side] / rate;
+      if (refuses) blocked = `${SIDE_NAMES[def.side].toLowerCase()}: \u043E\u0442\u043A\u0430\u0437\u044B\u0432\u0430\u044E\u0442`;
+      max = blocked ? 0 : floor1(clamp(max, 0, left));
+      return { def, rate, max, blocked };
+    });
+  }
+  function payTax(w2, id, measures, lines) {
+    const E = BALANCE.economy, e = w2.eco, t = e.tax;
+    const opt = payOptions(w2).find((o) => o.def.id === id);
+    const m = floor1(Math.min(Number(measures) || 0, opt.max));
+    if (m <= 0) return 0;
+    const units = round2(m * opt.rate), def = opt.def, out = [];
+    const toTax = `\u0432 \u043F\u043E\u0434\u0430\u0442\u044C, ${m} \u043C\u0435\u0440`;
+    if (id === "serebro" || id === "eda" || id === "tovary") addLine(w2, { cat: def.what, v: -units, text: toTax, side: "dvor" });
+    else if (id === "sbor_kuptsy") {
+      addTrust(w2, "kuptsy", -E.pay.levyTrust * m);
+      e.dutyCutUntil = w2.season + SEASON_NAMES.length;
+      addLine(w2, { cat: "serebro", v: 0, text: `\u043E\u0441\u043E\u0431\u044B\u0439 \u0441\u0431\u043E\u0440 \u0441 \u043A\u0443\u043F\u0446\u043E\u0432 \u2014 ${toTax}`, side: "kuptsy" });
+    } else if (id === "zaem") {
+      const back = round2(units * (1 + E.pay.loanInterest / loanEase(w2)));
+      e.debts.push({ due: w2.season + E.pay.loanTerm, sum: back });
+      addLine(w2, { cat: "serebro", v: 0, text: `\u0437\u0430\u0451\u043C \u0443 \u043A\u0443\u043F\u0446\u043E\u0432 \u2014 ${toTax}; \u0432\u0435\u0440\u043D\u0443\u0442\u044C ${back}`, side: "kuptsy" });
+    } else if (id === "sverh_brod" || id === "sverh_opushka") {
+      addTrust(w2, def.side, -E.pay.extraTrust * m);
+      addLine(w2, { cat: "eda", v: 0, text: `\u0437\u0435\u0440\u043D\u043E \u0441\u0432\u0435\u0440\u0445 \u043E\u0431\u0440\u043E\u043A\u0430 \u2014 ${toTax}`, side: def.side });
+    } else if (id === "volnye") {
+      w2.resources.poryadok = round1(w2.resources.poryadok + E.pay.vagrantOrder * m);
+      t.patience = round2(clamp(t.patience - E.pay.vagrantPatience * m, 0, STAR_MAX));
+      addLine(w2, { cat: "lyudi", v: 0, text: `\u0432\u043E\u043B\u044C\u043D\u044B\u0435 \u0438 \u0431\u0440\u043E\u0434\u044F\u0433\u0438 \u0438\u0437 \u043A\u043E\u0440\u0447\u043C\u044B \u2014 ${toTax}` });
+    } else {
+      const from = def.side;
+      e.recruits.push({ from, hands: units, until: w2.season + E.pay.recruitSeasons });
+      if (from === "zamok") {
+        addTrust(w2, "zamok", -E.pay.castleTrust * units);
+        w2.resources.poryadok = round1(w2.resources.poryadok - E.pay.castleOrder * units);
+      } else addTrust(w2, from, -E.pay.recruitTrust * units);
+      addLine(w2, { cat: "lyudi", v: -units, text: `\u0440\u0435\u043A\u0440\u0443\u0442\u044B \u043D\u0430 \u0433\u043E\u0434 \u2014 ${toTax}`, side: from });
+    }
+    t.paid = round1(t.paid + m);
+    t.by[id] = round1((t.by[id] ?? 0) + m);
+    out.push(`${def.name}: ${m} \u043C\u0435\u0440 (${units} ${CATEGORY_NAMES[def.what].toLowerCase()}). \u0411\u043E\u043B\u044C\u043D\u043E ${def.hurts}.`);
+    if (taxLeft(w2) <= 0) {
+      t.early = seasonKind(w2.season) < AUTUMN;
+      out.push(t.early ? "\u0423\u0440\u043E\u043A \u0437\u0430\u043A\u0440\u044B\u0442 \u0434\u043E\u0441\u0440\u043E\u0447\u043D\u043E." : "\u0423\u0440\u043E\u043A \u0437\u0430\u043A\u0440\u044B\u0442.");
+    } else out.push(`\u041E\u0441\u0442\u0430\u043B\u043E\u0441\u044C ${taxLeft(w2)} \u043C\u0435\u0440 \u0438\u0437 ${t.due}.`);
+    if (lines) lines.push(...out);
+    else w2.log.push({ season: w2.season, kind: "staff", title: "\u041F\u043E\u0434\u0430\u0442\u044C", lines: out });
+    return m;
+  }
+
+  // src/sim/economy/tax.ts
+  function lessonOf(year) {
+    return year <= BALANCE.economy.tax.trialYears ? BALANCE.economy.tax.trial : BALANCE.economy.tax.normal;
+  }
+  function newTaxYear(w2) {
+    const t = w2.eco.tax;
+    t.year++;
+    t.lesson = lessonOf(t.year);
+    t.due = round1(t.lesson + t.carried);
+    t.paid = 0;
+    t.early = false;
+    t.by = {};
+    const trial = t.year <= BALANCE.economy.tax.trialYears ? " (\u0438\u0441\u043F\u044B\u0442\u0430\u043D\u0438\u0435)" : "";
+    return `\u0413\u0435\u0440\u0446\u043E\u0433 \u043E\u0431\u044A\u044F\u0432\u0438\u043B \u0443\u0440\u043E\u043A \u043D\u0430 \u0433\u043E\u0434${trial}: ${t.lesson} \u043C\u0435\u0440${t.carried ? ` \u0438 \u043D\u0435\u0434\u043E\u0438\u043C\u043A\u0430 ${t.carried}` : ""} \u2014 \u043A \u043E\u0441\u0435\u043D\u0438 ${t.due}.`;
+  }
+  function autoPayTax(w2, lines) {
+    const e = w2.eco, E = BALANCE.economy;
+    let paid = 0;
+    paid += payTax(w2, "serebro", (e.stock.serebro - e.floor.serebro) / E.rate.serebro, lines);
+    paid += payTax(w2, "eda", (e.stock.eda - e.floor.eda) / E.rate.eda, lines);
+    return round1(paid);
+  }
+  function collect(w2, lines) {
+    const T = BALANCE.economy.tax, t = w2.eco.tax, left = taxLeft(w2);
+    if (left > 0 && w2.eco.autoPay) {
+      const sub = [];
+      const auto = autoPayTax(w2, sub);
+      PROBE.autoPaid += auto;
+      if (auto) lines.push(`\u0421\u043E\u0432\u0435\u0442 \u0441\u0430\u043C \u0437\u0430\u043A\u0440\u044B\u0432\u0430\u0435\u0442 \u0443\u0440\u043E\u043A, \u043D\u0435 \u0442\u0440\u043E\u0433\u0430\u044F \u043D\u0438\u0436\u043D\u0438\u0445 \u0447\u0435\u0440\u0442. ${sub.filter((x) => !x.startsWith("\u041E\u0441\u0442\u0430\u043B\u043E\u0441\u044C") && !x.startsWith("\u0423\u0440\u043E\u043A")).join(" ")}`);
+    }
+    const rest = taxLeft(w2), closed = rest <= 0;
+    if (closed) {
+      t.carried = 0;
+      t.patience = round2(clamp(t.patience + (t.early ? T.early : T.onTime), 0, STAR_MAX));
+      lines.push(`\u{1F4DC} \u0421\u0431\u043E\u0440\u0449\u0438\u0446\u0430 \u043F\u043E\u0434\u0430\u0442\u0435\u0439 \u043F\u0440\u0438\u043D\u044F\u043B\u0430 \u0443\u0440\u043E\u043A${t.early ? " \u2014 \u0432\u043D\u0435\u0441\u0451\u043D \u0434\u043E\u0441\u0440\u043E\u0447\u043D\u043E" : ""}: ${t.paid} \u043C\u0435\u0440 \u0438\u0437 ${t.due}. \u0413\u0435\u0440\u0446\u043E\u0433 ${patienceWord(t.patience)}.`);
+      addAuthority(w2, t.early ? BALANCE.authority.taxEarly : BALANCE.authority.taxOnTime, t.early ? "\u043F\u043E\u0434\u0430\u0442\u044C \u0437\u0430\u043A\u0440\u044B\u0442\u0430 \u0434\u043E\u0441\u0440\u043E\u0447\u043D\u043E" : "\u043F\u043E\u0434\u0430\u0442\u044C \u0437\u0430\u043A\u0440\u044B\u0442\u0430 \u0432 \u0441\u0440\u043E\u043A", "tax");
+    } else {
+      t.carried = round1(rest * (1 + T.arrears));
+      addAuthority(w2, -BALANCE.authority.taxArrears, "\u043D\u0435\u0434\u043E\u0438\u043C\u043A\u0430: \u0441\u043B\u043E\u0432\u043E \u0413\u0435\u0440\u0446\u043E\u0433\u0443 \u043D\u0435 \u0441\u0434\u0435\u0440\u0436\u0430\u043D\u043E", "tax");
+      const loss = T.arrearsPatience * Math.max(0, 1 + T.dvor * (1 - zoneMult(w2, "dvor")));
+      t.patience = round2(clamp(t.patience - loss, 0, STAR_MAX));
+      lines.push(`\u{1F4DC} \u0421\u0431\u043E\u0440\u0449\u0438\u0446\u0430 \u043F\u043E\u0434\u0430\u0442\u0435\u0439 \u0443\u0435\u0445\u0430\u043B\u0430 \u0441 \u043D\u0435\u0434\u043E\u0431\u043E\u0440\u043E\u043C: \u0432\u043D\u0435\u0441\u0435\u043D\u043E ${t.paid} \u043C\u0435\u0440 \u0438\u0437 ${t.due}. \u041D\u0435\u0434\u043E\u0438\u043C\u043A\u0430 ${rest} \u0441 \u043D\u0430\u0434\u0431\u0430\u0432\u043A\u043E\u0439 \u2014 ${t.carried} \u2014 \u043B\u044F\u0436\u0435\u0442 \u043D\u0430 \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0438\u0439 \u0433\u043E\u0434.`);
+      lines.push(`${patienceWord(t.patience) === "\u043D\u0430 \u0438\u0441\u0445\u043E\u0434\u0435" ? "\u26A0 \u0422\u0435\u0440\u043F\u0435\u043D\u0438\u0435 \u0413\u0435\u0440\u0446\u043E\u0433\u0430 \u043D\u0430 \u0438\u0441\u0445\u043E\u0434\u0435." : `\u0413\u0435\u0440\u0446\u043E\u0433 ${patienceWord(t.patience)}.`}`);
+    }
+    t.history.push({ year: t.year, due: t.due, paid: t.paid, closed, early: closed && t.early, by: { ...t.by } });
+  }
+
+  // src/sim/economy/season.ts
+  function initEconomy(w2) {
+    const S = BALANCE.economy.start;
+    const elders = ELDERS.map((e) => {
+      const trait = TRAITS.find((t) => t.id === e.trait);
+      const star = {};
+      for (const a of AXES) star[a] = BALANCE.star.base + w2.rng.range(0, BALANCE.star.baseRandom) + (trait.star[a] ?? 0);
+      const mean = AXES.reduce((t, a) => t + star[a], 0) / AXES.length;
+      for (const a of AXES) star[a] = round1(clamp(BALANCE.star.center + (star[a] - mean) * BALANCE.star.spread, BALANCE.star.floor, STAR_MAX));
+      const rel = w2.people.map((p) => {
+        let v = w2.rng.range(-BALANCE.rel.startSpread, BALANCE.rel.startSpread);
+        for (const [x, y] of OPPOSED) {
+          const from = BALANCE.rel.opposedFrom;
+          if (star[x] >= from && p.star[y] >= from || star[y] >= from && p.star[x] >= from) v -= BALANCE.rel.opposedPenalty;
+        }
+        if (topAxis(star) === topAxis(p.star)) v += BALANCE.rel.sameTop;
+        return round1(v);
+      });
+      return { side: e.side, name: e.name, female: e.female, age: e.age, trait, star, rel };
+    });
+    const eco = {
+      stock: { eda: S.eda, tovary: S.tovary, serebro: S.serebro },
+      floor: { eda: S.floorEda, serebro: S.floorSerebro },
+      feedFirst: "zamok",
+      course: null,
+      courseSeasons: 0,
+      shaky: false,
+      sown: 1,
+      recruits: [],
+      dutyCutUntil: 0,
+      debts: [],
+      autoPay: true,
+      tax: { year: 0, lesson: 0, carried: 0, due: 0, paid: 0, early: false, by: {}, patience: S.patience, history: [] },
+      elders,
+      last: null,
+      cur: [],
+      shortages: 0,
+      fc: { eda: 0, tovary: 0, serebro: 0 },
+      zoneWas: {},
+      pending: []
+    };
+    for (const s of SIDES) eco.zoneWas[s] = zoneWord(w2.factions[s]);
+    w2.eco = eco;
+    newTaxYear(w2);
+    rollForecast(w2);
+    return eco;
+  }
+  function elderSaw(w2, tiun, axes) {
+    for (const el of w2.eco.elders) {
+      const top = topAxis(el.star);
+      const against = OPPOSED.some(([x, y]) => x === top && axes.includes(y) || y === top && axes.includes(x));
+      const d = axes.includes(top) ? BALANCE.economy.trust.elderStep : against ? -BALANCE.economy.trust.elderStep : 0;
+      el.rel[tiun.id] = round1(clamp(el.rel[tiun.id] + d, -REL_MAX, REL_MAX));
+    }
+  }
+  function economySeason(w2, lines) {
+    const E = BALANCE.economy, e = w2.eco, kind = seasonKind(w2.season);
+    const before = e.last ? { ...e.last.after } : { eda: E.start.eda, tovary: E.start.tovary, serebro: E.start.serebro };
+    settle(w2, lines);
+    const hands = fieldHands(w2), plan = planSeason(w2);
+    e.stock = plan.stock;
+    e.sown = plan.sown;
+    e.cur.push({ cat: "lyudi", v: 0, text: `\u0432\u0441\u0435\u0433\u043E ${hands.total}: \u0432 \u043F\u043E\u043B\u0435 ${hands.field} \u0438\u0437 ${E.hands.field}${hands.build ? `, \u043D\u0430 \u0441\u0442\u0440\u043E\u0439\u043A\u0435 ${hands.build}` : ""}, \u0441\u0432\u043E\u0431\u043E\u0434\u043D\u043E ${round1(hands.free - hands.build)}` });
+    e.cur.push(...plan.lines);
+    if (kind === SPRING && plan.sown < 1) lines.push(`\u041F\u043E\u0441\u0435\u0432\u043D\u0430\u044F: \u0440\u0443\u043A \u0432 \u043F\u043E\u043B\u0435 \u0445\u0432\u0430\u0442\u0438\u043B\u043E \u043D\u0430 ${Math.round(plan.sown * 100)}% \u043F\u043E\u043B\u044F \u2014 \u0443\u0440\u043E\u0436\u0430\u0439 \u043E\u0441\u0435\u043D\u044C\u044E \u0431\u0443\u0434\u0435\u0442 \u043C\u0435\u043D\u044C\u0448\u0435.`);
+    if (kind === AUTUMN) lines.push(`\u0416\u0430\u0442\u0432\u0430: \u0432 \u0430\u043C\u0431\u0430\u0440 \u043B\u0435\u0433\u043B\u043E ${plan.harvest} \u0435\u0434\u044B.`);
+    if (plan.short.length) e.shortages++;
+    if (plan.short.length) PROBE.short.seasons++;
+    const L = levers(w2), H = E.hand;
+    for (const s of plan.short) {
+      PROBE.short[s.cat === "eda" ? "food" : "silver"] += s.v;
+      const soft = s.side === "brod" || s.side === "opushka" ? Math.max(0, 1 + L.shortSoft * H.flow * 2) : 1;
+      PROBE.short.trust += -addTrust(w2, s.side, -E.trust.short * s.v * soft);
+      let note = `\u26A0 \u041D\u0435\u0434\u043E\u0434\u0430\u0447\u0430: ${s.what} \u2014 \u043D\u0435 \u0445\u0432\u0430\u0442\u0438\u043B\u043E ${s.v} (${CATEGORY_NAMES[s.cat].toLowerCase()}). ${SIDE_NAMES[s.side]}: \u0434\u043E\u0432\u0435\u0440\u0438\u0435 \u043F\u0430\u0434\u0430\u0435\u0442.`;
+      if (s.cat === "serebro" && s.side === "zamok") {
+        w2.resources.poryadok = round1(w2.resources.poryadok - E.trust.shortOrder * s.v);
+        PROBE.short.order += E.trust.shortOrder * s.v;
+        note += " \u0421\u0442\u0440\u0430\u0436\u0430 \u0440\u0430\u0441\u0445\u043E\u0434\u0438\u0442\u0441\u044F \u2014 \u043F\u043E\u0440\u044F\u0434\u043A\u0430 \u043C\u0435\u043D\u044C\u0448\u0435.";
+      }
+      if (s.side === "kuptsy") {
+        addTrust(w2, "kuptsy", -E.pay.loanDefault * s.v);
+        note += " \u0414\u043E\u043B\u0433 \u043D\u0435 \u0432\u0435\u0440\u043D\u0443\u043B\u0438 \u2014 \u043A\u0443\u043F\u0446\u044B \u044D\u0442\u043E\u0433\u043E \u043D\u0435 \u043F\u0440\u043E\u0441\u0442\u044F\u0442.";
+      }
+      lines.push(note);
+      e.cur.push({ cat: s.cat, v: 0, text: `\u043D\u0435\u0434\u043E\u0434\u0430\u043D\u043E ${s.v}: ${s.what}`, side: s.side });
+    }
+    e.debts = e.debts.filter((d) => d.due > w2.season);
+    e.recruits = e.recruits.filter((r) => r.until > w2.season + 1);
+    if (kind === AUTUMN) collect(w2, lines);
+    const ct = E.course.trust;
+    if (e.course === "kopim") for (const v of VILLAGES) addTrust(w2, v, -ct);
+    if (e.course === "polegche") for (const v of VILLAGES) addTrust(w2, v, ct);
+    if (e.course === "les") addTrust(w2, "les", ct);
+    if (e.course === "torguem") addTrust(w2, "kuptsy", ct);
+    if (e.course === "stroimsya") {
+      addTrust(w2, "zamok", ct);
+      for (const v of VILLAGES) addTrust(w2, v, -ct);
+    }
+    if (e.course === "dorogi") w2.resources.poryadok = round1(w2.resources.poryadok + E.course.order);
+    for (const v of VILLAGES) addTrust(w2, v, (L.villages + (v === "opushka" ? L.opushka : 0)) * H.trust);
+    for (const side of ["zamok", "kuptsy", "les", "dvor"]) addTrust(w2, side, L[side] * H.trust);
+    w2.resources.poryadok = round1(w2.resources.poryadok + L.order * H.order);
+    e.tax.patience = round2(clamp(e.tax.patience + L.patience * H.patience, 0, STAR_MAX));
+    const tiun = holder(w2, "starosta");
+    if (tiun) for (const el of e.elders) addTrust(w2, el.side, el.rel[tiun.id] * E.trust.elder);
+    for (const s of SIDES) {
+      w2.factions[s] = round1(w2.factions[s] * E.trust.fade);
+      const now = zoneOf(w2, s);
+      if (e.zoneWas[s] !== now) lines.push(`${SIDE_NAMES[s]}: \u0442\u0435\u043F\u0435\u0440\u044C \xAB${now}\xBB (\u0431\u044B\u043B\u043E \xAB${e.zoneWas[s]}\xBB).`);
+      e.zoneWas[s] = now;
+    }
+    e.last = { season: w2.season, before, after: { ...e.stock }, lines: e.cur };
+    e.cur = [];
+    if (e.course) e.courseSeasons++;
+    if (e.courseSeasons >= E.course.shaky) e.shaky = false;
+    if (kind === WINTER) lines.push(`\u{1F4DC} ${newTaxYear(w2)}`);
+  }
+  function rollForecast(w2) {
+    for (const c of STOCKS) w2.eco.fc[c] = round2(w2.rng.range(-1, 1));
+  }
+
+  // src/sim/economy/view.ts
+  var COUNTER = { eda: "klyuchnik", tovary: "pisar", serebro: "pisar" };
+  function forecastFork(w2) {
+    const K = BALANCE.economy.fork, plan = planSeason(w2);
+    return STOCKS.map((cat) => {
+      const counter = holder(w2, COUNTER[cat]);
+      const bad = counter ? clamp(1 - fitness(counter, COUNTER[cat]) / STAR_MAX, 0, 1) : K.empty;
+      const half = K.min + K.wide * bad, mid = plan.stock[cat] + w2.eco.fc[cat] * K.skew * half;
+      const lo = round1(Math.max(0, mid - half)), hi = round1(Math.max(0, mid + half));
+      const floor = cat === "tovary" ? 0 : w2.eco.floor[cat];
+      const word = hi <= 0 ? "\u043F\u0443\u0441\u0442\u043E" : hi < floor ? "\u043D\u0435 \u0445\u0432\u0430\u0442\u0438\u0442" : lo > floor ? "\u0441 \u0437\u0430\u043F\u0430\u0441\u043E\u043C" : "\u0432\u043F\u0440\u0438\u0442\u044B\u043A";
+      return { cat, lo, hi, word, counter };
+    });
+  }
+  function ledgerOf(l, cat, all = false) {
+    const mine = l.lines.filter((x) => x.cat === cat);
+    return { lines: mine.filter((x) => all || !x.hidden), mismatch: mine.some((x) => x.hidden) };
+  }
+  function elderRel(w2, el) {
+    const tiun = holder(w2, "starosta");
+    return tiun ? el.rel[tiun.id] : void 0;
+  }
 
   // src/data/events.ts
   var EVENTS = [
@@ -1536,809 +2387,430 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
     }
   ];
 
-  // src/sim/rng.ts
-  var Rng = class {
-    constructor(seed) {
-      let h2 = 1779033703 ^ seed.length;
-      for (let i = 0; i < seed.length; i++) {
-        h2 = Math.imul(h2 ^ seed.charCodeAt(i), 3432918353);
-        h2 = h2 << 13 | h2 >>> 19;
-      }
-      this.s = h2 >>> 0;
-    }
-    next() {
-      let t = this.s += 1831565813;
-      t = Math.imul(t ^ t >>> 15, t | 1);
-      t ^= t + Math.imul(t ^ t >>> 7, t | 61);
-      return ((t ^ t >>> 14) >>> 0) / 4294967296;
-    }
-    range(a, b) {
-      return a + (b - a) * this.next();
-    }
-    int(a, b) {
-      return Math.floor(this.range(a, b + 1));
-    }
-    pick(arr) {
-      return arr[Math.floor(this.next() * arr.length)];
-    }
-    chance(p) {
-      return this.next() < p;
-    }
-    gauss() {
-      const u = 1 - this.next();
-      const v = this.next();
-      return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
-    }
-    shuffle(arr) {
-      const a = arr.slice();
-      for (let i = a.length - 1; i > 0; i--) {
-        const j = Math.floor(this.next() * (i + 1));
-        [a[i], a[j]] = [a[j], a[i]];
-      }
-      return a;
-    }
-  };
-
-  // src/sim/util.ts
-  var clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-  var round1 = (v) => Math.round(v * 10) / 10;
-  var round2 = (v) => Math.round(v * 100) / 100;
-
-  // src/sim/state.ts
-  var STAR_MAX = 10;
-  var REL_MAX = 10;
-  var relKey = (a, b) => a < b ? `${a}|${b}` : `${b}|${a}`;
-  function getRel(w2, a, b) {
-    return w2.rel.get(relKey(a, b)) ?? 0;
+  // src/sim/council/decide.ts
+  function underFloor(w2, opt) {
+    return belowFloor(w2, "eda", opt.effects.pripasy ?? 0) || belowFloor(w2, "serebro", opt.effects.kazna ?? 0);
   }
-  function setRel(w2, a, b, v) {
-    w2.rel.set(relKey(a, b), clamp(v, -REL_MAX, REL_MAX));
-  }
-  function isStale(p) {
-    return !!p.post && p.tenure >= BALANCE.exp.staleFrom;
-  }
-  function topAxis(star) {
-    return AXES.reduce((best, a) => star[a] > star[best] ? a : best, AXES[0]);
-  }
-  function postName(id) {
-    return POSTS.find((p) => p.id === id).name;
-  }
-  function holder(w2, post) {
-    const id = w2.posts[post];
-    return id == null ? void 0 : w2.people[id];
-  }
-  function fitness(p, post) {
-    const def = POSTS.find((x) => x.id === post);
-    let f = def.axes.reduce((s, a) => s + p.star[a], 0) / def.axes.length;
-    if (p.mark?.goodPost === post) f += BALANCE.exp.fitMarkGood;
-    if (p.mark?.badPost === post) f -= BALANCE.exp.fitMarkBad;
-    if (p.aspiration?.post === post) f += BALANCE.exp.fitAspiration;
-    return f;
-  }
-
-  // src/sim/probe.ts
-  var blank = () => ({
-    order: { fit: 0, worked: 0, already: 0, deaf: 0, weak: 0 },
-    autoPaid: 0,
-    short: { seasons: 0, food: 0, silver: 0, trust: 0, order: 0 }
-  });
-  var PROBE = blank();
-
-  // src/sim/economy/zones.ts
-  var seasonKind = (season) => (season - 1) % 4;
-  var AUTUMN = 2;
-  var WINTER = 3;
-  var SUMMER = 1;
-  var SPRING = 0;
-  function zoneWord(v) {
-    const T = BALANCE.economy.trust;
-    return v >= T.ally ? "\u0437\u0430\u043E\u0434\u043D\u043E" : v >= T.friendly ? "\u043B\u0430\u0434\u044F\u0442" : v > T.refuse ? "\u0442\u0435\u0440\u043F\u044F\u0442" : "\u043E\u0442\u043A\u0430\u0437\u044B\u0432\u0430\u044E\u0442";
-  }
-  var zoneOf = (w2, side) => zoneWord(w2.factions[side]);
-  function zoneMult(w2, side) {
-    const Z = BALANCE.economy.zone, z = zoneOf(w2, side);
-    return z === "\u0437\u0430\u043E\u0434\u043D\u043E" ? Z.ally : z === "\u043B\u0430\u0434\u044F\u0442" ? Z.friendly : z === "\u0442\u0435\u0440\u043F\u044F\u0442" ? Z.tolerate : Z.refuse;
-  }
-  function addTrust(w2, side, d) {
-    const max = BALANCE.economy.trust.max, was = w2.factions[side];
-    w2.factions[side] = round1(clamp(was + d, -max, max));
-    return round1(w2.factions[side] - was);
-  }
-  function patienceWord(v) {
-    const T = BALANCE.economy.tax;
-    return v >= T.favor ? "\u0431\u043B\u0430\u0433\u043E\u0432\u043E\u043B\u0438\u0442" : v >= T.waits ? "\u0436\u0434\u0451\u0442" : v >= T.displeased ? "\u043D\u0435\u0434\u043E\u0432\u043E\u043B\u0435\u043D" : "\u043D\u0430 \u0438\u0441\u0445\u043E\u0434\u0435";
-  }
-
-  // src/sim/economy/ledger.ts
-  var floor1 = (v) => Math.floor(v * 10 + 1e-9) / 10;
-  function addLine(w2, line) {
-    if (line.cat === "lyudi") {
-      w2.eco.cur.push(line);
-      return line.v;
-    }
-    const was = w2.eco.stock[line.cat];
-    w2.eco.stock[line.cat] = round2(Math.max(0, was + line.v));
-    const v = round2(w2.eco.stock[line.cat] - was);
-    w2.eco.cur.push({ ...line, v });
-    return v;
-  }
-  function belowFloor(w2, cat, v) {
-    return v < 0 && round2(w2.eco.stock[cat] + v) < w2.eco.floor[cat];
-  }
-  function takeHands(w2, hands) {
-    w2.eco.recruits.push({ from: "zamok", hands, until: w2.season + 1 });
-    w2.eco.cur.push({ cat: "lyudi", v: -hands, text: "\u0440\u0443\u043A\u0438 \u0437\u0430\u043D\u044F\u0442\u044B \u0434\u0435\u043B\u043E\u043C \u0441\u043E\u0432\u0435\u0442\u0430", side: "zamok" });
-  }
-  function invest(w2, ev, later, k2, lines) {
-    const effects = Object.fromEntries(Object.entries(later.effects).map(([key, v]) => [key, round1(v * k2)]));
-    w2.eco.pending.push({ due: w2.season + later.seasons, effects, text: `${later.text} (\u0434\u0435\u043B\u043E \xAB${ev.title}\xBB)`, village: ev.village });
-    lines.push(`\u0412\u043B\u043E\u0436\u0435\u043D\u0438\u0435: \u043E\u0442\u0434\u0430\u0447\u0430 \u0447\u0435\u0440\u0435\u0437 ${later.seasons} \u0441\u0435\u0437. \u2014 ${later.text}.`);
-  }
-  function settle(w2, lines) {
-    const due = w2.eco.pending.filter((x) => x.due <= w2.season);
-    w2.eco.pending = w2.eco.pending.filter((x) => x.due > w2.season);
-    for (const x of due) {
-      for (const [key, v] of Object.entries(x.effects)) {
-        if (key === "poryadok") w2.resources.poryadok = round1(w2.resources.poryadok + v);
-        else if (key === "kazna" || key === "pripasy") addLine(w2, { cat: key === "kazna" ? "serebro" : "eda", v, text: `\u043E\u0442\u0434\u0430\u0447\u0430 \u0432\u043B\u043E\u0436\u0435\u043D\u0438\u044F: ${x.text}` });
-        else if (key === "derevni") for (const v2 of x.village ? [x.village] : VILLAGES) addTrust(w2, v2, v * BALANCE.economy.trust.event);
-        else addTrust(w2, key, v * BALANCE.economy.trust.event);
-      }
-      lines.push(`\u{1F331} \u0412\u043B\u043E\u0436\u0435\u043D\u0438\u0435 \u0434\u0430\u043B\u043E \u043E\u0442\u0434\u0430\u0447\u0443: ${x.text}.`);
-    }
-  }
-
-  // src/sim/authority.ts
-  var FEASTS = [
-    { id: "prazdnik", name: "\u041F\u0440\u0430\u0437\u0434\u043D\u0438\u043A \u043F\u043E \u043E\u0431\u044B\u0447\u0430\u044E", pay: "eda", text: "\u0441\u0442\u043E\u043B \u0434\u043B\u044F \u0434\u0435\u0440\u0435\u0432\u0435\u043D\u044C \u0438 \u043E\u0431\u0440\u044F\u0434 \u0443 \u043E\u043F\u0443\u0448\u043A\u0438 \u2014 \u0438\u0437 \u0430\u043C\u0431\u0430\u0440\u0430" },
-    { id: "pir", name: "\u041F\u0438\u0440 \u0432 \u0437\u0430\u043C\u043A\u0435", pay: "serebro", text: "\u043F\u0438\u0440 \u0434\u043B\u044F \u043B\u044E\u0434\u0435\u0439 \u0437\u0430\u043C\u043A\u0430 \u0438 \u0433\u043E\u0441\u0442\u0435\u0439 \u2014 \u0438\u0437 \u043A\u0430\u0437\u043D\u044B" }
-  ];
-  function initAuthority() {
-    const totals = { support: 0, tax: 0, judge: 0, complaint: 0, feast: 0, order: 0, staff: 0, burn: 0 };
-    return { cur: [], last: null, lastSeason: 0, feasts: [], complaints: [], nextId: 1, totals };
-  }
-  var authorityCap = () => BALANCE.authority.cap;
-  var authorityWeak = (w2) => w2.authority < BALANCE.authority.weakBelow;
-  var priceOf = (w2, base) => base > 0 && authorityWeak(w2) ? base + BALANCE.authority.weakExtra : base;
-  var complaintLeft = (w2, c) => c.season + BALANCE.authority.complaintSeasons - w2.season;
-  function addAuthority(w2, v, text, kind) {
-    if (!v) return 0;
-    const a = w2.auth, cap = authorityCap(), next = round2(w2.authority + v);
-    a.cur.push({ v: round2(v), text, kind });
-    a.totals[kind] = round2(a.totals[kind] + v);
-    if (next > cap && v > 0) {
-      const burn = round2(next - Math.max(cap, w2.authority));
-      a.cur.push({ v: -burn, text: "\u0441\u0433\u043E\u0440\u0435\u043B\u043E \u0441\u0432\u0435\u0440\u0445 \u043F\u043E\u0442\u043E\u043B\u043A\u0430", kind: "burn" });
-      a.totals.burn = round2(a.totals.burn - burn);
-      w2.authority = Math.max(cap, w2.authority);
-    } else w2.authority = Math.max(0, next);
-    return v;
-  }
-  function councilSteady(w2) {
-    const council3 = w2.people.filter((p) => p.post);
-    const head = w2.head != null ? w2.people[w2.head] : void 0;
-    if (!head || !head.post) return { ok: false, why: "\u0433\u043B\u0430\u0432\u043D\u043E\u0433\u043E \u043D\u0435\u0442" };
-    const against = council3.find((p) => p.id !== head.id && getRel(w2, head.id, p.id) < BALANCE.council.headMinRel);
-    if (against) return { ok: false, why: `\u0433\u043B\u0430\u0432\u043D\u043E\u0433\u043E \u043D\u0435 \u043F\u0440\u0438\u0437\u043D\u0430\u0451\u0442 ${against.name}` };
-    for (const a of council3) for (const b of council3) if (a.id < b.id && getRel(w2, a.id, b.id) <= BALANCE.rel.enemy) return { ok: false, why: `${a.name} \u0438 ${b.name} \u2014 \u0432\u0440\u0430\u0433\u0438` };
-    return { ok: true, why: "\u0433\u043B\u0430\u0432\u043D\u044B\u0439 \u043F\u0440\u0438\u0437\u043D\u0430\u043D, \u0432\u0440\u0430\u0436\u0434\u044B \u043D\u0435\u0442" };
-  }
-  function councilFeud(w2) {
-    const council3 = w2.people.filter((p) => p.post);
-    return council3.some((a) => council3.some((b) => a.id < b.id && getRel(w2, a.id, b.id) <= BALANCE.rel.enemy));
-  }
-  function authoritySupport(w2) {
-    const A = BALANCE.authority, lines = [];
-    const ally = SIDES.filter((s) => zoneOf(w2, s) === "\u0437\u0430\u043E\u0434\u043D\u043E"), friendly = SIDES.filter((s) => zoneOf(w2, s) === "\u043B\u0430\u0434\u044F\u0442");
-    const names = (list) => list.map((s) => SIDE_NAMES[s].toLowerCase()).join(", ");
-    if (ally.length) lines.push({ v: round2(ally.length * A.sideAlly), text: `\u043E\u043F\u043E\u0440\u0430: \u0437\u0430\u043E\u0434\u043D\u043E \u2014 ${names(ally)}`, kind: "support" });
-    if (friendly.length) lines.push({ v: round2(friendly.length * A.sideFriendly), text: `\u043E\u043F\u043E\u0440\u0430: \u043B\u0430\u0434\u044F\u0442 \u2014 ${names(friendly)}`, kind: "support" });
-    const c = councilSteady(w2);
-    if (c.ok) lines.push({ v: A.council, text: `\u043E\u043F\u043E\u0440\u0430: \u0441\u043E\u0432\u0435\u0442 \u2014 ${c.why}`, kind: "support" });
-    const duke = patienceWord(w2.eco.tax.patience);
-    const dv = duke === "\u0431\u043B\u0430\u0433\u043E\u0432\u043E\u043B\u0438\u0442" ? A.dukeFavor : duke === "\u043D\u0435\u0434\u043E\u0432\u043E\u043B\u0435\u043D" ? -A.dukeDispleased : duke === "\u043D\u0430 \u0438\u0441\u0445\u043E\u0434\u0435" ? -A.dukeEdge : 0;
-    if (dv) lines.push({ v: dv, text: `\u043E\u043F\u043E\u0440\u0430: \u0413\u0435\u0440\u0446\u043E\u0433 ${duke}`, kind: "support" });
-    const sum = round2(lines.reduce((s, l) => s + l.v, 0));
-    if (sum < 0 && duke !== "\u043D\u0430 \u0438\u0441\u0445\u043E\u0434\u0435") return { lines: [], total: 0 };
-    return { lines, total: sum };
-  }
-  function authoritySeason(w2, lines) {
-    const A = BALANCE.authority, a = w2.auth;
-    const old = a.complaints.filter((c) => complaintLeft(w2, c) <= 0);
-    for (const c of old) {
-      const from = w2.people[c.from];
-      addAuthority(w2, -A.complaintLeft, `\u0436\u0430\u043B\u043E\u0431\u0430 ${from.name} \u043D\u0435 \u0434\u043E\u0436\u0434\u0430\u043B\u0430\u0441\u044C \u0440\u0430\u0437\u0431\u043E\u0440\u0430`, "complaint");
-      from.loyalty = Math.max(-10, Math.round((from.loyalty - A.leftLoyalty) * 10) / 10);
-      lines.push(`\u{1F4DC} \u0416\u0430\u043B\u043E\u0431\u0430 ${from.name} \u043D\u0430 ${w2.people[c.on].name} \u043F\u0440\u043E\u043B\u0435\u0436\u0430\u043B\u0430 \u0433\u043E\u0434: \u0421\u0435\u043D\u0435\u0448\u0430\u043B\u044C \u0435\u0451 \u0442\u0430\u043A \u0438 \u043D\u0435 \u0440\u0430\u0437\u043E\u0431\u0440\u0430\u043B. \u0410\u0432\u0442\u043E\u0440\u0438\u0442\u0435\u0442 \u2212${A.complaintLeft}.`);
-    }
-    a.complaints = a.complaints.filter((c) => complaintLeft(w2, c) > 0);
-    for (const l of authoritySupport(w2).lines) addAuthority(w2, l.v, l.text, "support");
-    a.last = a.cur;
-    a.lastSeason = w2.season;
-    a.cur = [];
-  }
-  function addComplaint(w2, from, on) {
-    w2.auth.complaints.push({ id: w2.auth.nextId++, from, on, season: w2.season });
-  }
-  function judge(w2, id) {
-    const A = BALANCE.authority, c = w2.auth.complaints.find((x) => x.id === id);
-    if (!c || w2.deedsLeft <= 0) return false;
-    w2.deedsLeft--;
-    w2.auth.complaints = w2.auth.complaints.filter((x) => x.id !== id);
-    const from = w2.people[c.from], on = w2.people[c.on];
-    from.loyalty = Math.min(10, Math.round((from.loyalty + A.judgeLoyalty) * 10) / 10);
-    addAuthority(w2, A.judge, `\u0441\u0443\u0434 \u043B\u0438\u0447\u043D\u043E: \u0436\u0430\u043B\u043E\u0431\u0430 ${from.name} \u043D\u0430 ${on.name}`, "judge");
-    w2.log.push({ season: w2.season, kind: "info", title: "\u0421\u0443\u0434 \u043B\u0438\u0447\u043D\u043E", lines: [`\u0421\u0435\u043D\u0435\u0448\u0430\u043B\u044C \u0441\u0430\u043C \u0440\u0430\u0437\u043E\u0431\u0440\u0430\u043B \u0436\u0430\u043B\u043E\u0431\u0443 ${from.name} \u043D\u0430 ${on.name}. ${from.name} \u0432\u044B\u0441\u043B\u0443\u0448\u0430\u043D${from.female ? "\u0430" : ""}. \u0410\u0432\u0442\u043E\u0440\u0438\u0442\u0435\u0442 +${A.judge}.`] });
-    return true;
-  }
-  function feastsThisYear(w2) {
-    const from = w2.season - seasonKind(w2.season);
-    return w2.auth.feasts.filter((s) => s >= from).length;
-  }
-  function feastGain(w2) {
-    return round2(BALANCE.authority.feast * Math.pow(BALANCE.authority.feastRepeat, feastsThisYear(w2)));
-  }
-  var feastCost = (id) => id === "prazdnik" ? BALANCE.authority.feastFood : BALANCE.authority.feastSilver;
-  function feast(w2, id) {
-    const def = FEASTS.find((f) => f.id === id), cost = feastCost(id);
-    if (w2.deedsLeft <= 0 || w2.eco.stock[def.pay] < cost) return false;
-    const gain = feastGain(w2);
-    w2.deedsLeft--;
-    addLine(w2, { cat: def.pay, v: -cost, text: `${def.name.toLowerCase()}: ${def.text}` });
-    w2.auth.feasts.push(w2.season);
-    addAuthority(w2, gain, `\u043E\u0431\u044B\u0447\u0430\u0439 \u0441\u043E\u0431\u043B\u044E\u0434\u0451\u043D: ${def.name.toLowerCase()}`, "feast");
-    const line = `${def.name}: ${def.text}. ${CATEGORY_NAMES[def.pay]} \u2212${cost}, \u0430\u0432\u0442\u043E\u0440\u0438\u0442\u0435\u0442 +${gain}.`;
-    w2.log.push({ season: w2.season, kind: "info", title: "\u041E\u0431\u044B\u0447\u0430\u0439 \u0441\u043E\u0431\u043B\u044E\u0434\u0451\u043D", lines: [line] });
-    return true;
-  }
-
-  // src/data/handwriting.ts
-  var LEVERS = [
-    "quitrent",
-    "quitrentSilver",
-    "harvest",
-    "hands",
-    "forestFood",
-    "forestGoods",
-    "duties",
-    "salary",
-    "spoil",
-    "upkeep",
-    "price",
-    "shortSoft",
-    "villages",
-    "opushka",
-    "zamok",
-    "kuptsy",
-    "les",
-    "dvor",
-    "order",
-    "silver",
-    "sellFood",
-    "loan",
-    "patience"
-  ];
-  var h = (post, axis, good, plus, bad, minus) => ({ post, axis, plus, minus, good, bad });
-  var HANDS = [
-    // тиун
-    h("starosta", "zabota", "\u0434\u043E\u0432\u0435\u0440\u0438\u0435 \u0434\u0435\u0440\u0435\u0432\u0435\u043D\u044C \u0440\u0430\u0441\u0442\u0451\u0442, \u043D\u0435\u0434\u043E\u0434\u0430\u0447\u0430 \u0434\u0435\u0440\u0435\u0432\u043D\u044F\u043C \u043C\u044F\u0433\u0447\u0435", [["villages", 1], ["shortSoft", -1]], "\u043E\u0431\u0440\u043E\u043A \u043C\u0435\u043D\u044C\u0448\u0435", [["quitrent", -1]]),
-    h("starosta", "obychai", "\u043E\u0431\u0440\u044F\u0434\u044B \u0434\u0435\u0440\u0436\u0430\u0442\u0441\u044F: \u0434\u0430\u0440\u044B \u043B\u0435\u0441\u0430 \u043F\u043E\u043B\u043D\u0435\u0435, \u043E\u043F\u0443\u0448\u043A\u0430 \u0434\u043E\u0432\u0435\u0440\u044F\u0435\u0442", [["forestFood", 1], ["opushka", 1]], "\u0443\u0440\u043E\u0436\u0430\u0439 \u043D\u0435 \u0440\u0430\u0441\u0442\u0451\u0442", [["harvest", -0.5]]),
-    h("starosta", "dolg", "\u043E\u0431\u0440\u043E\u043A \u0441\u043E\u0431\u0440\u0430\u043D \u0441\u043F\u043E\u043B\u043D\u0430", [["quitrent", 1]], "\u0434\u0435\u0440\u0435\u0432\u043D\u0438 \u0432\u043E\u0440\u0447\u0430\u0442", [["villages", -1]]),
-    h("starosta", "vygoda", "\u043E\u0431\u0440\u043E\u043A \u0441\u0435\u0440\u0435\u0431\u0440\u043E\u043C \u0431\u043E\u043B\u044C\u0448\u0435", [["quitrentSilver", 1]], "\u0434\u043E\u0432\u0435\u0440\u0438\u0435 \u0434\u0435\u0440\u0435\u0432\u0435\u043D\u044C \u043F\u0430\u0434\u0430\u0435\u0442", [["villages", -1]]),
-    h("starosta", "derzost", "\u0440\u0430\u0441\u043F\u0430\u0445\u0438\u0432\u0430\u0435\u0442 \u043D\u043E\u0432\u044B\u0435 \u043F\u043E\u043B\u044F: \u0443\u0440\u043E\u0436\u0430\u0439 \u0431\u043E\u043B\u044C\u0448\u0435", [["harvest", 1]], "\u0440\u0443\u043A\u0438 \u0443\u0445\u043E\u0434\u044F\u0442 \u043D\u0430 \u0440\u0430\u0441\u0447\u0438\u0441\u0442\u043A\u0443", [["hands", -1]]),
-    // десятник
-    h("desyatnik", "dolg", "\u043F\u043E\u0440\u044F\u0434\u043E\u043A \u0440\u0430\u0441\u0442\u0451\u0442", [["order", 1]], "\u0436\u0430\u043B\u043E\u0432\u0430\u043D\u044C\u0435 \u0441\u0442\u0440\u0430\u0436\u0435 \u0434\u043E\u0440\u043E\u0436\u0435", [["salary", 1]]),
-    h("desyatnik", "derzost", "\u043F\u043E\u0448\u043B\u0438\u043D\u044B \u0438 \u043A\u0430\u0440\u0430\u0432\u0430\u043D\u044B \u0431\u043E\u043B\u044C\u0448\u0435", [["duties", 1]], "\u0441\u0442\u044B\u0447\u043A\u0438: \u043F\u043E\u0440\u044F\u0434\u043E\u043A \u043D\u0438\u0436\u0435, \u0431\u044B\u0432\u0430\u044E\u0442 \u0440\u0430\u043D\u0435\u043D\u044B\u0435", [["order", -1], ["hands", -0.5]]),
-    h("desyatnik", "zabota", "\u043B\u044E\u0434\u0438 \u0437\u0430\u043C\u043A\u0430 \u0434\u043E\u0432\u043E\u043B\u044C\u043D\u044B", [["zamok", 1]], "\u043F\u043E\u0440\u044F\u0434\u043E\u043A \u043D\u0438\u0436\u0435", [["order", -1]]),
-    h("desyatnik", "vygoda", "\xAB\u0434\u043E\u0440\u043E\u0436\u043D\u044B\u0439 \u0441\u0431\u043E\u0440\xBB: \u0441\u0435\u0440\u0435\u0431\u0440\u043E \u0432 \u043A\u0430\u0437\u043D\u0443", [["silver", 1]], "\u043A\u0443\u043F\u0446\u044B \u043D\u0435\u0434\u043E\u0432\u043E\u043B\u044C\u043D\u044B, \u043F\u043E\u0440\u044F\u0434\u043E\u043A \u043D\u0438\u0436\u0435", [["kuptsy", -1], ["order", -0.5]]),
-    h("desyatnik", "obychai", "\u0441\u0442\u0430\u0440\u044B\u0435 \u0437\u0430\u0441\u0435\u043A\u0438 \u0438 \u043C\u0435\u0436\u0438: \u043B\u0435\u0441 \u0434\u043E\u0432\u0435\u0440\u044F\u0435\u0442", [["les", 1]], "\u0441\u0442\u0430\u0440\u044B\u0435 \u043B\u044C\u0433\u043E\u0442\u044B: \u043F\u043E\u0448\u043B\u0438\u043D\u044B \u043C\u0435\u043D\u044C\u0448\u0435", [["duties", -1]]),
-    // ключник
-    h("klyuchnik", "dolg", "\u043F\u043E\u0440\u0447\u0430 \u0437\u0430 \u0437\u0438\u043C\u0443 \u043C\u0435\u043D\u044C\u0448\u0435", [["spoil", -1]], "\u0447\u0435\u043B\u044F\u0434\u044C \u0434\u0435\u0440\u0436\u0430\u0442 \u0441\u0442\u0440\u043E\u0433\u043E: \u043B\u044E\u0434\u0438 \u0437\u0430\u043C\u043A\u0430 \u0432\u043E\u0440\u0447\u0430\u0442", [["zamok", -1]]),
-    h("klyuchnik", "vygoda", "\u0438\u0437\u043B\u0438\u0448\u0435\u043A \u0435\u0434\u044B \u043F\u0440\u043E\u0434\u0430\u0451\u0442 \u0441\u0430\u043C: \u0441\u0435\u0440\u0435\u0431\u0440\u043E \u0440\u0430\u0441\u0442\u0451\u0442", [["sellFood", 1]], "\u0437\u0430\u043F\u0430\u0441 \u0442\u043E\u043D\u044C\u0448\u0435: \u043D\u0435\u0434\u043E\u0434\u0430\u0447\u0430 \u0431\u043B\u0438\u0436\u0435", []),
-    h("klyuchnik", "zabota", "\u043F\u0440\u043E\u043A\u043E\u0440\u043C \u0449\u0435\u0434\u0440\u0435\u0435: \u043B\u044E\u0434\u0438 \u0437\u0430\u043C\u043A\u0430 \u0438 \u0434\u0435\u0440\u0435\u0432\u043D\u0438 \u0434\u043E\u0432\u043E\u043B\u044C\u043D\u044B", [["zamok", 1], ["villages", 0.5]], "\u0435\u0434\u044B \u0443\u0445\u043E\u0434\u0438\u0442 \u0431\u043E\u043B\u044C\u0448\u0435", [["upkeep", 1]]),
-    h("klyuchnik", "derzost", "\u043F\u043E\u0447\u0438\u043D\u043A\u0430 \u0438\u0434\u0451\u0442 \u0431\u044B\u0441\u0442\u0440\u043E: \u043B\u044E\u0434\u0438 \u0437\u0430\u043C\u043A\u0430 \u0434\u043E\u0432\u043E\u043B\u044C\u043D\u044B", [["zamok", 1]], "\u043F\u043E\u0440\u0447\u0430 \u0438 \u043D\u0435\u0441\u0447\u0430\u0441\u0442\u044C\u044F \u043D\u0430 \u0441\u0442\u0440\u043E\u0439\u043A\u0435", [["spoil", 1]]),
-    h("klyuchnik", "obychai", "\u0437\u0430\u043F\u0430\u0441 \u0432\u043F\u0440\u043E\u043A \u043F\u043E \u0441\u0442\u0430\u0440\u044B\u043C \u043F\u043E\u0433\u0440\u0435\u0431\u0430\u043C: \u043F\u0440\u043E\u043A\u043E\u0440\u043C \u0438 \u043F\u043E\u0440\u0447\u0430 \u043C\u0435\u043D\u044C\u0448\u0435", [["upkeep", -0.5], ["spoil", -0.5]], "\u043D\u0438\u0447\u0435\u0433\u043E \u043D\u0435 \u043F\u0440\u043E\u0434\u0430\u0451\u0442: \u0442\u043E\u0432\u0430\u0440\u044B \u0438\u0434\u0443\u0442 \u0434\u0435\u0448\u0435\u0432\u043B\u0435", [["price", -1]]),
-    // писарь
-    h("pisar", "vygoda", "\u0446\u0435\u043D\u0430 \u0442\u043E\u0432\u0430\u0440\u043E\u0432 \u0438 \u043F\u043E\u0448\u043B\u0438\u043D\u044B \u0432\u044B\u0448\u0435", [["price", 1], ["duties", 1]], "\u043A\u0443\u043F\u0446\u044B \u0434\u043E\u0432\u0435\u0440\u044F\u044E\u0442 \u043C\u0435\u043D\u044C\u0448\u0435", [["kuptsy", -1]]),
-    h("pisar", "dolg", "\u043A\u043D\u0438\u0433\u0438 \u0447\u0438\u0441\u0442\u044B: \u0434\u0432\u043E\u0440 \u0434\u043E\u0432\u043E\u043B\u0435\u043D", [["dvor", 1]], "\u0442\u043E\u0440\u0433\u043E\u0432\u043B\u044F \u043C\u0435\u0434\u043B\u0435\u043D\u043D\u0435\u0435: \u0446\u0435\u043D\u0430 \u043D\u0438\u0436\u0435", [["price", -1]]),
-    h("pisar", "derzost", "\u0437\u0430\u0451\u043C \u0434\u0435\u0448\u0435\u0432\u043B\u0435 \u0438 \u0431\u043E\u043B\u044C\u0448\u0435", [["loan", 1]], "\u0434\u043E\u043B\u0433\u0438 \u0440\u0430\u0441\u0442\u0443\u0442: \u0441\u0435\u0440\u0435\u0431\u0440\u043E \u0443\u0442\u0435\u043A\u0430\u0435\u0442 \u043D\u0430 \u043F\u0440\u043E\u0446\u0435\u043D\u0442\u044B", [["silver", -1]]),
-    h("pisar", "zabota", "\u0442\u043E\u0440\u0433\u0443\u0435\u0442 \u043C\u044F\u0433\u043A\u043E: \u043A\u0443\u043F\u0446\u044B \u0434\u043E\u0432\u043E\u043B\u044C\u043D\u044B", [["kuptsy", 1]], "\u0446\u0435\u043D\u0430 \u043D\u0438\u0436\u0435", [["price", -1]]),
-    h("pisar", "obychai", "\u0441\u0442\u0430\u0440\u044B\u0435 \u0433\u0440\u0430\u043C\u043E\u0442\u044B: \u0413\u0435\u0440\u0446\u043E\u0433 \u0442\u0435\u0440\u043F\u0435\u043B\u0438\u0432\u0435\u0435", [["patience", 1]], "\u043D\u043E\u0432\u044B\u0445 \u0441\u0434\u0435\u043B\u043E\u043A \u043D\u0435\u0442: \u043F\u043E\u0448\u043B\u0438\u043D\u044B \u043D\u0438\u0436\u0435", [["duties", -1]]),
-    // лесничий
-    h("lesnichiy", "obychai", "\u043B\u0435\u0441 \u0434\u043E\u0432\u0435\u0440\u044F\u0435\u0442, \u0434\u0430\u0440\u044B \u043B\u0435\u0441\u0430 \u0431\u043E\u043B\u044C\u0448\u0435", [["les", 1], ["forestFood", 1]], "\u0431\u0440\u0451\u0432\u0435\u043D \u0438 \u0448\u043A\u0443\u0440 \u043C\u0435\u043D\u044C\u0448\u0435", [["forestGoods", -1]]),
-    h("lesnichiy", "zabota", "\u0434\u0435\u0440\u0435\u0432\u043D\u044F \u0443 \u043E\u043F\u0443\u0448\u043A\u0438 \u0434\u043E\u0432\u043E\u043B\u044C\u043D\u0430", [["opushka", 1]], "\u043B\u0435\u0441 \u0442\u0435\u0440\u043F\u0438\u0442 \u0431\u0440\u0430\u043A\u043E\u043D\u044C\u0435\u0440\u043E\u0432: \u0435\u0433\u043E \u0434\u043E\u0432\u0435\u0440\u0438\u0435 \u043F\u0430\u0434\u0430\u0435\u0442", [["les", -1]]),
-    h("lesnichiy", "dolg", "\u0440\u043E\u0449\u0438 \u0441\u0442\u0435\u0440\u0435\u0436\u0451\u0442 \u0441\u0442\u0440\u043E\u0433\u043E: \u043B\u0435\u0441 \u0434\u043E\u0432\u0435\u0440\u044F\u0435\u0442", [["les", 1]], "\u043E\u043F\u0443\u0448\u043A\u0430 \u043D\u0435\u0434\u043E\u0432\u043E\u043B\u044C\u043D\u0430", [["opushka", -1]]),
-    h("lesnichiy", "vygoda", "\u0442\u043E\u0432\u0430\u0440\u043E\u0432 \u0438\u0437 \u043B\u0435\u0441\u0430 \u0431\u043E\u043B\u044C\u0448\u0435", [["forestGoods", 1]], "\u043B\u0435\u0441 \u0434\u043E\u0432\u0435\u0440\u044F\u0435\u0442 \u043C\u0435\u043D\u044C\u0448\u0435", [["les", -1]]),
-    h("lesnichiy", "derzost", "\u0445\u043E\u0434\u0438\u0442 \u0432\u0433\u043B\u0443\u0431\u044C: \u0442\u043E\u0432\u0430\u0440\u043E\u0432 \u0431\u043E\u043B\u044C\u0448\u0435", [["forestGoods", 1]], "\u0442\u0432\u0430\u0440\u0438 \u0438 \u0440\u0430\u043D\u0435\u043D\u044B\u0435", [["hands", -0.5], ["les", -0.5]])
-  ];
-
-  // src/sim/economy/doer.ts
-  function mastery(p, post) {
-    const D = BALANCE.economy.doer, t = clamp((fitness(p, post) - D.masteryFrom) / Math.max(1, D.masteryTo - D.masteryFrom), 0, 1);
-    const mult = round2(D.masteryMin + (D.masteryMax - D.masteryMin) * t);
-    const third = (D.masteryMax - D.masteryMin) / 3;
-    return { mult, word: mult < D.masteryMin + third ? "\u043D\u0435\u0433\u043E\u0434\u0435\u043D" : mult > D.masteryMax - third ? "\u043F\u0440\u0438\u0440\u043E\u0436\u0434\u0451\u043D\u043D\u044B\u0439" : "\u0433\u043E\u0434\u0435\u043D" };
-  }
-  function expOf(p) {
-    const D = BALANCE.economy.doer;
-    if (isStale(p)) return { mult: D.expStale, word: "\u0437\u0430\u0441\u0438\u0434\u0435\u043B\u0441\u044F" };
-    return p.exp >= BALANCE.exp.master ? { mult: D.expMaster, word: "\u043C\u0430\u0441\u0442\u0435\u0440" } : p.exp >= BALANCE.exp.settled ? { mult: D.expSettled, word: "\u043E\u0441\u0432\u043E\u0438\u043B\u0441\u044F" } : { mult: D.expNovice, word: "\u043D\u043E\u0432\u0438\u0447\u043E\u043A" };
-  }
-  var courseDef = (w2) => COURSES.find((c) => c.id === w2.eco.course);
-  function courseStrength(w2, id) {
-    if (w2.eco.course !== id) return 0;
-    return BALANCE.economy.course.effect * (w2.eco.courseSeasons >= 1 ? BALANCE.economy.course.inertia : 1);
-  }
-  function doer(w2, post) {
-    const D = BALANCE.economy.doer, p = holder(w2, post);
-    if (!p) return { mult: D.empty, how: "\u0434\u043E\u043B\u0436\u043D\u043E\u0441\u0442\u044C \u043F\u0443\u0441\u0442\u0430", note: "\u0434\u043E\u043B\u0436\u043D\u043E\u0441\u0442\u044C \u043F\u0443\u0441\u0442\u0430", mastery: 1, exp: 1, mood: D.empty, hand: "" };
-    const m = mastery(p, post), x = expOf(p), mine = handsOf(p, post).map((q) => AXIS_NAMES[q.hand.axis]);
-    const hand = mine.length ? `\u043F\u043E\u0447\u0435\u0440\u043A${isStale(p) ? " \u0432\u0434\u0432\u043E\u0435 \u0441\u0438\u043B\u044C\u043D\u0435\u0435" : ""} \u2014 ${mine.join(", \u0441 \u043E\u0442\u0442\u0435\u043D\u043A\u043E\u043C: ")}` : "";
+  function scoreOptions(w2, p, ev, noisy = true, mine = false) {
     const stale2 = isStale(p);
-    const made = (how, mood) => ({ p, mult: round2(m.mult * x.mult * mood), how, note: `${m.word}, ${x.word}, ${how}`, mastery: m.mult, exp: x.mult, mood, stale: stale2, hand });
-    let score = 0;
-    if (p.loyalty >= BALANCE.loyalty.trusts) score++;
-    if (p.loyalty <= BALANCE.loyalty.unhappy) score--;
-    if (p.aspiration?.post === post) score++;
-    const c = courseDef(w2), top = topAxis(p.star);
-    if (c?.pro.includes(top) && !stale2) score++;
-    if (c?.contra.includes(top)) score -= w2.eco.shaky ? 2 : 1;
-    score += councilSteady(w2).ok ? D.headFor : -D.headAgainst;
-    if (score >= D.fireFrom) return made("\u0441 \u043E\u0433\u043E\u043D\u044C\u043A\u043E\u043C", D.fire);
-    if (score <= D.dullFrom) return made("\u0431\u0435\u0437 \u043E\u0433\u043E\u043D\u044C\u043A\u0430", D.dull);
-    return made("\u043A\u0430\u043A \u0432\u0435\u043B\u0435\u043D\u043E", D.plain);
-  }
-  function handsOf(p, post) {
-    const strong = AXES.filter((a) => p.star[a] >= BALANCE.know.strong).sort((a, b) => p.star[b] - p.star[a]).slice(0, 2);
-    const stale2 = isStale(p) ? BALANCE.economy.hand.stale : 1;
-    return strong.map((axis, i) => ({ hand: HANDS.find((x) => x.post === post && x.axis === axis), weight: (i ? BALANCE.economy.hand.second : 1) * stale2 }));
-  }
-  function levers(w2) {
-    const H = BALANCE.economy.hand, out = Object.fromEntries(LEVERS.map((l) => [l, 0]));
-    for (const d of POSTS) {
-      const p = holder(w2, d.id);
-      if (!p) continue;
-      for (const { hand, weight } of handsOf(p, d.id)) {
-        const native = d.native.includes(hand.axis);
-        for (const [lever, v] of hand.plus) out[lever] += v * weight * (native ? H.nativePlus : 1);
-        for (const [lever, v] of hand.minus) out[lever] += v * weight * (native ? H.nativeMinus : H.foreignMinus);
+    const open = mine && !stale2 ? ev.options.filter((o) => !underFloor(w2, o)) : ev.options;
+    return (open.length ? open : ev.options).map((opt) => {
+      let base = opt.axes.reduce((s, a) => s + p.star[a], 0) / opt.axes.length;
+      const parts = [];
+      const lead = opt.axes.reduce((b, a) => p.star[a] > p.star[b] ? a : b, opt.axes[0]);
+      parts.push(`\u043F\u043E ${AXIS_DAT[lead]}`);
+      let bonus = 0;
+      const heard = !!p.order && opt.axes.includes(p.order);
+      if (p.order && opt.axes.includes(p.order)) {
+        const obey = Math.max(0, p.loyalty + BALANCE.decide.orderObeyBase + mod(p, "obedience") - (stale2 ? BALANCE.decide.orderStalePenalty : 0));
+        const add = obey * BALANCE.decide.orderWeight;
+        if (add > BALANCE.decide.orderMinBonus) {
+          base += add;
+          bonus = add;
+          parts.push("\u043F\u043E \u043D\u0430\u043A\u0430\u0437\u0443");
+        }
       }
-    }
-    return out;
+      if (stale2 && opt.axes.includes("vygoda") && p.star.vygoda >= BALANCE.decide.staleGreedFrom) {
+        base += BALANCE.decide.staleGreedBonus;
+        parts.push("\u0432 \u0441\u0432\u043E\u044E \u043F\u043E\u043B\u044C\u0437\u0443");
+      }
+      if (opt.risky && p.trait.id === "ostorozhny") base -= BALANCE.decide.cautiousRisk;
+      const dash = (p.star.derzost - BALANCE.star.center) * BALANCE.decide.kindLean;
+      if (opt.risky) base += dash;
+      if (opt.careful) base -= dash;
+      const lean = activeTraits(p).reduce((sum, t) => sum + opt.axes.reduce((x, a) => x + (t.lean?.[a] ?? 0), 0) / opt.axes.length, 0);
+      if (lean) {
+        base += lean;
+        if (lean > 0) parts.push("\u043F\u043E \u043F\u0440\u0438\u0432\u044B\u0447\u043A\u0435");
+      }
+      const course = courseLean(w2, opt.axes);
+      if (course) {
+        base += course;
+        parts.push("\u043F\u043E \u043A\u0443\u0440\u0441\u0443");
+      }
+      const noise = noisy ? w2.rng.gauss() * Math.max(0, BALANCE.decide.noise + mod(p, "random")) : 0;
+      return { opt, score: base + noise, base, why: parts.join(", "), bonus, heard };
+    });
   }
-  function handText(p) {
-    if (!p.post) return [];
-    return handsOf(p, p.post).map(({ hand }, i) => ({ axis: hand.axis, shade: i > 0, text: `${hand.good}; ${hand.bad}` }));
+  var trace = [];
+  var resetTrace = () => {
+    trace = [];
+  };
+  function probeOrder(scored, best) {
+    if (!scored.some((s) => s.heard)) return;
+    const o = PROBE.order, plain = scored.reduce((a, b) => b.score - b.bonus > a.score - a.bonus ? b : a);
+    o.fit++;
+    if (plain.heard) o.already++;
+    else if (best.heard) o.worked++;
+    else if (!scored.some((s) => s.bonus > 0)) o.deaf++;
+    else o.weak++;
   }
-  var whoOf = (d, post) => d.p ? `${postName(post).toLowerCase()} ${d.p.name}` : `${postName(post).toLowerCase()}: \u0434\u043E\u043B\u0436\u043D\u043E\u0441\u0442\u044C \u043F\u0443\u0441\u0442\u0430`;
-  function courseLean(w2, axes) {
-    const c = courseDef(w2);
-    if (!c || !c.pro.length) return 0;
-    const share = axes.filter((a) => c.pro.includes(a)).length / axes.length;
-    return share * BALANCE.economy.course.lean * (w2.eco.courseSeasons >= 1 ? BALANCE.economy.course.inertia : 1);
+  function decide(w2, p, ev) {
+    const scored = scoreOptions(w2, p, ev, true, true);
+    const best = scored.reduce((a, b) => b.score > a.score ? b : a);
+    const expected = scored.reduce((a, b) => b.base > a.base ? b : a);
+    probeOrder(scored, best);
+    const row = (s) => `${s.opt.id === best.opt.id ? "\u2192 " : ""}\xAB${s.opt.text}\xBB ${round1(s.score)} (\u0431\u0435\u0437 \u0441\u043B\u0443\u0447\u0430\u044F ${round1(s.base)}; ${s.why})`;
+    trace.push(`${p.name}: ${scored.map(row).join(" \xB7 ")}`);
+    if (scored.length < ev.options.length) trace.push(`${p.name}: \u043F\u043E\u0434 \u043D\u0438\u0436\u043D\u0435\u0439 \u0447\u0435\u0440\u0442\u043E\u0439, \u043D\u0435 \u0440\u0430\u0441\u0441\u043C\u0430\u0442\u0440\u0438\u0432\u0430\u043B${p.female ? "\u0430" : ""} \u2014 ${ev.options.length - scored.length}`);
+    return { ...best, surprise: best.opt.id !== expected.opt.id };
   }
-  function setCourse(w2, id) {
-    const e = w2.eco;
-    if (e.course === id) return;
-    e.shaky = e.course !== null && e.courseSeasons < BALANCE.economy.course.shaky;
-    e.course = id;
-    e.courseSeasons = 0;
-    const c = courseDef(w2);
-    const lines = [c ? `\u041A\u0443\u0440\u0441 \u043D\u0430 \u0441\u0435\u0437\u043E\u043D: \xAB${c.name}\xBB \u2014 ${c.desc}.` : "\u041A\u0443\u0440\u0441\u0430 \u043D\u0435\u0442: \u0445\u043E\u0437\u044F\u0439\u0441\u0442\u0432\u043E \u0438\u0434\u0451\u0442 \u043A\u0430\u043A \u0437\u0430\u0432\u0435\u0434\u0435\u043D\u043E."];
-    if (e.shaky) lines.push("\u041A\u0443\u0440\u0441 \u0441\u043C\u0435\u043D\u0438\u043B\u0438 \u0441\u043B\u0438\u0448\u043A\u043E\u043C \u0431\u044B\u0441\u0442\u0440\u043E \u2014 \u0448\u0430\u0442\u0430\u043D\u0438\u0435: \u043D\u0435\u0441\u043E\u0433\u043B\u0430\u0441\u043D\u044B\u0435 \u0438\u0441\u043F\u043E\u043B\u043D\u044F\u044E\u0442 \u0431\u0435\u0437 \u043E\u0433\u043E\u043D\u044C\u043A\u0430.");
-    w2.log.push({ season: w2.season, kind: "staff", title: "\u041A\u0443\u0440\u0441", lines });
-  }
-  function setFloor(w2, cat, v) {
-    w2.eco.floor[cat] = round2(Math.max(0, Number(v) || 0));
+  function competence(p) {
+    let c = p.exp >= BALANCE.exp.master ? BALANCE.exp.masterSkill : p.exp >= BALANCE.exp.settled ? BALANCE.exp.settledSkill : BALANCE.exp.novice;
+    if (p.post && p.mark?.goodPost === p.post) c += BALANCE.exp.markGood;
+    if (p.post && p.mark?.badPost === p.post) c += BALANCE.exp.markBad;
+    c += mod(p, "skill");
+    return clamp(c, BALANCE.exp.skillMin, BALANCE.exp.skillMax);
   }
 
-  // src/sim/economy/plan.ts
-  function handsNow(w2) {
+  // src/sim/council/effects.ts
+  function applyEffects(w2, ev, opt, mult, doer2, lines, plus = 1) {
+    let k2 = mult;
+    if (doer2) k2 *= competence(doer2);
+    if (opt.careful) k2 *= BALANCE.exp.carefulGain;
+    let failed = false;
+    if (opt.risky && doer2) {
+      const pSuccess = BALANCE.exp.riskBase + BALANCE.exp.riskSkill * competence(doer2);
+      if (!w2.rng.chance(pSuccess)) failed = true;
+    }
+    const gain = opt.risky && !failed ? BALANCE.exp.boldGain : 1;
     const out = {};
-    for (const f of HANDS_FROM) {
-      const away = w2.eco.recruits.filter((r) => r.from === f && w2.season < r.until).reduce((s, r) => s + r.hands, 0);
-      out[f] = round1(Math.max(0, BALANCE.economy.hands[f] * zoneMult(w2, f) - away));
+    for (const [key, v] of Object.entries(opt.effects)) {
+      let val = v * k2 * (v > 0 ? gain * plus : 1);
+      if (failed && val > 0) val = -val * BALANCE.exp.failBackfire;
+      val = round1(val);
+      out[key] = val;
+      const who = doer2 ? `${postName(doer2.post).toLowerCase()} ${doer2.name}` : void 0;
+      if (key === "poryadok") w2.resources.poryadok = round1(w2.resources.poryadok + val);
+      else if (key === "kazna" || key === "pripasy") {
+        const cat = key === "kazna" ? "serebro" : "eda";
+        const under = belowFloor(w2, cat, val) ? "\u043F\u043E-\u0441\u0432\u043E\u0435\u043C\u0443: \u043D\u0438\u0436\u0435 \u043D\u0438\u0436\u043D\u0435\u0439 \u0447\u0435\u0440\u0442\u044B" : void 0;
+        out[key] = addLine(w2, { cat, v: val, text: `\u0441\u043E\u0431\u044B\u0442\u0438\u0435 \xAB${ev.title}\xBB: ${lower(opt.text)}`, who, how: under });
+        if (out[key] !== val) lines.push(`${cat === "eda" ? "\u0410\u043C\u0431\u0430\u0440" : "\u041A\u0430\u0437\u043D\u0430"} \u043D\u0435 \u0431\u0435\u0437\u0434\u043E\u043D\u043D\u044B: \u0432\u0437\u044F\u0442\u044C \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u0442\u043E\u043B\u044C\u043A\u043E ${-out[key]}.`);
+        if (under) lines.push(`\u041D\u0438\u0436\u043D\u044F\u044F \u0447\u0435\u0440\u0442\u0430 \u043D\u0430\u0440\u0443\u0448\u0435\u043D\u0430: ${doer2?.name ?? "\u0441\u043E\u0432\u0435\u0442"} \u0440\u0430\u0441\u043F\u043E\u0440\u044F\u0434\u0438\u043B${doer2?.female ? "\u0430\u0441\u044C" : "\u0441\u044F"} \u0437\u0430\u043F\u0430\u0441\u043E\u043C \u043F\u043E-\u0441\u0432\u043E\u0435\u043C\u0443.`);
+      } else if (key === "derevni") for (const v2 of ev.village ? [ev.village] : VILLAGES) addTrust(w2, v2, val * BALANCE.economy.trust.event);
+      else addTrust(w2, key, val * BALANCE.economy.trust.event);
     }
+    if (opt.hands) takeHands(w2, opt.hands);
+    if (opt.later && !failed) invest(w2, ev, opt.later, k2 * gain * plus, lines);
+    if (opt.later && failed) lines.push("\u0412\u043B\u043E\u0436\u0435\u043D\u0438\u0435 \u043F\u0440\u043E\u043F\u0430\u043B\u043E: \u043E\u0442\u0434\u0430\u0447\u0438 \u043D\u0435 \u0431\u0443\u0434\u0435\u0442.");
+    if (failed) lines.push(`\u0420\u0438\u0441\u043A\u043E\u0432\u0430\u043D\u043D\u043E\u0435 \u0434\u0435\u043B\u043E \u043F\u0440\u043E\u0432\u0430\u043B\u0438\u043B\u043E\u0441\u044C \u2014 \u043D\u0435 \u0445\u0432\u0430\u0442\u0438\u043B\u043E \u043E\u043F\u044B\u0442\u0430 (${doer2 ? expWord(doer2) : "?"}).`);
     return out;
   }
-  function fieldHands(w2) {
-    const lost = Math.min(0, levers(w2).hands) * BALANCE.economy.hand.hands;
-    const h2 = handsNow(w2), total = round1(Math.max(0, HANDS_FROM.reduce((s, f) => s + h2[f], 0) + lost));
-    if (seasonKind(w2.season) === WINTER) return { total, field: 0, free: total, build: 0 };
-    const build = w2.eco.course === "stroimsya" ? Math.min(total, BALANCE.economy.course.buildHands) : 0;
-    const field = round1(Math.min(BALANCE.economy.hands.field, total - build));
-    return { total, field, free: round1(total - field), build };
+  function toneOf(eff) {
+    const vals = Object.values(eff);
+    const pos = vals.filter((v) => v > 0).length, neg = vals.filter((v) => v < 0).length;
+    return pos && !neg ? "good" : neg && !pos ? "bad" : pos && neg ? "mixed" : "neutral";
   }
-  function planSeason(w2) {
-    const E = BALANCE.economy, F = E.flow, e = w2.eco, kind = seasonKind(w2.season);
-    const stock = { ...e.stock }, lines = [], short = [];
-    const add = (cat, v, text, extra2 = {}) => {
-      const val = round2(v);
-      stock[cat] = round2(stock[cat] + val);
-      lines.push({ cat, v: val, text, ...extra2 });
-    };
-    const spend = (cat, v, text, side, extra2 = {}) => {
-      const need = round2(v), got = Math.min(need, stock[cat]);
-      if (need <= 0) return;
-      if (got > 0) add(cat, -got, text, { side, ...extra2 });
-      if (need - got > 0) short.push({ side, cat, v: round2(need - got), what: text });
-    };
-    const tiun = doer(w2, "starosta"), pisar = doer(w2, "pisar"), les = doer(w2, "lesnichiy"), klyuch = doer(w2, "klyuchnik");
-    const hands = fieldHands(w2), fieldShare = clamp(hands.field / E.hands.field, 0, 1);
-    const L = levers(w2), by = (lever) => Math.max(0, 1 + L[lever] * E.hand.flow);
-    const sown = kind === SPRING ? fieldShare : e.sown;
-    const seasonPrice = [E.year.priceSpring, E.year.priceSummer, E.year.priceAutumn, E.year.priceWinter][kind];
-    const price = F.scale * F.price * seasonPrice * zoneMult(w2, "kuptsy") * pisar.mult * (1 + courseStrength(w2, "torguem")) * by("price");
-    if (stock.tovary > 0) {
-      const sold = stock.tovary, how = pisar.note;
-      if (price > 0) {
-        add("tovary", -sold, "\u043F\u0440\u043E\u0434\u0430\u043D\u043E \u043A\u0443\u043F\u0446\u0430\u043C", { side: "kuptsy", who: whoOf(pisar, "pisar"), how });
-        add("serebro", sold * price, `\u0437\u0430 \u0442\u043E\u0432\u0430\u0440\u044B, ${round2(price)} \u0437\u0430 \u0432\u043E\u0437`, { side: "kuptsy", who: whoOf(pisar, "pisar"), how });
-      } else lines.push({ cat: "tovary", v: 0, text: "\u043A\u0443\u043F\u0446\u044B \u043E\u0442\u043A\u0430\u0437\u044B\u0432\u0430\u044E\u0442: \u0442\u043E\u0432\u0430\u0440\u044B \u043B\u0435\u0436\u0430\u0442 \u043D\u0430 \u0441\u043A\u043B\u0430\u0434\u0435", side: "kuptsy" });
+
+  // src/sim/council/traits.ts
+  function gainTrait(w2, p, traitId, lines, target) {
+    const trait = LIFE_TRAITS.find((t) => t.id === traitId);
+    if (!trait) throw new Error(`\u041D\u0435\u0442 \u043F\u0440\u0438\u043E\u0431\u0440\u0435\u0442\u0430\u0435\u043C\u043E\u0439 \u0447\u0435\u0440\u0442\u044B ${traitId}`);
+    const onPost = trait.source === "post";
+    const had = p.gained.find((g) => g.trait.id === traitId && g.target === target);
+    if (had && onPost) {
+      had.post = p.post;
+      had.away = 0;
     }
-    const seasonDuty = [E.year.dutySpring, E.year.dutySummer, E.year.dutyAutumn, E.year.dutyWinter][kind];
-    const levy = w2.season < e.dutyCutUntil ? E.pay.levyDuty : 1;
-    const duties = F.scale * F.duties * seasonDuty * zoneMult(w2, "kuptsy") * pisar.mult * (1 + courseStrength(w2, "dorogi")) * levy * by("duties");
-    const dutyText = `\u043F\u043E\u0448\u043B\u0438\u043D\u044B${levy < 1 ? " (\u043D\u0438\u0436\u0435 \u043F\u043E\u0441\u043B\u0435 \u043E\u0441\u043E\u0431\u043E\u0433\u043E \u0441\u0431\u043E\u0440\u0430)" : ""}`;
-    if (duties > 0) add("serebro", duties, dutyText, { side: "kuptsy", who: whoOf(pisar, "pisar"), how: pisar.note });
-    else lines.push({ cat: "serebro", v: 0, text: "\u043F\u043E\u0448\u043B\u0438\u043D \u043D\u0435\u0442: \u043A\u0443\u043F\u0446\u044B \u043E\u0442\u043A\u0430\u0437\u044B\u0432\u0430\u044E\u0442", side: "kuptsy" });
-    const zl = zoneMult(w2, "les");
-    if (e.course === "les") lines.push({ cat: "tovary", v: 0, text: "\u0431\u0440\u0451\u0432\u0435\u043D \u043D\u0435\u0442: \u0431\u0435\u0440\u0435\u0436\u0451\u043C \u043B\u0435\u0441", side: "les" });
-    else if (zl > 0) add("tovary", F.scale * F.forestGoods * zl * les.mult * by("forestGoods"), "\u0448\u043A\u0443\u0440\u044B, \u043C\u0451\u0434, \u0431\u0440\u0451\u0432\u043D\u0430 \u0438\u0437 \u043B\u0435\u0441\u0430", { side: "les", who: whoOf(les, "lesnichiy"), how: les.note });
-    if (kind === SUMMER && zl > 0) {
-      const rites = zoneOf(w2, "opushka") === "\u043E\u0442\u043A\u0430\u0437\u044B\u0432\u0430\u044E\u0442" ? E.zone.noRites : 1;
-      const gifts = F.scale * F.forestFood * zl * les.mult * (1 + courseStrength(w2, "les")) * rites * by("forestFood");
-      add("eda", gifts, `\u0434\u0430\u0440\u044B \u043B\u0435\u0441\u0430${rites < 1 ? " (\u043E\u0431\u0440\u044F\u0434\u043E\u0432 \u043D\u0435\u0442: \u0434\u0435\u0440\u0435\u0432\u043D\u044F \u0443 \u043E\u043F\u0443\u0448\u043A\u0438 \u043E\u0442\u043A\u0430\u0437\u044B\u0432\u0430\u0435\u0442)" : ""}`, { side: "les", who: whoOf(les, "lesnichiy"), how: les.note });
-    }
-    let harvest = 0;
-    if (kind === AUTUMN) {
-      const quit = 1 + courseStrength(w2, "kopim") - courseStrength(w2, "polegche"), how = tiun.note;
-      for (const v of VILLAGES) {
-        const z = zoneMult(w2, v), who = whoOf(tiun, "starosta"), share = v === "brod" ? F.brodShare : 1 - F.brodShare;
-        if (z <= 0) {
-          lines.push({ cat: "eda", v: 0, text: "\u043D\u0438 \u0443\u0440\u043E\u0436\u0430\u044F, \u043D\u0438 \u043E\u0431\u0440\u043E\u043A\u0430: \u0434\u0435\u0440\u0435\u0432\u043D\u044F \u043E\u0442\u043A\u0430\u0437\u044B\u0432\u0430\u0435\u0442", side: v });
-          continue;
-        }
-        const crop = F.scale * (F.harvest / VILLAGES.length) * z * tiun.mult * sown * fieldShare * by("harvest");
-        harvest += crop;
-        const field = sown < 1 || fieldShare < 1 ? ` (\u043F\u043E\u0441\u0435\u044F\u043D\u043E ${Math.round(sown * 100)}%, \u0441\u0436\u0430\u0442\u043E ${Math.round(fieldShare * 100)}%)` : "";
-        add("eda", crop, `\u0443\u0440\u043E\u0436\u0430\u0439${field}`, { side: v, who, how: tiun.note });
-        add("serebro", F.scale * F.quitrentSilver * share * z * tiun.mult * quit * by("quitrent") * by("quitrentSilver"), "\u043E\u0431\u0440\u043E\u043A \u0441\u0435\u0440\u0435\u0431\u0440\u043E\u043C", { side: v, who, how });
-        add("tovary", F.scale * F.quitrentGoods * share * z * tiun.mult * quit * by("quitrent"), "\u043E\u0431\u0440\u043E\u043A \u0442\u043E\u0432\u0430\u0440\u0430\u043C\u0438", { side: v, who, how });
+    if (had) return false;
+    if (!onPost && p.gained.filter((g) => g.trait.source !== "post").length >= BALANCE.traits.maxGained) return false;
+    p.gained.push({ trait, target, season: w2.season, known: !trait.hidden, ...onPost ? { post: p.post } : {} });
+    addStar(p.star, trait.star);
+    for (const a of AXES) p.star[a] = round1(clamp(p.star[a], 0, STAR_MAX));
+    const label = traitLabel(w2, { trait, target });
+    lines.push(`\u2726 \u041D\u043E\u0432\u0430\u044F \u0447\u0435\u0440\u0442\u0430: ${p.name} \u2014 \xAB${label}\xBB. ${trait.desc}.`);
+    p.bio.push(`\u041D\u0430 \u0441\u043B\u0443\u0436\u0431\u0435 \u0443 \u0421\u0435\u043D\u0435\u0448\u0430\u043B\u044F (\u0441\u0435\u0437\u043E\u043D ${w2.season}) \u043D\u0430\u0436\u0438\u043B${p.female ? "\u0430" : ""} \u0447\u0435\u0440\u0442\u0443 \xAB${label}\xBB: ${lower(trait.desc)}.`);
+    return true;
+  }
+  function dropPostTraits(w2, p, lines) {
+    p.gained = p.gained.filter((g) => {
+      if (g.trait.source !== "post") return true;
+      g.away = g.post === p.post ? 0 : (g.away ?? 0) + 1;
+      if (g.away < BALANCE.traits.postTraitLag) return true;
+      lines.push(`\u2727 \u0427\u0435\u0440\u0442\u0430 \u0443\u0448\u043B\u0430: ${p.name} \u0431\u043E\u043B\u044C\u0448\u0435 \u043D\u0435 \xAB${g.trait.name}\xBB \u2014 \u0434\u043E\u043B\u0436\u043D\u043E\u0441\u0442\u044C \u043E\u0441\u0442\u0430\u0432\u043B\u0435\u043D\u0430.`);
+      p.bio.push(`\u041E\u0441\u0442\u0430\u0432\u0438\u0432 \u0434\u043E\u043B\u0436\u043D\u043E\u0441\u0442\u044C (\u0441\u0435\u0437\u043E\u043D ${w2.season}), \u0443\u0442\u0440\u0430\u0442\u0438\u043B${p.female ? "\u0430" : ""} \u0447\u0435\u0440\u0442\u0443 \xAB${g.trait.name}\xBB.`);
+      return false;
+    });
+  }
+  function lifeTraits(w2, p, lines) {
+    dropPostTraits(w2, p, lines);
+    p.recent = p.recent.filter((r) => r.season > w2.season - BALANCE.traits.habitSeasons);
+    const n = p.recent.length;
+    if (n >= BALANCE.traits.habitMinDecisions) {
+      for (const t of LIFE_TRAITS) {
+        if (t.source !== "habit" || !t.axis) continue;
+        if (p.recent.filter((r) => r.axes.includes(t.axis)).length / n >= BALANCE.traits.habitShare) gainTrait(w2, p, t.id, lines);
       }
     }
-    const debt = e.debts.filter((d) => d.due <= w2.season).reduce((s, d) => s + d.sum, 0);
-    if (debt > 0) spend("serebro", debt, "\u0432\u043E\u0437\u0432\u0440\u0430\u0442 \u0437\u0430\u0439\u043C\u0430 \u0441 \u043B\u0438\u0445\u0432\u043E\u0439", "kuptsy");
-    const purse = L.silver * E.hand.silver;
-    if (purse > 0) add("serebro", purse, "\u0434\u043E\u0440\u043E\u0436\u043D\u044B\u0439 \u0441\u0431\u043E\u0440", { side: "kuptsy" });
-    if (purse < 0) add("serebro", -Math.min(stock.serebro, -purse), "\u043F\u0440\u043E\u0446\u0435\u043D\u0442\u044B \u043F\u043E \u0441\u0442\u0430\u0440\u044B\u043C \u0434\u043E\u043B\u0433\u0430\u043C");
-    spend("serebro", F.salary * (1 + courseStrength(w2, "dorogi")) * by("salary"), "\u0436\u0430\u043B\u043E\u0432\u0430\u043D\u044C\u0435 \u0441\u0442\u0440\u0430\u0436\u0435 \u0438 \u0447\u0435\u043B\u044F\u0434\u0438", "zamok");
-    const upkeep2 = (kind === WINTER ? F.upkeepWinter : F.upkeep) * by("upkeep");
-    const feed = [["zamok", upkeep2 * F.castleShare, "\u043F\u0440\u043E\u043A\u043E\u0440\u043C \u0437\u0430\u043C\u043A\u0430"]];
-    for (const v of VILLAGES) feed.push([v, upkeep2 * (1 - F.castleShare) / VILLAGES.length, "\u043F\u0440\u043E\u043A\u043E\u0440\u043C \u0440\u0430\u0431\u043E\u0442\u043D\u0438\u043A\u043E\u0432 \u043D\u0430 \u0431\u0430\u0440\u0449\u0438\u043D\u0435"]);
-    if (e.feedFirst === "derevni") feed.push(feed.shift());
-    for (const [side, v, text] of feed) spend("eda", v, text, side);
-    if (zoneOf(w2, "les") === "\u043E\u0442\u043A\u0430\u0437\u044B\u0432\u0430\u044E\u0442") spend("eda", E.zone.lesHarm, "\u043F\u043E\u0442\u0440\u0430\u0432\u044B \u0438 \u0442\u0432\u0430\u0440\u0438 \u0438\u0437 \u043B\u0435\u0441\u0430", "les");
-    if (kind === WINTER && stock.eda > 0) {
-      const spoil = stock.eda * F.spoil * (1 - courseStrength(w2, "stroimsya")) * by("spoil") / klyuch.mult;
-      add("eda", -Math.min(stock.eda, spoil), "\u0438\u0441\u043F\u043E\u0440\u0447\u0435\u043D\u043E \u0437\u0430 \u0437\u0438\u043C\u0443", { who: whoOf(klyuch, "klyuchnik"), how: klyuch.note });
-    }
-    const spare = stock.eda - e.floor.eda - F.upkeepWinter;
-    if (e.course === "torguem" && spare > 0 && zoneMult(w2, "kuptsy") > 0) {
-      add("eda", -spare, "\u0438\u0437\u043B\u0438\u0448\u0435\u043A \u043F\u0440\u043E\u0434\u0430\u043D \u043A\u0443\u043F\u0446\u0430\u043C", { side: "kuptsy", who: whoOf(pisar, "pisar"), how: pisar.note });
-      add("serebro", spare * F.foodPrice * zoneMult(w2, "kuptsy") * pisar.mult, "\u0437\u0430 \u0438\u0437\u043B\u0438\u0448\u0435\u043A \u0435\u0434\u044B", { side: "kuptsy", who: whoOf(pisar, "pisar"), how: pisar.note });
-    }
-    const extra = (stock.eda - e.floor.eda - F.upkeepWinter) * clamp(L.sellFood * E.hand.sell, 0, 1);
-    if (extra > 0 && zoneMult(w2, "kuptsy") > 0) {
-      add("eda", -extra, "\u0438\u0437\u043B\u0438\u0448\u0435\u043A \u043F\u0440\u043E\u0434\u0430\u043D \u043A\u043B\u044E\u0447\u043D\u0438\u043A\u043E\u043C", { side: "kuptsy", who: whoOf(klyuch, "klyuchnik"), how: klyuch.note });
-      add("serebro", extra * F.foodPrice * zoneMult(w2, "kuptsy"), "\u0437\u0430 \u0438\u0437\u043B\u0438\u0448\u0435\u043A \u0435\u0434\u044B", { side: "kuptsy", who: whoOf(klyuch, "klyuchnik"), how: klyuch.note });
-    }
-    return { lines, short, stock, sown, harvest: round2(harvest) };
+    if (!p.post) return;
+    if (p.exp >= BALANCE.exp.master) gainTrait(w2, p, "master_dela", lines);
+    if (isStale(p)) gainTrait(w2, p, "obros_svyazyami", lines);
+    const asp = p.aspiration?.post;
+    if (asp && asp !== p.post && p.tenure >= BALANCE.traits.tiredFrom) gainTrait(w2, p, "ustal_ot_sluzhby", lines);
   }
 
-  // src/sim/economy/pay.ts
-  var taxLeft = (w2) => round1(Math.max(0, w2.eco.tax.due - w2.eco.tax.paid));
-  var loanEase = (w2) => Math.max(1, 1 + levers(w2).loan * BALANCE.economy.hand.flow * 2);
-  function payOptions(w2) {
-    const E = BALANCE.economy, e = w2.eco, left = taxLeft(w2), hands = handsNow(w2);
-    const used = (id) => e.tax.by[id] ?? 0;
-    return PAY.map((def) => {
-      let rate = E.rate[def.what === "lyudi" ? "lyudi" : def.what], max = 0, blocked;
-      const refuses = def.side && zoneOf(w2, def.side) === "\u043E\u0442\u043A\u0430\u0437\u044B\u0432\u0430\u044E\u0442";
-      if (def.id === "serebro" || def.id === "eda" || def.id === "tovary") max = e.stock[def.what] / rate;
-      else if (def.id === "sbor_kuptsy") max = E.pay.levyCap - used(def.id);
-      else if (def.id === "zaem") {
-        max = E.pay.loanCap * loanEase(w2) - e.debts.reduce((s, d) => s + d.sum, 0) / (1 + E.pay.loanInterest);
-        if (zoneMult(w2, "kuptsy") < E.zone.friendly) blocked = "\u0432 \u0434\u043E\u043B\u0433 \u0434\u0430\u044E\u0442 \u0442\u043E\u043B\u044C\u043A\u043E \u0442\u0435\u043C, \u0441 \u043A\u0435\u043C \u043B\u0430\u0434\u044F\u0442";
-      } else if (def.id === "sverh_brod" || def.id === "sverh_opushka") max = E.pay.extraCap - used(def.id);
-      else if (def.id === "volnye") {
-        rate = E.rate.volnye;
-        max = E.pay.vagrantCap - used(def.id);
-      } else max = hands[def.side] / rate;
-      if (refuses) blocked = `${SIDE_NAMES[def.side].toLowerCase()}: \u043E\u0442\u043A\u0430\u0437\u044B\u0432\u0430\u044E\u0442`;
-      max = blocked ? 0 : floor1(clamp(max, 0, left));
-      return { def, rate, max, blocked };
-    });
+  // src/sim/council/council.ts
+  var outcome = "alone";
+  var bypassed = false;
+  function recordChoice(w2, p, opt, lines) {
+    const top = topAxis(p.star);
+    p.decisions++;
+    if (opt.axes.includes(top)) p.matchedTop++;
+    p.recent.push({ season: w2.season, axes: [...opt.axes] });
+    if (p.post === "starosta") elderSaw(w2, p, opt.axes);
+    for (const a of opt.axes) {
+      p.choices[a]++;
+      p.star[a] = round1(clamp(p.star[a] + BALANCE.star.drift, 0, STAR_MAX));
+      const was = axisKnown(p, a);
+      p.know.seen[a]++;
+      if (!was && axisKnown(p, a)) lines.push(`\u{1F441} \u041D\u0430\u0441\u043C\u043E\u0442\u0440\u0435\u043B\u0438\u0441\u044C \u0432 \u0434\u0435\u043B\u0435: ${p.name}, ${AXIS_NAMES[a]} \u2014 ${axisWord(p.star[a])}.`);
+    }
   }
-  function payTax(w2, id, measures, lines) {
-    const E = BALANCE.economy, e = w2.eco, t = e.tax;
-    const opt = payOptions(w2).find((o) => o.def.id === id);
-    const m = floor1(Math.min(Number(measures) || 0, opt.max));
-    if (m <= 0) return 0;
-    const units = round2(m * opt.rate), def = opt.def, out = [];
-    const toTax = `\u0432 \u043F\u043E\u0434\u0430\u0442\u044C, ${m} \u043C\u0435\u0440`;
-    if (id === "serebro" || id === "eda" || id === "tovary") addLine(w2, { cat: def.what, v: -units, text: toTax, side: "dvor" });
-    else if (id === "sbor_kuptsy") {
-      addTrust(w2, "kuptsy", -E.pay.levyTrust * m);
-      e.dutyCutUntil = w2.season + SEASON_NAMES.length;
-      addLine(w2, { cat: "serebro", v: 0, text: `\u043E\u0441\u043E\u0431\u044B\u0439 \u0441\u0431\u043E\u0440 \u0441 \u043A\u0443\u043F\u0446\u043E\u0432 \u2014 ${toTax}`, side: "kuptsy" });
-    } else if (id === "zaem") {
-      const back = round2(units * (1 + E.pay.loanInterest / loanEase(w2)));
-      e.debts.push({ due: w2.season + E.pay.loanTerm, sum: back });
-      addLine(w2, { cat: "serebro", v: 0, text: `\u0437\u0430\u0451\u043C \u0443 \u043A\u0443\u043F\u0446\u043E\u0432 \u2014 ${toTax}; \u0432\u0435\u0440\u043D\u0443\u0442\u044C ${back}`, side: "kuptsy" });
-    } else if (id === "sverh_brod" || id === "sverh_opushka") {
-      addTrust(w2, def.side, -E.pay.extraTrust * m);
-      addLine(w2, { cat: "eda", v: 0, text: `\u0437\u0435\u0440\u043D\u043E \u0441\u0432\u0435\u0440\u0445 \u043E\u0431\u0440\u043E\u043A\u0430 \u2014 ${toTax}`, side: def.side });
-    } else if (id === "volnye") {
-      w2.resources.poryadok = round1(w2.resources.poryadok + E.pay.vagrantOrder * m);
-      t.patience = round2(clamp(t.patience - E.pay.vagrantPatience * m, 0, STAR_MAX));
-      addLine(w2, { cat: "lyudi", v: 0, text: `\u0432\u043E\u043B\u044C\u043D\u044B\u0435 \u0438 \u0431\u0440\u043E\u0434\u044F\u0433\u0438 \u0438\u0437 \u043A\u043E\u0440\u0447\u043C\u044B \u2014 ${toTax}` });
+  function reveal(w2, p, deed, lines) {
+    if (!p.know.trait && p.trait.hidden && p.trait.revealedBy === deed) {
+      p.know.trait = true;
+      p.know.traitAsked = true;
+      lines.push(`\u{1F441} \u041F\u043E\u0441\u0442\u0443\u043F\u043E\u043A \u0432\u044B\u0434\u0430\u043B \u0447\u0435\u0440\u0442\u0443: ${p.name} \u2014 \xAB${p.trait.name}\xBB, ${lower(p.trait.desc)}.`);
+    }
+    for (const g of p.gained) {
+      if (g.known || g.trait.revealedBy !== deed) continue;
+      g.known = true;
+      lines.push(`\u{1F441} \u041F\u043E\u0441\u0442\u0443\u043F\u043E\u043A \u0432\u044B\u0434\u0430\u043B \u0447\u0435\u0440\u0442\u0443: ${p.name} \u2014 \xAB${traitLabel(w2, g)}\xBB, ${lower(g.trait.desc)}.`);
+    }
+  }
+  function bypass(w2, ev, win, lose, opt, lines) {
+    if (mod(lose, "sly", win) <= 0 || !w2.rng.chance(BALANCE.traits.bypassChance)) return void 0;
+    const f = lose.female;
+    bypassed = true;
+    lines.push(`\u041D\u043E ${lose.name} \u0442\u043E\u043B\u044C\u043A\u043E \u0434\u043B\u044F \u0432\u0438\u0434\u0430 \u0441\u043E\u0433\u043B\u0430\u0441\u0438\u043B${f ? "\u0430\u0441\u044C" : "\u0441\u044F"}, \u0430 \u0441\u0434\u0435\u043B\u0430\u043B${f ? "\u0430" : ""} \u043F\u043E-\u0441\u0432\u043E\u0435\u043C\u0443, \u0432 \u043E\u0431\u0445\u043E\u0434: \xAB${opt.text}\xBB.`);
+    reveal(w2, lose, "bypass", lines);
+    addRel(w2, win.id, lose.id, BALANCE.traits.bypassRel);
+    recordChoice(w2, lose, opt, lines);
+    return applyEffects(w2, ev, opt, BALANCE.traits.bypass, lose, lines);
+  }
+  function runEvent(w2, ev) {
+    const holders = ev.posts.map((post) => holder(w2, post)).filter((x) => !!x);
+    const lines = [ev.text];
+    let effects = {};
+    resetTrace();
+    bypassed = false;
+    outcome = holders.length === 0 ? "empty" : "alone";
+    if (holders.length === 0) {
+      lines.push("\u0414\u043E\u043B\u0436\u043D\u043E\u0441\u0442\u0438 \u043F\u0443\u0441\u0442\u044B \u2014 \u0434\u0435\u043B\u043E\u043C \u043D\u0438\u043A\u0442\u043E \u043D\u0435 \u0437\u0430\u043D\u044F\u043B\u0441\u044F.");
+      w2.resources.poryadok -= BALANCE.council.emptyOrder;
+      effects = { poryadok: -BALANCE.council.emptyOrder };
+    } else if (holders.length === 1) {
+      const p = holders[0];
+      const d = decide(w2, p, ev);
+      lines.push(`${p.name} (${postName(p.post)}): \xAB${d.opt.text}\xBB \u2014 ${d.why}${d.surprise ? ", \u043D\u0435\u043E\u0436\u0438\u0434\u0430\u043D\u043D\u043E \u0434\u043B\u044F \u0441\u0435\u0431\u044F" : ""}.`);
+      if (ev.posts.length === 2) lines.push(`\u0412\u0442\u043E\u0440\u0430\u044F \u0434\u043E\u043B\u0436\u043D\u043E\u0441\u0442\u044C \u043F\u0443\u0441\u0442\u0430 \u2014 ${p.name} \u0440\u0435\u0448\u0430\u043B${p.female ? "\u0430" : ""} \u0432 \u043E\u0434\u0438\u043D\u043E\u0447\u043A\u0443.`);
+      recordChoice(w2, p, d.opt, lines);
+      effects = applyEffects(w2, ev, d.opt, 1, p, lines);
     } else {
-      const from = def.side;
-      e.recruits.push({ from, hands: units, until: w2.season + E.pay.recruitSeasons });
-      if (from === "zamok") {
-        addTrust(w2, "zamok", -E.pay.castleTrust * units);
-        w2.resources.poryadok = round1(w2.resources.poryadok - E.pay.castleOrder * units);
-      } else addTrust(w2, from, -E.pay.recruitTrust * units);
-      addLine(w2, { cat: "lyudi", v: -units, text: `\u0440\u0435\u043A\u0440\u0443\u0442\u044B \u043D\u0430 \u0433\u043E\u0434 \u2014 ${toTax}`, side: from });
+      effects = council(w2, ev, holders[0], holders[1], lines);
     }
-    t.paid = round1(t.paid + m);
-    t.by[id] = round1((t.by[id] ?? 0) + m);
-    out.push(`${def.name}: ${m} \u043C\u0435\u0440 (${units} ${CATEGORY_NAMES[def.what].toLowerCase()}). \u0411\u043E\u043B\u044C\u043D\u043E ${def.hurts}.`);
-    if (taxLeft(w2) <= 0) {
-      t.early = seasonKind(w2.season) < AUTUMN;
-      out.push(t.early ? "\u0423\u0440\u043E\u043A \u0437\u0430\u043A\u0440\u044B\u0442 \u0434\u043E\u0441\u0440\u043E\u0447\u043D\u043E." : "\u0423\u0440\u043E\u043A \u0437\u0430\u043A\u0440\u044B\u0442.");
-    } else out.push(`\u041E\u0441\u0442\u0430\u043B\u043E\u0441\u044C ${taxLeft(w2)} \u043C\u0435\u0440 \u0438\u0437 ${t.due}.`);
-    if (lines) lines.push(...out);
-    else w2.log.push({ season: w2.season, kind: "staff", title: "\u041F\u043E\u0434\u0430\u0442\u044C", lines: out });
-    return m;
+    const title = `${ev.title}${ev.adventurers ? " \u2694" : ""}`;
+    const entry = { season: w2.season, kind: "event", title, lines, effects, tone: toneOf(effects), weights: trace, outcome, ...bypassed ? { bypass: true } : {} };
+    w2.log.push(entry);
+    return entry;
+  }
+  function council(w2, ev, a, b, lines) {
+    const co = councilFeud(w2) ? BALANCE.council.feud : councilSteady(w2).ok ? BALANCE.council.cohesion : 1;
+    if (co !== 1) lines.push(co > 1 ? "\u0421\u043E\u0432\u0435\u0442 \u0441\u043B\u0430\u0436\u0435\u043D: \u0434\u0435\u043B\u043E \u0434\u0432\u0443\u0445 \u0441\u0444\u0435\u0440 \u0441\u043F\u043E\u0440\u0438\u0442\u0441\u044F." : "\u0412 \u0441\u043E\u0432\u0435\u0442\u0435 \u0432\u0440\u0430\u0436\u0434\u0430: \u0434\u0435\u043B\u043E \u0434\u0432\u0443\u0445 \u0441\u0444\u0435\u0440 \u0438\u0434\u0451\u0442 \u0445\u0443\u0436\u0435.");
+    const da = decide(w2, a, ev), db = decide(w2, b, ev);
+    const r = getRel(w2, a.id, b.id);
+    const word = relWord(r);
+    lines.push(`${a.name} (${postName(a.post)}) \u0445\u043E\u0447\u0435\u0442 \xAB${da.opt.text}\xBB \u2014 ${da.why}.`);
+    lines.push(`${b.name} (${postName(b.post)}) \u0445\u043E\u0447\u0435\u0442 \xAB${db.opt.text}\xBB \u2014 ${db.why}.`);
+    if (da.opt.id === db.opt.id) {
+      const mult = r >= BALANCE.rel.friendly ? BALANCE.council.synergy : 1;
+      outcome = "agree";
+      lines.push(mult > 1 ? `\u0421\u043E\u0448\u043B\u0438\u0441\u044C \u0441\u0440\u0430\u0437\u0443, \u0438 \u0440\u0430\u0437 \u043E\u043D\u0438 ${word}, \u0432\u044B\u0448\u043B\u043E \u043B\u0443\u0447\u0448\u0435 \u043E\u0431\u044B\u0447\u043D\u043E\u0433\u043E.` : `\u0421\u043E\u0448\u043B\u0438\u0441\u044C \u0432\u043E \u043C\u043D\u0435\u043D\u0438\u0438.`);
+      recordChoice(w2, a, da.opt, lines);
+      recordChoice(w2, b, db.opt, lines);
+      addRel(w2, a.id, b.id, BALANCE.council.agreeRel);
+      const doer2 = a.exp >= b.exp ? a : b;
+      return applyEffects(w2, ev, da.opt, mult * co, doer2, lines);
+    }
+    const head = w2.head != null ? w2.people[w2.head] : void 0;
+    if (head && head.id !== a.id && head.id !== b.id) {
+      const ra = getRel(w2, head.id, a.id), rb = getRel(w2, head.id, b.id);
+      if (ra >= BALANCE.council.headMinRel && rb >= BALANCE.council.headMinRel) {
+        const sa = scoreOptions(w2, head, ev, false).find((s) => s.opt.id === da.opt.id).base;
+        const sb = scoreOptions(w2, head, ev, false).find((s) => s.opt.id === db.opt.id).base;
+        const [win2, lose2, opt] = sa >= sb ? [a, b, da.opt] : [b, a, db.opt];
+        outcome = "judge";
+        lines.push(`\u0421\u043F\u043E\u0440\u0438\u043B\u0438 (${word}). \u0420\u0430\u0441\u0441\u0443\u0434\u0438\u043B \u0433\u043B\u0430\u0432\u043D\u044B\u0439, ${head.name}: \u0434\u0435\u043B\u0430\u0442\u044C \u043A\u0430\u043A \u0445\u043E\u0447\u0435\u0442 ${win2.name}.`);
+        addRel(w2, head.id, lose2.id, BALANCE.council.headJudgeRel);
+        recordChoice(w2, win2, opt, lines);
+        return applyEffects(w2, ev, opt, co, head.post ? head : win2, lines);
+      }
+      lines.push(`\u0413\u043B\u0430\u0432\u043D\u043E\u0433\u043E, ${head.name}, \u043D\u0435 \u043F\u0440\u0438\u0437\u043D\u0430\u043B\u0438 \u2014 \u0443 \u043D\u0435\u0433\u043E \u0441 \u043A\u0435\u043C-\u0442\u043E \u0438\u0437 \u043D\u0438\u0445 \u043F\u043B\u043E\u0445\u0438\u0435 \u043E\u0442\u043D\u043E\u0448\u0435\u043D\u0438\u044F.`);
+    }
+    const soft = mod(a, "softness", b) + mod(b, "softness", a);
+    const power = (p) => (w2.head === p.id ? BALANCE.council.powerHead : 0) + p.tenure / BALANCE.council.powerTenureDiv + p.star.derzost / BALANCE.council.powerDerzostDiv + mod(p, "clout") + w2.rng.range(0, BALANCE.council.powerRandom);
+    const [win, lose, wd] = power(a) >= power(b) ? [a, b, da] : [b, a, db];
+    const ld = win === a ? db : da;
+    if (r >= BALANCE.rel.friendly) {
+      const all = scoreOptions(w2, a, ev, false).map((s, i) => ({ opt: s.opt, v: s.base + scoreOptions(w2, b, ev, false)[i].base }));
+      const kept = all.filter((x) => !underFloor(w2, x.opt));
+      const both = kept.length ? kept : all;
+      const opt = both.reduce((x, y) => y.v > x.v ? y : x).opt;
+      outcome = "deal";
+      lines.push(`\u041E\u043D\u0438 ${word} \u2014 \u0434\u043E\u0433\u043E\u0432\u043E\u0440\u0438\u043B\u0438\u0441\u044C: \xAB${opt.text}\xBB.`);
+      recordChoice(w2, a, opt, lines);
+      recordChoice(w2, b, opt, lines);
+      addRel(w2, a.id, b.id, BALANCE.council.dealRel);
+      return applyEffects(w2, ev, opt, BALANCE.council.dealGain * co, win, lines);
+    }
+    if (r > BALANCE.rel.rival) {
+      if (w2.rng.chance(BALANCE.council.compromiseChance + soft * BALANCE.council.softness)) {
+        outcome = "compromise";
+        lines.push(`\u041E\u043D\u0438 ${word} \u0434\u0440\u0443\u0433 \u0434\u0440\u0443\u0433\u0430 \u2014 \u0441\u0434\u0435\u043B\u0430\u043B\u0438 \u043D\u0430\u043F\u043E\u043B\u043E\u0432\u0438\u043D\u0443, \u043A\u0430\u043A \u0445\u043E\u0442\u0435\u043B ${win.name}, \u043D\u043E \u0432\u043F\u043E\u043B\u0441\u0438\u043B\u044B.`);
+        recordChoice(w2, win, wd.opt, lines);
+        return applyEffects(w2, ev, wd.opt, BALANCE.council.compromise * co, win, lines);
+      }
+      outcome = "push";
+      lines.push(`\u041E\u043D\u0438 ${word} \u0434\u0440\u0443\u0433 \u0434\u0440\u0443\u0433\u0430. ${win.name} \u043F\u0440\u043E\u0434\u0430\u0432\u0438\u043B${win.female ? "\u0430" : ""} \u0441\u0432\u043E\u0451; ${lose.name} \u0437\u0430\u0442\u0430\u0438\u043B${lose.female ? "\u0430" : ""} \u043E\u0431\u0438\u0434\u0443.`);
+      addRel(w2, a.id, b.id, BALANCE.council.pushRel);
+      const around = bypass(w2, ev, win, lose, ld.opt, lines);
+      if (around) return around;
+      recordChoice(w2, win, wd.opt, lines);
+      return applyEffects(w2, ev, wd.opt, co, win, lines);
+    }
+    if (r > BALANCE.rel.enemy) {
+      outcome = "rival";
+      lines.push(`\u041E\u043D\u0438 \u0441\u043E\u043F\u0435\u0440\u043D\u0438\u043A\u0438. ${win.name} \u043D\u0430\u0441\u0442\u043E\u044F\u043B${win.female ? "\u0430" : ""} \u043D\u0430 \u0441\u0432\u043E\u0451\u043C, ${lose.name} \u043D\u0435 \u043F\u0440\u043E\u0441\u0442\u0438\u0442.`);
+      addRel(w2, a.id, b.id, BALANCE.council.rivalRel);
+      const around = bypass(w2, ev, win, lose, ld.opt, lines);
+      if (around) return around;
+      recordChoice(w2, win, wd.opt, lines);
+      if (lose.loyalty < BALANCE.council.complaintLoyalty || w2.rng.chance(BALANCE.council.complaintChance)) {
+        lines.push(`\u{1F4DC} \u0416\u0430\u043B\u043E\u0431\u0430: ${lose.name} \u0436\u0434\u0451\u0442 \u0421\u0435\u043D\u0435\u0448\u0430\u043B\u044F \u0441 \u0436\u0430\u043B\u043E\u0431\u043E\u0439 \u043D\u0430 ${win.name}.`);
+        addComplaint(w2, lose.id, win.id);
+      }
+      return applyEffects(w2, ev, wd.opt, BALANCE.council.rivalGain * co, win, lines);
+    }
+    if (w2.rng.chance(BALANCE.council.sabotageChance)) {
+      outcome = "sabotage";
+      lines.push(`\u041E\u043D\u0438 \u0432\u0440\u0430\u0433\u0438. ${win.name} \u0441\u0434\u0435\u043B\u0430\u043B${win.female ? "\u0430" : ""} \u043F\u043E-\u0441\u0432\u043E\u0435\u043C\u0443, \u0430 ${lose.name} \u043C\u0435\u0448\u0430\u043B${lose.female ? "\u0430" : ""} \u043D\u0430\u0437\u043B\u043E: \xAB${ld.opt.text}\xBB \u2014 \u0432\u043E\u0442 \u0447\u0435\u0433\u043E ${lose.female ? "\u043E\u043D\u0430" : "\u043E\u043D"} \u0445\u043E\u0442\u0435\u043B${lose.female ? "\u0430" : ""}. \u0421\u0430\u0431\u043E\u0442\u0430\u0436.`);
+      addRel(w2, a.id, b.id, BALANCE.council.sabotageRel);
+      reveal(w2, lose, "sabotage", lines);
+      gainTrait(w2, win, "zlopamyatny_k", lines, lose.id);
+      recordChoice(w2, win, wd.opt, lines);
+      const eff = applyEffects(w2, ev, wd.opt, 1, win, lines, BALANCE.council.sabotage * co);
+      w2.resources.poryadok = round1(w2.resources.poryadok - BALANCE.council.sabotageOrder);
+      eff.poryadok = round1((eff.poryadok ?? 0) - BALANCE.council.sabotageOrder);
+      lines.push(`\u{1F4DC} \u0416\u0430\u043B\u043E\u0431\u044B \u0441 \u043E\u0431\u0435\u0438\u0445 \u0441\u0442\u043E\u0440\u043E\u043D \u0436\u0434\u0443\u0442 \u0421\u0435\u043D\u0435\u0448\u0430\u043B\u044F.`);
+      addComplaint(w2, lose.id, win.id);
+      addComplaint(w2, win.id, lose.id);
+      return eff;
+    }
+    outcome = "silent";
+    lines.push(`\u041E\u043D\u0438 \u0432\u0440\u0430\u0433\u0438, \u043D\u043E ${lose.name} \u043D\u0430 \u044D\u0442\u043E\u0442 \u0440\u0430\u0437 \u0441\u043C\u043E\u043B\u0447\u0430\u043B${lose.female ? "\u0430" : ""}. ${win.name} \u0441\u0434\u0435\u043B\u0430\u043B${win.female ? "\u0430" : ""} \u043F\u043E-\u0441\u0432\u043E\u0435\u043C\u0443.`);
+    addRel(w2, a.id, b.id, BALANCE.council.silentRel);
+    recordChoice(w2, win, wd.opt, lines);
+    return applyEffects(w2, ev, wd.opt, BALANCE.council.rivalGain * co, win, lines);
   }
 
-  // src/sim/economy/tax.ts
-  function lessonOf(year) {
-    return year <= BALANCE.economy.tax.trialYears ? BALANCE.economy.tax.trial : BALANCE.economy.tax.normal;
+  // src/sim/season.ts
+  var eventPool = (w2) => EVENTS.filter((e) => !e.adventurers || w2.labOpen);
+  function pickDesk(w2) {
+    w2.desk = { event: w2.rng.pick(eventPool(w2)).id };
   }
-  function newTaxYear(w2) {
-    const t = w2.eco.tax;
-    t.year++;
-    t.lesson = lessonOf(t.year);
-    t.due = round1(t.lesson + t.carried);
-    t.paid = 0;
-    t.early = false;
-    t.by = {};
-    const trial = t.year <= BALANCE.economy.tax.trialYears ? " (\u0438\u0441\u043F\u044B\u0442\u0430\u043D\u0438\u0435)" : "";
-    return `\u0413\u0435\u0440\u0446\u043E\u0433 \u043E\u0431\u044A\u044F\u0432\u0438\u043B \u0443\u0440\u043E\u043A \u043D\u0430 \u0433\u043E\u0434${trial}: ${t.lesson} \u043C\u0435\u0440${t.carried ? ` \u0438 \u043D\u0435\u0434\u043E\u0438\u043C\u043A\u0430 ${t.carried}` : ""} \u2014 \u043A \u043E\u0441\u0435\u043D\u0438 ${t.due}.`;
+  function deskView(w2) {
+    const ev = w2.desk ? eventPool(w2).find((e) => e.id === w2.desk.event) : void 0;
+    if (!ev) return void 0;
+    const advisor = ev.posts.map((post) => holder(w2, post)).find((x) => !!x);
+    const opinion = advisor ? scoreOptions(w2, advisor, ev, false, true).reduce((a, b) => b.base > a.base ? b : a).opt : void 0;
+    return { ev, advisor, opinion, order: ev.options.find((o) => o.id === w2.desk.order) };
   }
-  function autoPayTax(w2, lines) {
-    const e = w2.eco, E = BALANCE.economy;
-    let paid = 0;
-    paid += payTax(w2, "serebro", (e.stock.serebro - e.floor.serebro) / E.rate.serebro, lines);
-    paid += payTax(w2, "eda", (e.stock.eda - e.floor.eda) / E.rate.eda, lines);
-    return round1(paid);
+  function command(w2, optionId) {
+    const d = deskView(w2);
+    if (!d || d.order || w2.deedsLeft <= 0 || !d.ev.options.some((o) => o.id === optionId)) return false;
+    w2.deedsLeft--;
+    w2.desk.order = optionId;
+    const opt = d.ev.options.find((o) => o.id === optionId);
+    const against = d.opinion && d.opinion.id !== opt.id ? ` ${d.advisor.name} \u0441\u043E\u0432\u0435\u0442\u0443\u0435\u0442 \u0438\u043D\u0430\u0447\u0435: \xAB${d.opinion.text}\xBB.` : "";
+    w2.log.push({ season: w2.season, kind: "staff", title: "\u041F\u0440\u0438\u043A\u0430\u0437", lines: [`\u041F\u043E \u0434\u0435\u043B\u0443 \xAB${d.ev.title}\xBB \u0421\u0435\u043D\u0435\u0448\u0430\u043B\u044C \u043F\u0440\u0438\u043A\u0430\u0437\u0430\u043B: \xAB${opt.text}\xBB.${against}`] });
+    return true;
   }
-  function collect(w2, lines) {
-    const T = BALANCE.economy.tax, t = w2.eco.tax, left = taxLeft(w2);
-    if (left > 0 && w2.eco.autoPay) {
-      const sub = [];
-      const auto = autoPayTax(w2, sub);
-      PROBE.autoPaid += auto;
-      if (auto) lines.push(`\u0421\u043E\u0432\u0435\u0442 \u0441\u0430\u043C \u0437\u0430\u043A\u0440\u044B\u0432\u0430\u0435\u0442 \u0443\u0440\u043E\u043A, \u043D\u0435 \u0442\u0440\u043E\u0433\u0430\u044F \u043D\u0438\u0436\u043D\u0438\u0445 \u0447\u0435\u0440\u0442. ${sub.filter((x) => !x.startsWith("\u041E\u0441\u0442\u0430\u043B\u043E\u0441\u044C") && !x.startsWith("\u0423\u0440\u043E\u043A")).join(" ")}`);
+  function runOrdered(w2, ev, opt) {
+    const d = deskView(w2), p = d.advisor, A = BALANCE.authority;
+    const against = !!d.opinion && d.opinion.id !== opt.id;
+    const lines = [ev.text, `\u0421\u0435\u043D\u0435\u0448\u0430\u043B\u044C \u043F\u0440\u0438\u043A\u0430\u0437\u0430\u043B: \xAB${opt.text}\xBB.`];
+    let mult = 1;
+    if (p && against) {
+      lines.push(`${p.name} (${postName(p.post)}) \u0441\u043E\u0432\u0435\u0442\u043E\u0432\u0430\u043B${p.female ? "\u0430" : ""} \u0438\u043D\u0430\u0447\u0435: \xAB${d.opinion.text}\xBB.`);
+      if (p.loyalty < BALANCE.loyalty.trusts) {
+        mult = BALANCE.economy.doer.dull;
+        lines.push(`\u0418\u0441\u043F\u043E\u043B\u043D\u044F\u0435\u0442 \u0431\u0435\u0437 \u043E\u0433\u043E\u043D\u044C\u043A\u0430: \u0438 \u043D\u0435 \u0441\u043E\u0433\u043B\u0430\u0441\u0435\u043D${p.female ? "\u043D\u0430" : ""}, \u0438 \u0421\u0435\u043D\u0435\u0448\u0430\u043B\u044E \u043D\u0435 \u0441\u043B\u0438\u0448\u043A\u043E\u043C \u0432\u0435\u0440\u0438\u0442.`);
+      }
+    } else if (p) lines.push(`${p.name} (${postName(p.post)}) \u0442\u043E\u0433\u043E \u0436\u0435 \u043C\u043D\u0435\u043D\u0438\u044F.`);
+    else lines.push("\u0414\u043E\u043B\u0436\u043D\u043E\u0441\u0442\u0438 \u043F\u0443\u0441\u0442\u044B \u2014 \u0438\u0441\u043F\u043E\u043B\u043D\u044F\u0442\u044C \u043F\u0440\u0438\u0448\u043B\u043E\u0441\u044C \u043A\u043E\u043C\u0443 \u043F\u043E\u043F\u0430\u043B\u043E.");
+    const effects = applyEffects(w2, ev, opt, p ? mult : BALANCE.economy.doer.empty, p, lines);
+    const sum = Object.values(effects).reduce((s, v) => s + v, 0);
+    if (p && against && sum > 0) {
+      addAuthority(w2, A.rightGain, `\u043E\u043A\u0430\u0437\u0430\u043B\u0441\u044F \u043F\u0440\u0430\u0432: \xAB${ev.title}\xBB \u043F\u0440\u043E\u0442\u0438\u0432 \u043C\u043D\u0435\u043D\u0438\u044F ${p.name}`, "order");
+      p.loyalty = round1(clamp(p.loyalty + A.rightLoyalty, -REL_MAX, REL_MAX));
+      lines.push(`\u0412\u044B\u0448\u043B\u043E \u0445\u043E\u0440\u043E\u0448\u043E: \u0421\u0435\u043D\u0435\u0448\u0430\u043B\u044C \u043E\u043A\u0430\u0437\u0430\u043B\u0441\u044F \u043F\u0440\u0430\u0432. ${p.name} \u044D\u0442\u043E \u0437\u0430\u043F\u043E\u043C\u043D\u0438\u0442. \u0410\u0432\u0442\u043E\u0440\u0438\u0442\u0435\u0442 +${A.rightGain}.`);
+    } else if (p && against && sum < 0) {
+      addAuthority(w2, -A.rightLoss, `\u043F\u0440\u0438\u043A\u0430\u0437 \u043E\u0431\u0435\u0440\u043D\u0443\u043B\u0441\u044F \u043F\u043B\u043E\u0445\u043E: \xAB${ev.title}\xBB \u043F\u0440\u043E\u0442\u0438\u0432 \u043C\u043D\u0435\u043D\u0438\u044F ${p.name}`, "order");
+      lines.push(`\u0412\u044B\u0448\u043B\u043E \u043F\u043B\u043E\u0445\u043E, \u0430 ${p.name} \u043F\u0440\u0435\u0434\u0443\u043F\u0440\u0435\u0436\u0434\u0430\u043B${p.female ? "\u0430" : ""}. \u0410\u0432\u0442\u043E\u0440\u0438\u0442\u0435\u0442 \u2212${A.rightLoss}.`);
     }
-    const rest = taxLeft(w2), closed = rest <= 0;
-    if (closed) {
-      t.carried = 0;
-      t.patience = round2(clamp(t.patience + (t.early ? T.early : T.onTime), 0, STAR_MAX));
-      lines.push(`\u{1F4DC} \u0421\u0431\u043E\u0440\u0449\u0438\u0446\u0430 \u043F\u043E\u0434\u0430\u0442\u0435\u0439 \u043F\u0440\u0438\u043D\u044F\u043B\u0430 \u0443\u0440\u043E\u043A${t.early ? " \u2014 \u0432\u043D\u0435\u0441\u0451\u043D \u0434\u043E\u0441\u0440\u043E\u0447\u043D\u043E" : ""}: ${t.paid} \u043C\u0435\u0440 \u0438\u0437 ${t.due}. \u0413\u0435\u0440\u0446\u043E\u0433 ${patienceWord(t.patience)}.`);
-      addAuthority(w2, t.early ? BALANCE.authority.taxEarly : BALANCE.authority.taxOnTime, t.early ? "\u043F\u043E\u0434\u0430\u0442\u044C \u0437\u0430\u043A\u0440\u044B\u0442\u0430 \u0434\u043E\u0441\u0440\u043E\u0447\u043D\u043E" : "\u043F\u043E\u0434\u0430\u0442\u044C \u0437\u0430\u043A\u0440\u044B\u0442\u0430 \u0432 \u0441\u0440\u043E\u043A", "tax");
-    } else {
-      t.carried = round1(rest * (1 + T.arrears));
-      addAuthority(w2, -BALANCE.authority.taxArrears, "\u043D\u0435\u0434\u043E\u0438\u043C\u043A\u0430: \u0441\u043B\u043E\u0432\u043E \u0413\u0435\u0440\u0446\u043E\u0433\u0443 \u043D\u0435 \u0441\u0434\u0435\u0440\u0436\u0430\u043D\u043E", "tax");
-      const loss = T.arrearsPatience * Math.max(0, 1 + T.dvor * (1 - zoneMult(w2, "dvor")));
-      t.patience = round2(clamp(t.patience - loss, 0, STAR_MAX));
-      lines.push(`\u{1F4DC} \u0421\u0431\u043E\u0440\u0449\u0438\u0446\u0430 \u043F\u043E\u0434\u0430\u0442\u0435\u0439 \u0443\u0435\u0445\u0430\u043B\u0430 \u0441 \u043D\u0435\u0434\u043E\u0431\u043E\u0440\u043E\u043C: \u0432\u043D\u0435\u0441\u0435\u043D\u043E ${t.paid} \u043C\u0435\u0440 \u0438\u0437 ${t.due}. \u041D\u0435\u0434\u043E\u0438\u043C\u043A\u0430 ${rest} \u0441 \u043D\u0430\u0434\u0431\u0430\u0432\u043A\u043E\u0439 \u2014 ${t.carried} \u2014 \u043B\u044F\u0436\u0435\u0442 \u043D\u0430 \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0438\u0439 \u0433\u043E\u0434.`);
-      lines.push(`${patienceWord(t.patience) === "\u043D\u0430 \u0438\u0441\u0445\u043E\u0434\u0435" ? "\u26A0 \u0422\u0435\u0440\u043F\u0435\u043D\u0438\u0435 \u0413\u0435\u0440\u0446\u043E\u0433\u0430 \u043D\u0430 \u0438\u0441\u0445\u043E\u0434\u0435." : `\u0413\u0435\u0440\u0446\u043E\u0433 ${patienceWord(t.patience)}.`}`);
-    }
-    t.history.push({ year: t.year, due: t.due, paid: t.paid, closed, early: closed && t.early, by: { ...t.by } });
+    const entry = { season: w2.season, kind: "event", title: `${ev.title} \u2014 \u043F\u043E \u043F\u0440\u0438\u043A\u0430\u0437\u0443`, lines, effects, tone: toneOf(effects), outcome: "ordered" };
+    w2.log.push(entry);
+    return entry;
   }
-
-  // src/sim/economy/season.ts
-  function initEconomy(w2) {
-    const S = BALANCE.economy.start;
-    const elders = ELDERS.map((e) => {
-      const trait = TRAITS.find((t) => t.id === e.trait);
-      const star = {};
-      for (const a of AXES) star[a] = BALANCE.star.base + w2.rng.range(0, BALANCE.star.baseRandom) + (trait.star[a] ?? 0);
-      const mean = AXES.reduce((t, a) => t + star[a], 0) / AXES.length;
-      for (const a of AXES) star[a] = round1(clamp(BALANCE.star.center + (star[a] - mean) * BALANCE.star.spread, BALANCE.star.floor, STAR_MAX));
-      const rel = w2.people.map((p) => {
-        let v = w2.rng.range(-BALANCE.rel.startSpread, BALANCE.rel.startSpread);
-        for (const [x, y] of OPPOSED) {
-          const from = BALANCE.rel.opposedFrom;
-          if (star[x] >= from && p.star[y] >= from || star[y] >= from && p.star[x] >= from) v -= BALANCE.rel.opposedPenalty;
-        }
-        if (topAxis(star) === topAxis(p.star)) v += BALANCE.rel.sameTop;
-        return round1(v);
-      });
-      return { side: e.side, name: e.name, female: e.female, age: e.age, trait, star, rel };
-    });
-    const eco = {
-      stock: { eda: S.eda, tovary: S.tovary, serebro: S.serebro },
-      floor: { eda: S.floorEda, serebro: S.floorSerebro },
-      feedFirst: "zamok",
-      course: null,
-      courseSeasons: 0,
-      shaky: false,
-      sown: 1,
-      recruits: [],
-      dutyCutUntil: 0,
-      debts: [],
-      autoPay: true,
-      tax: { year: 0, lesson: 0, carried: 0, due: 0, paid: 0, early: false, by: {}, patience: S.patience, history: [] },
-      elders,
-      last: null,
-      cur: [],
-      shortages: 0,
-      fc: { eda: 0, tovary: 0, serebro: 0 },
-      zoneWas: {},
-      pending: []
-    };
-    for (const s of SIDES) eco.zoneWas[s] = zoneWord(w2.factions[s]);
-    w2.eco = eco;
-    newTaxYear(w2);
+  function runSeason(w2) {
+    const pool = eventPool(w2);
+    const desk = deskView(w2);
+    const rest = w2.rng.shuffle(pool.filter((e) => e !== desk?.ev)).slice(0, BALANCE.season.events - (desk ? 1 : 0));
+    if (desk?.order) runOrdered(w2, desk.ev, desk.order);
+    else if (desk) runEvent(w2, desk.ev);
+    for (const ev of rest) runEvent(w2, ev);
+    upkeep(w2);
+    w2.season++;
+    w2.deedsLeft = BALANCE.season.deeds;
     rollForecast(w2);
-    return eco;
+    pickDesk(w2);
   }
-  function elderSaw(w2, tiun, axes) {
-    for (const el of w2.eco.elders) {
-      const top = topAxis(el.star);
-      const against = OPPOSED.some(([x, y]) => x === top && axes.includes(y) || y === top && axes.includes(x));
-      const d = axes.includes(top) ? BALANCE.economy.trust.elderStep : against ? -BALANCE.economy.trust.elderStep : 0;
-      el.rel[tiun.id] = round1(clamp(el.rel[tiun.id] + d, -REL_MAX, REL_MAX));
-    }
-  }
-  function economySeason(w2, lines) {
-    const E = BALANCE.economy, e = w2.eco, kind = seasonKind(w2.season);
-    const before = e.last ? { ...e.last.after } : { eda: E.start.eda, tovary: E.start.tovary, serebro: E.start.serebro };
-    settle(w2, lines);
-    const hands = fieldHands(w2), plan = planSeason(w2);
-    e.stock = plan.stock;
-    e.sown = plan.sown;
-    e.cur.push({ cat: "lyudi", v: 0, text: `\u0432\u0441\u0435\u0433\u043E ${hands.total}: \u0432 \u043F\u043E\u043B\u0435 ${hands.field} \u0438\u0437 ${E.hands.field}${hands.build ? `, \u043D\u0430 \u0441\u0442\u0440\u043E\u0439\u043A\u0435 ${hands.build}` : ""}, \u0441\u0432\u043E\u0431\u043E\u0434\u043D\u043E ${round1(hands.free - hands.build)}` });
-    e.cur.push(...plan.lines);
-    if (kind === SPRING && plan.sown < 1) lines.push(`\u041F\u043E\u0441\u0435\u0432\u043D\u0430\u044F: \u0440\u0443\u043A \u0432 \u043F\u043E\u043B\u0435 \u0445\u0432\u0430\u0442\u0438\u043B\u043E \u043D\u0430 ${Math.round(plan.sown * 100)}% \u043F\u043E\u043B\u044F \u2014 \u0443\u0440\u043E\u0436\u0430\u0439 \u043E\u0441\u0435\u043D\u044C\u044E \u0431\u0443\u0434\u0435\u0442 \u043C\u0435\u043D\u044C\u0448\u0435.`);
-    if (kind === AUTUMN) lines.push(`\u0416\u0430\u0442\u0432\u0430: \u0432 \u0430\u043C\u0431\u0430\u0440 \u043B\u0435\u0433\u043B\u043E ${plan.harvest} \u0435\u0434\u044B.`);
-    if (plan.short.length) e.shortages++;
-    if (plan.short.length) PROBE.short.seasons++;
-    const L = levers(w2), H = E.hand;
-    for (const s of plan.short) {
-      PROBE.short[s.cat === "eda" ? "food" : "silver"] += s.v;
-      const soft = s.side === "brod" || s.side === "opushka" ? Math.max(0, 1 + L.shortSoft * H.flow * 2) : 1;
-      PROBE.short.trust += -addTrust(w2, s.side, -E.trust.short * s.v * soft);
-      let note = `\u26A0 \u041D\u0435\u0434\u043E\u0434\u0430\u0447\u0430: ${s.what} \u2014 \u043D\u0435 \u0445\u0432\u0430\u0442\u0438\u043B\u043E ${s.v} (${CATEGORY_NAMES[s.cat].toLowerCase()}). ${SIDE_NAMES[s.side]}: \u0434\u043E\u0432\u0435\u0440\u0438\u0435 \u043F\u0430\u0434\u0430\u0435\u0442.`;
-      if (s.cat === "serebro" && s.side === "zamok") {
-        w2.resources.poryadok = round1(w2.resources.poryadok - E.trust.shortOrder * s.v);
-        PROBE.short.order += E.trust.shortOrder * s.v;
-        note += " \u0421\u0442\u0440\u0430\u0436\u0430 \u0440\u0430\u0441\u0445\u043E\u0434\u0438\u0442\u0441\u044F \u2014 \u043F\u043E\u0440\u044F\u0434\u043A\u0430 \u043C\u0435\u043D\u044C\u0448\u0435.";
+  function upkeep(w2) {
+    const lines = [];
+    for (const [k2, v] of w2.rel) w2.rel.set(k2, round1(v * BALANCE.rel.fade));
+    for (const p of w2.people) {
+      if (p.post) {
+        p.tenure++;
+        p.exp = Math.min(p.exp + 1, BALANCE.exp.master);
+        if (p.tenure === BALANCE.exp.settled) lines.push(`${p.name} \u043E\u0441\u0432\u043E\u0438\u043B${p.female ? "\u0430\u0441\u044C" : "\u0441\u044F"} \u043D\u0430 \u0434\u043E\u043B\u0436\u043D\u043E\u0441\u0442\u0438.`);
+        if (p.tenure === BALANCE.exp.staleFrom) lines.push(`${p.name} \u0437\u0430\u0441\u0438\u0434\u0435\u043B${p.female ? "\u0430\u0441\u044C" : "\u0441\u044F"} \u043D\u0430 \u043C\u0435\u0441\u0442\u0435: \u043E\u0431\u0440\u043E\u0441 \u0441\u0432\u043E\u0438\u043C\u0438 \u043B\u044E\u0434\u044C\u043C\u0438 \u0438 \u0434\u0435\u043B\u0430\u0435\u0442 \u0432\u0441\u0451 \u0431\u043E\u043B\u044C\u0448\u0435 \u043F\u043E-\u0441\u0432\u043E\u0435\u043C\u0443.`);
+        if (isStale(p) && p.star.vygoda >= BALANCE.decide.staleGreedFrom && w2.rng.chance(BALANCE.season.theftChance)) {
+          const hidden = p.post === "pisar";
+          addLine(w2, { cat: "serebro", v: -BALANCE.season.theft, text: "\u0443\u0442\u0435\u043A\u043B\u043E \u0438\u0437 \u043A\u0430\u0437\u043D\u044B", who: `${postName(p.post).toLowerCase()} ${p.name}`, how: "\u043F\u043E-\u0441\u0432\u043E\u0435\u043C\u0443", hidden });
+          lines.push(hidden ? "\u0421\u0447\u0451\u0442 \u0441\u0435\u0440\u0435\u0431\u0440\u0430 \u043D\u0435 \u0441\u0445\u043E\u0434\u0438\u0442\u0441\u044F: \u0447\u0435\u0433\u043E-\u0442\u043E \u043D\u0435\u0434\u043E\u0441\u0442\u0430\u0451\u0442, \u0430 \u0432 \u043A\u043D\u0438\u0433\u0430\u0445 \u0447\u0438\u0441\u0442\u043E." : `\u0418\u0437 \u043A\u0430\u0437\u043D\u044B \u0447\u0442\u043E-\u0442\u043E \u0443\u0442\u0435\u043A\u0430\u0435\u0442 \u2014 \u0441\u043B\u0435\u0434\u044B \u0432\u0435\u0434\u0443\u0442 \u043A \u043B\u044E\u0434\u044F\u043C ${p.name}.`);
+        }
       }
-      if (s.side === "kuptsy") {
-        addTrust(w2, "kuptsy", -E.pay.loanDefault * s.v);
-        note += " \u0414\u043E\u043B\u0433 \u043D\u0435 \u0432\u0435\u0440\u043D\u0443\u043B\u0438 \u2014 \u043A\u0443\u043F\u0446\u044B \u044D\u0442\u043E\u0433\u043E \u043D\u0435 \u043F\u0440\u043E\u0441\u0442\u044F\u0442.";
+      lifeTraits(w2, p, lines);
+      const asp = p.aspiration?.post;
+      if (asp) {
+        if (p.post === asp) p.loyalty += BALANCE.loyalty.desiredPost;
+        else if (p.post) p.loyalty += BALANCE.loyalty.wrongPost * (1 + mod(p, "ambition") * BALANCE.loyalty.ambition) * (isStale(p) ? BALANCE.loyalty.staleWrong : 1);
+        else if (w2.posts[asp] != null) {
+          p.loyalty += BALANCE.loyalty.blocked;
+          const h2 = holder(w2, asp);
+          if (isStale(h2)) addRel(w2, p.id, h2.id, BALANCE.loyalty.blockedStaleRel);
+        }
       }
-      lines.push(note);
-      e.cur.push({ cat: s.cat, v: 0, text: `\u043D\u0435\u0434\u043E\u0434\u0430\u043D\u043E ${s.v}: ${s.what}`, side: s.side });
+      p.loyalty = round1(clamp(p.loyalty, -REL_MAX, REL_MAX));
+      if (p.loyalty <= BALANCE.loyalty.bitter && w2.rng.chance(BALANCE.loyalty.leaveChance)) lines.push(`\u26A0 ${p.name} \u043E\u0437\u043B\u043E\u0431\u043B\u0435\u043D${p.female ? "\u0430" : ""} \u0438 \u043F\u043E\u0434\u0443\u043C\u044B\u0432\u0430\u0435\u0442 \u0443\u0439\u0442\u0438.`);
     }
-    e.debts = e.debts.filter((d) => d.due > w2.season);
-    e.recruits = e.recruits.filter((r) => r.until > w2.season + 1);
-    if (kind === AUTUMN) collect(w2, lines);
-    const ct = E.course.trust;
-    if (e.course === "kopim") for (const v of VILLAGES) addTrust(w2, v, -ct);
-    if (e.course === "polegche") for (const v of VILLAGES) addTrust(w2, v, ct);
-    if (e.course === "les") addTrust(w2, "les", ct);
-    if (e.course === "torguem") addTrust(w2, "kuptsy", ct);
-    if (e.course === "stroimsya") {
-      addTrust(w2, "zamok", ct);
-      for (const v of VILLAGES) addTrust(w2, v, -ct);
-    }
-    if (e.course === "dorogi") w2.resources.poryadok = round1(w2.resources.poryadok + E.course.order);
-    for (const v of VILLAGES) addTrust(w2, v, (L.villages + (v === "opushka" ? L.opushka : 0)) * H.trust);
-    for (const side of ["zamok", "kuptsy", "les", "dvor"]) addTrust(w2, side, L[side] * H.trust);
-    w2.resources.poryadok = round1(w2.resources.poryadok + L.order * H.order);
-    e.tax.patience = round2(clamp(e.tax.patience + L.patience * H.patience, 0, STAR_MAX));
-    const tiun = holder(w2, "starosta");
-    if (tiun) for (const el of e.elders) addTrust(w2, el.side, el.rel[tiun.id] * E.trust.elder);
-    for (const s of SIDES) {
-      w2.factions[s] = round1(w2.factions[s] * E.trust.fade);
-      const now = zoneOf(w2, s);
-      if (e.zoneWas[s] !== now) lines.push(`${SIDE_NAMES[s]}: \u0442\u0435\u043F\u0435\u0440\u044C \xAB${now}\xBB (\u0431\u044B\u043B\u043E \xAB${e.zoneWas[s]}\xBB).`);
-      e.zoneWas[s] = now;
-    }
-    e.last = { season: w2.season, before, after: { ...e.stock }, lines: e.cur };
-    e.cur = [];
-    if (e.course) e.courseSeasons++;
-    if (e.courseSeasons >= E.course.shaky) e.shaky = false;
-    if (kind === WINTER) lines.push(`\u{1F4DC} ${newTaxYear(w2)}`);
-  }
-  function rollForecast(w2) {
-    for (const c of STOCKS) w2.eco.fc[c] = round2(w2.rng.range(-1, 1));
+    economySeason(w2, lines);
+    authoritySeason(w2, lines);
+    w2.log.push({ season: w2.season, kind: "season", title: `\u0418\u0442\u043E\u0433 \u0441\u0435\u0437\u043E\u043D\u0430 ${w2.season}`, lines: lines.length ? lines : ["\u041D\u0438\u0447\u0435\u0433\u043E \u043E\u0441\u043E\u0431\u0435\u043D\u043D\u043E\u0433\u043E."] });
   }
 
-  // src/sim/economy/view.ts
-  var COUNTER = { eda: "klyuchnik", tovary: "pisar", serebro: "pisar" };
-  function forecastFork(w2) {
-    const K = BALANCE.economy.fork, plan = planSeason(w2);
-    return STOCKS.map((cat) => {
-      const counter = holder(w2, COUNTER[cat]);
-      const bad = counter ? clamp(1 - fitness(counter, COUNTER[cat]) / STAR_MAX, 0, 1) : K.empty;
-      const half = K.min + K.wide * bad, mid = plan.stock[cat] + w2.eco.fc[cat] * K.skew * half;
-      const lo = round1(Math.max(0, mid - half)), hi = round1(Math.max(0, mid + half));
-      const floor = cat === "tovary" ? 0 : w2.eco.floor[cat];
-      const word = hi <= 0 ? "\u043F\u0443\u0441\u0442\u043E" : hi < floor ? "\u043D\u0435 \u0445\u0432\u0430\u0442\u0438\u0442" : lo > floor ? "\u0441 \u0437\u0430\u043F\u0430\u0441\u043E\u043C" : "\u0432\u043F\u0440\u0438\u0442\u044B\u043A";
-      return { cat, lo, hi, word, counter };
-    });
-  }
-  function ledgerOf(l, cat, all = false) {
-    const mine = l.lines.filter((x) => x.cat === cat);
-    return { lines: mine.filter((x) => all || !x.hidden), mismatch: mine.some((x) => x.hidden) };
-  }
-  function elderRel(w2, el) {
-    const tiun = holder(w2, "starosta");
-    return tiun ? el.rel[tiun.id] : void 0;
-  }
-
-  // src/sim/sim.ts
-  function activeTraits(p, vs) {
-    return [p.trait, ...p.gained.filter((g) => !g.trait.targeted || g.target === vs?.id).map((g) => g.trait)];
-  }
-  function mod(p, key, vs) {
-    return activeTraits(p, vs).reduce((s, t) => s + (t.mods[key] ?? 0), 0);
-  }
-  function grudge(p, vs) {
-    return activeTraits(p, vs).reduce((s, t) => s * (t.mods.grudge ?? 1), 1);
-  }
-  function addRel(w2, a, b, d) {
-    const pa = w2.people[a], pb = w2.people[b];
-    const g = d < 0 ? Math.max(grudge(pa, pb), grudge(pb, pa)) : 1;
-    w2.rel.set(relKey(a, b), clamp(getRel(w2, a, b) + d * g, -REL_MAX, REL_MAX));
-  }
-  function relWord(v) {
-    if (v >= BALANCE.rel.ally) return "\u0437\u0430\u043E\u0434\u043D\u043E";
-    if (v >= BALANCE.rel.friendly) return "\u043B\u0430\u0434\u044F\u0442";
-    if (v > BALANCE.rel.rival) return "\u0442\u0435\u0440\u043F\u044F\u0442";
-    if (v > BALANCE.rel.enemy) return "\u0441\u043E\u043F\u0435\u0440\u043D\u0438\u043A\u0438";
-    return "\u0432\u0440\u0430\u0433\u0438";
-  }
-  function loyaltyWord(v) {
-    if (v >= BALANCE.loyalty.devoted) return "\u043F\u0440\u0435\u0434\u0430\u043D";
-    if (v >= BALANCE.loyalty.trusts) return "\u0434\u043E\u0432\u0435\u0440\u044F\u0435\u0442";
-    if (v > BALANCE.loyalty.unhappy) return "\u0441\u043B\u0443\u0436\u0438\u0442";
-    if (v > BALANCE.loyalty.bitter) return "\u043D\u0435\u0434\u043E\u0432\u043E\u043B\u0435\u043D";
-    return "\u043E\u0437\u043B\u043E\u0431\u043B\u0435\u043D";
-  }
-  function expWord(p) {
-    if (!p.post) return "\u2014";
-    if (p.exp >= BALANCE.exp.master) return "\u043C\u0430\u0441\u0442\u0435\u0440";
-    if (p.exp >= BALANCE.exp.settled) return "\u043E\u0441\u0432\u043E\u0438\u043B\u0441\u044F";
-    return "\u043D\u043E\u0432\u0438\u0447\u043E\u043A";
-  }
-  function gender(text, p, other) {
-    return text.replace(/\{name\}/g, p.name).replace(/\{other\}/g, other ? other.name : "\u0441\u043E\u0441\u0435\u0434\u043E\u043C").replace(/\{oа\}/g, other?.female ? "\u0430" : "").replace(/\{а\}/g, p.female ? "\u0430" : "").replace(/\{ся\}|\{ась\}/g, p.female ? "\u0430\u0441\u044C" : "\u0441\u044F").replace(/\{он\}/g, p.female ? "\u043E\u043D\u0430" : "\u043E\u043D").replace(/\{его\}/g, p.female ? "\u0435\u0451" : "\u0435\u0433\u043E").replace(/\{ему\}/g, p.female ? "\u0435\u0439" : "\u0435\u043C\u0443");
-  }
-  function addStar(star, shift, k2 = 1) {
-    for (const a of AXES) if (shift[a]) star[a] += shift[a] * k2;
-  }
-  var noAxes = () => ({ dolg: 0, vygoda: 0, zabota: 0, derzost: 0, obychai: 0 });
-  var dative = (name) => name.endsWith("\u0430") ? `${name.slice(0, -1)}\u0435` : `${name}\u0443`;
-  var lower = (text) => text.charAt(0).toLowerCase() + text.slice(1);
+  // src/sim/council/generate.ts
   function newWorld(seed, labOpen = false) {
     const rng = new Rng(seed);
     const w2 = {
@@ -2526,6 +2998,8 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
   var PATRON_SIDE = { brod: "\u0440\u043E\u0434\u043D\u044F \u0432 \u0434\u0435\u0440\u0435\u0432\u043D\u0435 \u0443 \u0431\u0440\u043E\u0434\u0430", opushka: "\u0440\u043E\u0434\u043D\u044F \u0432 \u0434\u0435\u0440\u0435\u0432\u043D\u0435 \u0443 \u043E\u043F\u0443\u0448\u043A\u0438", zamok: "\u0441\u0442\u0430\u0440\u0448\u0438\u0435 \u0441\u043B\u0443\u0433\u0438 \u0437\u0430\u043C\u043A\u0430", dvor: "\u0434\u0432\u043E\u0440 \u0413\u0435\u0440\u0446\u043E\u0433\u0430" };
   var patronName = (w2, l) => l.person != null ? `${w2.people[l.person].name}, \u0440\u043E\u0434\u043D\u044F` : PATRON_SIDE[l.side] ?? "\u043F\u0440\u0435\u0436\u043D\u0438\u0435 \u043B\u044E\u0434\u0438 \u0431\u0430\u0440\u043E\u043D\u0430";
   var patronText = (w2, l) => `\u0417\u0430 ${holder(w2, l.post)?.female ? "\u043D\u0435\u0451" : "\u043D\u0435\u0433\u043E"} ${l.side === "zamok" ? "\u0441\u0442\u043E\u044F\u0442" : "\u0441\u0442\u043E\u0438\u0442"} ${patronName(w2, l)}.`;
+
+  // src/sim/council/staff.ts
   function offendPatron(w2, p, post, agreed, lines) {
     const l = w2.legacy.find((x) => x.post === post);
     if (!l) return;
@@ -2625,6 +3099,17 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
     w2.head = id;
     if (id != null) w2.log.push({ season: w2.season, kind: "staff", title: "\u0413\u043B\u0430\u0432\u043D\u044B\u0439 \u043D\u0430 \u0432\u0440\u0435\u043C\u044F \u043E\u0442\u043B\u0443\u0447\u043A\u0438", lines: [`\u0417\u0430 \u0433\u043B\u0430\u0432\u043D\u043E\u0433\u043E \u2014 ${w2.people[id].name}.`] });
   }
+  var orderCost = (w2) => priceOf(w2, BALANCE.staff.orderCost);
+  function giveOrder(w2, id, axis) {
+    const p = w2.people[id], cost = axis && !p.order ? orderCost(w2) : 0;
+    if (cost > w2.authority) return false;
+    addAuthority(w2, -cost, `\u043D\u0430\u043A\u0430\u0437: ${p.name}`, "staff");
+    p.order = axis ?? void 0;
+    if (axis) w2.log.push({ season: w2.season, kind: "staff", title: "\u041D\u0430\u043A\u0430\u0437", lines: [`${p.name}: \xAB\u0434\u0435\u0439\u0441\u0442\u0432\u0443\u0439 \u043F\u043E ${AXIS_DAT[axis]}\xBB.${cost ? ` \u0410\u0432\u0442\u043E\u0440\u0438\u0442\u0435\u0442 \u2212${cost}.` : ""}`] });
+    return true;
+  }
+
+  // src/sim/council/talk.ts
   var untold = (p) => p.gained.filter((g) => !g.known && !g.trait.hidden);
   function restTalk(p) {
     if (!p.know.aspiration) return "\u0441\u0442\u0440\u0435\u043C\u043B\u0435\u043D\u0438\u0435";
@@ -2684,470 +3169,6 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
     else lines.push(`${p.name} \u043F\u043E\u043A\u0430 \u043D\u0435 \u0441\u043E\u0433\u043B\u0430\u0441\u0435\u043D${f ? "\u043D\u0430" : ""}, \u043D\u043E \u0437\u0430\u0434\u0443\u043C\u0430\u043B${f ? "\u0430\u0441\u044C" : "\u0441\u044F"}: \u043D\u0443\u0436\u0435\u043D \u0435\u0449\u0451 \u0440\u0430\u0437\u0433\u043E\u0432\u043E\u0440.`);
     w2.log.push({ season: w2.season, kind: "info", title: "\u0423\u0433\u043E\u0432\u043E\u0440", lines });
     return true;
-  }
-  var orderCost = (w2) => priceOf(w2, BALANCE.staff.orderCost);
-  function giveOrder(w2, id, axis) {
-    const p = w2.people[id], cost = axis && !p.order ? orderCost(w2) : 0;
-    if (cost > w2.authority) return false;
-    addAuthority(w2, -cost, `\u043D\u0430\u043A\u0430\u0437: ${p.name}`, "staff");
-    p.order = axis ?? void 0;
-    if (axis) w2.log.push({ season: w2.season, kind: "staff", title: "\u041D\u0430\u043A\u0430\u0437", lines: [`${p.name}: \xAB\u0434\u0435\u0439\u0441\u0442\u0432\u0443\u0439 \u043F\u043E ${AXIS_DAT[axis]}\xBB.${cost ? ` \u0410\u0432\u0442\u043E\u0440\u0438\u0442\u0435\u0442 \u2212${cost}.` : ""}`] });
-    return true;
-  }
-  function underFloor(w2, opt) {
-    return belowFloor(w2, "eda", opt.effects.pripasy ?? 0) || belowFloor(w2, "serebro", opt.effects.kazna ?? 0);
-  }
-  function scoreOptions(w2, p, ev, noisy = true, mine = false) {
-    const stale2 = isStale(p);
-    const open = mine && !stale2 ? ev.options.filter((o) => !underFloor(w2, o)) : ev.options;
-    return (open.length ? open : ev.options).map((opt) => {
-      let base = opt.axes.reduce((s, a) => s + p.star[a], 0) / opt.axes.length;
-      const parts = [];
-      const lead = opt.axes.reduce((b, a) => p.star[a] > p.star[b] ? a : b, opt.axes[0]);
-      parts.push(`\u043F\u043E ${AXIS_DAT[lead]}`);
-      let bonus = 0;
-      const heard = !!p.order && opt.axes.includes(p.order);
-      if (p.order && opt.axes.includes(p.order)) {
-        const obey = Math.max(0, p.loyalty + BALANCE.decide.orderObeyBase + mod(p, "obedience") - (stale2 ? BALANCE.decide.orderStalePenalty : 0));
-        const add = obey * BALANCE.decide.orderWeight;
-        if (add > BALANCE.decide.orderMinBonus) {
-          base += add;
-          bonus = add;
-          parts.push("\u043F\u043E \u043D\u0430\u043A\u0430\u0437\u0443");
-        }
-      }
-      if (stale2 && opt.axes.includes("vygoda") && p.star.vygoda >= BALANCE.decide.staleGreedFrom) {
-        base += BALANCE.decide.staleGreedBonus;
-        parts.push("\u0432 \u0441\u0432\u043E\u044E \u043F\u043E\u043B\u044C\u0437\u0443");
-      }
-      if (opt.risky && p.trait.id === "ostorozhny") base -= BALANCE.decide.cautiousRisk;
-      const dash = (p.star.derzost - BALANCE.star.center) * BALANCE.decide.kindLean;
-      if (opt.risky) base += dash;
-      if (opt.careful) base -= dash;
-      const lean = activeTraits(p).reduce((sum, t) => sum + opt.axes.reduce((x, a) => x + (t.lean?.[a] ?? 0), 0) / opt.axes.length, 0);
-      if (lean) {
-        base += lean;
-        if (lean > 0) parts.push("\u043F\u043E \u043F\u0440\u0438\u0432\u044B\u0447\u043A\u0435");
-      }
-      const course = courseLean(w2, opt.axes);
-      if (course) {
-        base += course;
-        parts.push("\u043F\u043E \u043A\u0443\u0440\u0441\u0443");
-      }
-      const noise = noisy ? w2.rng.gauss() * Math.max(0, BALANCE.decide.noise + mod(p, "random")) : 0;
-      return { opt, score: base + noise, base, why: parts.join(", "), bonus, heard };
-    });
-  }
-  var trace = [];
-  var outcome = "alone";
-  var bypassed = false;
-  function probeOrder(scored, best) {
-    if (!scored.some((s) => s.heard)) return;
-    const o = PROBE.order, plain = scored.reduce((a, b) => b.score - b.bonus > a.score - a.bonus ? b : a);
-    o.fit++;
-    if (plain.heard) o.already++;
-    else if (best.heard) o.worked++;
-    else if (!scored.some((s) => s.bonus > 0)) o.deaf++;
-    else o.weak++;
-  }
-  function decide(w2, p, ev) {
-    const scored = scoreOptions(w2, p, ev, true, true);
-    const best = scored.reduce((a, b) => b.score > a.score ? b : a);
-    const expected = scored.reduce((a, b) => b.base > a.base ? b : a);
-    probeOrder(scored, best);
-    const row = (s) => `${s.opt.id === best.opt.id ? "\u2192 " : ""}\xAB${s.opt.text}\xBB ${round1(s.score)} (\u0431\u0435\u0437 \u0441\u043B\u0443\u0447\u0430\u044F ${round1(s.base)}; ${s.why})`;
-    trace.push(`${p.name}: ${scored.map(row).join(" \xB7 ")}`);
-    if (scored.length < ev.options.length) trace.push(`${p.name}: \u043F\u043E\u0434 \u043D\u0438\u0436\u043D\u0435\u0439 \u0447\u0435\u0440\u0442\u043E\u0439, \u043D\u0435 \u0440\u0430\u0441\u0441\u043C\u0430\u0442\u0440\u0438\u0432\u0430\u043B${p.female ? "\u0430" : ""} \u2014 ${ev.options.length - scored.length}`);
-    return { ...best, surprise: best.opt.id !== expected.opt.id };
-  }
-  function competence(p) {
-    let c = p.exp >= BALANCE.exp.master ? BALANCE.exp.masterSkill : p.exp >= BALANCE.exp.settled ? BALANCE.exp.settledSkill : BALANCE.exp.novice;
-    if (p.post && p.mark?.goodPost === p.post) c += BALANCE.exp.markGood;
-    if (p.post && p.mark?.badPost === p.post) c += BALANCE.exp.markBad;
-    c += mod(p, "skill");
-    return clamp(c, BALANCE.exp.skillMin, BALANCE.exp.skillMax);
-  }
-  function applyEffects(w2, ev, opt, mult, doer2, lines, plus = 1) {
-    let k2 = mult;
-    if (doer2) k2 *= competence(doer2);
-    if (opt.careful) k2 *= BALANCE.exp.carefulGain;
-    let failed = false;
-    if (opt.risky && doer2) {
-      const pSuccess = BALANCE.exp.riskBase + BALANCE.exp.riskSkill * competence(doer2);
-      if (!w2.rng.chance(pSuccess)) failed = true;
-    }
-    const gain = opt.risky && !failed ? BALANCE.exp.boldGain : 1;
-    const out = {};
-    for (const [key, v] of Object.entries(opt.effects)) {
-      let val = v * k2 * (v > 0 ? gain * plus : 1);
-      if (failed && val > 0) val = -val * BALANCE.exp.failBackfire;
-      val = round1(val);
-      out[key] = val;
-      const who = doer2 ? `${postName(doer2.post).toLowerCase()} ${doer2.name}` : void 0;
-      if (key === "poryadok") w2.resources.poryadok = round1(w2.resources.poryadok + val);
-      else if (key === "kazna" || key === "pripasy") {
-        const cat = key === "kazna" ? "serebro" : "eda";
-        const under = belowFloor(w2, cat, val) ? "\u043F\u043E-\u0441\u0432\u043E\u0435\u043C\u0443: \u043D\u0438\u0436\u0435 \u043D\u0438\u0436\u043D\u0435\u0439 \u0447\u0435\u0440\u0442\u044B" : void 0;
-        out[key] = addLine(w2, { cat, v: val, text: `\u0441\u043E\u0431\u044B\u0442\u0438\u0435 \xAB${ev.title}\xBB: ${lower(opt.text)}`, who, how: under });
-        if (out[key] !== val) lines.push(`${cat === "eda" ? "\u0410\u043C\u0431\u0430\u0440" : "\u041A\u0430\u0437\u043D\u0430"} \u043D\u0435 \u0431\u0435\u0437\u0434\u043E\u043D\u043D\u044B: \u0432\u0437\u044F\u0442\u044C \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u0442\u043E\u043B\u044C\u043A\u043E ${-out[key]}.`);
-        if (under) lines.push(`\u041D\u0438\u0436\u043D\u044F\u044F \u0447\u0435\u0440\u0442\u0430 \u043D\u0430\u0440\u0443\u0448\u0435\u043D\u0430: ${doer2?.name ?? "\u0441\u043E\u0432\u0435\u0442"} \u0440\u0430\u0441\u043F\u043E\u0440\u044F\u0434\u0438\u043B${doer2?.female ? "\u0430\u0441\u044C" : "\u0441\u044F"} \u0437\u0430\u043F\u0430\u0441\u043E\u043C \u043F\u043E-\u0441\u0432\u043E\u0435\u043C\u0443.`);
-      } else if (key === "derevni") for (const v2 of ev.village ? [ev.village] : VILLAGES) addTrust(w2, v2, val * BALANCE.economy.trust.event);
-      else addTrust(w2, key, val * BALANCE.economy.trust.event);
-    }
-    if (opt.hands) takeHands(w2, opt.hands);
-    if (opt.later && !failed) invest(w2, ev, opt.later, k2 * gain * plus, lines);
-    if (opt.later && failed) lines.push("\u0412\u043B\u043E\u0436\u0435\u043D\u0438\u0435 \u043F\u0440\u043E\u043F\u0430\u043B\u043E: \u043E\u0442\u0434\u0430\u0447\u0438 \u043D\u0435 \u0431\u0443\u0434\u0435\u0442.");
-    if (failed) lines.push(`\u0420\u0438\u0441\u043A\u043E\u0432\u0430\u043D\u043D\u043E\u0435 \u0434\u0435\u043B\u043E \u043F\u0440\u043E\u0432\u0430\u043B\u0438\u043B\u043E\u0441\u044C \u2014 \u043D\u0435 \u0445\u0432\u0430\u0442\u0438\u043B\u043E \u043E\u043F\u044B\u0442\u0430 (${doer2 ? expWord(doer2) : "?"}).`);
-    return out;
-  }
-  function recordChoice(w2, p, opt, lines) {
-    const top = topAxis(p.star);
-    p.decisions++;
-    if (opt.axes.includes(top)) p.matchedTop++;
-    p.recent.push({ season: w2.season, axes: [...opt.axes] });
-    if (p.post === "starosta") elderSaw(w2, p, opt.axes);
-    for (const a of opt.axes) {
-      p.choices[a]++;
-      p.star[a] = round1(clamp(p.star[a] + BALANCE.star.drift, 0, STAR_MAX));
-      const was = axisKnown(p, a);
-      p.know.seen[a]++;
-      if (!was && axisKnown(p, a)) lines.push(`\u{1F441} \u041D\u0430\u0441\u043C\u043E\u0442\u0440\u0435\u043B\u0438\u0441\u044C \u0432 \u0434\u0435\u043B\u0435: ${p.name}, ${AXIS_NAMES[a]} \u2014 ${axisWord(p.star[a])}.`);
-    }
-  }
-  function reveal(w2, p, deed, lines) {
-    if (!p.know.trait && p.trait.hidden && p.trait.revealedBy === deed) {
-      p.know.trait = true;
-      p.know.traitAsked = true;
-      lines.push(`\u{1F441} \u041F\u043E\u0441\u0442\u0443\u043F\u043E\u043A \u0432\u044B\u0434\u0430\u043B \u0447\u0435\u0440\u0442\u0443: ${p.name} \u2014 \xAB${p.trait.name}\xBB, ${lower(p.trait.desc)}.`);
-    }
-    for (const g of p.gained) {
-      if (g.known || g.trait.revealedBy !== deed) continue;
-      g.known = true;
-      lines.push(`\u{1F441} \u041F\u043E\u0441\u0442\u0443\u043F\u043E\u043A \u0432\u044B\u0434\u0430\u043B \u0447\u0435\u0440\u0442\u0443: ${p.name} \u2014 \xAB${traitLabel(w2, g)}\xBB, ${lower(g.trait.desc)}.`);
-    }
-  }
-  function bypass(w2, ev, win, lose, opt, lines) {
-    if (mod(lose, "sly", win) <= 0 || !w2.rng.chance(BALANCE.traits.bypassChance)) return void 0;
-    const f = lose.female;
-    bypassed = true;
-    lines.push(`\u041D\u043E ${lose.name} \u0442\u043E\u043B\u044C\u043A\u043E \u0434\u043B\u044F \u0432\u0438\u0434\u0430 \u0441\u043E\u0433\u043B\u0430\u0441\u0438\u043B${f ? "\u0430\u0441\u044C" : "\u0441\u044F"}, \u0430 \u0441\u0434\u0435\u043B\u0430\u043B${f ? "\u0430" : ""} \u043F\u043E-\u0441\u0432\u043E\u0435\u043C\u0443, \u0432 \u043E\u0431\u0445\u043E\u0434: \xAB${opt.text}\xBB.`);
-    reveal(w2, lose, "bypass", lines);
-    addRel(w2, win.id, lose.id, BALANCE.traits.bypassRel);
-    recordChoice(w2, lose, opt, lines);
-    return applyEffects(w2, ev, opt, BALANCE.traits.bypass, lose, lines);
-  }
-  function toneOf(eff) {
-    const vals = Object.values(eff);
-    const pos = vals.filter((v) => v > 0).length, neg = vals.filter((v) => v < 0).length;
-    return pos && !neg ? "good" : neg && !pos ? "bad" : pos && neg ? "mixed" : "neutral";
-  }
-  function runEvent(w2, ev) {
-    const holders = ev.posts.map((post) => holder(w2, post)).filter((x) => !!x);
-    const lines = [ev.text];
-    let effects = {};
-    trace = [];
-    bypassed = false;
-    outcome = holders.length === 0 ? "empty" : "alone";
-    if (holders.length === 0) {
-      lines.push("\u0414\u043E\u043B\u0436\u043D\u043E\u0441\u0442\u0438 \u043F\u0443\u0441\u0442\u044B \u2014 \u0434\u0435\u043B\u043E\u043C \u043D\u0438\u043A\u0442\u043E \u043D\u0435 \u0437\u0430\u043D\u044F\u043B\u0441\u044F.");
-      w2.resources.poryadok -= BALANCE.council.emptyOrder;
-      effects = { poryadok: -BALANCE.council.emptyOrder };
-    } else if (holders.length === 1) {
-      const p = holders[0];
-      const d = decide(w2, p, ev);
-      lines.push(`${p.name} (${postName(p.post)}): \xAB${d.opt.text}\xBB \u2014 ${d.why}${d.surprise ? ", \u043D\u0435\u043E\u0436\u0438\u0434\u0430\u043D\u043D\u043E \u0434\u043B\u044F \u0441\u0435\u0431\u044F" : ""}.`);
-      if (ev.posts.length === 2) lines.push(`\u0412\u0442\u043E\u0440\u0430\u044F \u0434\u043E\u043B\u0436\u043D\u043E\u0441\u0442\u044C \u043F\u0443\u0441\u0442\u0430 \u2014 ${p.name} \u0440\u0435\u0448\u0430\u043B${p.female ? "\u0430" : ""} \u0432 \u043E\u0434\u0438\u043D\u043E\u0447\u043A\u0443.`);
-      recordChoice(w2, p, d.opt, lines);
-      effects = applyEffects(w2, ev, d.opt, 1, p, lines);
-    } else {
-      effects = council(w2, ev, holders[0], holders[1], lines);
-    }
-    const title = `${ev.title}${ev.adventurers ? " \u2694" : ""}`;
-    const entry = { season: w2.season, kind: "event", title, lines, effects, tone: toneOf(effects), weights: trace, outcome, ...bypassed ? { bypass: true } : {} };
-    w2.log.push(entry);
-    return entry;
-  }
-  function council(w2, ev, a, b, lines) {
-    const co = councilFeud(w2) ? BALANCE.council.feud : councilSteady(w2).ok ? BALANCE.council.cohesion : 1;
-    if (co !== 1) lines.push(co > 1 ? "\u0421\u043E\u0432\u0435\u0442 \u0441\u043B\u0430\u0436\u0435\u043D: \u0434\u0435\u043B\u043E \u0434\u0432\u0443\u0445 \u0441\u0444\u0435\u0440 \u0441\u043F\u043E\u0440\u0438\u0442\u0441\u044F." : "\u0412 \u0441\u043E\u0432\u0435\u0442\u0435 \u0432\u0440\u0430\u0436\u0434\u0430: \u0434\u0435\u043B\u043E \u0434\u0432\u0443\u0445 \u0441\u0444\u0435\u0440 \u0438\u0434\u0451\u0442 \u0445\u0443\u0436\u0435.");
-    const da = decide(w2, a, ev), db = decide(w2, b, ev);
-    const r = getRel(w2, a.id, b.id);
-    const word = relWord(r);
-    lines.push(`${a.name} (${postName(a.post)}) \u0445\u043E\u0447\u0435\u0442 \xAB${da.opt.text}\xBB \u2014 ${da.why}.`);
-    lines.push(`${b.name} (${postName(b.post)}) \u0445\u043E\u0447\u0435\u0442 \xAB${db.opt.text}\xBB \u2014 ${db.why}.`);
-    if (da.opt.id === db.opt.id) {
-      const mult = r >= BALANCE.rel.friendly ? BALANCE.council.synergy : 1;
-      outcome = "agree";
-      lines.push(mult > 1 ? `\u0421\u043E\u0448\u043B\u0438\u0441\u044C \u0441\u0440\u0430\u0437\u0443, \u0438 \u0440\u0430\u0437 \u043E\u043D\u0438 ${word}, \u0432\u044B\u0448\u043B\u043E \u043B\u0443\u0447\u0448\u0435 \u043E\u0431\u044B\u0447\u043D\u043E\u0433\u043E.` : `\u0421\u043E\u0448\u043B\u0438\u0441\u044C \u0432\u043E \u043C\u043D\u0435\u043D\u0438\u0438.`);
-      recordChoice(w2, a, da.opt, lines);
-      recordChoice(w2, b, db.opt, lines);
-      addRel(w2, a.id, b.id, BALANCE.council.agreeRel);
-      const doer2 = a.exp >= b.exp ? a : b;
-      return applyEffects(w2, ev, da.opt, mult * co, doer2, lines);
-    }
-    const head = w2.head != null ? w2.people[w2.head] : void 0;
-    if (head && head.id !== a.id && head.id !== b.id) {
-      const ra = getRel(w2, head.id, a.id), rb = getRel(w2, head.id, b.id);
-      if (ra >= BALANCE.council.headMinRel && rb >= BALANCE.council.headMinRel) {
-        const sa = scoreOptions(w2, head, ev, false).find((s) => s.opt.id === da.opt.id).base;
-        const sb = scoreOptions(w2, head, ev, false).find((s) => s.opt.id === db.opt.id).base;
-        const [win2, lose2, opt] = sa >= sb ? [a, b, da.opt] : [b, a, db.opt];
-        outcome = "judge";
-        lines.push(`\u0421\u043F\u043E\u0440\u0438\u043B\u0438 (${word}). \u0420\u0430\u0441\u0441\u0443\u0434\u0438\u043B \u0433\u043B\u0430\u0432\u043D\u044B\u0439, ${head.name}: \u0434\u0435\u043B\u0430\u0442\u044C \u043A\u0430\u043A \u0445\u043E\u0447\u0435\u0442 ${win2.name}.`);
-        addRel(w2, head.id, lose2.id, BALANCE.council.headJudgeRel);
-        recordChoice(w2, win2, opt, lines);
-        return applyEffects(w2, ev, opt, co, head.post ? head : win2, lines);
-      }
-      lines.push(`\u0413\u043B\u0430\u0432\u043D\u043E\u0433\u043E, ${head.name}, \u043D\u0435 \u043F\u0440\u0438\u0437\u043D\u0430\u043B\u0438 \u2014 \u0443 \u043D\u0435\u0433\u043E \u0441 \u043A\u0435\u043C-\u0442\u043E \u0438\u0437 \u043D\u0438\u0445 \u043F\u043B\u043E\u0445\u0438\u0435 \u043E\u0442\u043D\u043E\u0448\u0435\u043D\u0438\u044F.`);
-    }
-    const soft = mod(a, "softness", b) + mod(b, "softness", a);
-    const power = (p) => (w2.head === p.id ? BALANCE.council.powerHead : 0) + p.tenure / BALANCE.council.powerTenureDiv + p.star.derzost / BALANCE.council.powerDerzostDiv + mod(p, "clout") + w2.rng.range(0, BALANCE.council.powerRandom);
-    const [win, lose, wd] = power(a) >= power(b) ? [a, b, da] : [b, a, db];
-    const ld = win === a ? db : da;
-    if (r >= BALANCE.rel.friendly) {
-      const all = scoreOptions(w2, a, ev, false).map((s, i) => ({ opt: s.opt, v: s.base + scoreOptions(w2, b, ev, false)[i].base }));
-      const kept = all.filter((x) => !underFloor(w2, x.opt));
-      const both = kept.length ? kept : all;
-      const opt = both.reduce((x, y) => y.v > x.v ? y : x).opt;
-      outcome = "deal";
-      lines.push(`\u041E\u043D\u0438 ${word} \u2014 \u0434\u043E\u0433\u043E\u0432\u043E\u0440\u0438\u043B\u0438\u0441\u044C: \xAB${opt.text}\xBB.`);
-      recordChoice(w2, a, opt, lines);
-      recordChoice(w2, b, opt, lines);
-      addRel(w2, a.id, b.id, BALANCE.council.dealRel);
-      return applyEffects(w2, ev, opt, BALANCE.council.dealGain * co, win, lines);
-    }
-    if (r > BALANCE.rel.rival) {
-      if (w2.rng.chance(BALANCE.council.compromiseChance + soft * BALANCE.council.softness)) {
-        outcome = "compromise";
-        lines.push(`\u041E\u043D\u0438 ${word} \u0434\u0440\u0443\u0433 \u0434\u0440\u0443\u0433\u0430 \u2014 \u0441\u0434\u0435\u043B\u0430\u043B\u0438 \u043D\u0430\u043F\u043E\u043B\u043E\u0432\u0438\u043D\u0443, \u043A\u0430\u043A \u0445\u043E\u0442\u0435\u043B ${win.name}, \u043D\u043E \u0432\u043F\u043E\u043B\u0441\u0438\u043B\u044B.`);
-        recordChoice(w2, win, wd.opt, lines);
-        return applyEffects(w2, ev, wd.opt, BALANCE.council.compromise * co, win, lines);
-      }
-      outcome = "push";
-      lines.push(`\u041E\u043D\u0438 ${word} \u0434\u0440\u0443\u0433 \u0434\u0440\u0443\u0433\u0430. ${win.name} \u043F\u0440\u043E\u0434\u0430\u0432\u0438\u043B${win.female ? "\u0430" : ""} \u0441\u0432\u043E\u0451; ${lose.name} \u0437\u0430\u0442\u0430\u0438\u043B${lose.female ? "\u0430" : ""} \u043E\u0431\u0438\u0434\u0443.`);
-      addRel(w2, a.id, b.id, BALANCE.council.pushRel);
-      const around = bypass(w2, ev, win, lose, ld.opt, lines);
-      if (around) return around;
-      recordChoice(w2, win, wd.opt, lines);
-      return applyEffects(w2, ev, wd.opt, co, win, lines);
-    }
-    if (r > BALANCE.rel.enemy) {
-      outcome = "rival";
-      lines.push(`\u041E\u043D\u0438 \u0441\u043E\u043F\u0435\u0440\u043D\u0438\u043A\u0438. ${win.name} \u043D\u0430\u0441\u0442\u043E\u044F\u043B${win.female ? "\u0430" : ""} \u043D\u0430 \u0441\u0432\u043E\u0451\u043C, ${lose.name} \u043D\u0435 \u043F\u0440\u043E\u0441\u0442\u0438\u0442.`);
-      addRel(w2, a.id, b.id, BALANCE.council.rivalRel);
-      const around = bypass(w2, ev, win, lose, ld.opt, lines);
-      if (around) return around;
-      recordChoice(w2, win, wd.opt, lines);
-      if (lose.loyalty < BALANCE.council.complaintLoyalty || w2.rng.chance(BALANCE.council.complaintChance)) {
-        lines.push(`\u{1F4DC} \u0416\u0430\u043B\u043E\u0431\u0430: ${lose.name} \u0436\u0434\u0451\u0442 \u0421\u0435\u043D\u0435\u0448\u0430\u043B\u044F \u0441 \u0436\u0430\u043B\u043E\u0431\u043E\u0439 \u043D\u0430 ${win.name}.`);
-        addComplaint(w2, lose.id, win.id);
-      }
-      return applyEffects(w2, ev, wd.opt, BALANCE.council.rivalGain * co, win, lines);
-    }
-    if (w2.rng.chance(BALANCE.council.sabotageChance)) {
-      outcome = "sabotage";
-      lines.push(`\u041E\u043D\u0438 \u0432\u0440\u0430\u0433\u0438. ${win.name} \u0441\u0434\u0435\u043B\u0430\u043B${win.female ? "\u0430" : ""} \u043F\u043E-\u0441\u0432\u043E\u0435\u043C\u0443, \u0430 ${lose.name} \u043C\u0435\u0448\u0430\u043B${lose.female ? "\u0430" : ""} \u043D\u0430\u0437\u043B\u043E: \xAB${ld.opt.text}\xBB \u2014 \u0432\u043E\u0442 \u0447\u0435\u0433\u043E ${lose.female ? "\u043E\u043D\u0430" : "\u043E\u043D"} \u0445\u043E\u0442\u0435\u043B${lose.female ? "\u0430" : ""}. \u0421\u0430\u0431\u043E\u0442\u0430\u0436.`);
-      addRel(w2, a.id, b.id, BALANCE.council.sabotageRel);
-      reveal(w2, lose, "sabotage", lines);
-      gainTrait(w2, win, "zlopamyatny_k", lines, lose.id);
-      recordChoice(w2, win, wd.opt, lines);
-      const eff = applyEffects(w2, ev, wd.opt, 1, win, lines, BALANCE.council.sabotage * co);
-      w2.resources.poryadok = round1(w2.resources.poryadok - BALANCE.council.sabotageOrder);
-      eff.poryadok = round1((eff.poryadok ?? 0) - BALANCE.council.sabotageOrder);
-      lines.push(`\u{1F4DC} \u0416\u0430\u043B\u043E\u0431\u044B \u0441 \u043E\u0431\u0435\u0438\u0445 \u0441\u0442\u043E\u0440\u043E\u043D \u0436\u0434\u0443\u0442 \u0421\u0435\u043D\u0435\u0448\u0430\u043B\u044F.`);
-      addComplaint(w2, lose.id, win.id);
-      addComplaint(w2, win.id, lose.id);
-      return eff;
-    }
-    outcome = "silent";
-    lines.push(`\u041E\u043D\u0438 \u0432\u0440\u0430\u0433\u0438, \u043D\u043E ${lose.name} \u043D\u0430 \u044D\u0442\u043E\u0442 \u0440\u0430\u0437 \u0441\u043C\u043E\u043B\u0447\u0430\u043B${lose.female ? "\u0430" : ""}. ${win.name} \u0441\u0434\u0435\u043B\u0430\u043B${win.female ? "\u0430" : ""} \u043F\u043E-\u0441\u0432\u043E\u0435\u043C\u0443.`);
-    addRel(w2, a.id, b.id, BALANCE.council.silentRel);
-    recordChoice(w2, win, wd.opt, lines);
-    return applyEffects(w2, ev, wd.opt, BALANCE.council.rivalGain * co, win, lines);
-  }
-  function forecast(p) {
-    const known = AXES.filter((a) => axisKnown(p, a));
-    if (!known.length) return "\u043F\u043E\u043A\u0430 \u043D\u0435\u043F\u043E\u043D\u044F\u0442\u043D\u043E, \u043A\u0430\u043A \u043F\u043E\u0441\u0442\u0443\u043F\u0438\u0442";
-    const best = known.reduce((x, a) => p.star[a] > p.star[x] ? a : x, known[0]);
-    if (p.star[best] < BALANCE.know.strong) return "\u0441\u0438\u043B\u044C\u043D\u044B\u0445 \u0441\u043A\u043B\u043E\u043D\u043D\u043E\u0441\u0442\u0435\u0439 \u043F\u043E\u043A\u0430 \u043D\u0435 \u0432\u0438\u0434\u043D\u043E";
-    return `\u0441\u043A\u043E\u0440\u0435\u0435 \u0432\u0441\u0435\u0433\u043E, \u0431\u0443\u0434\u0435\u0442 \u0434\u0435\u0439\u0441\u0442\u0432\u043E\u0432\u0430\u0442\u044C \u043F\u043E ${AXIS_DAT[best]}`;
-  }
-  var eventPool = (w2) => EVENTS.filter((e) => !e.adventurers || w2.labOpen);
-  function pickDesk(w2) {
-    w2.desk = { event: w2.rng.pick(eventPool(w2)).id };
-  }
-  function deskView(w2) {
-    const ev = w2.desk ? eventPool(w2).find((e) => e.id === w2.desk.event) : void 0;
-    if (!ev) return void 0;
-    const advisor = ev.posts.map((post) => holder(w2, post)).find((x) => !!x);
-    const opinion = advisor ? scoreOptions(w2, advisor, ev, false, true).reduce((a, b) => b.base > a.base ? b : a).opt : void 0;
-    return { ev, advisor, opinion, order: ev.options.find((o) => o.id === w2.desk.order) };
-  }
-  function command(w2, optionId) {
-    const d = deskView(w2);
-    if (!d || d.order || w2.deedsLeft <= 0 || !d.ev.options.some((o) => o.id === optionId)) return false;
-    w2.deedsLeft--;
-    w2.desk.order = optionId;
-    const opt = d.ev.options.find((o) => o.id === optionId);
-    const against = d.opinion && d.opinion.id !== opt.id ? ` ${d.advisor.name} \u0441\u043E\u0432\u0435\u0442\u0443\u0435\u0442 \u0438\u043D\u0430\u0447\u0435: \xAB${d.opinion.text}\xBB.` : "";
-    w2.log.push({ season: w2.season, kind: "staff", title: "\u041F\u0440\u0438\u043A\u0430\u0437", lines: [`\u041F\u043E \u0434\u0435\u043B\u0443 \xAB${d.ev.title}\xBB \u0421\u0435\u043D\u0435\u0448\u0430\u043B\u044C \u043F\u0440\u0438\u043A\u0430\u0437\u0430\u043B: \xAB${opt.text}\xBB.${against}`] });
-    return true;
-  }
-  function runOrdered(w2, ev, opt) {
-    const d = deskView(w2), p = d.advisor, A = BALANCE.authority;
-    const against = !!d.opinion && d.opinion.id !== opt.id;
-    const lines = [ev.text, `\u0421\u0435\u043D\u0435\u0448\u0430\u043B\u044C \u043F\u0440\u0438\u043A\u0430\u0437\u0430\u043B: \xAB${opt.text}\xBB.`];
-    let mult = 1;
-    if (p && against) {
-      lines.push(`${p.name} (${postName(p.post)}) \u0441\u043E\u0432\u0435\u0442\u043E\u0432\u0430\u043B${p.female ? "\u0430" : ""} \u0438\u043D\u0430\u0447\u0435: \xAB${d.opinion.text}\xBB.`);
-      if (p.loyalty < BALANCE.loyalty.trusts) {
-        mult = BALANCE.economy.doer.dull;
-        lines.push(`\u0418\u0441\u043F\u043E\u043B\u043D\u044F\u0435\u0442 \u0431\u0435\u0437 \u043E\u0433\u043E\u043D\u044C\u043A\u0430: \u0438 \u043D\u0435 \u0441\u043E\u0433\u043B\u0430\u0441\u0435\u043D${p.female ? "\u043D\u0430" : ""}, \u0438 \u0421\u0435\u043D\u0435\u0448\u0430\u043B\u044E \u043D\u0435 \u0441\u043B\u0438\u0448\u043A\u043E\u043C \u0432\u0435\u0440\u0438\u0442.`);
-      }
-    } else if (p) lines.push(`${p.name} (${postName(p.post)}) \u0442\u043E\u0433\u043E \u0436\u0435 \u043C\u043D\u0435\u043D\u0438\u044F.`);
-    else lines.push("\u0414\u043E\u043B\u0436\u043D\u043E\u0441\u0442\u0438 \u043F\u0443\u0441\u0442\u044B \u2014 \u0438\u0441\u043F\u043E\u043B\u043D\u044F\u0442\u044C \u043F\u0440\u0438\u0448\u043B\u043E\u0441\u044C \u043A\u043E\u043C\u0443 \u043F\u043E\u043F\u0430\u043B\u043E.");
-    const effects = applyEffects(w2, ev, opt, p ? mult : BALANCE.economy.doer.empty, p, lines);
-    const sum = Object.values(effects).reduce((s, v) => s + v, 0);
-    if (p && against && sum > 0) {
-      addAuthority(w2, A.rightGain, `\u043E\u043A\u0430\u0437\u0430\u043B\u0441\u044F \u043F\u0440\u0430\u0432: \xAB${ev.title}\xBB \u043F\u0440\u043E\u0442\u0438\u0432 \u043C\u043D\u0435\u043D\u0438\u044F ${p.name}`, "order");
-      p.loyalty = round1(clamp(p.loyalty + A.rightLoyalty, -REL_MAX, REL_MAX));
-      lines.push(`\u0412\u044B\u0448\u043B\u043E \u0445\u043E\u0440\u043E\u0448\u043E: \u0421\u0435\u043D\u0435\u0448\u0430\u043B\u044C \u043E\u043A\u0430\u0437\u0430\u043B\u0441\u044F \u043F\u0440\u0430\u0432. ${p.name} \u044D\u0442\u043E \u0437\u0430\u043F\u043E\u043C\u043D\u0438\u0442. \u0410\u0432\u0442\u043E\u0440\u0438\u0442\u0435\u0442 +${A.rightGain}.`);
-    } else if (p && against && sum < 0) {
-      addAuthority(w2, -A.rightLoss, `\u043F\u0440\u0438\u043A\u0430\u0437 \u043E\u0431\u0435\u0440\u043D\u0443\u043B\u0441\u044F \u043F\u043B\u043E\u0445\u043E: \xAB${ev.title}\xBB \u043F\u0440\u043E\u0442\u0438\u0432 \u043C\u043D\u0435\u043D\u0438\u044F ${p.name}`, "order");
-      lines.push(`\u0412\u044B\u0448\u043B\u043E \u043F\u043B\u043E\u0445\u043E, \u0430 ${p.name} \u043F\u0440\u0435\u0434\u0443\u043F\u0440\u0435\u0436\u0434\u0430\u043B${p.female ? "\u0430" : ""}. \u0410\u0432\u0442\u043E\u0440\u0438\u0442\u0435\u0442 \u2212${A.rightLoss}.`);
-    }
-    const entry = { season: w2.season, kind: "event", title: `${ev.title} \u2014 \u043F\u043E \u043F\u0440\u0438\u043A\u0430\u0437\u0443`, lines, effects, tone: toneOf(effects), outcome: "ordered" };
-    w2.log.push(entry);
-    return entry;
-  }
-  function runSeason(w2) {
-    const pool = eventPool(w2);
-    const desk = deskView(w2);
-    const rest = w2.rng.shuffle(pool.filter((e) => e !== desk?.ev)).slice(0, BALANCE.season.events - (desk ? 1 : 0));
-    if (desk?.order) runOrdered(w2, desk.ev, desk.order);
-    else if (desk) runEvent(w2, desk.ev);
-    for (const ev of rest) runEvent(w2, ev);
-    upkeep(w2);
-    w2.season++;
-    w2.deedsLeft = BALANCE.season.deeds;
-    rollForecast(w2);
-    pickDesk(w2);
-  }
-  function upkeep(w2) {
-    const lines = [];
-    for (const [k2, v] of w2.rel) w2.rel.set(k2, round1(v * BALANCE.rel.fade));
-    for (const p of w2.people) {
-      if (p.post) {
-        p.tenure++;
-        p.exp = Math.min(p.exp + 1, BALANCE.exp.master);
-        if (p.tenure === BALANCE.exp.settled) lines.push(`${p.name} \u043E\u0441\u0432\u043E\u0438\u043B${p.female ? "\u0430\u0441\u044C" : "\u0441\u044F"} \u043D\u0430 \u0434\u043E\u043B\u0436\u043D\u043E\u0441\u0442\u0438.`);
-        if (p.tenure === BALANCE.exp.staleFrom) lines.push(`${p.name} \u0437\u0430\u0441\u0438\u0434\u0435\u043B${p.female ? "\u0430\u0441\u044C" : "\u0441\u044F"} \u043D\u0430 \u043C\u0435\u0441\u0442\u0435: \u043E\u0431\u0440\u043E\u0441 \u0441\u0432\u043E\u0438\u043C\u0438 \u043B\u044E\u0434\u044C\u043C\u0438 \u0438 \u0434\u0435\u043B\u0430\u0435\u0442 \u0432\u0441\u0451 \u0431\u043E\u043B\u044C\u0448\u0435 \u043F\u043E-\u0441\u0432\u043E\u0435\u043C\u0443.`);
-        if (isStale(p) && p.star.vygoda >= BALANCE.decide.staleGreedFrom && w2.rng.chance(BALANCE.season.theftChance)) {
-          const hidden = p.post === "pisar";
-          addLine(w2, { cat: "serebro", v: -BALANCE.season.theft, text: "\u0443\u0442\u0435\u043A\u043B\u043E \u0438\u0437 \u043A\u0430\u0437\u043D\u044B", who: `${postName(p.post).toLowerCase()} ${p.name}`, how: "\u043F\u043E-\u0441\u0432\u043E\u0435\u043C\u0443", hidden });
-          lines.push(hidden ? "\u0421\u0447\u0451\u0442 \u0441\u0435\u0440\u0435\u0431\u0440\u0430 \u043D\u0435 \u0441\u0445\u043E\u0434\u0438\u0442\u0441\u044F: \u0447\u0435\u0433\u043E-\u0442\u043E \u043D\u0435\u0434\u043E\u0441\u0442\u0430\u0451\u0442, \u0430 \u0432 \u043A\u043D\u0438\u0433\u0430\u0445 \u0447\u0438\u0441\u0442\u043E." : `\u0418\u0437 \u043A\u0430\u0437\u043D\u044B \u0447\u0442\u043E-\u0442\u043E \u0443\u0442\u0435\u043A\u0430\u0435\u0442 \u2014 \u0441\u043B\u0435\u0434\u044B \u0432\u0435\u0434\u0443\u0442 \u043A \u043B\u044E\u0434\u044F\u043C ${p.name}.`);
-        }
-      }
-      lifeTraits(w2, p, lines);
-      const asp = p.aspiration?.post;
-      if (asp) {
-        if (p.post === asp) p.loyalty += BALANCE.loyalty.desiredPost;
-        else if (p.post) p.loyalty += BALANCE.loyalty.wrongPost * (1 + mod(p, "ambition") * BALANCE.loyalty.ambition) * (isStale(p) ? BALANCE.loyalty.staleWrong : 1);
-        else if (w2.posts[asp] != null) {
-          p.loyalty += BALANCE.loyalty.blocked;
-          const h2 = holder(w2, asp);
-          if (isStale(h2)) addRel(w2, p.id, h2.id, BALANCE.loyalty.blockedStaleRel);
-        }
-      }
-      p.loyalty = round1(clamp(p.loyalty, -REL_MAX, REL_MAX));
-      if (p.loyalty <= BALANCE.loyalty.bitter && w2.rng.chance(BALANCE.loyalty.leaveChance)) lines.push(`\u26A0 ${p.name} \u043E\u0437\u043B\u043E\u0431\u043B\u0435\u043D${p.female ? "\u0430" : ""} \u0438 \u043F\u043E\u0434\u0443\u043C\u044B\u0432\u0430\u0435\u0442 \u0443\u0439\u0442\u0438.`);
-    }
-    economySeason(w2, lines);
-    authoritySeason(w2, lines);
-    w2.log.push({ season: w2.season, kind: "season", title: `\u0418\u0442\u043E\u0433 \u0441\u0435\u0437\u043E\u043D\u0430 ${w2.season}`, lines: lines.length ? lines : ["\u041D\u0438\u0447\u0435\u0433\u043E \u043E\u0441\u043E\u0431\u0435\u043D\u043D\u043E\u0433\u043E."] });
-  }
-  function consistency(p) {
-    return p.decisions ? Math.round(p.matchedTop / p.decisions * 100) : 0;
-  }
-  function axisWord(v) {
-    return v >= BALANCE.know.strong ? "\u0441\u0438\u043B\u044C\u043D\u043E" : v >= BALANCE.know.notable ? "\u0437\u0430\u043C\u0435\u0442\u043D\u043E" : "\u0441\u043B\u0430\u0431\u043E";
-  }
-  function axisKnown(p, a) {
-    return p.know.axes || p.know.seen[a] >= BALANCE.know.seenToKnow;
-  }
-  function traitLabel(w2, g) {
-    return g.trait.targeted && g.target != null ? `${g.trait.name} ${dative(w2.people[g.target].name)}` : g.trait.name;
-  }
-  function rumorCheck(p) {
-    const r = p.rumor;
-    if (!r) return "";
-    if (r.trait) return !p.know.trait ? "" : r.trait === p.trait.id ? "\u043F\u043E\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u043B\u0430\u0441\u044C" : "\u043D\u0435 \u043F\u043E\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u043B\u0430\u0441\u044C";
-    if (!r.axis || !axisKnown(p, r.axis)) return "";
-    return p.star[r.axis] >= BALANCE.know.notable ? "\u043F\u043E\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u043B\u0430\u0441\u044C" : "\u043D\u0435 \u043F\u043E\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u043B\u0430\u0441\u044C";
-  }
-  function fitWord(p, post) {
-    const def = POSTS.find((x) => x.id === post);
-    const known = def.axes.filter((a) => axisKnown(p, a));
-    const good = p.mark?.goodPost === post, bad = p.mark?.badPost === post;
-    if (!known.length && !good && !bad) return "\u043D\u0435 \u0437\u043D\u0430\u044E";
-    let f = known.length ? known.reduce((s, a) => s + p.star[a], 0) / known.length : BALANCE.star.center;
-    if (good) f += BALANCE.exp.fitMarkGood;
-    if (bad) f -= BALANCE.exp.fitMarkBad;
-    if (p.know.aspiration && p.aspiration?.post === post) f += BALANCE.exp.fitAspiration;
-    return f >= BALANCE.know.fitGood ? "\u043F\u043E\u0434\u0445\u043E\u0434\u0438\u0442" : "\u0441\u043E\u043C\u043D\u0438\u0442\u0435\u043B\u044C\u043D\u043E";
-  }
-  function headOpinion(w2, p) {
-    const head = w2.head != null ? w2.people[w2.head] : void 0;
-    if (!head || head.id === p.id) return void 0;
-    const bias = round1(getRel(w2, head.id, p.id) * BALANCE.know.opinionBias);
-    const best = POSTS.reduce((x, d) => fitness(p, d.id) > fitness(p, x.id) ? d : x, POSTS[0]);
-    const text = fitness(p, best.id) + bias >= BALANCE.know.fitGood ? `\u0433\u043E\u0434\u0438\u0442\u0441\u044F \u0432 ${best.into}` : "\u043D\u0438 \u043D\u0430 \u043E\u0434\u043D\u0443 \u0434\u043E\u043B\u0436\u043D\u043E\u0441\u0442\u044C \u043D\u0435 \u0433\u043E\u0434\u0438\u0442\u0441\u044F";
-    return { head, text, bias };
-  }
-  function gainTrait(w2, p, traitId, lines, target) {
-    const trait = LIFE_TRAITS.find((t) => t.id === traitId);
-    if (!trait) throw new Error(`\u041D\u0435\u0442 \u043F\u0440\u0438\u043E\u0431\u0440\u0435\u0442\u0430\u0435\u043C\u043E\u0439 \u0447\u0435\u0440\u0442\u044B ${traitId}`);
-    const onPost = trait.source === "post";
-    const had = p.gained.find((g) => g.trait.id === traitId && g.target === target);
-    if (had && onPost) {
-      had.post = p.post;
-      had.away = 0;
-    }
-    if (had) return false;
-    if (!onPost && p.gained.filter((g) => g.trait.source !== "post").length >= BALANCE.traits.maxGained) return false;
-    p.gained.push({ trait, target, season: w2.season, known: !trait.hidden, ...onPost ? { post: p.post } : {} });
-    addStar(p.star, trait.star);
-    for (const a of AXES) p.star[a] = round1(clamp(p.star[a], 0, STAR_MAX));
-    const label = traitLabel(w2, { trait, target });
-    lines.push(`\u2726 \u041D\u043E\u0432\u0430\u044F \u0447\u0435\u0440\u0442\u0430: ${p.name} \u2014 \xAB${label}\xBB. ${trait.desc}.`);
-    p.bio.push(`\u041D\u0430 \u0441\u043B\u0443\u0436\u0431\u0435 \u0443 \u0421\u0435\u043D\u0435\u0448\u0430\u043B\u044F (\u0441\u0435\u0437\u043E\u043D ${w2.season}) \u043D\u0430\u0436\u0438\u043B${p.female ? "\u0430" : ""} \u0447\u0435\u0440\u0442\u0443 \xAB${label}\xBB: ${lower(trait.desc)}.`);
-    return true;
-  }
-  function dropPostTraits(w2, p, lines) {
-    p.gained = p.gained.filter((g) => {
-      if (g.trait.source !== "post") return true;
-      g.away = g.post === p.post ? 0 : (g.away ?? 0) + 1;
-      if (g.away < BALANCE.traits.postTraitLag) return true;
-      lines.push(`\u2727 \u0427\u0435\u0440\u0442\u0430 \u0443\u0448\u043B\u0430: ${p.name} \u0431\u043E\u043B\u044C\u0448\u0435 \u043D\u0435 \xAB${g.trait.name}\xBB \u2014 \u0434\u043E\u043B\u0436\u043D\u043E\u0441\u0442\u044C \u043E\u0441\u0442\u0430\u0432\u043B\u0435\u043D\u0430.`);
-      p.bio.push(`\u041E\u0441\u0442\u0430\u0432\u0438\u0432 \u0434\u043E\u043B\u0436\u043D\u043E\u0441\u0442\u044C (\u0441\u0435\u0437\u043E\u043D ${w2.season}), \u0443\u0442\u0440\u0430\u0442\u0438\u043B${p.female ? "\u0430" : ""} \u0447\u0435\u0440\u0442\u0443 \xAB${g.trait.name}\xBB.`);
-      return false;
-    });
-  }
-  function lifeTraits(w2, p, lines) {
-    dropPostTraits(w2, p, lines);
-    p.recent = p.recent.filter((r) => r.season > w2.season - BALANCE.traits.habitSeasons);
-    const n = p.recent.length;
-    if (n >= BALANCE.traits.habitMinDecisions) {
-      for (const t of LIFE_TRAITS) {
-        if (t.source !== "habit" || !t.axis) continue;
-        if (p.recent.filter((r) => r.axes.includes(t.axis)).length / n >= BALANCE.traits.habitShare) gainTrait(w2, p, t.id, lines);
-      }
-    }
-    if (!p.post) return;
-    if (p.exp >= BALANCE.exp.master) gainTrait(w2, p, "master_dela", lines);
-    if (isStale(p)) gainTrait(w2, p, "obros_svyazyami", lines);
-    const asp = p.aspiration?.post;
-    if (asp && asp !== p.post && p.tenure >= BALANCE.traits.tiredFrom) gainTrait(w2, p, "ustal_ot_sluzhby", lines);
   }
 
   // src/sim/presets.ts
