@@ -8,6 +8,11 @@ import { BALANCE, KNOBS, getAt, setAt, resetBalance, type KnobInfo } from "../si
 import { growParty, rollPerson, bagTrait, cos, isFar, isContra, type NaturaPerson } from "../sim/natura";
 import { rollAll, metricsOf, naturaWarnings, currentAxes, type NaturaMetrics } from "../sim/natura-report";
 import { postAxisTable } from "../sim/axes-report";
+import { HEALTH_TRAITS } from "../data/health";
+import type { HealthTrait } from "../data/types";
+import { Rng } from "../sim/rng";
+import { birthHealth, makeFamily, liveThrough, krepostNow, healthTrait, SEASONS_IN_YEAR, WINTER, type Health, type SeasonState } from "../sim/health";
+import { healthMetrics, healthWarnings, type HealthMetrics } from "../sim/health-report";
 
 const $ = (id: string) => document.getElementById(id)!;
 const val = (id: string) => ($(id) as HTMLInputElement | HTMLSelectElement).value;
@@ -24,6 +29,8 @@ const signDef = (id: Sign) => SIGNS.find((s) => s.id === id)!;
 
 let people: NaturaPerson[] = [];
 let m: NaturaMetrics;
+let hm: HealthMetrics;
+let shown: NaturaPerson | undefined; // человек из раздела «Один человек»: его же здоровье показано ниже
 const axesNow = currentAxes(); // нынешняя звезда совета от ручек натуры не зависит: считаем один раз
 let personRoll = 0;
 
@@ -43,21 +50,26 @@ const starLine = (s: Star) => AXES.map((a) => `<span style="color:var(--axis-${a
 
 // ---------- ручки ----------
 const GROUPS: { title: string; open: boolean; has: (path: string) => boolean }[] = [
-  { title: "Сколько черт и откуда", open: true, has: (p) => /innate|before|adultAge|eventList|lifeSteps|ageM|perkWeight/.test(p) },
-  { title: "Рост древа", open: true, has: (p) => p.split(".").length === 2 && !/innate|before|adultAge|eventList|lifeSteps|ageM|perkWeight|signSoft|coreScale|axisGain/.test(p) },
-  { title: "Признаки и склонности", open: false, has: (p) => /signSoft|coreScale|axisGain/.test(p) },
+  { title: "Сколько черт и откуда", open: true, has: (p) => /^natura\.(innate|before|adultAge|eventList|lifeSteps|ageM|perkWeight)/.test(p) },
+  { title: "Рост древа", open: true, has: (p) => /^natura\.[a-zA-Z]+$/.test(p) && !/innate|before|adultAge|eventList|lifeSteps|ageM|perkWeight|signSoft|coreScale|axisGain/.test(p) },
+  { title: "Признаки и склонности", open: false, has: (p) => /^natura\.(signSoft|coreScale|axisGain)/.test(p) },
   { title: "Веса деловых склонностей", open: false, has: (p) => p.startsWith("natura.w.") },
   { title: "Поправки середины склонностей", open: false, has: (p) => p.startsWith("natura.shift.") },
-  { title: "Цели отчёта", open: false, has: (p) => p.startsWith("natura.goal.") },
+  { title: "Цели отчёта о натуре", open: false, has: (p) => p.startsWith("natura.goal.") },
+  { title: "Здоровье: рождение и семья", open: false, has: (p) => /^health\.(krepostMean|krepostSpread|bornChance|familyChance|inheritChance)/.test(p) },
+  { title: "Здоровье: болезни и раны", open: false, has: (p) => /^health\.(ill|winterMult|krepostRisk|krepostDeath|hard|light|wound|incapAt)/.test(p) },
+  { title: "Здоровье: старость", open: false, has: (p) => /^health\.(oldFrom|agingStep|ageTraitChance|elderFrom|lifeMax|ageDeathMax)/.test(p) },
+  { title: "Здоровье: прогон", open: false, has: (p) => /^health\.(years|ageMin|ageMax|familySize)/.test(p) },
+  { title: "Цели отчёта о здоровье", open: false, has: (p) => p.startsWith("health.goal.") },
 ];
-const NATURA_KNOBS = KNOBS.filter((q) => q.path.startsWith("natura."));
+const NATURA_KNOBS = KNOBS.filter((q) => q.path.startsWith("natura.") || q.path.startsWith("health."));
 const knobId = (q: KnobInfo) => `k-${q.path.replace(/\./g, "-")}`;
 
 function renderKnobs() {
   $("knobs").innerHTML = GROUPS.map((g) => {
     const rows = NATURA_KNOBS.filter((q) => g.has(q.path)).map((q) => {
       const v = getAt(q.path);
-      const label = esc(q.label.replace(/^Натура(, отчёт|, цель)?: /, ""));
+      const label = esc(q.label.replace(/^(Натура|Здоровье)(, отчёт|, цель)?: /, ""));
       return `<div class="knob${v !== q.def ? " changed" : ""}" id="${knobId(q)}" title="${q.path}">
         <div class="knob-label">${label}</div>
         <div class="knob-row">
@@ -189,7 +201,9 @@ function renderPerson() {
   const nature = NATURES.find((x) => x.id === val("nature")) ?? NATURES[0];
   const seed = `${val("seed")}-человек-${personRoll}`;
   const age = val("age") ? Number(val("age")) : undefined;
-  $("person-view").innerHTML = personHtml(rollPerson(seed, nature, age));
+  shown = rollPerson(seed, nature, age);
+  $("person-view").innerHTML = personHtml(shown);
+  renderHealthPerson(seed);
   $("person-rerolls").innerHTML = Array.from({ length: 12 }, (_, i) => {
     const p = rollPerson(`${seed}-${i}`, nature, age);
     return `<div class="reroll"><span class="muted">${p.age} лет</span> ${p.traits.map((t) => traitTag(t, roleOf(p, t.id))).join("")}<div class="muted">${starLine(p.star)}</div></div>`;
@@ -199,6 +213,89 @@ function renderParty() {
   const party = growParty(val("seed"), 10);
   $("party-view").innerHTML = `<table><tr><th>Натура</th><th>Возраст</th><th>Черты</th><th>Склонности</th></tr>${party
     .map((p) => `<tr><td><b>${esc(p.nature.name)}</b></td><td class="c">${p.age}</td><td>${p.traits.map((t) => traitTag(t, roleOf(p, t.id))).join("")}</td><td>${starLine(p.star)}</td></tr>`).join("")}</table>`;
+}
+
+// ---------- здоровье ----------
+const H_ORIGIN: Record<HealthTrait["origin"], string> = { born: "врождённая", hereditary: "наследственная", gained: "нажитая" };
+const healthTag = (id: string) => {
+  const t = healthTrait(id);
+  return `<span class="tag h-${t.origin}${t.good ? " h-good" : ""}" title="${esc(`${t.desc}. ${t.effect}`)}">${esc(t.name)}</span>`;
+};
+const strip = (states: SeasonState[]) => `<div class="strip">${states.map((x, i) => `<i class="${x}${i % SEASONS_IN_YEAR === WINTER ? " winter" : ""}" title="год ${Math.floor(i / SEASONS_IN_YEAR) + 1}"></i>`).join("")}</div>`;
+const STRIP_LEGEND = `<div class="legend"><span><span class="sw" style="background:#cfe3c8"></span>служит</span><span><span class="sw" style="background:#e2b04a"></span>в постели</span>
+  <span><span class="sw" style="background:#9a9a9a"></span>выбыл со службы</span><span><span class="sw" style="background:#24211c"></span>умер</span></div>`;
+function liveStory(h: Health, age: number, seed: string) {
+  const states: SeasonState[] = [];
+  liveThrough(new Rng(seed), h, age, BALANCE.health.years * SEASONS_IN_YEAR, states);
+  return states;
+}
+function renderHealthPerson(seed: string) {
+  if (!shown) return;
+  const rng = new Rng(`${seed}-здоровье`);
+  const h = birthHealth(rng, makeFamily(rng, "семья"), shown.traits.map((t) => t.id));
+  const before = [...h.traits], k0 = krepostNow(h, shown.age);
+  const states = liveStory(h, shown.age, `${seed}-годы`);
+  const vices = h.vices.length ? ` · сказываются черты натуры: ${h.vices.map((id) => esc(bagTrait(id).name)).join(", ")}` : "";
+  const log = h.log.length ? h.log.map((e) => `<div>${e.age} лет, год ${Math.floor(e.season / SEASONS_IN_YEAR) + 1}: ${esc(e.text)}</div>`).join("") : `<div class="muted">За эти годы ничего не случилось.</div>`;
+  $("health-person").innerHTML = `<p><b>${esc(shown.nature.name)}</b>, ${shown.age} лет · крепость при рождении ${f1(h.krepost)}, сейчас ${f1(k0)}, через ${BALANCE.health.years} лет ${f1(krepostNow(h, shown.age + BALANCE.health.years))}
+    · с рождения: ${before.length ? before.map(healthTag).join("") : "здоров"}${vices}</p>${STRIP_LEGEND}${strip(states)}${log}`;
+}
+function svgCurve(curve: number[]) {
+  const W = 560, Hh = 170, L = 34, B0 = 22, x = (i: number) => L + (i / (curve.length - 1)) * (W - L - 8), y = (v: number) => 8 + (1 - v) * (Hh - B0 - 8);
+  const grid = [0, 0.25, 0.5, 0.75, 1].map((v) => `<line x1="${L}" x2="${W - 8}" y1="${y(v)}" y2="${y(v)}" stroke="#d9d3c4"/><text x="${L - 4}" y="${y(v) + 4}" text-anchor="end">${pct(v)}</text>`).join("");
+  const ticks = curve.map((_, i) => (i % 5 === 0 ? `<text x="${x(i)}" y="${Hh - 6}" text-anchor="middle">${i}-й год</text>` : "")).join("");
+  return `<svg class="plot" viewBox="0 0 ${W} ${Hh}">${grid}${ticks}<polyline fill="none" stroke="#3f7a3a" stroke-width="2.5" points="${curve.map((v, i) => `${x(i)},${y(v)}`).join(" ")}"/></svg>`;
+}
+function svgHist(hist: { age: number; share: number }[]) {
+  const W = 560, Hh = 170, L = 34, B0 = 22, top = Math.max(...hist.map((b) => b.share), 0.01), bw = (W - L - 8) / hist.length;
+  const y = (v: number) => 8 + (1 - v / top) * (Hh - B0 - 8);
+  const color = (age: number) => (age >= BALANCE.health.elderFrom ? "#6b4f86" : age >= BALANCE.health.oldFrom ? "#c0892a" : "#4b6fa8");
+  const bars = hist.map((b, i) => `<rect x="${L + i * bw + 1}" y="${y(b.share)}" width="${bw - 2}" height="${Hh - B0 - y(b.share)}" fill="${color(b.age)}"><title>${b.age}–${b.age + 10} лет: ${pct(b.share)}</title></rect>
+    ${i % 2 === 0 ? `<text x="${L + i * bw + bw / 2}" y="${Hh - 6}" text-anchor="middle">${b.age}</text>` : ""}`).join("");
+  return `<svg class="plot" viewBox="0 0 ${W} ${Hh}"><text x="${L - 4}" y="12" text-anchor="end">${pct(top)}</text>${bars}</svg>
+    <div class="legend"><span><span class="sw" style="background:#4b6fa8"></span>зрелость</span><span><span class="sw" style="background:#c0892a"></span>старость</span><span><span class="sw" style="background:#6b4f86"></span>глубокая старость</span></div>`;
+}
+function renderHealth() {
+  const G = BALANCE.health.goal, Hb = BALANCE.health;
+  const card = (title: string, v: string, goal: string, ok: boolean | null) =>
+    `<div class="card${ok === null ? " info" : ok ? "" : " bad"}"><div>${title}</div><div class="v">${v}</div><div class="goal">${goal}</div></div>`;
+  $("health-cards").innerHTML = [
+    card(`Выбыло за ${hm.years} лет`, pct(hm.removed), `цель: ${pct(G.removedMin)}–${pct(G.removedMax)} · из них умерло ${pct(hm.dead)}`, hm.removed >= G.removedMin && hm.removed <= G.removedMax),
+    card("Из совета в пять человек", f1(hm.removed * 5), "выбывает за партию в среднем", null),
+    card("Сезонов в постели", pct(hm.offShare), `цель: ${pct(G.offMin)}–${pct(G.offMax)} · слегали хотя бы раз ${pct(hm.sickEver)}`, hm.offShare >= G.offMin && hm.offShare <= G.offMax),
+    card("Половина доживает до", `${hm.life.median} лет`, `цель: не меньше ${G.medianLife} · здоровые ${hm.life.medianHealthy}, с дурной чертой ${hm.life.medianBad}`, hm.life.median >= G.medianLife),
+    card(`Доживают до ${Hb.elderFrom} лет`, pct(hm.life.reachElder), `цель: не меньше ${pct(G.reachElder)} · до ${Hb.lifeMax - 10} — ${pct(hm.life.reachMax)}`, hm.life.reachElder >= G.reachElder),
+    card("Дурная черта с рождения", pct(hm.badBorn), `цель: ${pct(G.badBornMin)}–${pct(G.badBornMax)}`, hm.badBorn >= G.badBornMin && hm.badBorn <= G.badBornMax),
+    card("Наследственная у родни носителя", pct(hm.kinShare.withKin), `в среднем у людей — ${pct(hm.kinShare.base)}`, null),
+    card("Нажили черту здоровья", pct(hm.gained), `за ${hm.years} лет партии`, null),
+  ].join("");
+  const warns = healthWarnings(hm);
+  $("health-warnings").innerHTML = warns.length ? warns.map((x) => `<div class="warn">⚠ ${esc(x)}</div>`).join("") : `<div class="fine">Предупреждений нет: цели выполнены.</div>`;
+  $("chart-curve").innerHTML = svgCurve(hm.curve);
+  $("chart-life").innerHTML = svgHist(hm.life.hist);
+  const CAUSE: Record<string, [string, string]> = { "здоровье": ["выбыл по здоровью", "#9a9a9a"], "болезнь": ["умер от болезни", "#b03a26"], "рана": ["умер от раны", "#7c3a1d"], "старость": ["умер от старости", "#6b4f86"] };
+  const cmax = Math.max(...Object.values(hm.causes), 0.01);
+  $("chart-causes").innerHTML = `<div class="bars">${Object.entries(hm.causes).sort((a, b) => b[1] - a[1])
+    .map(([key, v]) => `<div>${CAUSE[key][0]}</div>${track(v / cmax, CAUSE[key][1])}<div class="num">${(v * 100).toFixed(1)}%</div>`).join("")}</div>`;
+  $("chart-byage").innerHTML = `<div class="bars">${hm.byAge.map((b) => `<div>${b.from}–${b.to} лет (${b.people} чел.)</div>${track(b.removed, "#c0892a")}<div class="num">${pct(b.removed)}</div>`).join("")}</div>`;
+  // партия: те же десять человек, что в разделе «Партия», по семьям
+  const party = growParty(val("seed"), 10), rng = new Rng(`${val("seed")}-семьи`);
+  let family = makeFamily(rng, "1");
+  $("health-party").innerHTML = `${STRIP_LEGEND}<table><tr><th>Семья</th><th>Натура</th><th>Возраст</th><th>Крепость</th><th>Здоровье с рождения</th><th>Двадцать лет</th><th>Нажито и чем кончилось</th></tr>${party.map((p, i) => {
+    if (i % BALANCE.health.familySize === 0) family = makeFamily(rng, String(i / BALANCE.health.familySize + 1));
+    const h = birthHealth(rng, family, p.traits.map((t) => t.id)), before = [...h.traits];
+    const states = liveStory(h, p.age, `${val("seed")}-партия-${i}`);
+    const end = h.state === "dead" ? `умер (${h.cause})` : h.state === "out" ? "выбыл со службы" : "служит";
+    const fam = `${family.id}${family.hereditary.length ? ` · в роду: ${family.hereditary.map(healthTag).join("")}` : ""}`;
+    return `<tr><td>${fam}</td><td><b>${esc(p.nature.name)}</b></td><td class="c">${p.age}</td><td class="c">${f1(h.krepost)}</td><td>${before.map(healthTag).join("") || "здоров"}</td>
+      <td style="min-width:260px">${strip(states)}</td><td>${h.traits.filter((id) => !before.includes(id)).map(healthTag).join("")} ${end}</td></tr>`;
+  }).join("")}</table>`;
+  const mod = (t: HealthTrait) => [t.krepost ? `крепость ${t.krepost > 0 ? "+" : ""}${String(t.krepost).replace(".", ",")}` : "", t.risk ? `болеет ×${String(t.risk).replace(".", ",")}` : "",
+    t.winter ? `зимой ×${String(t.winter).replace(".", ",")}` : "", t.death ? `смерть ×${String(t.death).replace(".", ",")}` : "", t.aging ? `старение ×${String(t.aging).replace(".", ",")}` : ""].filter(Boolean).join(", ");
+  const CAUSES: Record<string, string> = { illness: "после болезни", wound: "после раны или надрыва", age: "со старостью" };
+  $("table-health").innerHTML = `<table><tr><th>Черта</th><th>Происхождение</th><th>Что это</th><th>Поправки</th><th>Как скажется на службе</th><th>У скольких к концу партии</th></tr>${HEALTH_TRAITS
+    .map((t) => `<tr><td>${healthTag(t.id)}</td><td>${H_ORIGIN[t.origin]}${t.cause ? `, ${CAUSES[t.cause]}` : ""}</td><td>${esc(t.desc)}</td><td>${mod(t)}</td><td>${esc(t.effect)}</td>
+      <td class="c">${(hm.traitShare[t.id] * 100).toFixed(1)}%</td></tr>`).join("")}</table>`;
 }
 
 // ---------- таблицы ----------
@@ -261,11 +358,13 @@ function run() {
   const rolls = Number(val("rolls")), seed = val("seed").trim() || "натура";
   people = rollAll(rolls, seed);
   m = metricsOf(people, axesNow);
+  hm = healthMetrics(1200, seed);
   $("state").textContent = `${rolls} рероллов, семя «${seed}»`;
   renderMetrics();
   renderCharts();
   renderPerson();
   renderParty();
+  renderHealth();
   renderTables();
 }
 
@@ -289,10 +388,13 @@ $("bag-sort").addEventListener("change", renderTables);
 run();
 
 // Для автопроверок в браузере (test/e2e/smoke.py, раздел natura).
-declare global { interface Window { __emu: { run: () => void; setKnob: (path: string, v: number) => number; metrics: () => NaturaMetrics; people: () => number } } }
+declare global {
+  interface Window { __emu: { run: () => void; setKnob: (path: string, v: number) => number; metrics: () => NaturaMetrics; health: () => HealthMetrics; people: () => number } }
+}
 window.__emu = {
   run,
   setKnob: (path, v) => { const got = setAt(path, v); renderKnobs(); run(); return got; },
   metrics: () => m,
+  health: () => hm,
   people: () => people.length,
 };

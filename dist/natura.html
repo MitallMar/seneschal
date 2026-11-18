@@ -97,6 +97,15 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
 .bi .fill { left: auto; }
 .bi .corem { position: absolute; top: -2px; bottom: -2px; width: 3px; background: var(--ink); }
 .reroll { padding: 3px 0; border-top: 1px solid var(--line); }
+
+/* здоровье */
+.tag.h-born { background: #7a5ea8; } .tag.h-hereditary { background: #a8456b; } .tag.h-gained { background: #5b7f8f; } .tag.h-good { box-shadow: inset 0 0 0 2px #3f7a3a; }
+.strip { display: flex; gap: 1px; margin: 6px 0; }
+.strip i { flex: 1; height: 18px; min-width: 3px; }
+.strip i.ok { background: #cfe3c8; } .strip i.bed { background: #e2b04a; } .strip i.out { background: #9a9a9a; } .strip i.dead { background: #24211c; }
+.strip i.winter { opacity: .75; }
+svg.plot { width: 100%; max-width: 560px; height: auto; }
+svg.plot text { font-size: 11px; fill: var(--muted); }
 </style>
 </head>
 <body>
@@ -109,7 +118,7 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
   <button id="run" class="primary">Прогнать</button>
   <span id="state" class="muted"></span>
   <nav>
-    <a href="#metrics">Метрики</a><a href="#charts">Графики</a><a href="#person">Человек</a><a href="#party">Партия</a>
+    <a href="#metrics">Метрики</a><a href="#charts">Графики</a><a href="#person">Человек</a><a href="#party">Партия</a><a href="#health">Здоровье</a>
     <a href="#t-natures">Натуры</a><a href="#t-bag">Мешок</a><a href="#t-signs">Признаки</a><a href="#t-council">Совет</a>
     <a href="index.html">← прототип совета</a>
   </nav>
@@ -160,6 +169,25 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
       <h2>Партия из десяти</h2>
       <p class="muted">Люди растут по очереди: черта, уже взятая кем-то в партии, следующему выпадает реже.</p>
       <div id="party-view"></div>
+    </section>
+    <section id="health">
+      <h2>Здоровье</h2>
+      <p class="muted">Отдельный слой: крепость при рождении, черты здоровья, проверка каждый сезон. Прогон — люди разного возраста проживают партию; срок жизни считается отдельно, от взрослости до смерти.</p>
+      <div id="health-cards" class="cards"></div><div id="health-warnings"></div>
+      <div class="split">
+        <div><h3>Кто ещё служит, по годам партии</h3><div id="chart-curve"></div></div>
+        <div><h3>До скольких лет живут</h3><div id="chart-life"></div></div>
+      </div>
+      <div class="split">
+        <div><h3>Отчего выбывают за партию</h3><div id="chart-causes"></div></div>
+        <div><h3>Выбывают за партию — по возрасту на её начало</h3><div id="chart-byage"></div></div>
+      </div>
+      <h3>Здоровье человека из раздела «Один человек» и его двадцать лет</h3>
+      <div id="health-person"></div>
+      <h3>Партия из десяти: семьи и здоровье</h3>
+      <div id="health-party" class="scroll"></div>
+      <h3>Черты здоровья</h3>
+      <div id="table-health" class="scroll"></div>
     </section>
     <section id="t-natures"><h2>Натуры: ядро и точки кристаллизации</h2><div id="table-natures" class="scroll"></div></section>
     <section id="t-bag">
@@ -2047,6 +2075,49 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
         axisSpreadMax: k(1.6, 1, 3, 0.05, "\u041D\u0430\u0442\u0443\u0440\u0430, \u0446\u0435\u043B\u044C: \u0440\u0430\u0437\u0431\u0440\u043E\u0441 \u0434\u0435\u043B\u043E\u0432\u043E\u0439 \u0441\u043A\u043B\u043E\u043D\u043D\u043E\u0441\u0442\u0438 \u2014 \u043D\u0435 \u0431\u043E\u043B\u044C\u0448\u0435 \u0442\u0430\u043A\u043E\u0439 \u0434\u043E\u043B\u0438 \u043E\u0442 \u043D\u044B\u043D\u0435\u0448\u043D\u0435\u0433\u043E")
       }
     },
+    // здоровье: крепость, болезни, раны, старость (src/sim/health.ts, замысел — docs/design/zdorovye.md). К совету не подключено.
+    health: {
+      krepostMean: k(6, 3, 9, 0.5, "\u0417\u0434\u043E\u0440\u043E\u0432\u044C\u0435: \u043A\u0440\u0435\u043F\u043E\u0441\u0442\u044C \u043F\u0440\u0438 \u0440\u043E\u0436\u0434\u0435\u043D\u0438\u0438, \u0441\u0440\u0435\u0434\u043D\u0435\u0435 (\u0448\u043A\u0430\u043B\u0430 0\u201310)"),
+      krepostSpread: k(1.2, 0, 3, 0.1, "\u0417\u0434\u043E\u0440\u043E\u0432\u044C\u0435: \u043A\u0440\u0435\u043F\u043E\u0441\u0442\u044C \u043F\u0440\u0438 \u0440\u043E\u0436\u0434\u0435\u043D\u0438\u0438, \u0440\u0430\u0437\u0431\u0440\u043E\u0441"),
+      bornChance: k(0.3, 0, 1, 0.05, "\u0417\u0434\u043E\u0440\u043E\u0432\u044C\u0435: \u0448\u0430\u043D\u0441 \u0432\u0440\u043E\u0436\u0434\u0451\u043D\u043D\u043E\u0439 \u0447\u0435\u0440\u0442\u044B \u0437\u0434\u043E\u0440\u043E\u0432\u044C\u044F"),
+      familyChance: k(0.3, 0, 1, 0.05, "\u0417\u0434\u043E\u0440\u043E\u0432\u044C\u0435: \u0448\u0430\u043D\u0441, \u0447\u0442\u043E \u0432 \u0441\u0435\u043C\u044C\u0435 \u0435\u0441\u0442\u044C \u043D\u0430\u0441\u043B\u0435\u0434\u0441\u0442\u0432\u0435\u043D\u043D\u0430\u044F \u0447\u0435\u0440\u0442\u0430"),
+      inheritChance: k(0.5, 0, 1, 0.05, "\u0417\u0434\u043E\u0440\u043E\u0432\u044C\u0435: \u0448\u0430\u043D\u0441, \u0447\u0442\u043E \u043D\u0430\u0441\u043B\u0435\u0434\u0441\u0442\u0432\u0435\u043D\u043D\u0430\u044F \u0447\u0435\u0440\u0442\u0430 \u0441\u0435\u043C\u044C\u0438 \u0434\u043E\u0441\u0442\u0430\u043D\u0435\u0442\u0441\u044F \u0447\u0435\u043B\u043E\u0432\u0435\u043A\u0443"),
+      familySize: k(3, 1, 8, 1, "\u0417\u0434\u043E\u0440\u043E\u0432\u044C\u0435, \u043E\u0442\u0447\u0451\u0442: \u0441\u043A\u043E\u043B\u044C\u043A\u043E \u0447\u0435\u043B\u043E\u0432\u0435\u043A \u0432 \u043F\u0440\u043E\u0433\u043E\u043D\u0435 \u043F\u0440\u0438\u0445\u043E\u0434\u0438\u0442\u0441\u044F \u043D\u0430 \u043E\u0434\u043D\u0443 \u0441\u0435\u043C\u044C\u044E"),
+      illBase: k(0.02, 0, 0.2, 5e-3, "\u0417\u0434\u043E\u0440\u043E\u0432\u044C\u0435: \u0448\u0430\u043D\u0441 \u0437\u0430\u0431\u043E\u043B\u0435\u0442\u044C \u0437\u0430 \u0441\u0435\u0437\u043E\u043D \u0443 \u0437\u0434\u043E\u0440\u043E\u0432\u043E\u0433\u043E \u0447\u0435\u043B\u043E\u0432\u0435\u043A\u0430 \u0441\u0440\u0435\u0434\u043D\u0435\u0439 \u043A\u0440\u0435\u043F\u043E\u0441\u0442\u0438"),
+      winterMult: k(2, 1, 5, 0.1, "\u0417\u0434\u043E\u0440\u043E\u0432\u044C\u0435: \u0432\u043E \u0441\u043A\u043E\u043B\u044C\u043A\u043E \u0440\u0430\u0437 \u0447\u0430\u0449\u0435 \u0431\u043E\u043B\u0435\u044E\u0442 \u0437\u0438\u043C\u043E\u0439"),
+      krepostRisk: k(0.2, 0, 1, 0.05, "\u0417\u0434\u043E\u0440\u043E\u0432\u044C\u0435: \u043D\u0430\u0441\u043A\u043E\u043B\u044C\u043A\u043E \u043A\u0430\u0436\u0434\u0430\u044F \u0435\u0434\u0438\u043D\u0438\u0446\u0430 \u043A\u0440\u0435\u043F\u043E\u0441\u0442\u0438 \u043D\u0438\u0436\u0435 \u0441\u0440\u0435\u0434\u043D\u0435\u0439 \u043F\u043E\u0432\u044B\u0448\u0430\u0435\u0442 \u0448\u0430\u043D\u0441 \u0437\u0430\u0431\u043E\u043B\u0435\u0442\u044C"),
+      hardShare: k(0.25, 0, 1, 0.05, "\u0417\u0434\u043E\u0440\u043E\u0432\u044C\u0435: \u0434\u043E\u043B\u044F \u0442\u044F\u0436\u0451\u043B\u044B\u0445 \u0431\u043E\u043B\u0435\u0437\u043D\u0435\u0439"),
+      hardDeath: k(0.03, 0, 0.5, 0.01, "\u0417\u0434\u043E\u0440\u043E\u0432\u044C\u0435: \u0448\u0430\u043D\u0441 \u0443\u043C\u0435\u0440\u0435\u0442\u044C \u043E\u0442 \u0442\u044F\u0436\u0451\u043B\u043E\u0439 \u0431\u043E\u043B\u0435\u0437\u043D\u0438 \u0443 \u0447\u0435\u043B\u043E\u0432\u0435\u043A\u0430 \u0441\u0440\u0435\u0434\u043D\u0435\u0439 \u043A\u0440\u0435\u043F\u043E\u0441\u0442\u0438"),
+      krepostDeath: k(0.3, 0, 1, 0.05, "\u0417\u0434\u043E\u0440\u043E\u0432\u044C\u0435: \u043D\u0430\u0441\u043A\u043E\u043B\u044C\u043A\u043E \u043A\u0430\u0436\u0434\u0430\u044F \u0435\u0434\u0438\u043D\u0438\u0446\u0430 \u043A\u0440\u0435\u043F\u043E\u0441\u0442\u0438 \u043D\u0438\u0436\u0435 \u0441\u0440\u0435\u0434\u043D\u0435\u0439 \u043F\u043E\u0432\u044B\u0448\u0430\u0435\u0442 \u0448\u0430\u043D\u0441 \u0443\u043C\u0435\u0440\u0435\u0442\u044C"),
+      illChronic: k(0.35, 0, 1, 0.05, "\u0417\u0434\u043E\u0440\u043E\u0432\u044C\u0435: \u0448\u0430\u043D\u0441, \u0447\u0442\u043E \u0442\u044F\u0436\u0451\u043B\u0430\u044F \u0431\u043E\u043B\u0435\u0437\u043D\u044C \u043E\u0441\u0442\u0430\u0432\u0438\u0442 \u0441\u043B\u0435\u0434"),
+      lightStrong: k(0.03, 0, 0.5, 0.01, "\u0417\u0434\u043E\u0440\u043E\u0432\u044C\u0435: \u0448\u0430\u043D\u0441, \u0447\u0442\u043E \u043B\u0451\u0433\u043A\u0430\u044F \u0431\u043E\u043B\u0435\u0437\u043D\u044C \u0437\u0430\u043A\u0430\u043B\u0438\u0442 (\xAB\u041F\u0435\u0440\u0435\u0431\u043E\u043B\u0435\u043B \u0438 \u043E\u043A\u0440\u0435\u043F\xBB)"),
+      woundChance: k(4e-3, 0, 0.05, 1e-3, "\u0417\u0434\u043E\u0440\u043E\u0432\u044C\u0435: \u0448\u0430\u043D\u0441 \u0440\u0430\u043D\u044B \u0438\u043B\u0438 \u043D\u0430\u0434\u0440\u044B\u0432\u0430 \u0437\u0430 \u0441\u0435\u0437\u043E\u043D"),
+      woundDeath: k(0.06, 0, 0.5, 0.01, "\u0417\u0434\u043E\u0440\u043E\u0432\u044C\u0435: \u0448\u0430\u043D\u0441 \u0443\u043C\u0435\u0440\u0435\u0442\u044C \u043E\u0442 \u0440\u0430\u043D\u044B"),
+      woundChronic: k(0.5, 0, 1, 0.05, "\u0417\u0434\u043E\u0440\u043E\u0432\u044C\u0435: \u0448\u0430\u043D\u0441, \u0447\u0442\u043E \u0440\u0430\u043D\u0430 \u043E\u0441\u0442\u0430\u0432\u0438\u0442 \u0441\u043B\u0435\u0434"),
+      hardOffMin: k(2, 1, 6, 1, "\u0417\u0434\u043E\u0440\u043E\u0432\u044C\u0435: \u0442\u044F\u0436\u0451\u043B\u0430\u044F \u0431\u043E\u043B\u0435\u0437\u043D\u044C \u0438\u043B\u0438 \u0440\u0430\u043D\u0430 \u2014 \u0441\u0435\u0437\u043E\u043D\u043E\u0432 \u0432 \u043F\u043E\u0441\u0442\u0435\u043B\u0438, \u043D\u0435 \u043C\u0435\u043D\u044C\u0448\u0435"),
+      hardOffMax: k(3, 1, 8, 1, "\u0417\u0434\u043E\u0440\u043E\u0432\u044C\u0435: \u0442\u044F\u0436\u0451\u043B\u0430\u044F \u0431\u043E\u043B\u0435\u0437\u043D\u044C \u0438\u043B\u0438 \u0440\u0430\u043D\u0430 \u2014 \u0441\u0435\u0437\u043E\u043D\u043E\u0432 \u0432 \u043F\u043E\u0441\u0442\u0435\u043B\u0438, \u043D\u0435 \u0431\u043E\u043B\u044C\u0448\u0435"),
+      oldFrom: k(110, 50, 180, 5, "\u0417\u0434\u043E\u0440\u043E\u0432\u044C\u0435: \u0441 \u044D\u0442\u043E\u0433\u043E \u0432\u043E\u0437\u0440\u0430\u0441\u0442\u0430 \u043D\u0430\u0447\u0438\u043D\u0430\u0435\u0442\u0441\u044F \u0441\u0442\u0430\u0440\u043E\u0441\u0442\u044C \u2014 \u043A\u0440\u0435\u043F\u043E\u0441\u0442\u044C \u0443\u0431\u044B\u0432\u0430\u0435\u0442"),
+      agingStep: k(20, 5, 60, 5, "\u0417\u0434\u043E\u0440\u043E\u0432\u044C\u0435: \u0432 \u0441\u0442\u0430\u0440\u043E\u0441\u0442\u0438 \u043A\u0430\u0436\u0434\u044B\u0435 \u0441\u0442\u043E\u043B\u044C\u043A\u043E \u043B\u0435\u0442 \u043A\u0440\u0435\u043F\u043E\u0441\u0442\u044C \u043F\u0430\u0434\u0430\u0435\u0442 \u043D\u0430 \u0435\u0434\u0438\u043D\u0438\u0446\u0443"),
+      ageTraitChance: k(8e-3, 0, 0.1, 1e-3, "\u0417\u0434\u043E\u0440\u043E\u0432\u044C\u0435: \u0448\u0430\u043D\u0441 \u0441\u0442\u0430\u0440\u0447\u0435\u0441\u043A\u043E\u0439 \u0447\u0435\u0440\u0442\u044B \u0437\u0430 \u0441\u0435\u0437\u043E\u043D \u0432 \u0441\u0442\u0430\u0440\u043E\u0441\u0442\u0438"),
+      elderFrom: k(160, 80, 195, 5, "\u0417\u0434\u043E\u0440\u043E\u0432\u044C\u0435: \u0441 \u044D\u0442\u043E\u0433\u043E \u0432\u043E\u0437\u0440\u0430\u0441\u0442\u0430 \u2014 \u0433\u043B\u0443\u0431\u043E\u043A\u0430\u044F \u0441\u0442\u0430\u0440\u043E\u0441\u0442\u044C, \u0443\u043C\u0438\u0440\u0430\u044E\u0442 \u043E\u0442 \u0441\u0442\u0430\u0440\u043E\u0441\u0442\u0438"),
+      lifeMax: k(200, 100, 260, 5, "\u0417\u0434\u043E\u0440\u043E\u0432\u044C\u0435: \u043F\u0440\u0435\u0434\u0435\u043B \u0436\u0438\u0437\u043D\u0438, \u043B\u0435\u0442"),
+      ageDeathMax: k(0.04, 0.01, 1, 0.01, "\u0417\u0434\u043E\u0440\u043E\u0432\u044C\u0435: \u0448\u0430\u043D\u0441 \u0443\u043C\u0435\u0440\u0435\u0442\u044C \u043E\u0442 \u0441\u0442\u0430\u0440\u043E\u0441\u0442\u0438 \u0437\u0430 \u0441\u0435\u0437\u043E\u043D \u0443 \u0441\u0430\u043C\u043E\u0433\u043E \u043F\u0440\u0435\u0434\u0435\u043B\u0430 \u0436\u0438\u0437\u043D\u0438"),
+      incapAt: k(2, 0, 5, 0.5, "\u0417\u0434\u043E\u0440\u043E\u0432\u044C\u0435: \u043F\u0440\u0438 \u0442\u0430\u043A\u043E\u0439 \u043A\u0440\u0435\u043F\u043E\u0441\u0442\u0438 \u0438 \u043D\u0438\u0436\u0435 \u0447\u0435\u043B\u043E\u0432\u0435\u043A \u0432\u044B\u0431\u044B\u0432\u0430\u0435\u0442 \u0441\u043E \u0441\u043B\u0443\u0436\u0431\u044B"),
+      years: k(20, 5, 40, 1, "\u0417\u0434\u043E\u0440\u043E\u0432\u044C\u0435, \u043E\u0442\u0447\u0451\u0442: \u0441\u043A\u043E\u043B\u044C\u043A\u043E \u043B\u0435\u0442 \u0434\u043B\u0438\u0442\u0441\u044F \u043F\u0430\u0440\u0442\u0438\u044F"),
+      ageMin: k(30, 15, 100, 5, "\u0417\u0434\u043E\u0440\u043E\u0432\u044C\u0435, \u043E\u0442\u0447\u0451\u0442: \u0432\u043E\u0437\u0440\u0430\u0441\u0442 \u043B\u044E\u0434\u0435\u0439 \u043D\u0430 \u043D\u0430\u0447\u0430\u043B\u043E \u043F\u0430\u0440\u0442\u0438\u0438 \u2014 \u043E\u0442"),
+      ageMax: k(150, 40, 200, 5, "\u0417\u0434\u043E\u0440\u043E\u0432\u044C\u0435, \u043E\u0442\u0447\u0451\u0442: \u0432\u043E\u0437\u0440\u0430\u0441\u0442 \u043B\u044E\u0434\u0435\u0439 \u043D\u0430 \u043D\u0430\u0447\u0430\u043B\u043E \u043F\u0430\u0440\u0442\u0438\u0438 \u2014 \u0434\u043E"),
+      // цели отчёта npm run health
+      goal: {
+        removedMin: k(0.15, 0, 1, 0.05, "\u0417\u0434\u043E\u0440\u043E\u0432\u044C\u0435, \u0446\u0435\u043B\u044C: \u0437\u0430 \u043F\u0430\u0440\u0442\u0438\u044E \u0443\u043C\u0438\u0440\u0430\u0435\u0442 \u0438\u043B\u0438 \u0432\u044B\u0431\u044B\u0432\u0430\u0435\u0442 \u0441\u043E \u0441\u043B\u0443\u0436\u0431\u044B \u043D\u0435 \u043C\u0435\u043D\u044C\u0448\u0435 \u0442\u0430\u043A\u043E\u0439 \u0434\u043E\u043B\u0438 \u043B\u044E\u0434\u0435\u0439"),
+        removedMax: k(0.3, 0, 1, 0.05, "\u0417\u0434\u043E\u0440\u043E\u0432\u044C\u0435, \u0446\u0435\u043B\u044C: \u0437\u0430 \u043F\u0430\u0440\u0442\u0438\u044E \u0443\u043C\u0438\u0440\u0430\u0435\u0442 \u0438\u043B\u0438 \u0432\u044B\u0431\u044B\u0432\u0430\u0435\u0442 \u0441\u043E \u0441\u043B\u0443\u0436\u0431\u044B \u043D\u0435 \u0431\u043E\u043B\u044C\u0448\u0435 \u0442\u0430\u043A\u043E\u0439 \u0434\u043E\u043B\u0438 \u043B\u044E\u0434\u0435\u0439"),
+        offMin: k(0.02, 0, 0.5, 0.01, "\u0417\u0434\u043E\u0440\u043E\u0432\u044C\u0435, \u0446\u0435\u043B\u044C: \u0434\u043E\u043B\u044F \u0441\u0435\u0437\u043E\u043D\u043E\u0432, \u043A\u043E\u0442\u043E\u0440\u044B\u0435 \u0447\u0435\u043B\u043E\u0432\u0435\u043A \u043F\u0440\u043E\u0432\u043E\u0434\u0438\u0442 \u0432 \u043F\u043E\u0441\u0442\u0435\u043B\u0438, \u043D\u0435 \u043C\u0435\u043D\u044C\u0448\u0435"),
+        offMax: k(0.06, 0, 0.5, 0.01, "\u0417\u0434\u043E\u0440\u043E\u0432\u044C\u0435, \u0446\u0435\u043B\u044C: \u0434\u043E\u043B\u044F \u0441\u0435\u0437\u043E\u043D\u043E\u0432, \u043A\u043E\u0442\u043E\u0440\u044B\u0435 \u0447\u0435\u043B\u043E\u0432\u0435\u043A \u043F\u0440\u043E\u0432\u043E\u0434\u0438\u0442 \u0432 \u043F\u043E\u0441\u0442\u0435\u043B\u0438, \u043D\u0435 \u0431\u043E\u043B\u044C\u0448\u0435"),
+        medianLife: k(175, 60, 250, 5, "\u0417\u0434\u043E\u0440\u043E\u0432\u044C\u0435, \u0446\u0435\u043B\u044C: \u043F\u043E\u043B\u043E\u0432\u0438\u043D\u0430 \u043B\u044E\u0434\u0435\u0439 \u0434\u043E\u0436\u0438\u0432\u0430\u0435\u0442 \u043D\u0435 \u043C\u0435\u043D\u044C\u0448\u0435 \u0447\u0435\u043C \u0434\u043E \u0441\u0442\u043E\u043B\u044C\u043A\u0438\u0445 \u043B\u0435\u0442"),
+        reachElder: k(0.5, 0, 1, 0.05, "\u0417\u0434\u043E\u0440\u043E\u0432\u044C\u0435, \u0446\u0435\u043B\u044C: \u0434\u043E \u0433\u043B\u0443\u0431\u043E\u043A\u043E\u0439 \u0441\u0442\u0430\u0440\u043E\u0441\u0442\u0438 \u0434\u043E\u0436\u0438\u0432\u0430\u0435\u0442 \u043D\u0435 \u043C\u0435\u043D\u044C\u0448\u0435 \u0442\u0430\u043A\u043E\u0439 \u0434\u043E\u043B\u0438"),
+        badBornMin: k(0.15, 0, 1, 0.05, "\u0417\u0434\u043E\u0440\u043E\u0432\u044C\u0435, \u0446\u0435\u043B\u044C: \u0434\u0443\u0440\u043D\u0430\u044F \u0447\u0435\u0440\u0442\u0430 \u0437\u0434\u043E\u0440\u043E\u0432\u044C\u044F \u0441 \u0440\u043E\u0436\u0434\u0435\u043D\u0438\u044F \u2014 \u043D\u0435 \u043C\u0435\u043D\u044C\u0448\u0435 \u0447\u0435\u043C \u0443 \u0442\u0430\u043A\u043E\u0439 \u0434\u043E\u043B\u0438 \u043B\u044E\u0434\u0435\u0439"),
+        badBornMax: k(0.4, 0, 1, 0.05, "\u0417\u0434\u043E\u0440\u043E\u0432\u044C\u0435, \u0446\u0435\u043B\u044C: \u0434\u0443\u0440\u043D\u0430\u044F \u0447\u0435\u0440\u0442\u0430 \u0437\u0434\u043E\u0440\u043E\u0432\u044C\u044F \u0441 \u0440\u043E\u0436\u0434\u0435\u043D\u0438\u044F \u2014 \u043D\u0435 \u0431\u043E\u043B\u044C\u0448\u0435 \u0447\u0435\u043C \u0443 \u0442\u0430\u043A\u043E\u0439 \u0434\u043E\u043B\u0438 \u043B\u044E\u0434\u0435\u0439")
+      }
+    },
     // сезон
     season: {
       events: k(3, 1, 8, 1, "\u0421\u043E\u0431\u044B\u0442\u0438\u0439 \u0437\u0430 \u0441\u0435\u0437\u043E\u043D"),
@@ -2990,6 +3061,469 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
     return out;
   }
 
+  // src/data/health.ts
+  var HEALTH_TRAITS = [
+    // --- врождённые ---
+    {
+      id: "krepok",
+      name: "\u041A\u0440\u0435\u043F\u043E\u043A \u043A\u0430\u043A \u0434\u0443\u0431",
+      desc: "\u0421\u0440\u043E\u0434\u0443 \u043D\u0435 \u0445\u0432\u043E\u0440\u0430\u043B \u0434\u043E\u043B\u044C\u0448\u0435 \u0442\u0440\u0451\u0445 \u0434\u043D\u0435\u0439",
+      origin: "born",
+      good: true,
+      weight: 3,
+      krepost: 1,
+      risk: 0.6,
+      effect: "\u0420\u0435\u0436\u0435 \u0441\u043B\u0435\u0433\u0430\u0435\u0442; \u0434\u043E\u043B\u044C\u0448\u0435 \u0434\u0435\u0440\u0436\u0438\u0442\u0441\u044F \u043D\u0430 \u0434\u043E\u043B\u0436\u043D\u043E\u0441\u0442\u0438 \u0432 \u0441\u0442\u0430\u0440\u043E\u0441\u0442\u0438"
+    },
+    {
+      id: "zhivuch",
+      name: "\u0416\u0438\u0432\u0443\u0447 \u043A\u0430\u043A \u043A\u043E\u0448\u043A\u0430",
+      desc: "\u0412\u044B\u043A\u0430\u0440\u0430\u0431\u043A\u0438\u0432\u0430\u043B\u0441\u044F \u043E\u0442\u0442\u0443\u0434\u0430, \u043E\u0442\u043A\u0443\u0434\u0430 \u043D\u0435 \u0432\u043E\u0437\u0432\u0440\u0430\u0449\u0430\u044E\u0442\u0441\u044F",
+      origin: "born",
+      good: true,
+      weight: 2,
+      death: 0.5,
+      effect: "\u0422\u044F\u0436\u0451\u043B\u0443\u044E \u0431\u043E\u043B\u0435\u0437\u043D\u044C \u0438 \u0440\u0430\u043D\u0443 \u043F\u0435\u0440\u0435\u0436\u0438\u0432\u0430\u0435\u0442 \u0447\u0430\u0449\u0435"
+    },
+    {
+      id: "ne_beryot",
+      name: "\u0425\u0432\u043E\u0440\u044C \u043D\u0435 \u0431\u0435\u0440\u0451\u0442",
+      desc: "\u0412\u0441\u044F \u0434\u0435\u0440\u0435\u0432\u043D\u044F \u043B\u0435\u0436\u0430\u043B\u0430 \u0432 \u0433\u043E\u0440\u044F\u0447\u043A\u0435, \u0430 \u043E\u043D \u043D\u043E\u0441\u0438\u043B \u0432\u043E\u0434\u0443",
+      origin: "born",
+      good: true,
+      weight: 1,
+      risk: 0.4,
+      effect: "\u041C\u043E\u0440 \u0438 \u043F\u043E\u0432\u0435\u0442\u0440\u0438\u044F \u043E\u0431\u0445\u043E\u0434\u044F\u0442 \u0441\u0442\u043E\u0440\u043E\u043D\u043E\u0439"
+    },
+    {
+      id: "slaboe",
+      name: "\u0421\u043B\u0430\u0431\u043E\u0435 \u0437\u0434\u043E\u0440\u043E\u0432\u044C\u0435",
+      desc: "\u0421 \u0434\u0435\u0442\u0441\u0442\u0432\u0430 \u0442\u043E \u043E\u0434\u043D\u043E, \u0442\u043E \u0434\u0440\u0443\u0433\u043E\u0435",
+      origin: "born",
+      weight: 3,
+      krepost: -1,
+      risk: 1.8,
+      death: 1.5,
+      effect: "\u0421\u043B\u0435\u0433\u0430\u0435\u0442 \u0447\u0430\u0449\u0435, \u0431\u043E\u043B\u0435\u0435\u0442 \u0442\u044F\u0436\u0435\u043B\u0435\u0435; \u0434\u043E\u043B\u0436\u043D\u043E\u0441\u0442\u044C \u043F\u0440\u0438 \u043D\u0451\u043C \u043F\u0443\u0441\u0442\u0443\u0435\u0442 \u0447\u0430\u0449\u0435"
+    },
+    {
+      id: "khily",
+      name: "\u0425\u0438\u043B\u044B\u0439",
+      desc: "\u041A\u043E\u0436\u0430 \u0434\u0430 \u043A\u043E\u0441\u0442\u0438, \u0442\u044F\u0436\u0451\u043B\u043E\u0439 \u0440\u0430\u0431\u043E\u0442\u044B \u043D\u0435 \u0442\u044F\u043D\u0435\u0442",
+      origin: "born",
+      weight: 2,
+      krepost: -2,
+      risk: 1.3,
+      effect: "\u0420\u0430\u043D\u044C\u0448\u0435 \u0434\u0440\u0443\u0433\u0438\u0445 \u0432\u044B\u0431\u044B\u0432\u0430\u0435\u0442 \u0441\u043E \u0441\u043B\u0443\u0436\u0431\u044B"
+    },
+    {
+      id: "merzlyak",
+      name: "\u041C\u0435\u0440\u0437\u043B\u044F\u043A",
+      desc: "\u041F\u0435\u0440\u0432\u044B\u0435 \u0445\u043E\u043B\u043E\u0434\u0430 \u2014 \u0438 \u043E\u043D \u0443\u0436\u0435 \u043A\u0430\u0448\u043B\u044F\u0435\u0442",
+      origin: "born",
+      weight: 2,
+      winter: 1.8,
+      effect: "\u0417\u0438\u043C\u043E\u0439 \u0441\u043B\u0435\u0433\u0430\u0435\u0442 \u043F\u043E\u0447\u0442\u0438 \u043A\u0430\u0436\u0434\u044B\u0439 \u0433\u043E\u0434"
+    },
+    // --- наследственные ---
+    {
+      id: "slabaya_grud",
+      name: "\u0421\u043B\u0430\u0431\u0430\u044F \u0433\u0440\u0443\u0434\u044C",
+      desc: "\u0412 \u0440\u043E\u0434\u0443 \u043F\u043E\u043B\u043E\u0432\u0438\u043D\u0430 \u043F\u043E\u043C\u0435\u0440\u043B\u0430 \u043E\u0442 \u043A\u0430\u0448\u043B\u044F",
+      origin: "hereditary",
+      weight: 3,
+      winter: 2,
+      death: 1.4,
+      effect: "\u0417\u0438\u043C\u043D\u0438\u0435 \u0445\u0432\u043E\u0440\u0438 \u043E\u043F\u0430\u0441\u043D\u044B; \u0443 \u0440\u043E\u0434\u043D\u0438 \u0442\u043E \u0436\u0435"
+    },
+    {
+      id: "paduchaya",
+      name: "\u041F\u0430\u0434\u0443\u0447\u0430\u044F",
+      desc: "\u0420\u043E\u0434\u043E\u0432\u0430\u044F \u0431\u043E\u043B\u0435\u0437\u043D\u044C: \u043F\u0430\u0434\u0430\u0435\u0442 \u0438 \u0431\u044C\u0451\u0442\u0441\u044F, \u043F\u043E\u0442\u043E\u043C \u043D\u0435 \u043F\u043E\u043C\u043D\u0438\u0442",
+      origin: "hereditary",
+      weight: 2,
+      krepost: -1,
+      risk: 1.2,
+      effect: "\u0412 \u0440\u0435\u0448\u0430\u044E\u0449\u0438\u0439 \u0434\u0435\u043D\u044C \u043C\u043E\u0436\u0435\u0442 \u043E\u043A\u0430\u0437\u0430\u0442\u044C\u0441\u044F \u043D\u0435 \u0432 \u0441\u0442\u0440\u043E\u044E"
+    },
+    {
+      id: "durnaya_krov",
+      name: "\u0414\u0443\u0440\u043D\u0430\u044F \u043A\u0440\u043E\u0432\u044C",
+      desc: "\u0420\u0430\u043D\u044B \u0443 \u043D\u0438\u0445 \u0432 \u0440\u043E\u0434\u0443 \u0437\u0430\u0436\u0438\u0432\u0430\u044E\u0442 \u043F\u043B\u043E\u0445\u043E",
+      origin: "hereditary",
+      weight: 2,
+      death: 2,
+      effect: "\u0422\u044F\u0436\u0451\u043B\u0430\u044F \u0431\u043E\u043B\u0435\u0437\u043D\u044C \u0438\u043B\u0438 \u0440\u0430\u043D\u0430 \u0447\u0430\u0449\u0435 \u043A\u043E\u043D\u0447\u0430\u0435\u0442\u0441\u044F \u0441\u043C\u0435\u0440\u0442\u044C\u044E"
+    },
+    {
+      id: "lomota",
+      name: "\u0420\u043E\u0434\u043E\u0432\u0430\u044F \u043B\u043E\u043C\u043E\u0442\u0430",
+      desc: "\u0421\u0443\u0441\u0442\u0430\u0432\u044B \u043A\u0440\u0443\u0442\u0438\u0442 \u0443 \u0432\u0441\u0435\u0439 \u0441\u0435\u043C\u044C\u0438, \u0443 \u043A\u043E\u0433\u043E \u0440\u0430\u043D\u044C\u0448\u0435, \u0443 \u043A\u043E\u0433\u043E \u043F\u043E\u0437\u0436\u0435",
+      origin: "hereditary",
+      weight: 3,
+      krepost: -1,
+      risk: 1.2,
+      effect: "\u041A \u043F\u0435\u0440\u0435\u043C\u0435\u043D\u0435 \u043F\u043E\u0433\u043E\u0434\u044B \u0440\u0430\u0431\u043E\u0442\u043D\u0438\u043A \u0438\u0437 \u043D\u0435\u0433\u043E \u043D\u0438\u043A\u0430\u043A\u043E\u0439"
+    },
+    {
+      id: "rano_stareyut",
+      name: "\u0420\u0430\u043D\u043E \u0441\u0442\u0430\u0440\u0435\u044E\u0442",
+      desc: "\u0412 \u0438\u0445 \u0440\u043E\u0434\u0443 \u0441\u0435\u0434\u0435\u044E\u0442 \u043A \u0441\u0435\u043C\u0438\u0434\u0435\u0441\u044F\u0442\u0438",
+      origin: "hereditary",
+      weight: 2,
+      aging: 1.5,
+      effect: "\u0421\u0442\u0430\u0440\u043E\u0441\u0442\u044C \u043F\u0440\u0438\u0445\u043E\u0434\u0438\u0442 \u043D\u0430 \u0434\u0435\u0441\u044F\u0442\u043A\u0438 \u043B\u0435\u0442 \u0440\u0430\u043D\u044C\u0448\u0435"
+    },
+    {
+      id: "dolgozhiteli",
+      name: "\u0420\u043E\u0434 \u0434\u043E\u043B\u0433\u043E\u0436\u0438\u0442\u0435\u043B\u0435\u0439",
+      desc: "\u041F\u0440\u0430\u0434\u0435\u0434 \u0432 \u0441\u0442\u043E \u0434\u0435\u0432\u044F\u043D\u043E\u0441\u0442\u043E \u0435\u0449\u0451 \u0445\u043E\u0434\u0438\u043B \u0437\u0430 \u043F\u043B\u0443\u0433\u043E\u043C",
+      origin: "hereditary",
+      good: true,
+      weight: 2,
+      aging: 0.6,
+      effect: "\u0421\u0442\u0430\u0440\u0435\u0435\u0442 \u043C\u0435\u0434\u043B\u0435\u043D\u043D\u0435\u0435, \u0441\u043B\u0443\u0436\u0438\u0442 \u0434\u043E\u043B\u044C\u0448\u0435"
+    },
+    // --- нажитые ---
+    {
+      id: "staraya_rana",
+      name: "\u0421\u0442\u0430\u0440\u0430\u044F \u0440\u0430\u043D\u0430",
+      desc: "\u0417\u0430\u0440\u043E\u0441\u043B\u0430, \u0430 \u043D\u043E\u0435\u0442",
+      origin: "gained",
+      cause: "wound",
+      weight: 3,
+      krepost: -1.5,
+      winter: 1.3,
+      effect: "\u0412 \u0445\u043E\u043B\u043E\u0434\u0430 \u0438 \u0432 \u0434\u043E\u0440\u043E\u0433\u0435 \u2014 \u043E\u0431\u0443\u0437\u0430"
+    },
+    {
+      id: "khromota",
+      name: "\u0425\u0440\u043E\u043C\u043E\u0442\u0430",
+      desc: "\u041D\u043E\u0433\u0430 \u0441\u0440\u043E\u0441\u043B\u0430\u0441\u044C \u043A\u0440\u0438\u0432\u043E",
+      origin: "gained",
+      cause: "wound",
+      weight: 3,
+      krepost: -1,
+      effect: "\u0414\u043E\u0437\u043E\u0440\u044B \u0438 \u043E\u0431\u044A\u0435\u0437\u0434\u044B \u0434\u0430\u044E\u0442\u0441\u044F \u0442\u044F\u0436\u0435\u043B\u043E"
+    },
+    {
+      id: "nadorvalsya",
+      name: "\u041D\u0430\u0434\u043E\u0440\u0432\u0430\u043B\u0441\u044F",
+      desc: "\u041F\u043E\u0434\u043D\u044F\u043B \u0431\u043E\u043B\u044C\u0448\u0435, \u0447\u0435\u043C \u043C\u043E\u0433, \u2014 \u0438 \u0447\u0442\u043E-\u0442\u043E \u0432\u043D\u0443\u0442\u0440\u0438 \u043B\u043E\u043F\u043D\u0443\u043B\u043E",
+      origin: "gained",
+      cause: "wound",
+      weight: 2,
+      krepost: -1.5,
+      risk: 1.2,
+      effect: "\u0422\u044F\u0436\u0451\u043B\u043E\u0439 \u0440\u0430\u0431\u043E\u0442\u044B \u0431\u043E\u043B\u044C\u0448\u0435 \u043D\u0435 \u0442\u044F\u043D\u0435\u0442"
+    },
+    {
+      id: "zastuzhen",
+      name: "\u0417\u0430\u0441\u0442\u0443\u0436\u0435\u043D\u043D\u0430\u044F \u0433\u0440\u0443\u0434\u044C",
+      desc: "\u041A\u0430\u0448\u0435\u043B\u044C \u043E\u0441\u0442\u0430\u043B\u0441\u044F \u0441 \u0442\u043E\u0439 \u0437\u0438\u043C\u044B",
+      origin: "gained",
+      cause: "illness",
+      weight: 3,
+      krepost: -1,
+      winter: 1.6,
+      effect: "\u041A\u0430\u0436\u0434\u0430\u044F \u0437\u0438\u043C\u0430 \u0442\u0435\u043F\u0435\u0440\u044C \u0438\u0441\u043F\u044B\u0442\u0430\u043D\u0438\u0435"
+    },
+    {
+      id: "serdtse",
+      name: "\u0421\u0435\u0440\u0434\u0446\u0435 \u0448\u0430\u043B\u0438\u0442",
+      desc: "\u041F\u043E\u0441\u043B\u0435 \u0433\u043E\u0440\u044F\u0447\u043A\u0438 \u0437\u0430\u0434\u044B\u0445\u0430\u0435\u0442\u0441\u044F \u043D\u0430 \u043B\u0435\u0441\u0442\u043D\u0438\u0446\u0435",
+      origin: "gained",
+      cause: "illness",
+      weight: 2,
+      krepost: -1,
+      death: 1.8,
+      effect: "\u0421\u043B\u0435\u0434\u0443\u044E\u0449\u0430\u044F \u0442\u044F\u0436\u0451\u043B\u0430\u044F \u0431\u043E\u043B\u0435\u0437\u043D\u044C \u043C\u043E\u0436\u0435\u0442 \u0441\u0442\u0430\u0442\u044C \u043F\u043E\u0441\u043B\u0435\u0434\u043D\u0435\u0439"
+    },
+    {
+      id: "perebolel",
+      name: "\u041F\u0435\u0440\u0435\u0431\u043E\u043B\u0435\u043B \u0438 \u043E\u043A\u0440\u0435\u043F",
+      desc: "\u0427\u0442\u043E \u043D\u0435 \u0443\u0431\u0438\u043B\u043E, \u0442\u043E \u0437\u0430\u043A\u0430\u043B\u0438\u043B\u043E",
+      origin: "gained",
+      cause: "illness",
+      good: true,
+      weight: 3,
+      risk: 0.7,
+      effect: "\u0421\u043B\u0435\u0433\u0430\u0435\u0442 \u0440\u0435\u0436\u0435"
+    },
+    {
+      id: "dryakhleet",
+      name: "\u0414\u0440\u044F\u0445\u043B\u0435\u0435\u0442",
+      desc: "\u0413\u043E\u0434\u044B \u0432\u0437\u044F\u043B\u0438 \u0441\u0432\u043E\u0451: \u0441\u0438\u043B\u044B \u0443\u0445\u043E\u0434\u044F\u0442",
+      origin: "gained",
+      cause: "age",
+      weight: 3,
+      krepost: -2,
+      effect: "\u0421\u043E \u0441\u043B\u0443\u0436\u0431\u044B \u043F\u043E\u0440\u0430 \u043D\u0430 \u043F\u043E\u043A\u043E\u0439"
+    },
+    {
+      id: "tryasuchka",
+      name: "\u0422\u0440\u044F\u0441\u0443\u0442\u0441\u044F \u0440\u0443\u043A\u0438",
+      desc: "\u041F\u0435\u0440\u043E \u0438 \u043B\u043E\u0436\u043A\u0443 \u0434\u0435\u0440\u0436\u0438\u0442 \u0441 \u0442\u0440\u0443\u0434\u043E\u043C",
+      origin: "gained",
+      cause: "age",
+      weight: 2,
+      krepost: -1,
+      effect: "\u041F\u0438\u0441\u0430\u0440\u0435\u043C \u0438 \u043A\u043B\u044E\u0447\u043D\u0438\u043A\u043E\u043C \u2014 \u0445\u0443\u0436\u0435"
+    },
+    {
+      id: "slepnet",
+      name: "\u0421\u043B\u0430\u0431\u0435\u0435\u0442 \u0433\u043B\u0430\u0437\u0430\u043C\u0438",
+      desc: "\u0411\u0443\u043A\u0432\u044B \u043F\u043B\u044B\u0432\u0443\u0442, \u043B\u0438\u0446\u0430 \u0432\u0434\u0430\u043B\u0435\u043A\u0435 \u043D\u0435 \u0440\u0430\u0437\u043B\u0438\u0447\u0430\u0435\u0442",
+      origin: "gained",
+      cause: "age",
+      weight: 2,
+      krepost: -0.5,
+      effect: "\u0411\u0443\u043C\u0430\u0433\u0438 \u0438 \u0434\u043E\u0437\u043E\u0440\u044B \u2014 \u0445\u0443\u0436\u0435"
+    }
+  ];
+  var NATURA_HEALTH = {
+    charka: { krepost: -1, risk: 1.4 },
+    gulyaka: { risk: 1.2 },
+    razmyak: { risk: 1.2 },
+    zamaterel: { krepost: 0.5, risk: 0.85 },
+    khlebnul_likha: { risk: 0.9 },
+    zarok: { risk: 0.9 }
+  };
+
+  // src/sim/health.ts
+  var KREPOST_MAX = 10;
+  var SEASONS_IN_YEAR = 4;
+  var WINTER = 3;
+  var clamp3 = (v, a, b) => Math.max(a, Math.min(b, v));
+  var round13 = (v) => Math.round(v * 10) / 10;
+  var healthTrait = (id) => {
+    const t = HEALTH_TRAITS.find((x) => x.id === id);
+    if (!t) throw new Error(`\u041D\u0435\u0442 \u0447\u0435\u0440\u0442\u044B \u0437\u0434\u043E\u0440\u043E\u0432\u044C\u044F ${id}`);
+    return t;
+  };
+  function pickByWeight(rng, items) {
+    const total = items.reduce((s, t) => s + t.weight, 0);
+    if (!items.length || total <= 0) return void 0;
+    let r = rng.next() * total;
+    for (const t of items) {
+      r -= t.weight;
+      if (r < 0) return t;
+    }
+    return items[items.length - 1];
+  }
+  function makeFamily(rng, id) {
+    const t = rng.chance(BALANCE.health.familyChance) ? pickByWeight(rng, HEALTH_TRAITS.filter((x) => x.origin === "hereditary")) : void 0;
+    return { id, hereditary: t ? [t.id] : [] };
+  }
+  function birthHealth(rng, family, vices = []) {
+    const krepost = round13(clamp3(BALANCE.health.krepostMean + rng.gauss() * BALANCE.health.krepostSpread, 1, KREPOST_MAX));
+    const traits = [];
+    const born = rng.chance(BALANCE.health.bornChance) ? pickByWeight(rng, HEALTH_TRAITS.filter((x) => x.origin === "born")) : void 0;
+    if (born) traits.push(born.id);
+    for (const id of family?.hereditary ?? []) if (rng.chance(BALANCE.health.inheritChance)) traits.push(id);
+    return { krepost, traits, family: family?.id, vices: vices.filter((id) => NATURA_HEALTH[id]), off: 0, state: "ok", log: [] };
+  }
+  function healthMods(h) {
+    const m2 = { krepost: 0, risk: 1, winter: 1, death: 1, aging: 1 };
+    const all = [...h.traits.map(healthTrait), ...h.vices.map((id) => NATURA_HEALTH[id])];
+    for (const t of all) {
+      m2.krepost += t.krepost ?? 0;
+      m2.risk *= t.risk ?? 1;
+      m2.winter *= t.winter ?? 1;
+      m2.death *= t.death ?? 1;
+      m2.aging *= t.aging ?? 1;
+    }
+    return m2;
+  }
+  function krepostNow(h, age) {
+    const m2 = healthMods(h);
+    const aged = Math.max(0, age - BALANCE.health.oldFrom) / BALANCE.health.agingStep * m2.aging;
+    return round13(clamp3(h.krepost + m2.krepost - aged, 0, KREPOST_MAX));
+  }
+  function illChance(h, age, season) {
+    const m2 = healthMods(h);
+    const weak = Math.max(0, 1 + (BALANCE.health.krepostMean - krepostNow(h, age)) * BALANCE.health.krepostRisk);
+    const winter = season % SEASONS_IN_YEAR === WINTER ? BALANCE.health.winterMult * m2.winter : 1;
+    return clamp3(BALANCE.health.illBase * m2.risk * weak * winter, 0, 1);
+  }
+  function ageDeathChance(h, age) {
+    const span = Math.max(1, BALANCE.health.lifeMax - BALANCE.health.elderFrom);
+    const x = Math.max(0, age - BALANCE.health.elderFrom) / span * healthMods(h).aging;
+    return clamp3(x * x * BALANCE.health.ageDeathMax, 0, 1);
+  }
+  function gain(rng, h, cause, ev, onlyBad = false) {
+    const t = pickByWeight(rng, HEALTH_TRAITS.filter((x) => x.origin === "gained" && x.cause === cause && !h.traits.includes(x.id) && !(onlyBad && x.good)));
+    if (!t) return;
+    h.traits.push(t.id);
+    ev("trait", `\u041E\u0441\u0442\u0430\u043B\u043E\u0441\u044C: \xAB${t.name}\xBB \u2014 ${t.desc.charAt(0).toLowerCase()}${t.desc.slice(1)}.`, t.id);
+  }
+  function die(h, cause, ev, text) {
+    h.state = "dead";
+    h.cause = cause;
+    h.off = 0;
+    ev("dead", text);
+  }
+  function seasonCheck(rng, h, age, season) {
+    const out = [];
+    if (h.state !== "ok") return out;
+    const ev = (kind, text, trait) => {
+      const e = { season, age: Math.floor(age), kind, text, trait };
+      out.push(e);
+      h.log.push(e);
+    };
+    const m2 = healthMods(h);
+    const weak = Math.max(0, 1 + (BALANCE.health.krepostMean - krepostNow(h, age)) * BALANCE.health.krepostDeath);
+    if (rng.chance(ageDeathChance(h, age))) {
+      die(h, "\u0441\u0442\u0430\u0440\u043E\u0441\u0442\u044C", ev, "\u0423\u043C\u0435\u0440 \u043E\u0442 \u0441\u0442\u0430\u0440\u043E\u0441\u0442\u0438.");
+      return out;
+    }
+    if (age >= BALANCE.health.oldFrom && rng.chance(BALANCE.health.ageTraitChance * m2.aging)) gain(rng, h, "age", ev);
+    if (h.off > 0) {
+      h.off--;
+      return out;
+    }
+    if (rng.chance(BALANCE.health.woundChance)) {
+      if (rng.chance(clamp3(BALANCE.health.woundDeath * m2.death * weak, 0, 1))) {
+        die(h, "\u0440\u0430\u043D\u0430", ev, "\u0422\u044F\u0436\u0435\u043B\u043E \u0440\u0430\u043D\u0435\u043D \u0438 \u043D\u0435 \u0432\u044B\u0436\u0438\u043B.");
+        return out;
+      }
+      h.off = rng.int(BALANCE.health.hardOffMin, Math.max(BALANCE.health.hardOffMin, BALANCE.health.hardOffMax));
+      ev("wound", `\u0420\u0430\u043D\u0435\u043D \u0438\u043B\u0438 \u043D\u0430\u0434\u043E\u0440\u0432\u0430\u043B\u0441\u044F: \u0432 \u043F\u043E\u0441\u0442\u0435\u043B\u0438 ${h.off} \u0441\u0435\u0437.`);
+      if (rng.chance(BALANCE.health.woundChronic)) gain(rng, h, "wound", ev);
+    } else if (rng.chance(illChance(h, age, season))) {
+      if (rng.chance(BALANCE.health.hardShare)) {
+        if (rng.chance(clamp3(BALANCE.health.hardDeath * m2.death * weak, 0, 1))) {
+          die(h, "\u0431\u043E\u043B\u0435\u0437\u043D\u044C", ev, "\u0422\u044F\u0436\u0435\u043B\u043E \u0437\u0430\u0431\u043E\u043B\u0435\u043B \u0438 \u0443\u043C\u0435\u0440.");
+          return out;
+        }
+        h.off = rng.int(BALANCE.health.hardOffMin, Math.max(BALANCE.health.hardOffMin, BALANCE.health.hardOffMax));
+        ev("hard", `\u0422\u044F\u0436\u0435\u043B\u043E \u0431\u043E\u043B\u0435\u043D: \u0432 \u043F\u043E\u0441\u0442\u0435\u043B\u0438 ${h.off} \u0441\u0435\u0437.`);
+        if (rng.chance(BALANCE.health.illChronic)) gain(rng, h, "illness", ev, true);
+      } else {
+        h.off = 1;
+        ev("ill", "\u0421\u043B\u0451\u0433 \u043D\u0430 \u0441\u0435\u0437\u043E\u043D.");
+        if (rng.chance(BALANCE.health.lightStrong) && !h.traits.includes("perebolel")) {
+          h.traits.push("perebolel");
+          ev("trait", "\u041E\u0441\u0442\u0430\u043B\u043E\u0441\u044C: \xAB\u041F\u0435\u0440\u0435\u0431\u043E\u043B\u0435\u043B \u0438 \u043E\u043A\u0440\u0435\u043F\xBB.", "perebolel");
+        }
+      }
+    }
+    if (krepostNow(h, age) <= BALANCE.health.incapAt) {
+      h.state = "out";
+      h.cause = "\u0437\u0434\u043E\u0440\u043E\u0432\u044C\u0435";
+      ev("out", "\u0417\u0434\u043E\u0440\u043E\u0432\u044C\u0435 \u043D\u0435 \u0434\u0430\u0451\u0442 \u0441\u043B\u0443\u0436\u0438\u0442\u044C: \u0432\u044B\u0431\u044B\u043B \u0441\u043E \u0441\u043B\u0443\u0436\u0431\u044B.");
+    }
+    return out;
+  }
+  function liveThrough(rng, h, age, seasons, track2) {
+    const r = { offSeasons: 0, lived: 0 };
+    for (let s = 0; s < seasons && h.state !== "dead"; s++) {
+      const wasOk = h.state === "ok";
+      seasonCheck(rng, h, age + s / SEASONS_IN_YEAR, s);
+      if (wasOk) {
+        r.lived++;
+        if (h.off > 0) r.offSeasons++;
+      }
+      if (wasOk && h.state !== "ok") r.removedAt = s;
+      if (h.state === "dead" && r.deadAt === void 0) r.deadAt = s;
+      if (h.state === "out" && rng.chance(ageDeathChance(h, age + s / SEASONS_IN_YEAR))) {
+        h.state = "dead";
+        r.deadAt = s;
+      }
+      track2?.push(h.state === "dead" ? "dead" : h.state === "out" ? "out" : h.off > 0 ? "bed" : "ok");
+    }
+    return r;
+  }
+
+  // src/sim/health-report.ts
+  var median2 = (xs) => {
+    const a = [...xs].sort((x, y) => x - y);
+    return a.length ? a[Math.floor(a.length / 2)] : 0;
+  };
+  var round32 = (v) => Math.round(v * 1e3) / 1e3;
+  var isBad = (h) => h.traits.some((id) => !healthTrait(id).good && healthTrait(id).origin !== "gained");
+  function healthCohort(people2, seed) {
+    const rng = new Rng(seed);
+    const out = [];
+    let family = makeFamily(rng, "\u0441\u0435\u043C\u044C\u044F-0");
+    for (let i = 0; i < people2; i++) {
+      if (i % BALANCE.health.familySize === 0) family = makeFamily(rng, `\u0441\u0435\u043C\u044C\u044F-${i / BALANCE.health.familySize}`);
+      out.push({ h: birthHealth(rng, family), age: rng.int(BALANCE.health.ageMin, Math.max(BALANCE.health.ageMin, BALANCE.health.ageMax)), family });
+    }
+    return out;
+  }
+  function healthMetrics(people2, seed = "\u0437\u0434\u043E\u0440\u043E\u0432\u044C\u0435") {
+    const years = BALANCE.health.years, seasons = years * SEASONS_IN_YEAR;
+    const cohort = healthCohort(people2, seed);
+    const badBorn = cohort.filter((c) => isBad(c.h)).length / Math.max(1, people2);
+    const hered = (h) => h.traits.some((id) => healthTrait(id).origin === "hereditary");
+    const kin = cohort.filter((c) => cohort.some((o) => o !== c && o.family === c.family && hered(o.h)));
+    const kinShare = { withKin: round32(kin.filter((c) => hered(c.h)).length / Math.max(1, kin.length)), base: round32(cohort.filter((c) => hered(c.h)).length / Math.max(1, people2)) };
+    const rng = new Rng(`${seed}-\u043F\u0430\u0440\u0442\u0438\u044F`);
+    const lived = cohort.map((c) => liveThrough(rng, c.h, c.age, seasons));
+    const causes = { "\u0431\u043E\u043B\u0435\u0437\u043D\u044C": 0, "\u0440\u0430\u043D\u0430": 0, "\u0441\u0442\u0430\u0440\u043E\u0441\u0442\u044C": 0, "\u0437\u0434\u043E\u0440\u043E\u0432\u044C\u0435": 0 };
+    for (const c of cohort) if (c.h.state !== "ok" && c.h.cause) causes[c.h.cause] += 1 / Math.max(1, people2);
+    const removedAt = lived.map((l) => l.removedAt);
+    const curve = Array.from({ length: years + 1 }, (_, y) => round32(removedAt.filter((s) => s === void 0 || s >= y * SEASONS_IN_YEAR).length / Math.max(1, people2)));
+    const edges = [BALANCE.health.ageMin, BALANCE.health.oldFrom, BALANCE.health.elderFrom, BALANCE.health.lifeMax].filter((v, i, a) => i === 0 || v > a[i - 1]);
+    const byAge = edges.slice(0, -1).map((from, i) => {
+      const idx = cohort.map((c, k2) => c.age >= from && c.age < edges[i + 1] ? k2 : -1).filter((k2) => k2 >= 0);
+      return { from, to: edges[i + 1], people: idx.length, removed: round32(idx.filter((k2) => removedAt[k2] !== void 0).length / Math.max(1, idx.length)) };
+    }).filter((b) => b.people > 0);
+    const start = new Map(cohort.map((c) => [c, c.h.traits.length]));
+    const lifeRng = new Rng(`${seed}-\u0436\u0438\u0437\u043D\u044C`);
+    const adult = BALANCE.natura.adultAge, maxSeasons = (BALANCE.health.lifeMax + 60 - adult) * SEASONS_IN_YEAR;
+    const lives = Array.from({ length: people2 }, (_, i) => {
+      const fam = makeFamily(lifeRng, `\u0440\u043E\u0434-${i}`);
+      const h = birthHealth(lifeRng, fam);
+      const bad = isBad(h);
+      const l = liveThrough(lifeRng, h, adult, maxSeasons);
+      return { age: adult + (l.deadAt ?? maxSeasons) / SEASONS_IN_YEAR, bad };
+    });
+    const ages = lives.map((l) => l.age);
+    const hist = Array.from({ length: Math.ceil((BALANCE.health.lifeMax + 20 - adult) / 10) }, (_, i) => {
+      const from = adult + i * 10;
+      return { age: from, share: round32(ages.filter((a) => a >= from && a < from + 10).length / Math.max(1, people2)) };
+    });
+    return {
+      people: people2,
+      years,
+      removed: round32(removedAt.filter((s) => s !== void 0).length / Math.max(1, people2)),
+      dead: round32(cohort.filter((c) => c.h.state === "dead").length / Math.max(1, people2)),
+      causes: Object.fromEntries(Object.entries(causes).map(([key, v]) => [key, round32(v)])),
+      curve,
+      byAge,
+      sickEver: round32(cohort.filter((c) => c.h.log.some((e) => e.kind === "ill" || e.kind === "hard" || e.kind === "wound")).length / Math.max(1, people2)),
+      offShare: round32(lived.reduce((s, l) => s + l.offSeasons, 0) / Math.max(1, lived.reduce((s, l) => s + l.lived, 0))),
+      gained: round32(cohort.filter((c) => c.h.traits.length > (start.get(c) ?? 0) || c.h.log.some((e) => e.kind === "trait")).length / Math.max(1, people2)),
+      badBorn: round32(badBorn),
+      traitShare: Object.fromEntries(HEALTH_TRAITS.map((t) => [t.id, round32(cohort.filter((c) => c.h.traits.includes(t.id)).length / Math.max(1, people2))])),
+      kinShare,
+      life: {
+        median: Math.round(median2(ages)),
+        reachElder: round32(ages.filter((a) => a >= BALANCE.health.elderFrom).length / Math.max(1, people2)),
+        reachMax: round32(ages.filter((a) => a >= BALANCE.health.lifeMax - 10).length / Math.max(1, people2)),
+        hist,
+        medianHealthy: Math.round(median2(lives.filter((l) => !l.bad).map((l) => l.age))),
+        medianBad: Math.round(median2(lives.filter((l) => l.bad).map((l) => l.age)))
+      }
+    };
+  }
+  function healthWarnings(m2) {
+    const G = BALANCE.health.goal, out = [];
+    if (m2.removed < G.removedMin) out.push(`\u0441\u043E\u0432\u0435\u0442 \u043F\u043E\u0447\u0442\u0438 \u043D\u0435 \u043C\u0435\u043D\u044F\u0435\u0442\u0441\u044F: \u0437\u0430 \u043F\u0430\u0440\u0442\u0438\u044E \u0432\u044B\u0431\u044B\u0432\u0430\u0435\u0442 ${m2.removed} \u043F\u0440\u0438 \u0446\u0435\u043B\u0438 \u043D\u0435 \u043C\u0435\u043D\u044C\u0448\u0435 ${G.removedMin}`);
+    if (m2.removed > G.removedMax) out.push(`\u043B\u044E\u0434\u0435\u0439 \u043A\u043E\u0441\u0438\u0442 \u0441\u043B\u0438\u0448\u043A\u043E\u043C \u0431\u044B\u0441\u0442\u0440\u043E: \u0437\u0430 \u043F\u0430\u0440\u0442\u0438\u044E \u0432\u044B\u0431\u044B\u0432\u0430\u0435\u0442 ${m2.removed} \u043F\u0440\u0438 \u0446\u0435\u043B\u0438 \u043D\u0435 \u0431\u043E\u043B\u044C\u0448\u0435 ${G.removedMax}`);
+    if (m2.offShare < G.offMin) out.push(`\u0431\u043E\u043B\u0435\u044E\u0442 \u0441\u043B\u0438\u0448\u043A\u043E\u043C \u0440\u0435\u0434\u043A\u043E: \u0432 \u043F\u043E\u0441\u0442\u0435\u043B\u0438 ${m2.offShare} \u0441\u0435\u0437\u043E\u043D\u043E\u0432 \u043F\u0440\u0438 \u0446\u0435\u043B\u0438 \u043D\u0435 \u043C\u0435\u043D\u044C\u0448\u0435 ${G.offMin}`);
+    if (m2.offShare > G.offMax) out.push(`\u0431\u043E\u043B\u0435\u044E\u0442 \u0441\u043B\u0438\u0448\u043A\u043E\u043C \u0447\u0430\u0441\u0442\u043E: \u0432 \u043F\u043E\u0441\u0442\u0435\u043B\u0438 ${m2.offShare} \u0441\u0435\u0437\u043E\u043D\u043E\u0432 \u043F\u0440\u0438 \u0446\u0435\u043B\u0438 \u043D\u0435 \u0431\u043E\u043B\u044C\u0448\u0435 ${G.offMax}`);
+    if (m2.life.median < G.medianLife) out.push(`\u0436\u0438\u0432\u0443\u0442 \u043C\u0430\u043B\u043E: \u043F\u043E\u043B\u043E\u0432\u0438\u043D\u0430 \u0434\u043E\u0436\u0438\u0432\u0430\u0435\u0442 \u0434\u043E ${m2.life.median} \u043F\u0440\u0438 \u0446\u0435\u043B\u0438 \u043D\u0435 \u043C\u0435\u043D\u044C\u0448\u0435 ${G.medianLife}`);
+    if (m2.life.reachElder < G.reachElder) out.push(`\u0434\u043E \u0433\u043B\u0443\u0431\u043E\u043A\u043E\u0439 \u0441\u0442\u0430\u0440\u043E\u0441\u0442\u0438 \u0434\u043E\u0436\u0438\u0432\u0430\u0435\u0442 ${m2.life.reachElder} \u043F\u0440\u0438 \u0446\u0435\u043B\u0438 \u043D\u0435 \u043C\u0435\u043D\u044C\u0448\u0435 ${G.reachElder}`);
+    if (m2.badBorn < G.badBornMin) out.push(`\u0432\u0441\u0435 \u043E\u0434\u0438\u043D\u0430\u043A\u043E\u0432\u043E \u0437\u0434\u043E\u0440\u043E\u0432\u044B: \u0434\u0443\u0440\u043D\u0430\u044F \u0447\u0435\u0440\u0442\u0430 \u0441 \u0440\u043E\u0436\u0434\u0435\u043D\u0438\u044F \u0443 ${m2.badBorn} \u043F\u0440\u0438 \u0446\u0435\u043B\u0438 \u043D\u0435 \u043C\u0435\u043D\u044C\u0448\u0435 ${G.badBornMin}`);
+    if (m2.badBorn > G.badBornMax) out.push(`\u0441\u043B\u0438\u0448\u043A\u043E\u043C \u043C\u043D\u043E\u0433\u043E \u0431\u043E\u043B\u044C\u043D\u044B\u0445 \u0441 \u0440\u043E\u0436\u0434\u0435\u043D\u0438\u044F: ${m2.badBorn} \u043F\u0440\u0438 \u0446\u0435\u043B\u0438 \u043D\u0435 \u0431\u043E\u043B\u044C\u0448\u0435 ${G.badBornMax}`);
+    const never = HEALTH_TRAITS.filter((t) => !m2.traitShare[t.id]).map((t) => t.name);
+    if (never.length) out.push(`\u0447\u0435\u0440\u0442\u044B \u0437\u0434\u043E\u0440\u043E\u0432\u044C\u044F \u043D\u0435 \u0432\u0441\u0442\u0440\u0435\u0447\u0430\u044E\u0442\u0441\u044F: ${never.join(", ")}`);
+    return out;
+  }
+
   // src/ui/natura.ts
   var $ = (id) => document.getElementById(id);
   var val = (id) => $(id).value;
@@ -3005,6 +3539,8 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
   var signDef = (id) => SIGNS.find((s) => s.id === id);
   var people = [];
   var m;
+  var hm;
+  var shown;
   var axesNow = currentAxes();
   var personRoll = 0;
   var vecTags = (v) => Object.entries(v).map(([k2, x]) => `<span class="tag ${x > 0 ? "plus" : "minus"}">${esc(x > 0 ? signDef(k2).plus : signDef(k2).minus)} ${Math.abs(x)}</span>`).join("");
@@ -3017,20 +3553,25 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
   var track = (share, color, extra = "") => `<div class="track">${extra}<div class="fill" style="width:${Math.min(100, Math.max(0, share * 100)).toFixed(1)}%;background:${color}"></div></div>`;
   var starLine = (s) => AXES.map((a) => `<span style="color:var(--axis-${a})"><b>${AXIS_NAMES[a]}</b> ${f1(s[a])}</span>`).join(" \xB7 ");
   var GROUPS = [
-    { title: "\u0421\u043A\u043E\u043B\u044C\u043A\u043E \u0447\u0435\u0440\u0442 \u0438 \u043E\u0442\u043A\u0443\u0434\u0430", open: true, has: (p) => /innate|before|adultAge|eventList|lifeSteps|ageM|perkWeight/.test(p) },
-    { title: "\u0420\u043E\u0441\u0442 \u0434\u0440\u0435\u0432\u0430", open: true, has: (p) => p.split(".").length === 2 && !/innate|before|adultAge|eventList|lifeSteps|ageM|perkWeight|signSoft|coreScale|axisGain/.test(p) },
-    { title: "\u041F\u0440\u0438\u0437\u043D\u0430\u043A\u0438 \u0438 \u0441\u043A\u043B\u043E\u043D\u043D\u043E\u0441\u0442\u0438", open: false, has: (p) => /signSoft|coreScale|axisGain/.test(p) },
+    { title: "\u0421\u043A\u043E\u043B\u044C\u043A\u043E \u0447\u0435\u0440\u0442 \u0438 \u043E\u0442\u043A\u0443\u0434\u0430", open: true, has: (p) => /^natura\.(innate|before|adultAge|eventList|lifeSteps|ageM|perkWeight)/.test(p) },
+    { title: "\u0420\u043E\u0441\u0442 \u0434\u0440\u0435\u0432\u0430", open: true, has: (p) => /^natura\.[a-zA-Z]+$/.test(p) && !/innate|before|adultAge|eventList|lifeSteps|ageM|perkWeight|signSoft|coreScale|axisGain/.test(p) },
+    { title: "\u041F\u0440\u0438\u0437\u043D\u0430\u043A\u0438 \u0438 \u0441\u043A\u043B\u043E\u043D\u043D\u043E\u0441\u0442\u0438", open: false, has: (p) => /^natura\.(signSoft|coreScale|axisGain)/.test(p) },
     { title: "\u0412\u0435\u0441\u0430 \u0434\u0435\u043B\u043E\u0432\u044B\u0445 \u0441\u043A\u043B\u043E\u043D\u043D\u043E\u0441\u0442\u0435\u0439", open: false, has: (p) => p.startsWith("natura.w.") },
     { title: "\u041F\u043E\u043F\u0440\u0430\u0432\u043A\u0438 \u0441\u0435\u0440\u0435\u0434\u0438\u043D\u044B \u0441\u043A\u043B\u043E\u043D\u043D\u043E\u0441\u0442\u0435\u0439", open: false, has: (p) => p.startsWith("natura.shift.") },
-    { title: "\u0426\u0435\u043B\u0438 \u043E\u0442\u0447\u0451\u0442\u0430", open: false, has: (p) => p.startsWith("natura.goal.") }
+    { title: "\u0426\u0435\u043B\u0438 \u043E\u0442\u0447\u0451\u0442\u0430 \u043E \u043D\u0430\u0442\u0443\u0440\u0435", open: false, has: (p) => p.startsWith("natura.goal.") },
+    { title: "\u0417\u0434\u043E\u0440\u043E\u0432\u044C\u0435: \u0440\u043E\u0436\u0434\u0435\u043D\u0438\u0435 \u0438 \u0441\u0435\u043C\u044C\u044F", open: false, has: (p) => /^health\.(krepostMean|krepostSpread|bornChance|familyChance|inheritChance)/.test(p) },
+    { title: "\u0417\u0434\u043E\u0440\u043E\u0432\u044C\u0435: \u0431\u043E\u043B\u0435\u0437\u043D\u0438 \u0438 \u0440\u0430\u043D\u044B", open: false, has: (p) => /^health\.(ill|winterMult|krepostRisk|krepostDeath|hard|light|wound|incapAt)/.test(p) },
+    { title: "\u0417\u0434\u043E\u0440\u043E\u0432\u044C\u0435: \u0441\u0442\u0430\u0440\u043E\u0441\u0442\u044C", open: false, has: (p) => /^health\.(oldFrom|agingStep|ageTraitChance|elderFrom|lifeMax|ageDeathMax)/.test(p) },
+    { title: "\u0417\u0434\u043E\u0440\u043E\u0432\u044C\u0435: \u043F\u0440\u043E\u0433\u043E\u043D", open: false, has: (p) => /^health\.(years|ageMin|ageMax|familySize)/.test(p) },
+    { title: "\u0426\u0435\u043B\u0438 \u043E\u0442\u0447\u0451\u0442\u0430 \u043E \u0437\u0434\u043E\u0440\u043E\u0432\u044C\u0435", open: false, has: (p) => p.startsWith("health.goal.") }
   ];
-  var NATURA_KNOBS = KNOBS.filter((q) => q.path.startsWith("natura."));
+  var NATURA_KNOBS = KNOBS.filter((q) => q.path.startsWith("natura.") || q.path.startsWith("health."));
   var knobId = (q) => `k-${q.path.replace(/\./g, "-")}`;
   function renderKnobs() {
     $("knobs").innerHTML = GROUPS.map((g) => {
       const rows = NATURA_KNOBS.filter((q) => g.has(q.path)).map((q) => {
         const v = getAt(q.path);
-        const label = esc(q.label.replace(/^Натура(, отчёт|, цель)?: /, ""));
+        const label = esc(q.label.replace(/^(Натура|Здоровье)(, отчёт|, цель)?: /, ""));
         return `<div class="knob${v !== q.def ? " changed" : ""}" id="${knobId(q)}" title="${q.path}">
         <div class="knob-label">${label}</div>
         <div class="knob-row">
@@ -3149,7 +3690,9 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
     const nature = NATURES.find((x) => x.id === val("nature")) ?? NATURES[0];
     const seed = `${val("seed")}-\u0447\u0435\u043B\u043E\u0432\u0435\u043A-${personRoll}`;
     const age = val("age") ? Number(val("age")) : void 0;
-    $("person-view").innerHTML = personHtml(rollPerson(seed, nature, age));
+    shown = rollPerson(seed, nature, age);
+    $("person-view").innerHTML = personHtml(shown);
+    renderHealthPerson(seed);
     $("person-rerolls").innerHTML = Array.from({ length: 12 }, (_, i) => {
       const p = rollPerson(`${seed}-${i}`, nature, age);
       return `<div class="reroll"><span class="muted">${p.age} \u043B\u0435\u0442</span> ${p.traits.map((t) => traitTag(t, roleOf(p, t.id))).join("")}<div class="muted">${starLine(p.star)}</div></div>`;
@@ -3158,6 +3701,88 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
   function renderParty() {
     const party = growParty(val("seed"), 10);
     $("party-view").innerHTML = `<table><tr><th>\u041D\u0430\u0442\u0443\u0440\u0430</th><th>\u0412\u043E\u0437\u0440\u0430\u0441\u0442</th><th>\u0427\u0435\u0440\u0442\u044B</th><th>\u0421\u043A\u043B\u043E\u043D\u043D\u043E\u0441\u0442\u0438</th></tr>${party.map((p) => `<tr><td><b>${esc(p.nature.name)}</b></td><td class="c">${p.age}</td><td>${p.traits.map((t) => traitTag(t, roleOf(p, t.id))).join("")}</td><td>${starLine(p.star)}</td></tr>`).join("")}</table>`;
+  }
+  var H_ORIGIN = { born: "\u0432\u0440\u043E\u0436\u0434\u0451\u043D\u043D\u0430\u044F", hereditary: "\u043D\u0430\u0441\u043B\u0435\u0434\u0441\u0442\u0432\u0435\u043D\u043D\u0430\u044F", gained: "\u043D\u0430\u0436\u0438\u0442\u0430\u044F" };
+  var healthTag = (id) => {
+    const t = healthTrait(id);
+    return `<span class="tag h-${t.origin}${t.good ? " h-good" : ""}" title="${esc(`${t.desc}. ${t.effect}`)}">${esc(t.name)}</span>`;
+  };
+  var strip = (states) => `<div class="strip">${states.map((x, i) => `<i class="${x}${i % SEASONS_IN_YEAR === WINTER ? " winter" : ""}" title="\u0433\u043E\u0434 ${Math.floor(i / SEASONS_IN_YEAR) + 1}"></i>`).join("")}</div>`;
+  var STRIP_LEGEND = `<div class="legend"><span><span class="sw" style="background:#cfe3c8"></span>\u0441\u043B\u0443\u0436\u0438\u0442</span><span><span class="sw" style="background:#e2b04a"></span>\u0432 \u043F\u043E\u0441\u0442\u0435\u043B\u0438</span>
+  <span><span class="sw" style="background:#9a9a9a"></span>\u0432\u044B\u0431\u044B\u043B \u0441\u043E \u0441\u043B\u0443\u0436\u0431\u044B</span><span><span class="sw" style="background:#24211c"></span>\u0443\u043C\u0435\u0440</span></div>`;
+  function liveStory(h, age, seed) {
+    const states = [];
+    liveThrough(new Rng(seed), h, age, BALANCE.health.years * SEASONS_IN_YEAR, states);
+    return states;
+  }
+  function renderHealthPerson(seed) {
+    if (!shown) return;
+    const rng = new Rng(`${seed}-\u0437\u0434\u043E\u0440\u043E\u0432\u044C\u0435`);
+    const h = birthHealth(rng, makeFamily(rng, "\u0441\u0435\u043C\u044C\u044F"), shown.traits.map((t) => t.id));
+    const before = [...h.traits], k0 = krepostNow(h, shown.age);
+    const states = liveStory(h, shown.age, `${seed}-\u0433\u043E\u0434\u044B`);
+    const vices = h.vices.length ? ` \xB7 \u0441\u043A\u0430\u0437\u044B\u0432\u0430\u044E\u0442\u0441\u044F \u0447\u0435\u0440\u0442\u044B \u043D\u0430\u0442\u0443\u0440\u044B: ${h.vices.map((id) => esc(bagTrait(id).name)).join(", ")}` : "";
+    const log = h.log.length ? h.log.map((e) => `<div>${e.age} \u043B\u0435\u0442, \u0433\u043E\u0434 ${Math.floor(e.season / SEASONS_IN_YEAR) + 1}: ${esc(e.text)}</div>`).join("") : `<div class="muted">\u0417\u0430 \u044D\u0442\u0438 \u0433\u043E\u0434\u044B \u043D\u0438\u0447\u0435\u0433\u043E \u043D\u0435 \u0441\u043B\u0443\u0447\u0438\u043B\u043E\u0441\u044C.</div>`;
+    $("health-person").innerHTML = `<p><b>${esc(shown.nature.name)}</b>, ${shown.age} \u043B\u0435\u0442 \xB7 \u043A\u0440\u0435\u043F\u043E\u0441\u0442\u044C \u043F\u0440\u0438 \u0440\u043E\u0436\u0434\u0435\u043D\u0438\u0438 ${f1(h.krepost)}, \u0441\u0435\u0439\u0447\u0430\u0441 ${f1(k0)}, \u0447\u0435\u0440\u0435\u0437 ${BALANCE.health.years} \u043B\u0435\u0442 ${f1(krepostNow(h, shown.age + BALANCE.health.years))}
+    \xB7 \u0441 \u0440\u043E\u0436\u0434\u0435\u043D\u0438\u044F: ${before.length ? before.map(healthTag).join("") : "\u0437\u0434\u043E\u0440\u043E\u0432"}${vices}</p>${STRIP_LEGEND}${strip(states)}${log}`;
+  }
+  function svgCurve(curve) {
+    const W = 560, Hh = 170, L = 34, B0 = 22, x = (i) => L + i / (curve.length - 1) * (W - L - 8), y = (v) => 8 + (1 - v) * (Hh - B0 - 8);
+    const grid = [0, 0.25, 0.5, 0.75, 1].map((v) => `<line x1="${L}" x2="${W - 8}" y1="${y(v)}" y2="${y(v)}" stroke="#d9d3c4"/><text x="${L - 4}" y="${y(v) + 4}" text-anchor="end">${pct(v)}</text>`).join("");
+    const ticks = curve.map((_, i) => i % 5 === 0 ? `<text x="${x(i)}" y="${Hh - 6}" text-anchor="middle">${i}-\u0439 \u0433\u043E\u0434</text>` : "").join("");
+    return `<svg class="plot" viewBox="0 0 ${W} ${Hh}">${grid}${ticks}<polyline fill="none" stroke="#3f7a3a" stroke-width="2.5" points="${curve.map((v, i) => `${x(i)},${y(v)}`).join(" ")}"/></svg>`;
+  }
+  function svgHist(hist) {
+    const W = 560, Hh = 170, L = 34, B0 = 22, top = Math.max(...hist.map((b) => b.share), 0.01), bw = (W - L - 8) / hist.length;
+    const y = (v) => 8 + (1 - v / top) * (Hh - B0 - 8);
+    const color = (age) => age >= BALANCE.health.elderFrom ? "#6b4f86" : age >= BALANCE.health.oldFrom ? "#c0892a" : "#4b6fa8";
+    const bars = hist.map((b, i) => `<rect x="${L + i * bw + 1}" y="${y(b.share)}" width="${bw - 2}" height="${Hh - B0 - y(b.share)}" fill="${color(b.age)}"><title>${b.age}\u2013${b.age + 10} \u043B\u0435\u0442: ${pct(b.share)}</title></rect>
+    ${i % 2 === 0 ? `<text x="${L + i * bw + bw / 2}" y="${Hh - 6}" text-anchor="middle">${b.age}</text>` : ""}`).join("");
+    return `<svg class="plot" viewBox="0 0 ${W} ${Hh}"><text x="${L - 4}" y="12" text-anchor="end">${pct(top)}</text>${bars}</svg>
+    <div class="legend"><span><span class="sw" style="background:#4b6fa8"></span>\u0437\u0440\u0435\u043B\u043E\u0441\u0442\u044C</span><span><span class="sw" style="background:#c0892a"></span>\u0441\u0442\u0430\u0440\u043E\u0441\u0442\u044C</span><span><span class="sw" style="background:#6b4f86"></span>\u0433\u043B\u0443\u0431\u043E\u043A\u0430\u044F \u0441\u0442\u0430\u0440\u043E\u0441\u0442\u044C</span></div>`;
+  }
+  function renderHealth() {
+    const G = BALANCE.health.goal, Hb = BALANCE.health;
+    const card = (title, v, goal, ok) => `<div class="card${ok === null ? " info" : ok ? "" : " bad"}"><div>${title}</div><div class="v">${v}</div><div class="goal">${goal}</div></div>`;
+    $("health-cards").innerHTML = [
+      card(`\u0412\u044B\u0431\u044B\u043B\u043E \u0437\u0430 ${hm.years} \u043B\u0435\u0442`, pct(hm.removed), `\u0446\u0435\u043B\u044C: ${pct(G.removedMin)}\u2013${pct(G.removedMax)} \xB7 \u0438\u0437 \u043D\u0438\u0445 \u0443\u043C\u0435\u0440\u043B\u043E ${pct(hm.dead)}`, hm.removed >= G.removedMin && hm.removed <= G.removedMax),
+      card("\u0418\u0437 \u0441\u043E\u0432\u0435\u0442\u0430 \u0432 \u043F\u044F\u0442\u044C \u0447\u0435\u043B\u043E\u0432\u0435\u043A", f1(hm.removed * 5), "\u0432\u044B\u0431\u044B\u0432\u0430\u0435\u0442 \u0437\u0430 \u043F\u0430\u0440\u0442\u0438\u044E \u0432 \u0441\u0440\u0435\u0434\u043D\u0435\u043C", null),
+      card("\u0421\u0435\u0437\u043E\u043D\u043E\u0432 \u0432 \u043F\u043E\u0441\u0442\u0435\u043B\u0438", pct(hm.offShare), `\u0446\u0435\u043B\u044C: ${pct(G.offMin)}\u2013${pct(G.offMax)} \xB7 \u0441\u043B\u0435\u0433\u0430\u043B\u0438 \u0445\u043E\u0442\u044F \u0431\u044B \u0440\u0430\u0437 ${pct(hm.sickEver)}`, hm.offShare >= G.offMin && hm.offShare <= G.offMax),
+      card("\u041F\u043E\u043B\u043E\u0432\u0438\u043D\u0430 \u0434\u043E\u0436\u0438\u0432\u0430\u0435\u0442 \u0434\u043E", `${hm.life.median} \u043B\u0435\u0442`, `\u0446\u0435\u043B\u044C: \u043D\u0435 \u043C\u0435\u043D\u044C\u0448\u0435 ${G.medianLife} \xB7 \u0437\u0434\u043E\u0440\u043E\u0432\u044B\u0435 ${hm.life.medianHealthy}, \u0441 \u0434\u0443\u0440\u043D\u043E\u0439 \u0447\u0435\u0440\u0442\u043E\u0439 ${hm.life.medianBad}`, hm.life.median >= G.medianLife),
+      card(`\u0414\u043E\u0436\u0438\u0432\u0430\u044E\u0442 \u0434\u043E ${Hb.elderFrom} \u043B\u0435\u0442`, pct(hm.life.reachElder), `\u0446\u0435\u043B\u044C: \u043D\u0435 \u043C\u0435\u043D\u044C\u0448\u0435 ${pct(G.reachElder)} \xB7 \u0434\u043E ${Hb.lifeMax - 10} \u2014 ${pct(hm.life.reachMax)}`, hm.life.reachElder >= G.reachElder),
+      card("\u0414\u0443\u0440\u043D\u0430\u044F \u0447\u0435\u0440\u0442\u0430 \u0441 \u0440\u043E\u0436\u0434\u0435\u043D\u0438\u044F", pct(hm.badBorn), `\u0446\u0435\u043B\u044C: ${pct(G.badBornMin)}\u2013${pct(G.badBornMax)}`, hm.badBorn >= G.badBornMin && hm.badBorn <= G.badBornMax),
+      card("\u041D\u0430\u0441\u043B\u0435\u0434\u0441\u0442\u0432\u0435\u043D\u043D\u0430\u044F \u0443 \u0440\u043E\u0434\u043D\u0438 \u043D\u043E\u0441\u0438\u0442\u0435\u043B\u044F", pct(hm.kinShare.withKin), `\u0432 \u0441\u0440\u0435\u0434\u043D\u0435\u043C \u0443 \u043B\u044E\u0434\u0435\u0439 \u2014 ${pct(hm.kinShare.base)}`, null),
+      card("\u041D\u0430\u0436\u0438\u043B\u0438 \u0447\u0435\u0440\u0442\u0443 \u0437\u0434\u043E\u0440\u043E\u0432\u044C\u044F", pct(hm.gained), `\u0437\u0430 ${hm.years} \u043B\u0435\u0442 \u043F\u0430\u0440\u0442\u0438\u0438`, null)
+    ].join("");
+    const warns = healthWarnings(hm);
+    $("health-warnings").innerHTML = warns.length ? warns.map((x) => `<div class="warn">\u26A0 ${esc(x)}</div>`).join("") : `<div class="fine">\u041F\u0440\u0435\u0434\u0443\u043F\u0440\u0435\u0436\u0434\u0435\u043D\u0438\u0439 \u043D\u0435\u0442: \u0446\u0435\u043B\u0438 \u0432\u044B\u043F\u043E\u043B\u043D\u0435\u043D\u044B.</div>`;
+    $("chart-curve").innerHTML = svgCurve(hm.curve);
+    $("chart-life").innerHTML = svgHist(hm.life.hist);
+    const CAUSE = { "\u0437\u0434\u043E\u0440\u043E\u0432\u044C\u0435": ["\u0432\u044B\u0431\u044B\u043B \u043F\u043E \u0437\u0434\u043E\u0440\u043E\u0432\u044C\u044E", "#9a9a9a"], "\u0431\u043E\u043B\u0435\u0437\u043D\u044C": ["\u0443\u043C\u0435\u0440 \u043E\u0442 \u0431\u043E\u043B\u0435\u0437\u043D\u0438", "#b03a26"], "\u0440\u0430\u043D\u0430": ["\u0443\u043C\u0435\u0440 \u043E\u0442 \u0440\u0430\u043D\u044B", "#7c3a1d"], "\u0441\u0442\u0430\u0440\u043E\u0441\u0442\u044C": ["\u0443\u043C\u0435\u0440 \u043E\u0442 \u0441\u0442\u0430\u0440\u043E\u0441\u0442\u0438", "#6b4f86"] };
+    const cmax = Math.max(...Object.values(hm.causes), 0.01);
+    $("chart-causes").innerHTML = `<div class="bars">${Object.entries(hm.causes).sort((a, b) => b[1] - a[1]).map(([key, v]) => `<div>${CAUSE[key][0]}</div>${track(v / cmax, CAUSE[key][1])}<div class="num">${(v * 100).toFixed(1)}%</div>`).join("")}</div>`;
+    $("chart-byage").innerHTML = `<div class="bars">${hm.byAge.map((b) => `<div>${b.from}\u2013${b.to} \u043B\u0435\u0442 (${b.people} \u0447\u0435\u043B.)</div>${track(b.removed, "#c0892a")}<div class="num">${pct(b.removed)}</div>`).join("")}</div>`;
+    const party = growParty(val("seed"), 10), rng = new Rng(`${val("seed")}-\u0441\u0435\u043C\u044C\u0438`);
+    let family = makeFamily(rng, "1");
+    $("health-party").innerHTML = `${STRIP_LEGEND}<table><tr><th>\u0421\u0435\u043C\u044C\u044F</th><th>\u041D\u0430\u0442\u0443\u0440\u0430</th><th>\u0412\u043E\u0437\u0440\u0430\u0441\u0442</th><th>\u041A\u0440\u0435\u043F\u043E\u0441\u0442\u044C</th><th>\u0417\u0434\u043E\u0440\u043E\u0432\u044C\u0435 \u0441 \u0440\u043E\u0436\u0434\u0435\u043D\u0438\u044F</th><th>\u0414\u0432\u0430\u0434\u0446\u0430\u0442\u044C \u043B\u0435\u0442</th><th>\u041D\u0430\u0436\u0438\u0442\u043E \u0438 \u0447\u0435\u043C \u043A\u043E\u043D\u0447\u0438\u043B\u043E\u0441\u044C</th></tr>${party.map((p, i) => {
+      if (i % BALANCE.health.familySize === 0) family = makeFamily(rng, String(i / BALANCE.health.familySize + 1));
+      const h = birthHealth(rng, family, p.traits.map((t) => t.id)), before = [...h.traits];
+      const states = liveStory(h, p.age, `${val("seed")}-\u043F\u0430\u0440\u0442\u0438\u044F-${i}`);
+      const end = h.state === "dead" ? `\u0443\u043C\u0435\u0440 (${h.cause})` : h.state === "out" ? "\u0432\u044B\u0431\u044B\u043B \u0441\u043E \u0441\u043B\u0443\u0436\u0431\u044B" : "\u0441\u043B\u0443\u0436\u0438\u0442";
+      const fam = `${family.id}${family.hereditary.length ? ` \xB7 \u0432 \u0440\u043E\u0434\u0443: ${family.hereditary.map(healthTag).join("")}` : ""}`;
+      return `<tr><td>${fam}</td><td><b>${esc(p.nature.name)}</b></td><td class="c">${p.age}</td><td class="c">${f1(h.krepost)}</td><td>${before.map(healthTag).join("") || "\u0437\u0434\u043E\u0440\u043E\u0432"}</td>
+      <td style="min-width:260px">${strip(states)}</td><td>${h.traits.filter((id) => !before.includes(id)).map(healthTag).join("")} ${end}</td></tr>`;
+    }).join("")}</table>`;
+    const mod = (t) => [
+      t.krepost ? `\u043A\u0440\u0435\u043F\u043E\u0441\u0442\u044C ${t.krepost > 0 ? "+" : ""}${String(t.krepost).replace(".", ",")}` : "",
+      t.risk ? `\u0431\u043E\u043B\u0435\u0435\u0442 \xD7${String(t.risk).replace(".", ",")}` : "",
+      t.winter ? `\u0437\u0438\u043C\u043E\u0439 \xD7${String(t.winter).replace(".", ",")}` : "",
+      t.death ? `\u0441\u043C\u0435\u0440\u0442\u044C \xD7${String(t.death).replace(".", ",")}` : "",
+      t.aging ? `\u0441\u0442\u0430\u0440\u0435\u043D\u0438\u0435 \xD7${String(t.aging).replace(".", ",")}` : ""
+    ].filter(Boolean).join(", ");
+    const CAUSES = { illness: "\u043F\u043E\u0441\u043B\u0435 \u0431\u043E\u043B\u0435\u0437\u043D\u0438", wound: "\u043F\u043E\u0441\u043B\u0435 \u0440\u0430\u043D\u044B \u0438\u043B\u0438 \u043D\u0430\u0434\u0440\u044B\u0432\u0430", age: "\u0441\u043E \u0441\u0442\u0430\u0440\u043E\u0441\u0442\u044C\u044E" };
+    $("table-health").innerHTML = `<table><tr><th>\u0427\u0435\u0440\u0442\u0430</th><th>\u041F\u0440\u043E\u0438\u0441\u0445\u043E\u0436\u0434\u0435\u043D\u0438\u0435</th><th>\u0427\u0442\u043E \u044D\u0442\u043E</th><th>\u041F\u043E\u043F\u0440\u0430\u0432\u043A\u0438</th><th>\u041A\u0430\u043A \u0441\u043A\u0430\u0436\u0435\u0442\u0441\u044F \u043D\u0430 \u0441\u043B\u0443\u0436\u0431\u0435</th><th>\u0423 \u0441\u043A\u043E\u043B\u044C\u043A\u0438\u0445 \u043A \u043A\u043E\u043D\u0446\u0443 \u043F\u0430\u0440\u0442\u0438\u0438</th></tr>${HEALTH_TRAITS.map((t) => `<tr><td>${healthTag(t.id)}</td><td>${H_ORIGIN[t.origin]}${t.cause ? `, ${CAUSES[t.cause]}` : ""}</td><td>${esc(t.desc)}</td><td>${mod(t)}</td><td>${esc(t.effect)}</td>
+      <td class="c">${(hm.traitShare[t.id] * 100).toFixed(1)}%</td></tr>`).join("")}</table>`;
   }
   function renderTables() {
     const n = Math.max(1, people.length);
@@ -3211,11 +3836,13 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
     const rolls = Number(val("rolls")), seed = val("seed").trim() || "\u043D\u0430\u0442\u0443\u0440\u0430";
     people = rollAll(rolls, seed);
     m = metricsOf(people, axesNow);
+    hm = healthMetrics(1200, seed);
     $("state").textContent = `${rolls} \u0440\u0435\u0440\u043E\u043B\u043B\u043E\u0432, \u0441\u0435\u043C\u044F \xAB${seed}\xBB`;
     renderMetrics();
     renderCharts();
     renderPerson();
     renderParty();
+    renderHealth();
     renderTables();
   }
   $("nature").innerHTML = NATURES.map((x) => `<option value="${x.id}">${esc(x.name)}</option>`).join("");
@@ -3255,6 +3882,7 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
       return got;
     },
     metrics: () => m,
+    health: () => hm,
     people: () => people.length
   };
 })();
