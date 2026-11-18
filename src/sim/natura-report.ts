@@ -13,13 +13,15 @@ export interface NaturaMetrics {
   traitsMean: number;                         // черт на человека в среднем
   jaccard: number;                            // медианная похожесть двух рероллов одной натуры
   jaccardWorst: { nature: string; value: number };
-  nn: number;                                 // как часто натура угадывается по чертам ближайшим соседом
+  nn: number;                                 // как часто натура угадывается по набору черт ближайшим соседом
+  signNn: number;                             // как часто натура угадывается по признакам ближайшим соседом
+  lifeShare: number;                          // доля нажитых черт и перков у человека, в среднем
   never: string[];                            // черты, что не выпали ни разу
   commonMax: { trait: string; share: number }; // самая частая обычная черта
   signSpread: Record<Sign, number>;           // разброс признака среди рероллов одной натуры (в среднем по натурам)
   axes: Record<Axis, AxisDist>;               // деловые склонности из признаков
   axesNow: Record<Axis, AxisDist>;            // нынешняя звезда совета, для сравнения
-  perNature: Record<string, { jaccard: number; nn: number }>; // по id натуры: похожесть её рероллов и как часто её угадывают
+  perNature: Record<string, { jaccard: number; nn: number; signNn: number }>; // по id натуры: похожесть рероллов, угадывание по чертам и по признакам
   count: Record<string, number>;              // по id черты: у скольких людей выпала
   kinds: { born: number; life: number; perk: number }; // черт на человека по видам
 }
@@ -68,7 +70,7 @@ export function metricsOf(people: NaturaPerson[], axesNow: Record<Axis, AxisDist
     const own: number[] = [];
     for (let a = 0; a < idx.length; a++) for (let b = a + 1; b < idx.length; b++) own.push(jaccard(sets[idx[a]], sets[idx[b]]));
     all.push(...own);
-    perNature[n.id] = { jaccard: round3(median(own)), nn: 0 };
+    perNature[n.id] = { jaccard: round3(median(own)), nn: 0, signNn: 0 };
     if (median(own) >= worst.value) worst = { nature: n.name, value: round3(median(own)) };
   }
   // различимость: ближайший сосед по набору черт; при равенстве — доля соседей той же натуры
@@ -84,7 +86,24 @@ export function metricsOf(people: NaturaPerson[], axesNow: Record<Axis, AxisDist
     hit += total ? same / total : 0;
     perNature[people[i].nature.id].nn += total ? same / total : 0;
   }
-  for (const n of NATURES) perNature[n.id].nn = round3(perNature[n.id].nn / Math.max(1, people.filter((p) => p.nature === n).length));
+  // различимость по признакам: ближайший сосед по расстоянию между профилями признаков
+  let signHit = 0;
+  const prof = people.map((p) => SIGNS.map((x) => p.signs[x.id]));
+  for (let i = 0; i < people.length; i++) {
+    let best = Infinity, at = -1;
+    for (let j = 0; j < people.length; j++) {
+      if (j === i) continue;
+      let d = 0;
+      for (let q = 0; q < prof[i].length; q++) d += (prof[i][q] - prof[j][q]) * (prof[i][q] - prof[j][q]);
+      if (d < best) { best = d; at = j; }
+    }
+    if (at >= 0 && people[at].nature === people[i].nature) { signHit++; perNature[people[i].nature.id].signNn++; }
+  }
+  for (const n of NATURES) {
+    const size = Math.max(1, people.filter((p) => p.nature === n).length);
+    perNature[n.id].nn = round3(perNature[n.id].nn / size);
+    perNature[n.id].signNn = round3(perNature[n.id].signNn / size);
+  }
   // покрытие мешка
   const count = new Map<string, number>();
   for (const p of people) for (const t of p.traits) count.set(t.id, (count.get(t.id) ?? 0) + 1);
@@ -100,6 +119,8 @@ export function metricsOf(people: NaturaPerson[], axesNow: Record<Axis, AxisDist
     jaccard: round3(median(all)),
     jaccardWorst: worst,
     nn: round3(hit / Math.max(1, people.length)),
+    signNn: round3(signHit / Math.max(1, people.length)),
+    lifeShare: round3(mean(people.map((p) => p.traits.filter((t) => t.kind !== "born").length / Math.max(1, p.traits.length)))),
     never: BAG.filter((t) => !count.has(t.id)).map((t) => t.name),
     commonMax: common.reduce((a, b) => (b.share > a.share ? b : a), { trait: "", share: 0 }),
     signSpread,
@@ -119,8 +140,10 @@ export function metricsOf(people: NaturaPerson[], axesNow: Record<Axis, AxisDist
 export function naturaWarnings(m: NaturaMetrics): string[] {
   const G = B.natura.goal, out: string[] = [];
   if (m.jaccard > G.jaccard) out.push(`рероллы одной натуры слишком похожи: ${m.jaccard} при цели не больше ${G.jaccard}`);
-  if (m.nn < G.nnMin) out.push(`натуры сливаются: угадывается ${m.nn} при цели не меньше ${G.nnMin}`);
-  if (m.nn > G.nnMax) out.push(`натуры шаблонны: угадывается ${m.nn} при цели не больше ${G.nnMax}`);
+  if (m.nn < G.nnMin) out.push(`черты от натуры почти не зависят: по набору черт она угадывается в ${m.nn} при цели не меньше ${G.nnMin}`);
+  if (m.nn > G.nnMax) out.push(`натуры шаблонны: по набору черт угадывается ${m.nn} при цели не больше ${G.nnMax}`);
+  if (m.signNn < G.signNn) out.push(`натуры сливаются: по признакам угадывается ${m.signNn} при цели не меньше ${G.signNn}`);
+  if (m.lifeShare < G.lifeShare) out.push(`нажитого мало: доля нажитых черт ${m.lifeShare} при цели не меньше ${G.lifeShare}`);
   if (m.never.length) out.push(`не выпадают никогда: ${m.never.join(", ")}`);
   if (m.commonMax.share > G.commonShare) out.push(`черта «${m.commonMax.trait}» выпадает слишком часто: ${m.commonMax.share} при цели не больше ${G.commonShare}`);
   for (const s of SIGNS) {

@@ -24,6 +24,7 @@ button.primary { background: var(--accent); color: #fff; border-color: var(--acc
 aside { background: var(--paper); border: 1px solid var(--line); border-radius: 8px; padding: 10px; position: sticky; top: 56px; max-height: calc(100vh - 66px); overflow: auto; }
 @media (max-width: 900px) { aside { position: static; max-height: none; } }
 section { background: var(--paper); border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; scroll-margin-top: 60px; }
+main { min-width: 0; }
 h2 { margin: 0 0 8px; font-size: 16px; color: var(--accent); }
 h3 { margin: 16px 0 4px; font-size: 14px; }
 p { margin: 0 0 8px; }
@@ -57,6 +58,7 @@ textarea { width: 100%; font-family: ui-monospace, monospace; font-size: 12px; }
 .sw { display: inline-block; width: 12px; height: 12px; border-radius: 2px; vertical-align: -2px; margin-right: 4px; }
 .bars { display: grid; grid-template-columns: max-content 1fr max-content; gap: 2px 8px; align-items: center; font-size: 12px; }
 .bars.two { grid-template-columns: max-content 1fr max-content 1fr max-content; }
+.bars.three { grid-template-columns: max-content 1fr max-content 1fr max-content 1fr max-content; }
 .bars.cols2 { grid-template-columns: max-content 1fr max-content max-content 1fr max-content; }
 .track { position: relative; height: 13px; background: #f0ece2; border-radius: 2px; min-width: 60px; }
 .fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 2px; }

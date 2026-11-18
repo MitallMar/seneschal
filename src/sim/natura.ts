@@ -1,8 +1,9 @@
 // Генератор натур (задача И8): рост древа черт от точек кристаллизации. Замысел и правила — docs/design/natura.md, раздел 5.
 // Стоит отдельно от совета: sim.ts его не зовёт. Без экрана; случайность только через Rng, числа — раздел natura в balance.ts.
-import type { Axis, Star, Sign, SignVec, NatureDef, BagTrait } from "../data/types";
+import type { Axis, Star, Sign, SignVec, NatureDef, BagTrait, BagTrigger, BackstoryEvent } from "../data/types";
 import { AXES } from "../data/core";
 import { SIGNS, NATURES, BAG } from "../data/natura";
+import { BACKSTORY } from "../data/backstory";
 import { BALANCE as B } from "./balance";
 import { Rng } from "./rng";
 import { STAR_MAX } from "./sim";
@@ -13,17 +14,24 @@ const SIGN_IDS: Sign[] = SIGNS.map((s) => s.id);
 
 export interface NaturaPerson {
   nature: NatureDef;
-  traits: BagTrait[];          // в порядке появления
-  anchors: string[];           // id черт-якорей из точек кристаллизации ядра
-  far: string;                 // id дальнего якоря
+  age: number;
+  traits: BagTrait[];          // в порядке появления: врождённые, нажитые до игры, нажитые в игре
+  anchors: string[];           // id врождённых черт: якоря от точек кристаллизации ядра
+  far: string;                 // id дальнего якоря: первая нажитая черта, почти не связанная с ядром
   contra: string;              // id черты-противоречия (может совпасть с дальним якорем или вырасти от него)
   from: Record<string, string>; // от какого якоря выросла черта: id черты → id якоря (у якорей и противоречия записи нет)
+  via: Record<string, string>; // какое событие предыстории дало черту: id черты → id события
+  inGame: string[];            // id черт и перков, нажитых в игре
+  lost: string[];              // id нажитых черт, вытесненных другими
   events: SignVec[];           // события жизни, которые тянули рост
   signs: Record<Sign, number>; // признаки: ядро + черты
   star: Star;                  // деловые склонности, посчитанные из признаков
 }
-// taken — сколько раз черту уже взяли другие в этой партии (штраф за повтор); count — сколько черт при рождении.
-export interface GrowOpts { events?: SignVec[]; taken?: Map<string, number>; count?: number }
+// taken — сколько раз черту уже взяли другие в этой партии (штраф за повтор); age — возраст; backstory — свои события предыстории вместо случайных.
+export interface GrowOpts { events?: SignVec[]; taken?: Map<string, number>; age?: number; backstory?: BackstoryEvent[] }
+// Повод в игре: по нему отбираются нажитые черты и перки.
+export interface LifeOpts { events?: SignVec[]; taken?: Map<string, number>; trigger?: BagTrigger }
+export const TRIGGERS: BagTrigger[] = ["habit", "post", "rel", "break", "deed"];
 
 const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
 const round1 = (v: number) => Math.round(v * 10) / 10;
@@ -57,15 +65,26 @@ export const inConflict = (a: BagTrait, b: BagTrait) => !!a.conflicts?.includes(
 export const isFar = (n: NatureDef, t: BagTrait) => Math.abs(cos(n.core, t.vec)) <= B.natura.farCos;
 export const isContra = (n: NatureDef, t: BagTrait) => cos(n.core, t.vec) <= -B.natura.contraCos;
 
-// Признаки человека: ядро натуры и сумма векторов его черт.
+// Признаки человека: ядро натуры и сумма векторов его черт. Сложение убывающее: чем сильнее признак, тем меньше добавляет новая черта,
+// и в потолок шкалы он не упирается.
 export function signsOf(nature: NatureDef, traits: BagTrait[]): Record<Sign, number> {
   const raw = sum([sum([nature.core], B.natura.coreScale), ...traits.map((t) => t.vec)]);
-  return Object.fromEntries(SIGN_IDS.map((k) => [k, round1(clamp(raw[k] ?? 0, -SIGN_MAX, SIGN_MAX))])) as Record<Sign, number>;
+  return Object.fromEntries(SIGN_IDS.map((k) => [k, round1(SIGN_MAX * Math.tanh((raw[k] ?? 0) / B.natura.signSoft))])) as Record<Sign, number>;
+}
+// Вектор события предыстории в признаках: его сдвиг деловых склонностей, развёрнутый обратно через веса склонностей.
+export function eventVec(ev: BackstoryEvent): SignVec {
+  const w = B.natura.w as Record<Axis, SignVec>;
+  return sum(AXES.filter((a) => ev.shift[a]).map((a) => sum([w[a]], ev.shift[a]!)));
+}
+// Сколько черт человек нажил до игры: растёт с возрастом.
+export function beforeCount(age: number): number {
+  const extra = Math.floor(Math.max(0, age - B.natura.adultAge) / B.natura.beforeAgeStep);
+  return clamp(B.natura.beforeMin + extra, B.natura.beforeMin, Math.max(B.natura.beforeMin, B.natura.beforeMax));
 }
 // Деловые склонности из признаков: середина звезды + поправка оси + сумма (вес × признак), в шкале звезды.
 export function businessStar(signs: Record<Sign, number>): Star {
   const w = B.natura.w as Record<Axis, SignVec>;
-  return Object.fromEntries(AXES.map((a) => [a, round1(clamp(B.star.center + B.natura.shift[a] + dot(w[a], signs), 0, STAR_MAX))])) as Star;
+  return Object.fromEntries(AXES.map((a) => [a, round1(clamp(B.star.center + B.natura.shift[a] + B.natura.axisGain * dot(w[a], signs), 0, STAR_MAX))])) as Star;
 }
 
 const rarityWeight = (t: BagTrait) => (t.rarity === "rare" ? B.natura.rareWeight : t.rarity === "exceptional" ? B.natura.exceptionalWeight : 1);
@@ -78,7 +97,7 @@ export function saturation(nature: NatureDef, traits: BagTrait[], t: BagTrait): 
 // Вес кандидата: (близость к цели × события) с температурой × редкость × насыщение × повтор в партии.
 // Температура действует только на близость и события: иначе при холодном выборе редкие черты не выпадали бы вовсе.
 // target — вектор якоря или точки кристаллизации; нет цели — близость не учитывается (дальний якорь, противоречие).
-export function candidateWeight(nature: NatureDef, traits: BagTrait[], t: BagTrait, target: SignVec | undefined, opts: GrowOpts = {}): number {
+export function candidateWeight(nature: NatureDef, traits: BagTrait[], t: BagTrait, target: SignVec | undefined, opts: LifeOpts = {}): number {
   const close = target ? Math.max(0, cos(t.vec, target)) + B.natura.closenessFloor : 1;
   const pull = opts.events?.length ? Math.max(B.natura.closenessFloor, 1 + B.natura.eventK * cos(t.vec, sum(opts.events))) : 1;
   const repeat = Math.pow(B.natura.repeatPenalty, opts.taken?.get(t.id) ?? 0);
@@ -93,25 +112,25 @@ function pickWeighted(rng: Rng, items: BagTrait[], weight: (t: BagTrait) => numb
   for (let i = 0; i < items.length; i++) { r -= ws[i]; if (r < 0) return items[i]; }
   return items[items.length - 1];
 }
-// Кого можно взять: ещё не взят, ни с кем из взятых не в конфликте, для перка выполнено requires.
-function allowed(traits: BagTrait[], kinds: BagTrait["kind"][]): BagTrait[] {
-  return BAG.filter((t) => kinds.includes(t.kind) && !traits.includes(t) && !traits.some((x) => inConflict(x, t))
-    && (!t.requires || t.requires.some((id) => traits.some((x) => x.id === id))));
+// Кого можно взять: ещё не взят, для перка выполнено requires, ни с кем из взятых не в конфликте.
+// swap — в игре нажитая черта может вытеснить ту, что названа у неё в replaces: тогда конфликт с ней не мешает.
+function allowed(p: NaturaPerson, kinds: BagTrait["kind"][], swap = false): BagTrait[] {
+  const blocks = (held: BagTrait, t: BagTrait) => inConflict(held, t) && !(swap && held.kind === "life" && t.replaces?.includes(held.id) && !isAnchor(p, held.id));
+  return BAG.filter((t) => kinds.includes(t.kind) && !p.traits.includes(t) && !p.traits.some((x) => blocks(x, t))
+    && (!t.requires || t.requires.some((id) => p.traits.some((x) => x.id === id))));
 }
-// Очередная черта растёт от одного из якорей: с шансом farShare — от дальнего, иначе от якоря ядра.
-function growFrom(rng: Rng, p: NaturaPerson, kinds: BagTrait["kind"][], opts: GrowOpts): BagTrait | undefined {
-  const t = pickFrom(rng, p, kinds, opts);
-  if (t) { p.traits.push(t.trait); p.from[t.trait.id] = t.anchor; }
-  return t?.trait;
+const isAnchor = (p: NaturaPerson, id: string) => p.anchors.includes(id) || p.far === id || p.contra === id;
+// Цель роста: с шансом farShare — дальний якорь, иначе якорь ядра вместе с самим ядром (corePull).
+function growthTarget(rng: Rng, p: NaturaPerson): { anchor: string; target: SignVec } {
+  const fromFar = !!p.far && (rng.chance(B.natura.farShare) || !p.anchors.length);
+  if (fromFar) return { anchor: p.far, target: bagTrait(p.far).vec };
+  if (!p.anchors.length) return { anchor: "", target: p.nature.core };
+  const anchor = rng.pick(p.anchors);
+  return { anchor, target: sum([unit(bagTrait(anchor).vec), sum([unit(p.nature.core)], B.natura.corePull)]) };
 }
-function pickFrom(rng: Rng, p: NaturaPerson, kinds: BagTrait["kind"][], opts: GrowOpts): { trait: BagTrait; anchor: string } | undefined {
-  const fromFar = rng.chance(B.natura.farShare) || !p.anchors.length;
-  const anchorId = fromFar ? p.far : rng.pick(p.anchors);
-  const anchor = bagTrait(anchorId).vec;
-  // куст у якоря ядра тянется и к самому ядру (corePull); куст дальнего якоря растёт сам по себе
-  const target = fromFar ? anchor : sum([unit(anchor), sum([unit(p.nature.core)], B.natura.corePull)]);
-  const trait = pickWeighted(rng, allowed(p.traits, kinds), (t) => candidateWeight(p.nature, p.traits, t, target, opts));
-  return trait && { trait, anchor: anchorId };
+// Событие предлагает короткий список: черты, ближайшие к его вектору. Из него и выбирает натура.
+function shortList(pool: BagTrait[], ev: SignVec): BagTrait[] {
+  return pool.map((t, i) => ({ t, i, c: cos(t.vec, ev) })).sort((a, b) => b.c - a.c || a.i - b.i).slice(0, B.natura.eventList).map((x) => x.t);
 }
 function refresh(p: NaturaPerson): NaturaPerson {
   p.signs = signsOf(p.nature, p.traits);
@@ -119,38 +138,62 @@ function refresh(p: NaturaPerson): NaturaPerson {
   return p;
 }
 
-// Человек при рождении: якоря из точек кристаллизации ядра, один якорь из дальней области, рост от якорей, обязательное противоречие.
+// Человек к началу игры. Врождённое: 1–2 черты от точек кристаллизации ядра — они же якоря.
+// Нажитое до игры: по черте на событие предыстории, число событий растёт с возрастом. Первая нажитая — из дальней области (дальний якорь),
+// последняя — против ядра, если противоречия ещё нет.
 export function growPerson(rng: Rng, nature: NatureDef, opts: GrowOpts = {}): NaturaPerson {
-  const count = opts.count ?? rng.int(B.natura.birthMin, Math.max(B.natura.birthMin, B.natura.birthMax));
-  const p: NaturaPerson = { nature, traits: [], anchors: [], far: "", contra: "", from: {}, events: opts.events ?? [], signs: signsOf(nature, []), star: businessStar(signsOf(nature, [])) };
-  const born = () => allowed(p.traits, ["born"]);
-  const w = (target?: SignVec) => (t: BagTrait) => candidateWeight(nature, p.traits, t, target, opts);
-  // 1. якоря ядра: по одному от разных точек кристаллизации
-  for (const crystal of rng.shuffle(nature.crystals).slice(0, B.natura.anchorsNear)) {
-    const t = pickWeighted(rng, born().filter((x) => cos(x.vec, crystal) > 0), w(crystal));
+  const age = opts.age ?? rng.int(B.natura.ageMin, Math.max(B.natura.ageMin, B.natura.ageMax));
+  const zero = signsOf(nature, []);
+  const p: NaturaPerson = {
+    nature, age, traits: [], anchors: [], far: "", contra: "", from: {}, via: {}, inGame: [], lost: [], events: opts.events ?? [], signs: zero, star: businessStar(zero),
+  };
+  const w = (target?: SignVec, events?: SignVec[]) => (t: BagTrait) => candidateWeight(nature, p.traits, t, target, { events, taken: opts.taken });
+  // 1. врождённое
+  const innate = rng.int(B.natura.innateMin, Math.max(B.natura.innateMin, B.natura.innateMax));
+  for (const crystal of rng.shuffle(nature.crystals).slice(0, innate)) {
+    const t = pickWeighted(rng, allowed(p, ["born"]).filter((x) => cos(x.vec, crystal) > 0), w(crystal, opts.events));
     if (t) { p.traits.push(t); p.anchors.push(t.id); }
   }
-  // 2. дальний якорь: черта, почти не связанная с ядром, — источник второго куста
-  const far = pickWeighted(rng, born().filter((x) => isFar(nature, x)), w());
-  if (far) { p.traits.push(far); p.far = far.id; }
-  // 3. рост от якорей; последнее место придержано под противоречие, пока его нет
+  // 2. нажитое до игры
+  const count = beforeCount(age);
+  const story = opts.backstory ?? rng.shuffle(BACKSTORY).slice(0, count);
   const hasContra = () => p.traits.find((x) => isContra(nature, x));
-  while (p.traits.length < count - (hasContra() ? 0 : 1)) {
-    if (!growFrom(rng, p, ["born"], opts)) break;
-  }
-  // 4. обязательное противоречие: одна черта против ядра
-  if (!hasContra()) {
-    const t = pickWeighted(rng, born().filter((x) => isContra(nature, x)), w());
-    if (t) p.traits.push(t);
-  }
+  story.slice(0, count).forEach((ev, i) => {
+    const vec = eventVec(ev);
+    const life = allowed(p, ["life"]).filter((x) => x.source.includes("backstory"));
+    const far = i === 0, contra = !far && i === Math.min(count, story.length) - 1 && !hasContra();
+    const narrowed = far ? life.filter((x) => isFar(nature, x)) : contra ? life.filter((x) => isContra(nature, x)) : life;
+    const grow = far || contra ? undefined : growthTarget(rng, p);
+    const list = shortList(narrowed.length ? narrowed : life, vec), events = [vec, ...(opts.events ?? [])];
+    // если в коротком списке нет ничего в сторону якоря, событие всё равно оставляет след: выбор без оглядки на якорь
+    const t = pickWeighted(rng, list, w(grow?.target, events)) ?? pickWeighted(rng, list, w(undefined, events));
+    if (!t) return;
+    p.traits.push(t);
+    p.via[t.id] = ev.id;
+    if (far) p.far = t.id;
+    else if (grow?.anchor) p.from[t.id] = grow.anchor;
+  });
   p.contra = hasContra()?.id ?? "";
+  delete p.from[p.contra];
   return refresh(p);
 }
 
-// Жизнь: следующая черта жизни или перк растёт от тех же якорей, события жизни тянут выбор в свою сторону.
-export function growLife(rng: Rng, p: NaturaPerson, opts: GrowOpts = {}): BagTrait | undefined {
-  const t = growFrom(rng, p, ["life", "perk"], opts);
+// Жизнь в игре: по поводу (привычка, должность, отношения, перелом, поступок) человек наживает черту или перк.
+// Растёт она от тех же якорей, события тянут выбор; нажитая черта может вытеснить ту, что названа у неё в replaces.
+export function growLife(rng: Rng, p: NaturaPerson, opts: LifeOpts = {}): BagTrait | undefined {
+  const pool = allowed(p, ["life", "perk"], true).filter((t) => !opts.trigger || t.trigger === opts.trigger);
+  const grow = growthTarget(rng, p);
+  const weight = (target?: SignVec) => (x: BagTrait) => candidateWeight(p.nature, p.traits, x, target, opts) * (x.kind === "perk" ? B.natura.perkWeight : 1);
+  // повод случился — что-то да прилипнет: если к якорю ничего не тянется, выбор без оглядки на якорь
+  const t = pickWeighted(rng, pool, weight(grow.target)) ?? pickWeighted(rng, pool, weight());
   if (!t) return undefined;
+  const gone = p.traits.filter((x) => x.kind === "life" && t.replaces?.includes(x.id) && !isAnchor(p, x.id));
+  p.traits = p.traits.filter((x) => !gone.includes(x));
+  p.lost.push(...gone.map((x) => x.id));
+  p.inGame = p.inGame.filter((id) => !gone.some((x) => x.id === id));
+  p.traits.push(t);
+  p.inGame.push(t.id);
+  if (grow.anchor) p.from[t.id] = grow.anchor;
   if (opts.events) p.events = [...p.events, ...opts.events];
   refresh(p);
   return t;
@@ -168,15 +211,10 @@ export function growParty(seed: string, size: number, natureIds?: string[]): Nat
   });
 }
 
-// Событие судьбы для прогонов: случайный признак, случайный полюс.
-export function fateEvent(rng: Rng): SignVec {
-  return { [rng.pick(SIGN_IDS)]: rng.chance(1 / 2) ? B.natura.fateStrength : -B.natura.fateStrength };
-}
-// Один реролл для отчёта: судьба (несколько событий), рождение и несколько шагов жизни.
-export function rollPerson(seed: string, nature: NatureDef): NaturaPerson {
+// Один реролл для отчёта: случайный возраст (или заданный), рождение, предыстория и несколько поводов в игре.
+export function rollPerson(seed: string, nature: NatureDef, age?: number): NaturaPerson {
   const rng = new Rng(seed);
-  const events = Array.from({ length: B.natura.fateEvents }, () => fateEvent(rng));
-  const p = growPerson(rng, nature, { events });
-  for (let i = 0; i < B.natura.lifeSteps; i++) growLife(rng, p, { events: [fateEvent(rng)] });
+  const p = growPerson(rng, nature, { age });
+  for (let i = 0; i < B.natura.lifeSteps; i++) growLife(rng, p, { trigger: rng.pick(TRIGGERS), events: [eventVec(rng.pick(BACKSTORY))] });
   return p;
 }

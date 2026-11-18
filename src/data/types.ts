@@ -106,7 +106,9 @@ export interface NatureDef {
   crystals: SignVec[];
 }
 
-export type BagKind = "born" | "life" | "perk";       // черта рождения, черта жизни, перк (умение, открывается делом)
+export type BagKind = "born" | "life" | "perk";       // врождённая, нажитая (до игры или в игре), перк (умение, открывается делом)
+// Повод, по которому нажитая черта или перк появляются в игре: привычка, должность, отношения, перелом, поступок.
+export type BagTrigger = "habit" | "post" | "rel" | "break" | "deed";
 export type Rarity = "common" | "rare" | "exceptional";
 export type BagSource = "birth" | "backstory" | "life" | "post";
 
@@ -122,5 +124,8 @@ export interface BagTrait {
   source: BagSource[];     // откуда может взяться
   conflicts?: string[];    // с чем не уживается (достаточно назвать с одной стороны)
   requires?: string[];     // для перков: нужна хотя бы одна из этих черт
+  trigger?: BagTrigger;    // у нажитых и перков: по какому поводу появляется в игре
+  replaces?: string[];     // какие нажитые черты вытесняет (старая уходит, запись остаётся в утраченных)
+  council?: boolean;       // та же черта уже работает в совете под этим id (LIFE_TRAITS)
   hidden?: boolean;        // открывается только поступком
 }

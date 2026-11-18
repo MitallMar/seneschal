@@ -30,6 +30,7 @@ button.primary { background: var(--accent); color: #fff; border-color: var(--acc
 aside { background: var(--paper); border: 1px solid var(--line); border-radius: 8px; padding: 10px; position: sticky; top: 56px; max-height: calc(100vh - 66px); overflow: auto; }
 @media (max-width: 900px) { aside { position: static; max-height: none; } }
 section { background: var(--paper); border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; scroll-margin-top: 60px; }
+main { min-width: 0; }
 h2 { margin: 0 0 8px; font-size: 16px; color: var(--accent); }
 h3 { margin: 16px 0 4px; font-size: 14px; }
 p { margin: 0 0 8px; }
@@ -63,6 +64,7 @@ textarea { width: 100%; font-family: ui-monospace, monospace; font-size: 12px; }
 .sw { display: inline-block; width: 12px; height: 12px; border-radius: 2px; vertical-align: -2px; margin-right: 4px; }
 .bars { display: grid; grid-template-columns: max-content 1fr max-content; gap: 2px 8px; align-items: center; font-size: 12px; }
 .bars.two { grid-template-columns: max-content 1fr max-content 1fr max-content; }
+.bars.three { grid-template-columns: max-content 1fr max-content 1fr max-content 1fr max-content; }
 .bars.cols2 { grid-template-columns: max-content 1fr max-content max-content 1fr max-content; }
 .track { position: relative; height: 13px; background: #f0ece2; border-radius: 2px; min-width: 60px; }
 .fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 2px; }
@@ -131,7 +133,7 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
       <h3>Черт на человека по видам</h3>
       <div id="chart-kinds"></div>
       <h3>Натуры: похожесть рероллов и различимость</h3>
-      <p class="muted">Слева — насколько похожи два реролла одной натуры (меньше — разнообразнее). Справа — как часто натуру угадывают по чертам.</p>
+      <p class="muted">Насколько похожи два реролла одной натуры (меньше — разнообразнее) и как часто натуру угадывают: по набору черт и по признакам.</p>
       <div id="chart-natures"></div>
       <h3>Натуры × признаки</h3>
       <p class="muted">Средний признак по рероллам натуры: красное — плюс-полюс, синее — минус-полюс. Рамка — признак ядра.</p>
@@ -146,8 +148,9 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
       <h2>Один человек</h2>
       <div class="row">
         <label>Натура <select id="nature"></select></label>
+        <label>Возраст <select id="age"><option value="">случайный</option><option>30</option><option>60</option><option>90</option><option>120</option><option>150</option></select></label>
         <button id="reroll">Реролл</button>
-        <span class="muted">Якоря ядра → куст; дальний якорь; противоречие; черты жизни и перки.</span>
+        <span class="muted">Врождённые якоря и их кусты; дальний якорь; противоречие. У каждой черты подписано, откуда она.</span>
       </div>
       <div id="person-view"></div>
       <h3>Двенадцать рероллов этой натуры</h3>
@@ -162,7 +165,7 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
     <section id="t-bag">
       <h2>Мешок черт и перков</h2>
       <div class="row">
-        <label>Вид <select id="bag-kind"><option value="">все</option><option value="born">рождение</option><option value="life">жизнь</option><option value="perk">перки</option></select></label>
+        <label>Вид <select id="bag-kind"><option value="">все</option><option value="born">врождённые</option><option value="life">нажитые</option><option value="perk">перки</option></select></label>
         <label>Сортировка <select id="bag-sort"><option value="order">как в мешке</option><option value="freq">по частоте</option><option value="name">по названию</option></select></label>
       </div>
       <div id="table-bag" class="scroll"></div>
@@ -170,7 +173,7 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
     <section id="t-signs"><h2>Признаки и веса деловых склонностей</h2><div id="table-signs" class="scroll"></div></section>
     <section id="t-council">
       <h2>Совет: что уже в игре (И4–И6)</h2>
-      <p class="muted">Эти таблицы — из совета, генератор натур их пока не использует. Здесь они для сверки: какие черты жизни уже есть и где мешок их повторяет.</p>
+      <p class="muted">Эти таблицы — из совета. Черты жизни совета уже внесены в мешок под теми же именами (пометка «уже в совете»): система черт одна, но совет пока считает их по-своему.</p>
       <h3>Ключевые черты (с рождения)</h3><div id="table-key" class="scroll"></div>
       <h3>Черты в течение жизни</h3><div id="table-life" class="scroll"></div>
       <h3>Должности: годность, родные склонности и как часто события задевают склонность</h3><div id="table-posts" class="scroll"></div>
@@ -309,17 +312,7 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
     nat("sobiratel", "\u0421\u043E\u0431\u0438\u0440\u0430\u0442\u0435\u043B\u044C", { terpenie: 3, poryadok: 3, shchedrost: -3 })
   ];
   var BAG = [
-    // --- черты рождения ---
-    {
-      id: "derzhit_slovo",
-      name: "\u0414\u0435\u0440\u0436\u0438\u0442 \u0441\u043B\u043E\u0432\u043E",
-      desc: "\u0421\u043A\u0430\u0437\u0430\u043B \u2014 \u0441\u0434\u0435\u043B\u0430\u043B, \u0445\u043E\u0442\u044C \u043A\u0430\u043C\u043D\u0438 \u0441 \u043D\u0435\u0431\u0430",
-      kind: "born",
-      vec: { chestnost: 2, poryadok: 1 },
-      rarity: "common",
-      source: ["birth", "backstory"],
-      effect: "\u041D\u0430\u043A\u0430\u0437 \u0421\u0435\u043D\u0435\u0448\u0430\u043B\u044F \u0438\u0441\u043F\u043E\u043B\u043D\u044F\u0435\u0442 \u043B\u0443\u0447\u0448\u0435; \u043D\u0430\u0440\u0443\u0448\u0435\u043D\u043D\u043E\u0435 \u043E\u0431\u0435\u0449\u0430\u043D\u0438\u0435 \u0441\u0442\u043E\u0440\u043E\u043D\u0435 \u0434\u043B\u044F \u043D\u0435\u0433\u043E \u2014 \u043E\u0431\u0438\u0434\u0430"
-    },
+    // --- врождённые ---
     {
       id: "sebe_na_ume",
       name: "\u0421\u0435\u0431\u0435 \u043D\u0430 \u0443\u043C\u0435",
@@ -327,7 +320,7 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
       kind: "born",
       vec: { chestnost: -2, obshchitelnost: -1 },
       rarity: "rare",
-      source: ["birth", "backstory"],
+      source: ["birth"],
       conflicts: ["dusha_naraspashku"],
       hidden: true,
       effect: "\u041A\u043E\u0433\u0434\u0430 \u0432 \u0441\u043F\u043E\u0440\u0435 \u0435\u0433\u043E \u043F\u0440\u043E\u0434\u0430\u0432\u0438\u043B\u0438, \u0447\u0430\u0449\u0435 \u0434\u0435\u043B\u0430\u0435\u0442 \u043F\u043E-\u0441\u0432\u043E\u0435\u043C\u0443"
@@ -339,7 +332,7 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
       kind: "born",
       vec: { terpenie: -2, zhestkost: 1 },
       rarity: "common",
-      source: ["birth", "backstory"],
+      source: ["birth"],
       conflicts: ["dolgo_zapryagaet"],
       effect: "\u0412 \u0441\u043F\u043E\u0440\u0435 \u0441\u0438\u043B\u044C\u043D\u0435\u0435, \u043E\u0431\u0438\u0434\u044B \u043A\u043E\u043F\u0438\u0442 \u0431\u044B\u0441\u0442\u0440\u0435\u0435"
     },
@@ -350,7 +343,7 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
       kind: "born",
       vec: { shchedrost: 2, obshchitelnost: 1 },
       rarity: "common",
-      source: ["birth", "backstory"],
+      source: ["birth"],
       conflicts: ["zimoy_snega"],
       effect: "\u041F\u0440\u0430\u0437\u0434\u043D\u0438\u043A\u0438 \u0438 \u0433\u043E\u0441\u0442\u0435\u0439 \u0440\u0435\u0448\u0430\u0435\u0442 \u0432 \u043F\u043B\u044E\u0441 \u0434\u0435\u0440\u0435\u0432\u043D\u044F\u043C, \u0442\u0440\u0430\u0442\u0438\u0442 \u043F\u0440\u0438\u043F\u0430\u0441\u044B"
     },
@@ -361,7 +354,7 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
       kind: "born",
       vec: { shchedrost: -1, lyubopytstvo: 1 },
       rarity: "common",
-      source: ["birth", "backstory"],
+      source: ["birth"],
       effect: "\u0420\u0438\u0441\u043A\u043E\u0432\u0430\u043D\u043D\u044B\u0435 \u0442\u043E\u0440\u0433\u043E\u0432\u044B\u0435 \u0432\u0430\u0440\u0438\u0430\u043D\u0442\u044B \u0443\u0434\u0430\u044E\u0442\u0441\u044F \u0447\u0430\u0449\u0435"
     },
     {
@@ -371,7 +364,7 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
       kind: "born",
       vec: { privyazannost: 2 },
       rarity: "common",
-      source: ["birth", "backstory"],
+      source: ["birth"],
       effect: "\u0420\u043E\u0434\u043D\u044F \u0438 \u043A\u0443\u043C\u043E\u0432\u044C\u044F \u0432 \u0441\u043E\u0432\u0435\u0442\u0435 \u2014 \u043E\u0442\u043D\u043E\u0448\u0435\u043D\u0438\u044F \u043B\u0443\u0447\u0448\u0435"
     },
     {
@@ -381,7 +374,7 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
       kind: "born",
       vec: { smelost: -1, vera: 1 },
       rarity: "common",
-      source: ["birth", "backstory"],
+      source: ["birth"],
       effect: "\u0423 \u043E\u043F\u0443\u0448\u043A\u0438 \u0443\u043C\u0435\u043D\u0438\u0435 \u0445\u0443\u0436\u0435, \u043B\u0435\u0441\u043D\u0438\u0447\u0438\u043C \u2014 \u043F\u043B\u043E\u0445\u043E"
     },
     {
@@ -391,7 +384,7 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
       kind: "born",
       vec: { gordost: 1, zhestkost: 2 },
       rarity: "common",
-      source: ["birth", "backstory"],
+      source: ["birth"],
       effect: "\u0427\u0435\u043B\u044F\u0434\u044C \u0438 \u0441\u0442\u0440\u0430\u0436\u0430 \u0441\u043B\u0443\u0448\u0430\u044E\u0442, \u0434\u0435\u0440\u0435\u0432\u043D\u0438 \u043F\u043E\u0431\u0430\u0438\u0432\u0430\u044E\u0442\u0441\u044F"
     },
     {
@@ -401,7 +394,7 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
       kind: "born",
       vec: { obshchitelnost: 2, privyazannost: 1 },
       rarity: "common",
-      source: ["birth", "backstory"],
+      source: ["birth"],
       effect: "\u041D\u043E\u0432\u044B\u0435 \u0437\u043D\u0430\u043A\u043E\u043C\u0441\u0442\u0432\u0430 \u0432 \u0441\u043E\u0432\u0435\u0442\u0435 \u043D\u0430\u0447\u0438\u043D\u0430\u044E\u0442\u0441\u044F \u0441 \xAB\u043B\u0430\u0434\u044F\u0442\xBB"
     },
     {
@@ -411,7 +404,7 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
       kind: "born",
       vec: { shchedrost: -2 },
       rarity: "common",
-      source: ["birth", "backstory"],
+      source: ["birth"],
       effect: "\u0412\u0430\u0440\u0438\u0430\u043D\u0442\u044B \u0441 \u0442\u0440\u0430\u0442\u043E\u0439 \u043F\u0440\u0438\u043F\u0430\u0441\u043E\u0432 \u0438 \u043A\u0430\u0437\u043D\u044B \u0432\u044B\u0431\u0438\u0440\u0430\u0435\u0442 \u0440\u0435\u0436\u0435"
     },
     {
@@ -421,7 +414,7 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
       kind: "born",
       vec: { chestnost: 1, obshchitelnost: 2 },
       rarity: "common",
-      source: ["birth", "backstory"],
+      source: ["birth"],
       effect: "\u0420\u0430\u0437\u0433\u043E\u0432\u043E\u0440 \u0441 \u043D\u0438\u043C \u043E\u0442\u043A\u0440\u044B\u0432\u0430\u0435\u0442 \u0431\u043E\u043B\u044C\u0448\u0435; \u0442\u0430\u0439\u043D\u0443 \u043D\u0435 \u0443\u0434\u0435\u0440\u0436\u0438\u0442"
     },
     {
@@ -431,7 +424,7 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
       kind: "born",
       vec: { terpenie: 2, smelost: -1 },
       rarity: "common",
-      source: ["birth", "backstory"],
+      source: ["birth"],
       effect: "\u0421\u0440\u043E\u0447\u043D\u044B\u0435 \u0434\u0435\u043B\u0430 \u0440\u0435\u0448\u0430\u0435\u0442 \u0445\u0443\u0436\u0435, \u0437\u0430\u0442\u043E \u0440\u0435\u0436\u0435 \u043E\u0448\u0438\u0431\u0430\u0435\u0442\u0441\u044F"
     },
     {
@@ -441,7 +434,7 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
       kind: "born",
       vec: { smelost: 2, terpenie: -1 },
       rarity: "common",
-      source: ["birth", "backstory"],
+      source: ["birth"],
       conflicts: ["semero_otmerit"],
       effect: "\u0420\u0438\u0441\u043A\u043E\u0432\u0430\u043D\u043D\u044B\u0435 \u0432\u0430\u0440\u0438\u0430\u043D\u0442\u044B \u0432\u044B\u0431\u0438\u0440\u0430\u0435\u0442 \u0447\u0430\u0449\u0435"
     },
@@ -452,19 +445,8 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
       kind: "born",
       vec: { smelost: -2, poryadok: 1 },
       rarity: "common",
-      source: ["birth", "backstory"],
+      source: ["birth"],
       effect: "\u0420\u0438\u0441\u043A\u043E\u0432\u0430\u043D\u043D\u044B\u0435 \u0432\u0430\u0440\u0438\u0430\u043D\u0442\u044B \u0432\u044B\u0431\u0438\u0440\u0430\u0435\u0442 \u0440\u0435\u0436\u0435, \u043F\u0440\u043E\u0432\u0430\u043B\u044B \u043C\u044F\u0433\u0447\u0435"
-    },
-    {
-      id: "chtit_primety",
-      name: "\u0427\u0442\u0438\u0442 \u043F\u0440\u0438\u043C\u0435\u0442\u044B",
-      desc: "\u0427\u0435\u0440\u0435\u0437 \u043F\u043E\u0440\u043E\u0433 \u043D\u0435 \u0437\u0434\u043E\u0440\u043E\u0432\u0430\u0435\u0442\u0441\u044F, \u0432 \u043F\u044F\u0442\u043D\u0438\u0446\u0443 \u043D\u0435 \u043D\u0430\u0447\u0438\u043D\u0430\u0435\u0442",
-      kind: "born",
-      vec: { vera: 2 },
-      rarity: "common",
-      source: ["birth", "backstory"],
-      conflicts: ["poka_ne_potrogaet"],
-      effect: "\u0412\u0430\u0440\u0438\u0430\u043D\u0442\u044B \u043F\u043E \u043E\u0431\u0440\u044F\u0434\u0443 \u0438 \u0437\u043D\u0430\u043C\u0435\u043D\u0438\u044F\u043C \u0432\u044B\u0431\u0438\u0440\u0430\u0435\u0442 \u0447\u0430\u0449\u0435; \u043B\u0435\u0441 \u043A \u043D\u0435\u043C\u0443 \u0434\u043E\u0431\u0440\u0435\u0435"
     },
     {
       id: "poka_ne_potrogaet",
@@ -473,7 +455,7 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
       kind: "born",
       vec: { vera: -2, lyubopytstvo: 1 },
       rarity: "common",
-      source: ["birth", "backstory"],
+      source: ["birth"],
       effect: "\u041E\u0431\u0440\u044F\u0434\u044B \u0438 \u043F\u0440\u0438\u043C\u0435\u0442\u044B \u0432 \u0440\u0430\u0441\u0447\u0451\u0442 \u043D\u0435 \u0431\u0435\u0440\u0451\u0442; \u043B\u0435\u0441\u043D\u043E\u0439 \u043D\u0430\u0440\u043E\u0434 \u0435\u0433\u043E \u0441\u0442\u043E\u0440\u043E\u043D\u0438\u0442\u0441\u044F"
     },
     {
@@ -483,18 +465,8 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
       kind: "born",
       vec: { lyubopytstvo: 2, obshchitelnost: 1 },
       rarity: "common",
-      source: ["birth", "backstory"],
+      source: ["birth"],
       effect: "\u0427\u0430\u0449\u0435 \u0443\u0437\u043D\u0430\u0451\u0442 \u0447\u0443\u0436\u0438\u0435 \u0442\u0430\u0439\u043D\u044B; \u0447\u0430\u0449\u0435 \u043D\u0430\u0436\u0438\u0432\u0430\u0435\u0442 \u0432\u0440\u0430\u0433\u043E\u0432"
-    },
-    {
-      id: "kak_dedy",
-      name: "\u041A\u0430\u043A \u0434\u0435\u0434\u044B \u0436\u0438\u043B\u0438",
-      desc: "\u041D\u043E\u0432\u043E\u0433\u043E \u043D\u0435 \u043D\u0430\u0434\u043E, \u0441\u0442\u0430\u0440\u043E\u0435 \u0431\u044B \u0443\u0434\u0435\u0440\u0436\u0430\u0442\u044C",
-      kind: "born",
-      vec: { lyubopytstvo: -2, vera: 1 },
-      rarity: "common",
-      source: ["birth", "backstory"],
-      effect: "\u041F\u0435\u0440\u0435\u043C\u0435\u043D\u044B \u0438 \u043D\u043E\u0432\u0448\u0435\u0441\u0442\u0432\u0430 \u0432\u044B\u0431\u0438\u0440\u0430\u0435\u0442 \u0440\u0435\u0436\u0435"
     },
     {
       id: "myagko_stelet",
@@ -503,7 +475,7 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
       kind: "born",
       vec: { zhestkost: -1, chestnost: -2 },
       rarity: "common",
-      source: ["birth", "backstory"],
+      source: ["birth"],
       effect: "\u0412 \u0441\u043F\u043E\u0440\u0435 \u0447\u0430\u0449\u0435 \u0434\u043E\u0431\u0438\u0432\u0430\u0435\u0442\u0441\u044F \u043A\u043E\u043C\u043F\u0440\u043E\u043C\u0438\u0441\u0441\u0430 \u0432 \u0441\u0432\u043E\u044E \u043F\u043E\u043B\u044C\u0437\u0443"
     },
     {
@@ -513,7 +485,7 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
       kind: "born",
       vec: { zhestkost: 2, privyazannost: -1 },
       rarity: "exceptional",
-      source: ["birth", "backstory"],
+      source: ["birth"],
       conflicts: ["zhaleet_ubogikh", "skor_na_slezu"],
       effect: "\u0416\u0430\u043B\u043E\u0431\u044B \u0438 \u0441\u043B\u0451\u0437\u044B \u043D\u0430 \u0440\u0435\u0448\u0435\u043D\u0438\u0435 \u043D\u0435 \u0432\u043B\u0438\u044F\u044E\u0442"
     },
@@ -524,28 +496,8 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
       kind: "born",
       vec: { zhestkost: -2, shchedrost: 1 },
       rarity: "common",
-      source: ["birth", "backstory"],
+      source: ["birth"],
       effect: "\u0412\u0430\u0440\u0438\u0430\u043D\u0442\u044B \u0432 \u043F\u043E\u043B\u044C\u0437\u0443 \u0441\u043B\u0430\u0431\u044B\u0445 \u0432\u044B\u0431\u0438\u0440\u0430\u0435\u0442 \u0447\u0430\u0449\u0435, \u0434\u0430\u0436\u0435 \u0432 \u0443\u0431\u044B\u0442\u043E\u043A"
-    },
-    {
-      id: "svoikh_ne_sdayot",
-      name: "\u0421\u0432\u043E\u0438\u0445 \u043D\u0435 \u0441\u0434\u0430\u0451\u0442",
-      desc: "\u0425\u043E\u0442\u044C \u043D\u0430 \u0434\u044B\u0431\u0435",
-      kind: "born",
-      vec: { privyazannost: 2, smelost: 1 },
-      rarity: "common",
-      source: ["birth", "backstory"],
-      effect: "\u0421\u0432\u043E\u0438\u0445 \u043B\u044E\u0434\u0435\u0439 \u043F\u0440\u0438\u043A\u0440\u044B\u0432\u0430\u0435\u0442; \u0436\u0430\u043B\u043E\u0431\u0443 \u043D\u0430 \u0441\u043E\u044E\u0437\u043D\u0438\u043A\u0430 \u043D\u0435 \u043F\u043E\u0434\u0430\u0441\u0442"
-    },
-    {
-      id: "otrezanny_lomot",
-      name: "\u041E\u0442\u0440\u0435\u0437\u0430\u043D\u043D\u044B\u0439 \u043B\u043E\u043C\u043E\u0442\u044C",
-      desc: "\u041D\u0438 \u043A\u043E\u043B\u0430, \u043D\u0438 \u0440\u043E\u0434\u043D\u0438",
-      kind: "born",
-      vec: { privyazannost: -2, obshchitelnost: -1 },
-      rarity: "common",
-      source: ["birth", "backstory"],
-      effect: "\u041E\u0442\u043D\u043E\u0448\u0435\u043D\u0438\u044F \u0432 \u0441\u043E\u0432\u0435\u0442\u0435 \u0441\u043A\u043B\u0430\u0434\u044B\u0432\u0430\u044E\u0442\u0441\u044F \u043C\u0435\u0434\u043B\u0435\u043D\u043D\u0435\u0435, \u043E\u0431\u0438\u0434\u044B \u0442\u043E\u0436\u0435"
     },
     {
       id: "metit_vysoko",
@@ -554,7 +506,7 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
       kind: "born",
       vec: { chestolyubie: 2 },
       rarity: "common",
-      source: ["birth", "backstory"],
+      source: ["birth"],
       conflicts: ["znaet_shestok"],
       effect: "\u0421\u0442\u0440\u0435\u043C\u043B\u0435\u043D\u0438\u0435 \u043A \u0434\u043E\u043B\u0436\u043D\u043E\u0441\u0442\u0438 \u0434\u0430\u0432\u0438\u0442 \u0441\u0438\u043B\u044C\u043D\u0435\u0435"
     },
@@ -565,7 +517,7 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
       kind: "born",
       vec: { chestolyubie: -2, gordost: -1 },
       rarity: "common",
-      source: ["birth", "backstory"],
+      source: ["birth"],
       effect: "\u041D\u0430 \u043D\u0435\u0436\u0435\u043B\u0430\u043D\u043D\u043E\u0439 \u0434\u043E\u043B\u0436\u043D\u043E\u0441\u0442\u0438 \u043D\u0435 \u0442\u043E\u0441\u043A\u0443\u0435\u0442"
     },
     {
@@ -575,7 +527,7 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
       kind: "born",
       vec: { chestnost: 2, terpenie: -1 },
       rarity: "common",
-      source: ["birth", "backstory"],
+      source: ["birth"],
       effect: "\u041D\u0435 \u043C\u043E\u0436\u0435\u0442 \u0441\u043C\u043E\u043B\u0447\u0430\u0442\u044C: \u043E\u0442\u043D\u043E\u0448\u0435\u043D\u0438\u044F \u043F\u043E\u0440\u0442\u0438\u0442, \u0437\u0430\u0442\u043E \u0435\u043C\u0443 \u0432\u0435\u0440\u044F\u0442"
     },
     {
@@ -585,7 +537,7 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
       kind: "born",
       vec: { chestnost: -1, obshchitelnost: 2 },
       rarity: "common",
-      source: ["birth", "backstory"],
+      source: ["birth"],
       effect: "\u0421 \u043A\u0443\u043F\u0446\u0430\u043C\u0438 \u0438 \u0434\u0432\u043E\u0440\u043E\u043C \u0434\u043E\u0433\u043E\u0432\u0430\u0440\u0438\u0432\u0430\u0435\u0442\u0441\u044F \u043B\u0443\u0447\u0448\u0435"
     },
     {
@@ -595,7 +547,7 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
       kind: "born",
       vec: { terpenie: 2 },
       rarity: "common",
-      source: ["birth", "backstory"],
+      source: ["birth"],
       conflicts: ["porokh"],
       effect: "\u041E\u0431\u0438\u0434\u044B \u043A\u043E\u043F\u0438\u0442 \u043C\u0435\u0434\u043B\u0435\u043D\u043D\u043E, \u043D\u043E \u043D\u0435 \u0437\u0430\u0431\u044B\u0432\u0430\u0435\u0442"
     },
@@ -606,7 +558,7 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
       kind: "born",
       vec: { terpenie: -2, gordost: 1 },
       rarity: "common",
-      source: ["birth", "backstory"],
+      source: ["birth"],
       effect: "\u0420\u0435\u0448\u0435\u043D\u0438\u044F \u043C\u0435\u043D\u0435\u0435 \u043F\u0440\u0435\u0434\u0441\u043A\u0430\u0437\u0443\u0435\u043C\u044B; \u0432 \u0441\u043F\u043E\u0440\u0435 \u043D\u0430 \u043A\u043E\u043C\u043F\u0440\u043E\u043C\u0438\u0441\u0441 \u043D\u0435 \u0438\u0434\u0451\u0442"
     },
     {
@@ -616,7 +568,7 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
       kind: "born",
       vec: { obshchitelnost: -2, chestolyubie: -1 },
       rarity: "common",
-      source: ["birth", "backstory"],
+      source: ["birth"],
       conflicts: ["yazyk_bez_kostey"],
       effect: "\u0420\u0430\u0437\u0433\u043E\u0432\u043E\u0440 \u043E\u0442\u043A\u0440\u044B\u0432\u0430\u0435\u0442 \u043E \u043D\u0451\u043C \u043C\u0435\u043D\u044C\u0448\u0435"
     },
@@ -627,7 +579,7 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
       kind: "born",
       vec: { obshchitelnost: 2, poryadok: -1 },
       rarity: "common",
-      source: ["birth", "backstory"],
+      source: ["birth"],
       effect: "\u0421\u043B\u0443\u0445\u0438 \u043E\u0442 \u043D\u0435\u0433\u043E \u0440\u0430\u0441\u0445\u043E\u0434\u044F\u0442\u0441\u044F \u0431\u044B\u0441\u0442\u0440\u043E: \u0438 \u043D\u0443\u0436\u043D\u044B\u0435, \u0438 \u043B\u0438\u0448\u043D\u0438\u0435"
     },
     {
@@ -637,7 +589,7 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
       kind: "born",
       vec: { poryadok: 2 },
       rarity: "common",
-      source: ["birth", "backstory"],
+      source: ["birth"],
       conflicts: ["volny_veter"],
       effect: "\u0423\u043C\u0435\u043D\u0438\u0435 \u043D\u0430 \u0434\u043E\u043B\u0436\u043D\u043E\u0441\u0442\u0438 \u0440\u0430\u0441\u0442\u0451\u0442 \u0431\u044B\u0441\u0442\u0440\u0435\u0435"
     },
@@ -648,7 +600,7 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
       kind: "born",
       vec: { poryadok: -2, privyazannost: -1 },
       rarity: "common",
-      source: ["birth", "backstory"],
+      source: ["birth"],
       effect: "\u041D\u0430\u043A\u0430\u0437\u044B \u0441\u043B\u0443\u0448\u0430\u0435\u0442 \u0445\u0443\u0436\u0435; \u0437\u0430\u0441\u0438\u0436\u0438\u0432\u0430\u0435\u0442\u0441\u044F \u0440\u0435\u0436\u0435"
     },
     {
@@ -658,7 +610,7 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
       kind: "born",
       vec: { gordost: 2 },
       rarity: "common",
-      source: ["birth", "backstory"],
+      source: ["birth"],
       conflicts: ["nizhe_travy"],
       effect: "\u0421 \u0434\u0432\u043E\u0440\u043E\u043C \u0438 \u0441\u0431\u043E\u0440\u0449\u0438\u043A\u043E\u043C \u043B\u0430\u0434\u0438\u0442 \u0445\u0443\u0436\u0435, \u0432 \u0441\u043F\u043E\u0440\u0435 \u0435\u0433\u043E \u0442\u0440\u0443\u0434\u043D\u0435\u0435 \u0441\u0434\u0432\u0438\u043D\u0443\u0442\u044C"
     },
@@ -669,7 +621,7 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
       kind: "born",
       vec: { gordost: -2, smelost: -1 },
       rarity: "common",
-      source: ["birth", "backstory"],
+      source: ["birth"],
       effect: "\u0412 \u0441\u043F\u043E\u0440\u0435 \u0443\u0441\u0442\u0443\u043F\u0430\u0435\u0442 \u0447\u0430\u0449\u0435"
     },
     {
@@ -679,19 +631,9 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
       kind: "born",
       vec: { shchedrost: 2, zhestkost: -1 },
       rarity: "rare",
-      source: ["birth", "backstory"],
+      source: ["birth"],
       conflicts: ["zimoy_snega", "kopeyka_k_kopeyke"],
       effect: "\u0414\u0435\u0440\u0435\u0432\u043D\u0438 \u0435\u0433\u043E \u043B\u044E\u0431\u044F\u0442; \u043A\u0430\u0437\u043D\u0443 \u0438 \u043F\u0440\u0438\u043F\u0430\u0441\u044B \u043F\u0440\u0438 \u043D\u0451\u043C \u043D\u0435 \u043D\u0430\u043A\u043E\u043F\u0438\u0442\u044C"
-    },
-    {
-      id: "kopeyka_k_kopeyke",
-      name: "\u041A\u043E\u043F\u0435\u0439\u043A\u0430 \u043A \u043A\u043E\u043F\u0435\u0439\u043A\u0435",
-      desc: "\u041A\u043E\u043F\u0438\u0442 \u043D\u0435 \u0434\u043B\u044F \u0441\u0435\u0431\u044F \u2014 \u043D\u0430 \u0447\u0451\u0440\u043D\u044B\u0439 \u0434\u0435\u043D\u044C",
-      kind: "born",
-      vec: { shchedrost: -1, poryadok: 1, terpenie: 1 },
-      rarity: "common",
-      source: ["birth", "backstory"],
-      effect: "\u041A\u0430\u0437\u043D\u0430\u0447\u0435\u0435\u043C \u0438 \u043A\u043B\u044E\u0447\u043D\u0438\u043A\u043E\u043C \u2014 \u0443\u043C\u0435\u043D\u0438\u0435 \u043B\u0443\u0447\u0448\u0435"
     },
     {
       id: "ne_robkogo_desyatka",
@@ -700,59 +642,8 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
       kind: "born",
       vec: { smelost: 2 },
       rarity: "common",
-      source: ["birth", "backstory"],
+      source: ["birth"],
       effect: "\u0423 \u043E\u043F\u0443\u0448\u043A\u0438 \u0438 \u043F\u0435\u0440\u0435\u0434 \u043F\u0440\u0438\u043A\u043B\u044E\u0447\u0435\u043D\u0446\u0430\u043C\u0438 \u043D\u0435 \u0442\u0435\u0440\u044F\u0435\u0442\u0441\u044F"
-    },
-    {
-      id: "khodit_k_vedunye",
-      name: "\u0425\u043E\u0434\u0438\u0442 \u043A \u0432\u0435\u0434\u0443\u043D\u044C\u0435",
-      desc: "\u0422\u0430\u0439\u043A\u043E\u043C, \u043D\u043E \u0432\u0441\u0435 \u0437\u043D\u0430\u044E\u0442",
-      kind: "born",
-      vec: { vera: 1, lyubopytstvo: 1 },
-      rarity: "common",
-      source: ["birth", "backstory"],
-      effect: "\u0417\u043D\u0430\u043C\u0435\u043D\u0438\u044F \u0447\u0438\u0442\u0430\u0435\u0442 \u043B\u0443\u0447\u0448\u0435; \u0434\u0432\u043E\u0440 \u0441\u043C\u043E\u0442\u0440\u0438\u0442 \u043A\u043E\u0441\u043E"
-    },
-    {
-      id: "ni_v_son_ni_v_chokh",
-      name: "\u041D\u0438 \u0432 \u0441\u043E\u043D, \u043D\u0438 \u0432 \u0447\u043E\u0445",
-      desc: "\u041D\u0435 \u0432\u0435\u0440\u0438\u0442 \u043D\u0438 \u0432 \u0431\u043E\u0433\u0430, \u043D\u0438 \u0432 \u0447\u0451\u0440\u0442\u0430",
-      kind: "born",
-      vec: { vera: -2, smelost: 1 },
-      rarity: "rare",
-      source: ["birth", "backstory"],
-      conflicts: ["chtit_primety", "postitsya_i_kaetsya"],
-      effect: "\u041B\u0435\u0441\u043D\u043E\u0439 \u043D\u0430\u0440\u043E\u0434 \u0435\u0433\u043E \u043D\u0435 \u043B\u044E\u0431\u0438\u0442; \u0441\u0442\u0440\u0430\u0445 \u043F\u0435\u0440\u0435\u0434 \u043B\u0430\u0431\u0438\u0440\u0438\u043D\u0442\u043E\u043C \u043D\u0430 \u043D\u0435\u0433\u043E \u043D\u0435 \u0434\u0435\u0439\u0441\u0442\u0432\u0443\u0435\u0442"
-    },
-    {
-      id: "za_semyu_goroy",
-      name: "\u0417\u0430 \u0441\u0435\u043C\u044C\u044E \u0433\u043E\u0440\u043E\u0439",
-      desc: "\u0422\u0440\u043E\u043D\u044C \u0435\u0433\u043E \u0440\u043E\u0434\u043D\u044E \u2014 \u0443\u0437\u043D\u0430\u0435\u0448\u044C",
-      kind: "born",
-      vec: { privyazannost: 2, zhestkost: 1 },
-      rarity: "common",
-      source: ["birth", "backstory"],
-      effect: "\u041E\u0431\u0438\u0434\u0443, \u043D\u0430\u043D\u0435\u0441\u0451\u043D\u043D\u0443\u044E \u0431\u043B\u0438\u0437\u043A\u0438\u043C, \u043D\u0435 \u043F\u0440\u043E\u0449\u0430\u0435\u0442"
-    },
-    {
-      id: "kost_v_gorle",
-      name: "\u041A\u043E\u0441\u0442\u044C \u0432 \u0433\u043E\u0440\u043B\u0435",
-      desc: "\u041D\u0435\u0443\u0434\u043E\u0431\u043D\u044B\u0439 \u0447\u0435\u043B\u043E\u0432\u0435\u043A: \u043D\u0438 \u043A\u0443\u043F\u0438\u0442\u044C, \u043D\u0438 \u043D\u0430\u043F\u0443\u0433\u0430\u0442\u044C",
-      kind: "born",
-      vec: { gordost: 1, chestnost: 1, zhestkost: 1 },
-      rarity: "rare",
-      source: ["birth", "backstory"],
-      effect: "\u0416\u0430\u043B\u043E\u0431\u044B \u043D\u0430 \u043D\u0435\u0433\u043E \u043D\u0435 \u0434\u0435\u0439\u0441\u0442\u0432\u0443\u044E\u0442; \u0441\u0430\u043C \u0436\u0430\u043B\u0443\u0435\u0442\u0441\u044F \u0447\u0430\u0449\u0435"
-    },
-    {
-      id: "svoego_ne_upustit",
-      name: "\u0421\u0432\u043E\u0435\u0433\u043E \u043D\u0435 \u0443\u043F\u0443\u0441\u0442\u0438\u0442",
-      desc: "\u0418 \u0447\u0443\u0436\u043E\u0435 \u043F\u0440\u0438\u0445\u0432\u0430\u0442\u0438\u0442, \u0435\u0441\u043B\u0438 \u043F\u043B\u043E\u0445\u043E \u043B\u0435\u0436\u0438\u0442",
-      kind: "born",
-      vec: { chestolyubie: 1, shchedrost: -1 },
-      rarity: "common",
-      source: ["birth", "backstory"],
-      effect: "\u0417\u0430\u0441\u0438\u0434\u0435\u0432\u0448\u0438\u0441\u044C, \u0447\u0430\u0449\u0435 \u0442\u044F\u043D\u0435\u0442 \u0438\u0437 \u043A\u0430\u0437\u043D\u044B"
     },
     {
       id: "trezvaya_golova",
@@ -761,7 +652,7 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
       kind: "born",
       vec: { vera: -1, terpenie: 1, poryadok: 1 },
       rarity: "common",
-      source: ["birth", "backstory"],
+      source: ["birth"],
       effect: "\u041F\u0440\u043E\u0432\u0430\u043B\u044B \u0440\u0438\u0441\u043A\u043E\u0432\u0430\u043D\u043D\u044B\u0445 \u0434\u0435\u043B \u043C\u044F\u0433\u0447\u0435"
     },
     {
@@ -771,7 +662,7 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
       kind: "born",
       vec: { privyazannost: -1, gordost: 1 },
       rarity: "common",
-      source: ["birth", "backstory"],
+      source: ["birth"],
       effect: "\u0421\u0442\u043E\u0440\u043E\u043D\u0443 \u0432 \u0447\u0443\u0436\u043E\u043C \u0441\u043F\u043E\u0440\u0435 \u043D\u0435 \u0437\u0430\u043D\u0438\u043C\u0430\u0435\u0442"
     },
     {
@@ -781,19 +672,8 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
       kind: "born",
       vec: { lyubopytstvo: 1, smelost: 1, poryadok: -1 },
       rarity: "common",
-      source: ["birth", "backstory"],
+      source: ["birth"],
       effect: "\u041D\u043E\u0432\u0443\u044E \u0434\u043E\u043B\u0436\u043D\u043E\u0441\u0442\u044C \u043E\u0441\u0432\u0430\u0438\u0432\u0430\u0435\u0442 \u0431\u044B\u0441\u0442\u0440\u0435\u0435"
-    },
-    {
-      id: "ruka_ne_drognet",
-      name: "\u0420\u0443\u043A\u0430 \u043D\u0435 \u0434\u0440\u043E\u0433\u043D\u0435\u0442",
-      desc: "\u041D\u0430\u0434\u043E \u0432\u044B\u0441\u0435\u0447\u044C \u2014 \u0432\u044B\u0441\u0435\u0447\u0435\u0442",
-      kind: "born",
-      vec: { zhestkost: 2, smelost: 1 },
-      rarity: "common",
-      source: ["birth", "backstory"],
-      conflicts: ["skor_na_slezu"],
-      effect: "\u0421\u0443\u0440\u043E\u0432\u044B\u0435 \u0432\u0430\u0440\u0438\u0430\u043D\u0442\u044B \u0432\u044B\u0431\u0438\u0440\u0430\u0435\u0442 \u0447\u0430\u0449\u0435; \u043F\u043E\u0440\u044F\u0434\u043E\u043A \u043F\u0440\u0438 \u043D\u0451\u043C \u043A\u0440\u0435\u043F\u0447\u0435"
     },
     {
       id: "skor_na_slezu",
@@ -802,7 +682,7 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
       kind: "born",
       vec: { zhestkost: -2, terpenie: -1 },
       rarity: "common",
-      source: ["birth", "backstory"],
+      source: ["birth"],
       effect: "\u0416\u0430\u043B\u043E\u0431\u044B \u0438 \u043F\u0440\u043E\u0441\u044C\u0431\u044B \u0434\u0435\u0439\u0441\u0442\u0432\u0443\u044E\u0442 \u043D\u0430 \u043D\u0435\u0433\u043E \u0441\u0438\u043B\u044C\u043D\u0435\u0435"
     },
     {
@@ -812,7 +692,7 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
       kind: "born",
       vec: { chestolyubie: 2, shchedrost: -1 },
       rarity: "common",
-      source: ["birth", "backstory"],
+      source: ["birth"],
       conflicts: ["syt_krayukhoy"],
       effect: "\u041A \u0442\u0435\u043C, \u043A\u0442\u043E \u0432\u044B\u0448\u0435, \u043E\u0442\u043D\u043E\u0441\u0438\u0442\u0441\u044F \u0445\u0443\u0436\u0435"
     },
@@ -823,19 +703,8 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
       kind: "born",
       vec: { chestolyubie: -2, lyubopytstvo: -1 },
       rarity: "common",
-      source: ["birth", "backstory"],
+      source: ["birth"],
       effect: "\u041E\u0431\u043E\u0439\u0434\u0451\u043D\u043D\u044B\u0439 \u0441 \u0434\u043E\u043B\u0436\u043D\u043E\u0441\u0442\u044C\u044E, \u043E\u0431\u0438\u0434\u044B \u043D\u0435 \u0434\u0435\u0440\u0436\u0438\u0442"
-    },
-    {
-      id: "krivaya_dorozhka",
-      name: "\u041A\u0440\u0438\u0432\u0430\u044F \u0434\u043E\u0440\u043E\u0436\u043A\u0430 \u043A\u043E\u0440\u043E\u0447\u0435",
-      desc: "\u0417\u0430\u0447\u0435\u043C \u0432 \u0432\u043E\u0440\u043E\u0442\u0430, \u043A\u043E\u0433\u0434\u0430 \u0435\u0441\u0442\u044C \u043B\u0430\u0437",
-      kind: "born",
-      vec: { chestnost: -2, smelost: 1 },
-      rarity: "common",
-      source: ["birth", "backstory"],
-      conflicts: ["kak_na_dukhu", "derzhit_slovo"],
-      effect: "\u041E\u0431\u0445\u043E\u0434\u043D\u044B\u0435 \u0432\u0430\u0440\u0438\u0430\u043D\u0442\u044B \u0432\u044B\u0431\u0438\u0440\u0430\u0435\u0442 \u0447\u0430\u0449\u0435; \u0434\u0432\u043E\u0440 \u0435\u043C\u0443 \u043D\u0435 \u0432\u0435\u0440\u0438\u0442"
     },
     {
       id: "kak_na_dukhu",
@@ -844,7 +713,7 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
       kind: "born",
       vec: { chestnost: 2, vera: 1 },
       rarity: "common",
-      source: ["birth", "backstory"],
+      source: ["birth"],
       effect: "\u0415\u0433\u043E \u0441\u043B\u043E\u0432\u0443 \u0432\u0435\u0440\u044F\u0442 \u0441\u0442\u043E\u0440\u043E\u043D\u044B; \u043E\u043F\u0438\u0441\u044C \u0437\u0430\u043D\u0438\u0437\u0438\u0442\u044C \u043D\u0435 \u0441\u043C\u043E\u0436\u0435\u0442"
     },
     {
@@ -854,40 +723,8 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
       kind: "born",
       vec: { gordost: 1, lyubopytstvo: -2 },
       rarity: "common",
-      source: ["birth", "backstory"],
+      source: ["birth"],
       effect: "\u041D\u0430\u043A\u0430\u0437\u044B \u0441\u043B\u0443\u0448\u0430\u0435\u0442 \u0445\u0443\u0436\u0435, \u0432 \u0441\u043F\u043E\u0440\u0435 \u043D\u0435 \u0443\u0441\u0442\u0443\u043F\u0430\u0435\u0442"
-    },
-    {
-      id: "sor_iz_izby",
-      name: "\u0421\u043E\u0440 \u0438\u0437 \u0438\u0437\u0431\u044B \u043D\u0435 \u0432\u044B\u043D\u043E\u0441\u0438\u0442",
-      desc: "\u0427\u0442\u043E \u0432 \u0434\u043E\u043C\u0435, \u0442\u043E \u0432 \u0434\u043E\u043C\u0435",
-      kind: "born",
-      vec: { obshchitelnost: -1, privyazannost: 2 },
-      rarity: "common",
-      source: ["birth", "backstory"],
-      effect: "\u0416\u0430\u043B\u043E\u0431 \u043D\u0430\u0432\u0435\u0440\u0445 \u043D\u0435 \u043F\u043E\u0434\u0430\u0451\u0442; \u0447\u0442\u043E \u0442\u0432\u043E\u0440\u0438\u0442\u0441\u044F \u0443 \u043D\u0435\u0433\u043E \u0432 \u0441\u0444\u0435\u0440\u0435, \u0443\u0437\u043D\u0430\u0442\u044C \u0442\u0440\u0443\u0434\u043D\u0435\u0435"
-    },
-    {
-      id: "i_nashim_i_vashim",
-      name: "\u0418 \u043D\u0430\u0448\u0438\u043C \u0438 \u0432\u0430\u0448\u0438\u043C",
-      desc: "\u0421\u043B\u0443\u0436\u0438\u0442 \u0434\u0432\u0443\u043C \u0433\u043E\u0441\u043F\u043E\u0434\u0430\u043C, \u0438 \u043E\u0431\u0430 \u0434\u043E\u0432\u043E\u043B\u044C\u043D\u044B",
-      kind: "born",
-      vec: { chestnost: -2, chestolyubie: 1 },
-      rarity: "exceptional",
-      source: ["birth", "backstory"],
-      conflicts: ["derzhit_slovo", "kak_na_dukhu"],
-      hidden: true,
-      effect: "\u0412 \u0441\u043F\u043E\u0440\u0435 \u0432\u0441\u0442\u0430\u0451\u0442 \u043D\u0430 \u0441\u0442\u043E\u0440\u043E\u043D\u0443 \u0441\u0438\u043B\u044C\u043D\u043E\u0433\u043E"
-    },
-    {
-      id: "postitsya_i_kaetsya",
-      name: "\u041F\u043E\u0441\u0442\u0438\u0442\u0441\u044F \u0438 \u043A\u0430\u0435\u0442\u0441\u044F",
-      desc: "\u0413\u0440\u0435\u0445\u043E\u0432 \u043D\u0430 \u043D\u0451\u043C \u2014 \u043A\u0430\u043A \u043D\u0430 \u0432\u0441\u0435\u0445, \u0430 \u043A\u0430\u0435\u0442\u0441\u044F \u0437\u0430 \u0442\u0440\u043E\u0438\u0445",
-      kind: "born",
-      vec: { vera: 2, gordost: -1 },
-      rarity: "common",
-      source: ["birth", "backstory"],
-      effect: "\u041E\u0431\u0440\u044F\u0434\u043E\u0432\u044B\u0435 \u0432\u0430\u0440\u0438\u0430\u043D\u0442\u044B \u0432\u044B\u0431\u0438\u0440\u0430\u0435\u0442 \u0447\u0430\u0449\u0435; \u043F\u043E\u0441\u043B\u0435 \u043F\u0440\u043E\u0432\u0430\u043B\u0430 \u0432\u0438\u043D\u0438\u0442 \u0441\u0435\u0431\u044F"
     },
     {
       id: "glaz_almaz",
@@ -896,19 +733,8 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
       kind: "born",
       vec: { lyubopytstvo: 1, poryadok: 1 },
       rarity: "common",
-      source: ["birth", "backstory"],
+      source: ["birth"],
       effect: "\u041D\u0435\u0434\u043E\u0441\u0442\u0430\u0447\u0443 \u0438 \u043F\u043E\u0434\u043B\u043E\u0433 \u0437\u0430\u043C\u0435\u0447\u0430\u0435\u0442 \u0440\u0430\u043D\u044C\u0448\u0435 \u0434\u0440\u0443\u0433\u0438\u0445"
-    },
-    {
-      id: "gulyaka",
-      name: "\u0413\u0443\u043B\u044F\u043A\u0430",
-      desc: "\u0413\u0434\u0435 \u043F\u0438\u0440, \u0442\u0430\u043C \u0438 \u043E\u043D",
-      kind: "born",
-      vec: { obshchitelnost: 1, poryadok: -2, shchedrost: 1 },
-      rarity: "common",
-      source: ["birth", "backstory"],
-      conflicts: ["vsyo_po_polkam"],
-      effect: "\u041F\u0440\u0430\u0437\u0434\u043D\u0438\u043A\u0438 \u0438 \u044F\u0440\u043C\u0430\u0440\u043A\u0438 \u043B\u044E\u0431\u0438\u0442; \u043F\u0440\u0438\u043F\u0430\u0441\u044B \u043F\u0440\u0438 \u043D\u0451\u043C \u0442\u0430\u044E\u0442"
     },
     {
       id: "odin_v_pole",
@@ -917,7 +743,7 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
       kind: "born",
       vec: { obshchitelnost: -1, smelost: 2, gordost: 1 },
       rarity: "exceptional",
-      source: ["birth", "backstory"],
+      source: ["birth"],
       effect: "\u0412 \u043E\u0434\u0438\u043D\u043E\u0447\u043A\u0443 \u0440\u0435\u0448\u0430\u0435\u0442 \u043B\u0443\u0447\u0448\u0435, \u0447\u0435\u043C \u0432 \u0441\u043F\u043E\u0440\u0435"
     },
     {
@@ -927,19 +753,9 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
       kind: "born",
       vec: { gordost: -2, zhestkost: -1 },
       rarity: "common",
-      source: ["birth", "backstory"],
+      source: ["birth"],
       conflicts: ["porokh", "skor_na_ruku"],
       effect: "\u041E\u0431\u0438\u0434 \u043D\u0435 \u043A\u043E\u043F\u0438\u0442; \u0441\u0430\u0431\u043E\u0442\u0430\u0436\u0435\u043C \u043D\u0435 \u043E\u0442\u0432\u0435\u0447\u0430\u0435\u0442"
-    },
-    {
-      id: "strelyany_vorobey",
-      name: "\u0421\u0442\u0440\u0435\u043B\u044F\u043D\u044B\u0439 \u0432\u043E\u0440\u043E\u0431\u0435\u0439",
-      desc: "\u041D\u0430 \u043C\u044F\u043A\u0438\u043D\u0435 \u043D\u0435 \u043F\u0440\u043E\u0432\u0435\u0434\u0451\u0448\u044C",
-      kind: "born",
-      vec: { smelost: -1, vera: -1 },
-      rarity: "common",
-      source: ["birth", "backstory"],
-      effect: "\u041E\u0431\u043C\u0430\u043D \u0438 \u043F\u043E\u0434\u0432\u043E\u0445 \u0432 \u0441\u043E\u0431\u044B\u0442\u0438\u044F\u0445 \u0440\u0430\u0441\u043F\u043E\u0437\u043D\u0430\u0451\u0442 \u0447\u0430\u0449\u0435"
     },
     {
       id: "belaya_vorona",
@@ -948,30 +764,247 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
       kind: "born",
       vec: { lyubopytstvo: 1, obshchitelnost: -1, poryadok: -1 },
       rarity: "rare",
-      source: ["birth", "backstory"],
+      source: ["birth"],
       effect: "\u041E\u0442\u043D\u043E\u0448\u0435\u043D\u0438\u044F \u0441 \u0441\u043E\u0432\u0435\u0442\u043E\u043C \u0445\u0443\u0436\u0435, \u0437\u0430\u0442\u043E \u0440\u0435\u0448\u0435\u043D\u0438\u044F \u043D\u0435\u043E\u0436\u0438\u0434\u0430\u043D\u043D\u0435\u0435"
+    },
+    {
+      id: "veshchie_sny",
+      name: "\u0412\u0438\u0434\u0438\u0442 \u0432\u0435\u0449\u0438\u0435 \u0441\u043D\u044B",
+      desc: "\u0421 \u0434\u0435\u0442\u0441\u0442\u0432\u0430 \u0437\u043D\u0430\u0435\u0442 \u043D\u0430\u043F\u0435\u0440\u0451\u0434, \u0442\u043E\u043B\u044C\u043A\u043E \u043D\u0435 \u0432\u0441\u0435\u0433\u0434\u0430 \u043F\u043E\u043D\u0438\u043C\u0430\u0435\u0442 \u0447\u0442\u043E",
+      kind: "born",
+      vec: { vera: 2, lyubopytstvo: 1 },
+      rarity: "rare",
+      source: ["birth"],
+      effect: "\u0417\u043D\u0430\u043C\u0435\u043D\u0438\u044F \u0438 \u043F\u0440\u0435\u0434\u0447\u0443\u0432\u0441\u0442\u0432\u0438\u044F \u043F\u0435\u0440\u0435\u0434 \u0431\u0435\u0434\u043E\u0439 \u0437\u0430\u043C\u0435\u0447\u0430\u0435\u0442 \u0440\u0430\u043D\u044C\u0448\u0435 \u0434\u0440\u0443\u0433\u0438\u0445"
+    },
+    // --- нажитые ---
+    {
+      id: "derzhit_slovo",
+      name: "\u0414\u0435\u0440\u0436\u0438\u0442 \u0441\u043B\u043E\u0432\u043E",
+      desc: "\u0421\u043A\u0430\u0437\u0430\u043B \u2014 \u0441\u0434\u0435\u043B\u0430\u043B, \u0445\u043E\u0442\u044C \u043A\u0430\u043C\u043D\u0438 \u0441 \u043D\u0435\u0431\u0430",
+      kind: "life",
+      vec: { chestnost: 2, poryadok: 1 },
+      rarity: "common",
+      source: ["backstory", "life"],
+      trigger: "habit",
+      effect: "\u041D\u0430\u043A\u0430\u0437 \u0421\u0435\u043D\u0435\u0448\u0430\u043B\u044F \u0438\u0441\u043F\u043E\u043B\u043D\u044F\u0435\u0442 \u043B\u0443\u0447\u0448\u0435; \u043D\u0430\u0440\u0443\u0448\u0435\u043D\u043D\u043E\u0435 \u043E\u0431\u0435\u0449\u0430\u043D\u0438\u0435 \u0441\u0442\u043E\u0440\u043E\u043D\u0435 \u0434\u043B\u044F \u043D\u0435\u0433\u043E \u2014 \u043E\u0431\u0438\u0434\u0430"
+    },
+    {
+      id: "chtit_primety",
+      name: "\u0427\u0442\u0438\u0442 \u043F\u0440\u0438\u043C\u0435\u0442\u044B",
+      desc: "\u0427\u0435\u0440\u0435\u0437 \u043F\u043E\u0440\u043E\u0433 \u043D\u0435 \u0437\u0434\u043E\u0440\u043E\u0432\u0430\u0435\u0442\u0441\u044F, \u0432 \u043F\u044F\u0442\u043D\u0438\u0446\u0443 \u043D\u0435 \u043D\u0430\u0447\u0438\u043D\u0430\u0435\u0442",
+      kind: "life",
+      vec: { vera: 2 },
+      rarity: "common",
+      source: ["backstory", "life"],
+      trigger: "habit",
+      conflicts: ["poka_ne_potrogaet"],
+      effect: "\u0412\u0430\u0440\u0438\u0430\u043D\u0442\u044B \u043F\u043E \u043E\u0431\u0440\u044F\u0434\u0443 \u0438 \u0437\u043D\u0430\u043C\u0435\u043D\u0438\u044F\u043C \u0432\u044B\u0431\u0438\u0440\u0430\u0435\u0442 \u0447\u0430\u0449\u0435; \u043B\u0435\u0441 \u043A \u043D\u0435\u043C\u0443 \u0434\u043E\u0431\u0440\u0435\u0435"
+    },
+    {
+      id: "kak_dedy",
+      name: "\u041A\u0430\u043A \u0434\u0435\u0434\u044B \u0436\u0438\u043B\u0438",
+      desc: "\u041D\u043E\u0432\u043E\u0433\u043E \u043D\u0435 \u043D\u0430\u0434\u043E, \u0441\u0442\u0430\u0440\u043E\u0435 \u0431\u044B \u0443\u0434\u0435\u0440\u0436\u0430\u0442\u044C",
+      kind: "life",
+      vec: { lyubopytstvo: -2, vera: 1 },
+      rarity: "common",
+      source: ["backstory", "life"],
+      trigger: "habit",
+      effect: "\u041F\u0435\u0440\u0435\u043C\u0435\u043D\u044B \u0438 \u043D\u043E\u0432\u0448\u0435\u0441\u0442\u0432\u0430 \u0432\u044B\u0431\u0438\u0440\u0430\u0435\u0442 \u0440\u0435\u0436\u0435"
+    },
+    {
+      id: "svoikh_ne_sdayot",
+      name: "\u0421\u0432\u043E\u0438\u0445 \u043D\u0435 \u0441\u0434\u0430\u0451\u0442",
+      desc: "\u0425\u043E\u0442\u044C \u043D\u0430 \u0434\u044B\u0431\u0435",
+      kind: "life",
+      vec: { privyazannost: 2, smelost: 1 },
+      rarity: "common",
+      source: ["backstory", "life"],
+      trigger: "rel",
+      effect: "\u0421\u0432\u043E\u0438\u0445 \u043B\u044E\u0434\u0435\u0439 \u043F\u0440\u0438\u043A\u0440\u044B\u0432\u0430\u0435\u0442; \u0436\u0430\u043B\u043E\u0431\u0443 \u043D\u0430 \u0441\u043E\u044E\u0437\u043D\u0438\u043A\u0430 \u043D\u0435 \u043F\u043E\u0434\u0430\u0441\u0442"
+    },
+    {
+      id: "otrezanny_lomot",
+      name: "\u041E\u0442\u0440\u0435\u0437\u0430\u043D\u043D\u044B\u0439 \u043B\u043E\u043C\u043E\u0442\u044C",
+      desc: "\u041D\u0438 \u043A\u043E\u043B\u0430, \u043D\u0438 \u0440\u043E\u0434\u043D\u0438",
+      kind: "life",
+      vec: { privyazannost: -2, obshchitelnost: -1 },
+      rarity: "common",
+      source: ["backstory", "life"],
+      trigger: "break",
+      effect: "\u041E\u0442\u043D\u043E\u0448\u0435\u043D\u0438\u044F \u0432 \u0441\u043E\u0432\u0435\u0442\u0435 \u0441\u043A\u043B\u0430\u0434\u044B\u0432\u0430\u044E\u0442\u0441\u044F \u043C\u0435\u0434\u043B\u0435\u043D\u043D\u0435\u0435, \u043E\u0431\u0438\u0434\u044B \u0442\u043E\u0436\u0435"
+    },
+    {
+      id: "kopeyka_k_kopeyke",
+      name: "\u041A\u043E\u043F\u0435\u0439\u043A\u0430 \u043A \u043A\u043E\u043F\u0435\u0439\u043A\u0435",
+      desc: "\u041A\u043E\u043F\u0438\u0442 \u043D\u0435 \u0434\u043B\u044F \u0441\u0435\u0431\u044F \u2014 \u043D\u0430 \u0447\u0451\u0440\u043D\u044B\u0439 \u0434\u0435\u043D\u044C",
+      kind: "life",
+      vec: { shchedrost: -1, poryadok: 1, terpenie: 1 },
+      rarity: "common",
+      source: ["backstory", "life"],
+      trigger: "habit",
+      effect: "\u041A\u0430\u0437\u043D\u0430\u0447\u0435\u0435\u043C \u0438 \u043A\u043B\u044E\u0447\u043D\u0438\u043A\u043E\u043C \u2014 \u0443\u043C\u0435\u043D\u0438\u0435 \u043B\u0443\u0447\u0448\u0435"
+    },
+    {
+      id: "khodit_k_vedunye",
+      name: "\u0425\u043E\u0434\u0438\u0442 \u043A \u0432\u0435\u0434\u0443\u043D\u044C\u0435",
+      desc: "\u0422\u0430\u0439\u043A\u043E\u043C, \u043D\u043E \u0432\u0441\u0435 \u0437\u043D\u0430\u044E\u0442",
+      kind: "life",
+      vec: { vera: 1, lyubopytstvo: 1 },
+      rarity: "common",
+      source: ["backstory", "life"],
+      trigger: "break",
+      effect: "\u0417\u043D\u0430\u043C\u0435\u043D\u0438\u044F \u0447\u0438\u0442\u0430\u0435\u0442 \u043B\u0443\u0447\u0448\u0435; \u0434\u0432\u043E\u0440 \u0441\u043C\u043E\u0442\u0440\u0438\u0442 \u043A\u043E\u0441\u043E"
+    },
+    {
+      id: "ni_v_son_ni_v_chokh",
+      name: "\u041D\u0438 \u0432 \u0441\u043E\u043D, \u043D\u0438 \u0432 \u0447\u043E\u0445",
+      desc: "\u041D\u0435 \u0432\u0435\u0440\u0438\u0442 \u043D\u0438 \u0432 \u0431\u043E\u0433\u0430, \u043D\u0438 \u0432 \u0447\u0451\u0440\u0442\u0430",
+      kind: "life",
+      vec: { vera: -2, smelost: 1 },
+      rarity: "rare",
+      source: ["backstory", "life"],
+      trigger: "break",
+      conflicts: ["chtit_primety", "postitsya_i_kaetsya"],
+      effect: "\u041B\u0435\u0441\u043D\u043E\u0439 \u043D\u0430\u0440\u043E\u0434 \u0435\u0433\u043E \u043D\u0435 \u043B\u044E\u0431\u0438\u0442; \u0441\u0442\u0440\u0430\u0445 \u043F\u0435\u0440\u0435\u0434 \u043B\u0430\u0431\u0438\u0440\u0438\u043D\u0442\u043E\u043C \u043D\u0430 \u043D\u0435\u0433\u043E \u043D\u0435 \u0434\u0435\u0439\u0441\u0442\u0432\u0443\u0435\u0442"
+    },
+    {
+      id: "za_semyu_goroy",
+      name: "\u0417\u0430 \u0441\u0435\u043C\u044C\u044E \u0433\u043E\u0440\u043E\u0439",
+      desc: "\u0422\u0440\u043E\u043D\u044C \u0435\u0433\u043E \u0440\u043E\u0434\u043D\u044E \u2014 \u0443\u0437\u043D\u0430\u0435\u0448\u044C",
+      kind: "life",
+      vec: { privyazannost: 2, zhestkost: 1 },
+      rarity: "common",
+      source: ["backstory", "life"],
+      trigger: "rel",
+      effect: "\u041E\u0431\u0438\u0434\u0443, \u043D\u0430\u043D\u0435\u0441\u0451\u043D\u043D\u0443\u044E \u0431\u043B\u0438\u0437\u043A\u0438\u043C, \u043D\u0435 \u043F\u0440\u043E\u0449\u0430\u0435\u0442"
+    },
+    {
+      id: "kost_v_gorle",
+      name: "\u041A\u043E\u0441\u0442\u044C \u0432 \u0433\u043E\u0440\u043B\u0435",
+      desc: "\u041D\u0435\u0443\u0434\u043E\u0431\u043D\u044B\u0439 \u0447\u0435\u043B\u043E\u0432\u0435\u043A: \u043D\u0438 \u043A\u0443\u043F\u0438\u0442\u044C, \u043D\u0438 \u043D\u0430\u043F\u0443\u0433\u0430\u0442\u044C",
+      kind: "life",
+      vec: { gordost: 1, chestnost: 1, zhestkost: 1 },
+      rarity: "rare",
+      source: ["backstory", "life"],
+      trigger: "deed",
+      effect: "\u0416\u0430\u043B\u043E\u0431\u044B \u043D\u0430 \u043D\u0435\u0433\u043E \u043D\u0435 \u0434\u0435\u0439\u0441\u0442\u0432\u0443\u044E\u0442; \u0441\u0430\u043C \u0436\u0430\u043B\u0443\u0435\u0442\u0441\u044F \u0447\u0430\u0449\u0435"
+    },
+    {
+      id: "svoego_ne_upustit",
+      name: "\u0421\u0432\u043E\u0435\u0433\u043E \u043D\u0435 \u0443\u043F\u0443\u0441\u0442\u0438\u0442",
+      desc: "\u0418 \u0447\u0443\u0436\u043E\u0435 \u043F\u0440\u0438\u0445\u0432\u0430\u0442\u0438\u0442, \u0435\u0441\u043B\u0438 \u043F\u043B\u043E\u0445\u043E \u043B\u0435\u0436\u0438\u0442",
+      kind: "life",
+      vec: { chestolyubie: 1, shchedrost: -1 },
+      rarity: "common",
+      source: ["backstory", "life"],
+      trigger: "habit",
+      effect: "\u0417\u0430\u0441\u0438\u0434\u0435\u0432\u0448\u0438\u0441\u044C, \u0447\u0430\u0449\u0435 \u0442\u044F\u043D\u0435\u0442 \u0438\u0437 \u043A\u0430\u0437\u043D\u044B"
+    },
+    {
+      id: "ruka_ne_drognet",
+      name: "\u0420\u0443\u043A\u0430 \u043D\u0435 \u0434\u0440\u043E\u0433\u043D\u0435\u0442",
+      desc: "\u041D\u0430\u0434\u043E \u0432\u044B\u0441\u0435\u0447\u044C \u2014 \u0432\u044B\u0441\u0435\u0447\u0435\u0442",
+      kind: "life",
+      vec: { zhestkost: 2, smelost: 1 },
+      rarity: "common",
+      source: ["backstory", "life"],
+      trigger: "post",
+      conflicts: ["skor_na_slezu"],
+      effect: "\u0421\u0443\u0440\u043E\u0432\u044B\u0435 \u0432\u0430\u0440\u0438\u0430\u043D\u0442\u044B \u0432\u044B\u0431\u0438\u0440\u0430\u0435\u0442 \u0447\u0430\u0449\u0435; \u043F\u043E\u0440\u044F\u0434\u043E\u043A \u043F\u0440\u0438 \u043D\u0451\u043C \u043A\u0440\u0435\u043F\u0447\u0435"
+    },
+    {
+      id: "krivaya_dorozhka",
+      name: "\u041A\u0440\u0438\u0432\u0430\u044F \u0434\u043E\u0440\u043E\u0436\u043A\u0430 \u043A\u043E\u0440\u043E\u0447\u0435",
+      desc: "\u0417\u0430\u0447\u0435\u043C \u0432 \u0432\u043E\u0440\u043E\u0442\u0430, \u043A\u043E\u0433\u0434\u0430 \u0435\u0441\u0442\u044C \u043B\u0430\u0437",
+      kind: "life",
+      vec: { chestnost: -2, smelost: 1 },
+      rarity: "common",
+      source: ["backstory", "life"],
+      trigger: "habit",
+      conflicts: ["kak_na_dukhu", "derzhit_slovo"],
+      effect: "\u041E\u0431\u0445\u043E\u0434\u043D\u044B\u0435 \u0432\u0430\u0440\u0438\u0430\u043D\u0442\u044B \u0432\u044B\u0431\u0438\u0440\u0430\u0435\u0442 \u0447\u0430\u0449\u0435; \u0434\u0432\u043E\u0440 \u0435\u043C\u0443 \u043D\u0435 \u0432\u0435\u0440\u0438\u0442"
+    },
+    {
+      id: "sor_iz_izby",
+      name: "\u0421\u043E\u0440 \u0438\u0437 \u0438\u0437\u0431\u044B \u043D\u0435 \u0432\u044B\u043D\u043E\u0441\u0438\u0442",
+      desc: "\u0427\u0442\u043E \u0432 \u0434\u043E\u043C\u0435, \u0442\u043E \u0432 \u0434\u043E\u043C\u0435",
+      kind: "life",
+      vec: { obshchitelnost: -1, privyazannost: 2 },
+      rarity: "common",
+      source: ["backstory", "life"],
+      trigger: "rel",
+      effect: "\u0416\u0430\u043B\u043E\u0431 \u043D\u0430\u0432\u0435\u0440\u0445 \u043D\u0435 \u043F\u043E\u0434\u0430\u0451\u0442; \u0447\u0442\u043E \u0442\u0432\u043E\u0440\u0438\u0442\u0441\u044F \u0443 \u043D\u0435\u0433\u043E \u0432 \u0441\u0444\u0435\u0440\u0435, \u0443\u0437\u043D\u0430\u0442\u044C \u0442\u0440\u0443\u0434\u043D\u0435\u0435"
+    },
+    {
+      id: "i_nashim_i_vashim",
+      name: "\u0418 \u043D\u0430\u0448\u0438\u043C \u0438 \u0432\u0430\u0448\u0438\u043C",
+      desc: "\u0421\u043B\u0443\u0436\u0438\u0442 \u0434\u0432\u0443\u043C \u0433\u043E\u0441\u043F\u043E\u0434\u0430\u043C, \u0438 \u043E\u0431\u0430 \u0434\u043E\u0432\u043E\u043B\u044C\u043D\u044B",
+      kind: "life",
+      vec: { chestnost: -2, chestolyubie: 1 },
+      rarity: "exceptional",
+      source: ["backstory", "life"],
+      trigger: "deed",
+      conflicts: ["derzhit_slovo", "kak_na_dukhu"],
+      hidden: true,
+      effect: "\u0412 \u0441\u043F\u043E\u0440\u0435 \u0432\u0441\u0442\u0430\u0451\u0442 \u043D\u0430 \u0441\u0442\u043E\u0440\u043E\u043D\u0443 \u0441\u0438\u043B\u044C\u043D\u043E\u0433\u043E"
+    },
+    {
+      id: "postitsya_i_kaetsya",
+      name: "\u041F\u043E\u0441\u0442\u0438\u0442\u0441\u044F \u0438 \u043A\u0430\u0435\u0442\u0441\u044F",
+      desc: "\u0413\u0440\u0435\u0445\u043E\u0432 \u043D\u0430 \u043D\u0451\u043C \u2014 \u043A\u0430\u043A \u043D\u0430 \u0432\u0441\u0435\u0445, \u0430 \u043A\u0430\u0435\u0442\u0441\u044F \u0437\u0430 \u0442\u0440\u043E\u0438\u0445",
+      kind: "life",
+      vec: { vera: 2, gordost: -1 },
+      rarity: "common",
+      source: ["backstory", "life"],
+      trigger: "break",
+      effect: "\u041E\u0431\u0440\u044F\u0434\u043E\u0432\u044B\u0435 \u0432\u0430\u0440\u0438\u0430\u043D\u0442\u044B \u0432\u044B\u0431\u0438\u0440\u0430\u0435\u0442 \u0447\u0430\u0449\u0435; \u043F\u043E\u0441\u043B\u0435 \u043F\u0440\u043E\u0432\u0430\u043B\u0430 \u0432\u0438\u043D\u0438\u0442 \u0441\u0435\u0431\u044F"
+    },
+    {
+      id: "gulyaka",
+      name: "\u0413\u0443\u043B\u044F\u043A\u0430",
+      desc: "\u0413\u0434\u0435 \u043F\u0438\u0440, \u0442\u0430\u043C \u0438 \u043E\u043D",
+      kind: "life",
+      vec: { obshchitelnost: 1, poryadok: -2, shchedrost: 1 },
+      rarity: "common",
+      source: ["backstory", "life"],
+      trigger: "habit",
+      conflicts: ["vsyo_po_polkam"],
+      effect: "\u041F\u0440\u0430\u0437\u0434\u043D\u0438\u043A\u0438 \u0438 \u044F\u0440\u043C\u0430\u0440\u043A\u0438 \u043B\u044E\u0431\u0438\u0442; \u043F\u0440\u0438\u043F\u0430\u0441\u044B \u043F\u0440\u0438 \u043D\u0451\u043C \u0442\u0430\u044E\u0442"
+    },
+    {
+      id: "strelyany_vorobey",
+      name: "\u0421\u0442\u0440\u0435\u043B\u044F\u043D\u044B\u0439 \u0432\u043E\u0440\u043E\u0431\u0435\u0439",
+      desc: "\u041D\u0430 \u043C\u044F\u043A\u0438\u043D\u0435 \u043D\u0435 \u043F\u0440\u043E\u0432\u0435\u0434\u0451\u0448\u044C",
+      kind: "life",
+      vec: { smelost: -1, vera: -1 },
+      rarity: "common",
+      source: ["backstory", "life"],
+      trigger: "break",
+      effect: "\u041E\u0431\u043C\u0430\u043D \u0438 \u043F\u043E\u0434\u0432\u043E\u0445 \u0432 \u0441\u043E\u0431\u044B\u0442\u0438\u044F\u0445 \u0440\u0430\u0441\u043F\u043E\u0437\u043D\u0430\u0451\u0442 \u0447\u0430\u0449\u0435"
     },
     {
       id: "prodast_i_kupit",
       name: "\u041F\u0440\u043E\u0434\u0430\u0441\u0442 \u0438 \u043A\u0443\u043F\u0438\u0442",
       desc: "\u0418 \u0435\u0449\u0451 \u0440\u0430\u0437 \u043F\u0440\u043E\u0434\u0430\u0441\u0442 \u2014 \u0434\u043E\u0440\u043E\u0436\u0435",
-      kind: "born",
+      kind: "life",
       vec: { shchedrost: -1, chestnost: -1, obshchitelnost: 1 },
       rarity: "common",
-      source: ["birth", "backstory"],
+      source: ["backstory", "life"],
+      trigger: "habit",
       effect: "\u0422\u043E\u0440\u0433\u043E\u0432\u044B\u0435 \u0432\u0430\u0440\u0438\u0430\u043D\u0442\u044B \u0443\u0434\u0430\u044E\u0442\u0441\u044F \u0447\u0430\u0449\u0435; \u043A\u0443\u043F\u0446\u044B \u0435\u0433\u043E \u0443\u0432\u0430\u0436\u0430\u044E\u0442"
     },
     {
       id: "dolg_platezhom",
       name: "\u0414\u043E\u043B\u0433 \u043F\u043B\u0430\u0442\u0435\u0436\u043E\u043C \u043A\u0440\u0430\u0441\u0435\u043D",
       desc: "\u041D\u0438 \u0434\u043E\u0431\u0440\u0430, \u043D\u0438 \u0437\u043B\u0430 \u043D\u0435 \u0437\u0430\u0431\u044B\u0432\u0430\u0435\u0442",
-      kind: "born",
+      kind: "life",
       vec: { poryadok: 1, shchedrost: 1, chestnost: 1 },
       rarity: "common",
-      source: ["birth", "backstory"],
+      source: ["backstory", "life"],
+      trigger: "rel",
       effect: "\u041F\u043E\u043C\u043E\u0449\u044C \u0432\u043E\u0437\u0432\u0440\u0430\u0449\u0430\u0435\u0442 \u043F\u043E\u043C\u043E\u0449\u044C\u044E: \u043E\u0442\u043D\u043E\u0448\u0435\u043D\u0438\u044F \u0441 \u0442\u0435\u043C\u0438, \u043A\u0442\u043E \u0435\u0433\u043E \u043F\u043E\u0434\u0434\u0435\u0440\u0436\u0430\u043B, \u0440\u0430\u0441\u0442\u0443\u0442 \u0431\u044B\u0441\u0442\u0440\u0435\u0435"
     },
-    // --- черты жизни ---
     {
       id: "nabil_ruku",
       name: "\u041D\u0430\u0431\u0438\u043B \u0440\u0443\u043A\u0443",
@@ -979,7 +1012,8 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
       kind: "life",
       vec: { poryadok: 1, terpenie: 1 },
       rarity: "common",
-      source: ["life"],
+      source: ["backstory", "life"],
+      trigger: "post",
       effect: "\u0423\u043C\u0435\u043D\u0438\u0435 \u043D\u0430 \u043F\u0440\u0438\u0432\u044B\u0447\u043D\u043E\u043C \u0434\u0435\u043B\u0435 \u0432\u044B\u0448\u0435"
     },
     {
@@ -989,7 +1023,8 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
       kind: "life",
       vec: { smelost: -2 },
       rarity: "common",
-      source: ["life"],
+      source: ["backstory", "life"],
+      trigger: "break",
       effect: "\u041F\u043E\u0441\u043B\u0435 \u043F\u0440\u043E\u0432\u0430\u043B\u0430 \u0440\u0438\u0441\u043A\u043E\u0432\u0430\u043D\u043D\u044B\u0435 \u0432\u0430\u0440\u0438\u0430\u043D\u0442\u044B \u0432\u044B\u0431\u0438\u0440\u0430\u0435\u0442 \u0440\u0435\u0436\u0435"
     },
     {
@@ -999,7 +1034,8 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
       kind: "life",
       vec: { zhestkost: 1, terpenie: 1 },
       rarity: "common",
-      source: ["life"],
+      source: ["backstory", "life"],
+      trigger: "break",
       effect: "\u0411\u0435\u0434\u044B \u0441\u043D\u043E\u0441\u0438\u0442 \u0440\u043E\u0432\u043D\u0435\u0435: \u043E\u0442\u043D\u043E\u0448\u0435\u043D\u0438\u0435 \u043A \u0421\u0435\u043D\u0435\u0448\u0430\u043B\u044E \u043F\u0430\u0434\u0430\u0435\u0442 \u043C\u0435\u0434\u043B\u0435\u043D\u043D\u0435\u0435"
     },
     {
@@ -1009,7 +1045,8 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
       kind: "life",
       vec: { shchedrost: -1, chestolyubie: 1 },
       rarity: "common",
-      source: ["life"],
+      source: ["backstory", "life"],
+      trigger: "deed",
       effect: "\u0412\u0430\u0440\u0438\u0430\u043D\u0442\u044B, \u0447\u0442\u043E \u0433\u0440\u043E\u0437\u044F\u0442 \u0435\u0433\u043E \u0434\u043E\u0431\u0440\u0443, \u0432\u044B\u0431\u0438\u0440\u0430\u0435\u0442 \u0440\u0435\u0436\u0435"
     },
     {
@@ -1019,8 +1056,10 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
       kind: "life",
       vec: { poryadok: 1, privyazannost: 1, terpenie: 1 },
       rarity: "rare",
-      source: ["life"],
+      source: ["backstory", "life"],
+      trigger: "habit",
       conflicts: ["gulyaka", "volny_veter"],
+      replaces: ["gulyaka"],
       effect: "\u0420\u0435\u0448\u0435\u043D\u0438\u044F \u043F\u0440\u0435\u0434\u0441\u043A\u0430\u0437\u0443\u0435\u043C\u0435\u0435"
     },
     {
@@ -1030,8 +1069,10 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
       kind: "life",
       vec: { vera: -2, privyazannost: -1 },
       rarity: "rare",
-      source: ["life"],
+      source: ["backstory", "life"],
+      trigger: "break",
       conflicts: ["chtit_primety", "postitsya_i_kaetsya"],
+      replaces: ["chtit_primety", "postitsya_i_kaetsya"],
       effect: "\u041E\u0431\u0440\u044F\u0434\u044B \u0438 \u0437\u043D\u0430\u043C\u0435\u043D\u0438\u044F \u0431\u043E\u043B\u044C\u0448\u0435 \u043D\u0435 \u0442\u0440\u043E\u0433\u0430\u044E\u0442"
     },
     {
@@ -1041,7 +1082,8 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
       kind: "life",
       vec: { privyazannost: 2, lyubopytstvo: -1 },
       rarity: "common",
-      source: ["life"],
+      source: ["backstory", "life"],
+      trigger: "post",
       effect: "\u041F\u0435\u0440\u0435\u0432\u043E\u0434 \u043D\u0430 \u0434\u0440\u0443\u0433\u0443\u044E \u0434\u043E\u043B\u0436\u043D\u043E\u0441\u0442\u044C \u2014 \u043E\u0431\u0438\u0434\u0430"
     },
     {
@@ -1051,9 +1093,438 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
       kind: "life",
       vec: { gordost: 1, smelost: 1 },
       rarity: "common",
-      source: ["life"],
+      source: ["backstory", "life"],
+      trigger: "deed",
       conflicts: ["nizhe_travy"],
       effect: "\u0412 \u0441\u043F\u043E\u0440\u0435 \u0441\u0438\u043B\u044C\u043D\u0435\u0435; \u043D\u0430\u043A\u0430\u0437\u044B \u0441\u043B\u0443\u0448\u0430\u0435\u0442 \u0445\u0443\u0436\u0435"
+    },
+    {
+      id: "sluzhaka",
+      name: "\u0421\u043B\u0443\u0436\u0430\u043A\u0430",
+      desc: "\u041F\u0440\u0438\u0432\u044B\u043A \u0434\u0435\u043B\u0430\u0442\u044C \u043A\u0430\u043A \u043F\u043E\u043B\u043E\u0436\u0435\u043D\u043E",
+      kind: "life",
+      vec: { poryadok: 1, chestnost: 1 },
+      rarity: "common",
+      source: ["backstory", "life"],
+      trigger: "habit",
+      council: true,
+      effect: "\u0422\u044F\u043D\u0435\u0442 \u0440\u0435\u0448\u0435\u043D\u0438\u044F \u043A \u0414\u043E\u043B\u0433\u0443, \u043D\u0430\u043A\u0430\u0437\u044B \u0441\u043B\u0443\u0448\u0430\u0435\u0442 \u043B\u0443\u0447\u0448\u0435"
+    },
+    {
+      id: "prizhimisty",
+      name: "\u041F\u0440\u0438\u0436\u0438\u043C\u0438\u0441\u0442\u044B\u0439",
+      desc: "\u041F\u0440\u0438\u0432\u044B\u043A \u0432\u043E \u0432\u0441\u0451\u043C \u0438\u0441\u043A\u0430\u0442\u044C \u0432\u044B\u0433\u043E\u0434\u0443",
+      kind: "life",
+      vec: { shchedrost: -2 },
+      rarity: "common",
+      source: ["backstory", "life"],
+      trigger: "habit",
+      council: true,
+      effect: "\u0422\u044F\u043D\u0435\u0442 \u0440\u0435\u0448\u0435\u043D\u0438\u044F \u043A \u0412\u044B\u0433\u043E\u0434\u0435"
+    },
+    {
+      id: "serdobolny",
+      name: "\u0421\u0435\u0440\u0434\u043E\u0431\u043E\u043B\u044C\u043D\u044B\u0439",
+      desc: "\u041F\u0440\u0438\u0432\u044B\u043A \u0436\u0430\u043B\u0435\u0442\u044C \u043B\u044E\u0434\u0435\u0439",
+      kind: "life",
+      vec: { zhestkost: -2 },
+      rarity: "common",
+      source: ["backstory", "life"],
+      trigger: "habit",
+      replaces: ["ozhestochilsya"],
+      council: true,
+      effect: "\u0422\u044F\u043D\u0435\u0442 \u0440\u0435\u0448\u0435\u043D\u0438\u044F \u043A \u0417\u0430\u0431\u043E\u0442\u0435, \u043B\u0435\u0433\u0447\u0435 \u0438\u0434\u0451\u0442 \u043D\u0430 \u043A\u043E\u043C\u043F\u0440\u043E\u043C\u0438\u0441\u0441"
+    },
+    {
+      id: "riskovy",
+      name: "\u0420\u0438\u0441\u043A\u043E\u0432\u044B\u0439",
+      desc: "\u041F\u0440\u0438\u0432\u044B\u043A \u0438\u0434\u0442\u0438 \u043D\u0430\u043F\u0440\u043E\u043B\u043E\u043C",
+      kind: "life",
+      vec: { smelost: 2 },
+      rarity: "common",
+      source: ["backstory", "life"],
+      trigger: "habit",
+      council: true,
+      effect: "\u0422\u044F\u043D\u0435\u0442 \u0440\u0435\u0448\u0435\u043D\u0438\u044F \u043A \u0414\u0435\u0440\u0437\u043E\u0441\u0442\u0438, \u0440\u0435\u0448\u0435\u043D\u0438\u044F \u043C\u0435\u043D\u0435\u0435 \u043F\u0440\u0435\u0434\u0441\u043A\u0430\u0437\u0443\u0435\u043C\u044B"
+    },
+    {
+      id: "starover",
+      name: "\u0427\u0442\u0438\u0442 \u0441\u0442\u0430\u0440\u0438\u043D\u0443",
+      desc: "\u041F\u0440\u0438\u0432\u044B\u043A \u0434\u0435\u0440\u0436\u0430\u0442\u044C\u0441\u044F \u0441\u0442\u0430\u0440\u044B\u0445 \u043F\u0440\u0430\u0432\u0438\u043B",
+      kind: "life",
+      vec: { lyubopytstvo: -1, vera: 1, terpenie: 1 },
+      rarity: "common",
+      source: ["backstory", "life"],
+      trigger: "habit",
+      council: true,
+      effect: "\u0422\u044F\u043D\u0435\u0442 \u0440\u0435\u0448\u0435\u043D\u0438\u044F \u043A \u041E\u0431\u044B\u0447\u0430\u044E, \u0440\u0435\u0448\u0435\u043D\u0438\u044F \u043F\u0440\u0435\u0434\u0441\u043A\u0430\u0437\u0443\u0435\u043C\u0435\u0435"
+    },
+    {
+      id: "master_dela",
+      name: "\u041C\u0430\u0441\u0442\u0435\u0440 \u0441\u0432\u043E\u0435\u0433\u043E \u0434\u0435\u043B\u0430",
+      desc: "\u0414\u043E\u0448\u0451\u043B \u0434\u043E \u043F\u043E\u0442\u043E\u043B\u043A\u0430 \u043E\u043F\u044B\u0442\u0430: \u0434\u0435\u043B\u043E \u0441\u043F\u043E\u0440\u0438\u0442\u0441\u044F, \u043E\u0448\u0438\u0431\u043E\u043A \u043C\u0435\u043D\u044C\u0448\u0435",
+      kind: "life",
+      vec: { gordost: 1, poryadok: 1 },
+      rarity: "common",
+      source: ["life", "post"],
+      trigger: "post",
+      council: true,
+      effect: "\u0423\u043C\u0435\u043D\u0438\u0435 \u043D\u0430 \u0434\u043E\u043B\u0436\u043D\u043E\u0441\u0442\u0438 \u0432\u044B\u0448\u0435, \u0441\u043B\u0443\u0447\u0430\u0439\u043D\u043E\u0441\u0442\u0438 \u043C\u0435\u043D\u044C\u0448\u0435; \u0443\u0445\u043E\u0434\u0438\u0442 \u0432\u0441\u043B\u0435\u0434 \u0437\u0430 \u0434\u043E\u043B\u0436\u043D\u043E\u0441\u0442\u044C\u044E"
+    },
+    {
+      id: "obros_svyazyami",
+      name: "\u041E\u0431\u0440\u043E\u0441 \u0441\u0432\u044F\u0437\u044F\u043C\u0438",
+      desc: "\u0417\u0430\u0441\u0438\u0434\u0435\u043B\u0441\u044F: \u0441\u0432\u043E\u0438 \u043B\u044E\u0434\u0438 \u043F\u043E\u0432\u0441\u044E\u0434\u0443",
+      kind: "life",
+      vec: { obshchitelnost: 1, chestolyubie: 1, chestnost: -1 },
+      rarity: "common",
+      source: ["life", "post"],
+      trigger: "post",
+      council: true,
+      effect: "\u0412 \u0441\u043F\u043E\u0440\u0435 \u0435\u0433\u043E \u0442\u0440\u0443\u0434\u043D\u043E \u0441\u0434\u0432\u0438\u043D\u0443\u0442\u044C, \u043D\u0430\u043A\u0430\u0437\u044B \u0441\u043B\u0443\u0448\u0430\u0435\u0442 \u0445\u0443\u0436\u0435; \u0443\u0445\u043E\u0434\u0438\u0442 \u0432\u0441\u043B\u0435\u0434 \u0437\u0430 \u0434\u043E\u043B\u0436\u043D\u043E\u0441\u0442\u044C\u044E"
+    },
+    {
+      id: "ustal_ot_sluzhby",
+      name: "\u0423\u0441\u0442\u0430\u043B \u043E\u0442 \u0441\u043B\u0443\u0436\u0431\u044B",
+      desc: "\u0421\u043B\u0438\u0448\u043A\u043E\u043C \u0434\u043E\u043B\u0433\u043E \u043D\u0430 \u0434\u043E\u043B\u0436\u043D\u043E\u0441\u0442\u0438, \u043A\u043E\u0442\u043E\u0440\u043E\u0439 \u043D\u0435 \u0445\u043E\u0442\u0435\u043B",
+      kind: "life",
+      vec: { chestolyubie: -1, poryadok: -1 },
+      rarity: "common",
+      source: ["life", "post"],
+      trigger: "post",
+      council: true,
+      effect: "\u0423\u043C\u0435\u043D\u0438\u0435 \u043D\u0438\u0436\u0435, \u043B\u0435\u0433\u0447\u0435 \u0438\u0434\u0451\u0442 \u043D\u0430 \u043A\u043E\u043C\u043F\u0440\u043E\u043C\u0438\u0441\u0441; \u0443\u0445\u043E\u0434\u0438\u0442 \u0432\u0441\u043B\u0435\u0434 \u0437\u0430 \u0434\u043E\u043B\u0436\u043D\u043E\u0441\u0442\u044C\u044E"
+    },
+    {
+      id: "zlopamyatny_k",
+      name: "\u0417\u043B\u043E\u043F\u0430\u043C\u044F\u0442\u043D\u044B\u0439 \u043A \u043E\u0431\u0438\u0434\u0447\u0438\u043A\u0443",
+      desc: "\u041F\u043E\u043C\u043D\u0438\u0442 \u0441\u0430\u0431\u043E\u0442\u0430\u0436 \u0438 \u043D\u0435 \u0443\u0441\u0442\u0443\u043F\u0438\u0442 \u044D\u0442\u043E\u043C\u0443 \u0447\u0435\u043B\u043E\u0432\u0435\u043A\u0443",
+      kind: "life",
+      vec: { zhestkost: 1, privyazannost: -1 },
+      rarity: "common",
+      source: ["life"],
+      trigger: "rel",
+      council: true,
+      effect: "\u041E\u0431\u0438\u0434\u044B \u043D\u0430 \u043E\u0431\u0438\u0434\u0447\u0438\u043A\u0430 \u043A\u043E\u043F\u044F\u0442\u0441\u044F \u0431\u044B\u0441\u0442\u0440\u0435\u0435, \u043D\u0430 \u043A\u043E\u043C\u043F\u0440\u043E\u043C\u0438\u0441\u0441 \u0441 \u043D\u0438\u043C \u043D\u0435 \u0438\u0434\u0451\u0442"
+    },
+    {
+      id: "ozhestochilsya",
+      name: "\u041E\u0436\u0435\u0441\u0442\u043E\u0447\u0438\u043B\u0441\u044F",
+      desc: "\u041F\u0435\u0440\u0435\u043B\u043E\u043C: \u0436\u0430\u043B\u043E\u0441\u0442\u0438 \u0441\u0442\u0430\u043B\u043E \u043C\u0435\u043D\u044C\u0448\u0435, \u0441\u043F\u043E\u0440\u0438\u0442 \u0436\u0451\u0441\u0442\u0447\u0435",
+      kind: "life",
+      vec: { zhestkost: 2, shchedrost: -1 },
+      rarity: "rare",
+      source: ["backstory", "life"],
+      trigger: "break",
+      replaces: ["serdobolny"],
+      council: true,
+      effect: "\u0417\u0430\u0431\u043E\u0442\u0430 \u043D\u0438\u0436\u0435, \u0414\u0435\u0440\u0437\u043E\u0441\u0442\u044C \u0432\u044B\u0448\u0435; \u043D\u0430 \u043A\u043E\u043C\u043F\u0440\u043E\u043C\u0438\u0441\u0441 \u0438\u0434\u0451\u0442 \u0445\u0443\u0436\u0435"
+    },
+    {
+      id: "stal_nabozhen",
+      name: "\u0421\u0442\u0430\u043B \u043D\u0430\u0431\u043E\u0436\u0435\u043D",
+      desc: "\u041F\u0435\u0440\u0435\u043B\u043E\u043C: \u0438\u0449\u0435\u0442 \u043E\u043F\u043E\u0440\u0443 \u0432 \u0441\u0442\u0430\u0440\u044B\u0445 \u043F\u0440\u0430\u0432\u0438\u043B\u0430\u0445",
+      kind: "life",
+      vec: { vera: 2, smelost: -1 },
+      rarity: "rare",
+      source: ["backstory", "life"],
+      trigger: "break",
+      council: true,
+      effect: "\u041E\u0431\u044B\u0447\u0430\u0439 \u0432\u044B\u0448\u0435, \u0414\u0435\u0440\u0437\u043E\u0441\u0442\u044C \u043D\u0438\u0436\u0435; \u0440\u0435\u0448\u0435\u043D\u0438\u044F \u043F\u0440\u0435\u0434\u0441\u043A\u0430\u0437\u0443\u0435\u043C\u0435\u0435"
+    },
+    {
+      id: "nauchilsya_molchat",
+      name: "\u041D\u0430\u0443\u0447\u0438\u043B\u0441\u044F \u043C\u043E\u043B\u0447\u0430\u0442\u044C",
+      desc: "\u0420\u0430\u0437 \u0441\u0431\u043E\u043B\u0442\u043D\u0443\u043B \u043B\u0438\u0448\u043D\u0435\u0435 \u2014 \u0445\u0432\u0430\u0442\u0438\u043B\u043E",
+      kind: "life",
+      vec: { obshchitelnost: -1, chestnost: -1 },
+      rarity: "common",
+      source: ["backstory", "life"],
+      trigger: "break",
+      effect: "\u0420\u0430\u0437\u0433\u043E\u0432\u043E\u0440 \u043E\u0442\u043A\u0440\u044B\u0432\u0430\u0435\u0442 \u043E \u043D\u0451\u043C \u043C\u0435\u043D\u044C\u0448\u0435; \u0442\u0430\u0439\u043D\u044B \u0434\u0435\u0440\u0436\u0438\u0442"
+    },
+    {
+      id: "ottayal",
+      name: "\u041E\u0442\u0442\u0430\u044F\u043B",
+      desc: "\u041A\u0442\u043E-\u0442\u043E \u043E\u0442\u043E\u0433\u0440\u0435\u043B: \u0441\u043D\u043E\u0432\u0430 \u0432\u0438\u0434\u0438\u0442 \u0432 \u043B\u044E\u0434\u044F\u0445 \u043B\u044E\u0434\u0435\u0439",
+      kind: "life",
+      vec: { zhestkost: -2, privyazannost: 1 },
+      rarity: "rare",
+      source: ["backstory", "life"],
+      trigger: "rel",
+      replaces: ["ozhestochilsya"],
+      effect: "\u0412\u0430\u0440\u0438\u0430\u043D\u0442\u044B \u0432 \u043F\u043E\u043B\u044C\u0437\u0443 \u0441\u043B\u0430\u0431\u044B\u0445 \u0432\u044B\u0431\u0438\u0440\u0430\u0435\u0442 \u0447\u0430\u0449\u0435"
+    },
+    {
+      id: "nazhil_vragov",
+      name: "\u041D\u0430\u0436\u0438\u043B \u0432\u0440\u0430\u0433\u043E\u0432",
+      desc: "\u0417\u043D\u0430\u0435\u0442, \u043A\u0442\u043E \u0436\u0434\u0451\u0442 \u0435\u0433\u043E \u043F\u0440\u043E\u043C\u0430\u0445\u0430",
+      kind: "life",
+      vec: { gordost: 1, obshchitelnost: -1 },
+      rarity: "common",
+      source: ["backstory", "life"],
+      trigger: "rel",
+      effect: "\u041E\u0442\u043D\u043E\u0448\u0435\u043D\u0438\u044F \u0441 \u043D\u0435\u0434\u0440\u0443\u0433\u0430\u043C\u0438 \u043D\u0435 \u0441\u0433\u043B\u0430\u0436\u0438\u0432\u0430\u044E\u0442\u0441\u044F \u0441\u043E \u0432\u0440\u0435\u043C\u0435\u043D\u0435\u043C"
+    },
+    {
+      id: "kumovya",
+      name: "\u041E\u0431\u0437\u0430\u0432\u0451\u043B\u0441\u044F \u043A\u0443\u043C\u043E\u0432\u044C\u044F\u043C\u0438",
+      desc: "\u041F\u043E\u043B\u0434\u0435\u0440\u0435\u0432\u043D\u0438 \u0435\u043C\u0443 \u0442\u0435\u043F\u0435\u0440\u044C \u0440\u043E\u0434\u043D\u044F",
+      kind: "life",
+      vec: { obshchitelnost: 1, privyazannost: 1 },
+      rarity: "common",
+      source: ["backstory", "life"],
+      trigger: "rel",
+      effect: "\u0414\u0435\u0440\u0435\u0432\u043D\u0438 \u0435\u043C\u0443 \u0432\u0435\u0440\u044F\u0442 \u0431\u043E\u043B\u044C\u0448\u0435; \u0441\u0432\u043E\u0438\u043C \u043E\u0442\u043A\u0430\u0437\u0430\u0442\u044C \u0442\u0440\u0443\u0434\u043D\u0435\u0435"
+    },
+    {
+      id: "vkusil_vlasti",
+      name: "\u0412\u043A\u0443\u0441\u0438\u043B \u0432\u043B\u0430\u0441\u0442\u0438",
+      desc: "\u041F\u043E\u043D\u044F\u043B, \u043A\u0430\u043A\u043E\u0432\u043E \u044D\u0442\u043E \u2014 \u043A\u043E\u0433\u0434\u0430 \u0441\u043B\u0443\u0448\u0430\u044E\u0442\u0441\u044F",
+      kind: "life",
+      vec: { chestolyubie: 2, zhestkost: 1 },
+      rarity: "common",
+      source: ["backstory", "life"],
+      trigger: "post",
+      conflicts: ["znaet_shestok", "syt_krayukhoy"],
+      effect: "\u0421\u0442\u0440\u0435\u043C\u043B\u0435\u043D\u0438\u0435 \u043A \u0434\u043E\u043B\u0436\u043D\u043E\u0441\u0442\u0438 \u0434\u0430\u0432\u0438\u0442 \u0441\u0438\u043B\u044C\u043D\u0435\u0435; \u0441\u043D\u044F\u0442\u044B\u0439 \u0441 \u0434\u043E\u043B\u0436\u043D\u043E\u0441\u0442\u0438 \u043E\u0431\u0438\u0436\u0430\u0435\u0442\u0441\u044F \u0441\u0438\u043B\u044C\u043D\u0435\u0435"
+    },
+    {
+      id: "charka",
+      name: "\u041F\u0440\u0438\u0441\u0442\u0440\u0430\u0441\u0442\u0438\u043B\u0441\u044F \u043A \u0447\u0430\u0440\u043A\u0435",
+      desc: "\u0421\u043F\u0435\u0440\u0432\u0430 \u0441 \u0433\u043E\u0440\u044F, \u043F\u043E\u0442\u043E\u043C \u043F\u043E \u043F\u0440\u0438\u0432\u044B\u0447\u043A\u0435",
+      kind: "life",
+      vec: { terpenie: -1, poryadok: -1 },
+      rarity: "common",
+      source: ["backstory", "life"],
+      trigger: "break",
+      effect: "\u0423\u043C\u0435\u043D\u0438\u0435 \u043D\u0430 \u0434\u043E\u043B\u0436\u043D\u043E\u0441\u0442\u0438 \u043D\u0438\u0436\u0435, \u0440\u0435\u0448\u0435\u043D\u0438\u044F \u043C\u0435\u043D\u0435\u0435 \u043F\u0440\u0435\u0434\u0441\u043A\u0430\u0437\u0443\u0435\u043C\u044B"
+    },
+    {
+      id: "bity",
+      name: "\u0411\u0438\u0442\u044B\u0439",
+      desc: "\u0417\u0430 \u043E\u0434\u043D\u043E\u0433\u043E \u0431\u0438\u0442\u043E\u0433\u043E \u0434\u0432\u0443\u0445 \u043D\u0435\u0431\u0438\u0442\u044B\u0445 \u0434\u0430\u044E\u0442",
+      kind: "life",
+      vec: { smelost: -1, terpenie: 1 },
+      rarity: "common",
+      source: ["backstory", "life"],
+      trigger: "deed",
+      effect: "\u041F\u0440\u043E\u0432\u0430\u043B\u044B \u0440\u0438\u0441\u043A\u043E\u0432\u0430\u043D\u043D\u044B\u0445 \u0434\u0435\u043B \u043C\u044F\u0433\u0447\u0435; \u043D\u0430 \u0440\u043E\u0436\u043E\u043D \u043D\u0435 \u043B\u0435\u0437\u0435\u0442"
+    },
+    {
+      id: "udacha",
+      name: "\u041F\u043E\u0432\u0435\u0440\u0438\u043B \u0432 \u0443\u0434\u0430\u0447\u0443",
+      desc: "\u0420\u0430\u0437 \u043F\u043E\u0432\u0435\u0437\u043B\u043E \u2014 \u0437\u043D\u0430\u0447\u0438\u0442, \u0432\u0435\u0437\u0451\u0442",
+      kind: "life",
+      vec: { smelost: 1, poryadok: -1 },
+      rarity: "common",
+      source: ["backstory", "life"],
+      trigger: "deed",
+      replaces: ["obzhyogsya", "bity"],
+      effect: "\u0420\u0438\u0441\u043A\u043E\u0432\u0430\u043D\u043D\u044B\u0435 \u0432\u0430\u0440\u0438\u0430\u043D\u0442\u044B \u0432\u044B\u0431\u0438\u0440\u0430\u0435\u0442 \u0447\u0430\u0449\u0435"
+    },
+    {
+      id: "povidal_svet",
+      name: "\u041F\u043E\u0432\u0438\u0434\u0430\u043B \u0441\u0432\u0435\u0442",
+      desc: "\u0411\u044B\u043B \u0434\u0430\u043B\u044C\u0448\u0435 \u0433\u043E\u0440\u043E\u0434\u0430 \u0438 \u0437\u043D\u0430\u0435\u0442, \u0447\u0442\u043E \u0436\u0438\u0432\u0443\u0442 \u043F\u043E-\u0440\u0430\u0437\u043D\u043E\u043C\u0443",
+      kind: "life",
+      vec: { lyubopytstvo: 2, vera: -1 },
+      rarity: "common",
+      source: ["backstory", "life"],
+      trigger: "deed",
+      replaces: ["kak_dedy"],
+      effect: "\u0427\u0443\u0436\u0430\u043A\u043E\u0432 \u0438 \u043D\u043E\u0432\u0448\u0435\u0441\u0442\u0432\u0430 \u043F\u0440\u0438\u043D\u0438\u043C\u0430\u0435\u0442 \u043B\u0435\u0433\u0447\u0435"
+    },
+    {
+      id: "privyk_komandovat",
+      name: "\u041F\u0440\u0438\u0432\u044B\u043A \u043A\u043E\u043C\u0430\u043D\u0434\u043E\u0432\u0430\u0442\u044C",
+      desc: "\u041F\u0440\u043E\u0441\u0438\u0442\u044C \u0440\u0430\u0437\u0443\u0447\u0438\u043B\u0441\u044F",
+      kind: "life",
+      vec: { zhestkost: 1, poryadok: 1, gordost: 1 },
+      rarity: "common",
+      source: ["backstory", "life"],
+      trigger: "post",
+      effect: "\u0412 \u0441\u043F\u043E\u0440\u0435 \u0441\u0438\u043B\u044C\u043D\u0435\u0435; \u043F\u043E\u0434 \u0447\u0443\u0436\u0438\u043C \u043D\u0430\u0447\u0430\u043B\u043E\u043C \u0441\u043B\u0443\u0436\u0438\u0442 \u0445\u0443\u0436\u0435"
+    },
+    {
+      id: "privyk_podchinyatsya",
+      name: "\u041F\u0440\u0438\u0432\u044B\u043A \u043F\u043E\u0434\u0447\u0438\u043D\u044F\u0442\u044C\u0441\u044F",
+      desc: "\u0421\u043A\u0430\u0436\u0443\u0442 \u2014 \u0441\u0434\u0435\u043B\u0430\u0435\u0442, \u043D\u0435 \u0441\u043A\u0430\u0436\u0443\u0442 \u2014 \u043F\u043E\u0434\u043E\u0436\u0434\u0451\u0442",
+      kind: "life",
+      vec: { gordost: -1, poryadok: 1 },
+      rarity: "common",
+      source: ["backstory", "life"],
+      trigger: "post",
+      conflicts: ["privyk_komandovat", "shapku_ne_lomaet"],
+      effect: "\u041D\u0430\u043A\u0430\u0437\u044B \u0441\u043B\u0443\u0448\u0430\u0435\u0442 \u043B\u0443\u0447\u0448\u0435; \u0431\u0435\u0437 \u0433\u043B\u0430\u0432\u043D\u043E\u0433\u043E \u0440\u0435\u0448\u0430\u0435\u0442 \u0445\u0443\u0436\u0435"
+    },
+    {
+      id: "v_dorogu",
+      name: "\u0422\u044F\u043D\u0435\u0442 \u0432 \u0434\u043E\u0440\u043E\u0433\u0443",
+      desc: "\u041D\u0430 \u043E\u0434\u043D\u043E\u043C \u043C\u0435\u0441\u0442\u0435 \u0435\u043C\u0443 \u0442\u0435\u0441\u043D\u043E",
+      kind: "life",
+      vec: { privyazannost: -1, lyubopytstvo: 1 },
+      rarity: "common",
+      source: ["backstory", "life"],
+      trigger: "habit",
+      conflicts: ["prikipel"],
+      effect: "\u0417\u0430\u0441\u0438\u0436\u0438\u0432\u0430\u0435\u0442\u0441\u044F \u0440\u0435\u0436\u0435; \u043E\u0442\u043B\u0443\u0447\u043A\u0438 \u0441 \u0421\u0435\u043D\u0435\u0448\u0430\u043B\u0435\u043C \u043B\u044E\u0431\u0438\u0442"
+    },
+    {
+      id: "delitsya",
+      name: "\u041D\u0430\u0443\u0447\u0438\u043B\u0441\u044F \u0434\u0435\u043B\u0438\u0442\u044C\u0441\u044F",
+      desc: "\u041F\u043E\u043D\u044F\u043B, \u0447\u0442\u043E \u0432 \u0433\u0440\u043E\u0431 \u043D\u0435 \u0443\u043D\u0435\u0441\u0451\u0448\u044C",
+      kind: "life",
+      vec: { shchedrost: 2 },
+      rarity: "common",
+      source: ["backstory", "life"],
+      trigger: "rel",
+      conflicts: ["zimoy_snega"],
+      replaces: ["prizhimisty", "kopeyka_k_kopeyke"],
+      effect: "\u0412\u0430\u0440\u0438\u0430\u043D\u0442\u044B \u0441 \u0442\u0440\u0430\u0442\u043E\u0439 \u043D\u0430 \u043B\u044E\u0434\u0435\u0439 \u0432\u044B\u0431\u0438\u0440\u0430\u0435\u0442 \u0447\u0430\u0449\u0435"
+    },
+    {
+      id: "skhoronil",
+      name: "\u0421\u0445\u043E\u0440\u043E\u043D\u0438\u043B \u0441\u0432\u043E\u0438\u0445",
+      desc: "\u041E\u0434\u0438\u043D \u043E\u0441\u0442\u0430\u043B\u0441\u044F \u0438\u0437 \u0432\u0441\u0435\u0439 \u0441\u0435\u043C\u044C\u0438",
+      kind: "life",
+      vec: { privyazannost: -2, vera: 1 },
+      rarity: "rare",
+      source: ["backstory", "life"],
+      trigger: "break",
+      effect: "\u041F\u0440\u0438\u0432\u044F\u0437\u044B\u0432\u0430\u0435\u0442\u0441\u044F \u0442\u0440\u0443\u0434\u043D\u0435\u0435; \u043E \u0441\u043C\u0435\u0440\u0442\u0438 \u0433\u043E\u0432\u043E\u0440\u0438\u0442 \u0441\u043F\u043E\u043A\u043E\u0439\u043D\u043E"
+    },
+    {
+      id: "sirota",
+      name: "\u041F\u0440\u0438\u0433\u0440\u0435\u043B \u0441\u0438\u0440\u043E\u0442\u0443",
+      desc: "\u0427\u0443\u0436\u043E\u0433\u043E \u0440\u0435\u0431\u0451\u043D\u043A\u0430 \u0440\u0430\u0441\u0442\u0438\u0442 \u043A\u0430\u043A \u0441\u0432\u043E\u0435\u0433\u043E",
+      kind: "life",
+      vec: { privyazannost: 2, shchedrost: 1 },
+      rarity: "common",
+      source: ["backstory", "life"],
+      trigger: "deed",
+      effect: "\u0412\u0430\u0440\u0438\u0430\u043D\u0442\u044B \u0432 \u043F\u043E\u043B\u044C\u0437\u0443 \u0434\u0435\u0442\u0435\u0439 \u0438 \u0441\u043B\u0430\u0431\u044B\u0445 \u0432\u044B\u0431\u0438\u0440\u0430\u0435\u0442 \u0447\u0430\u0449\u0435"
+    },
+    {
+      id: "popalsya",
+      name: "\u041F\u043E\u0439\u043C\u0430\u043D \u043D\u0430 \u043B\u0436\u0438",
+      desc: "\u0421 \u0442\u0435\u0445 \u043F\u043E\u0440 \u043D\u0435 \u0432\u0440\u0451\u0442: \u0441\u0435\u0431\u0435 \u0434\u043E\u0440\u043E\u0436\u0435",
+      kind: "life",
+      vec: { chestnost: 1, smelost: -1 },
+      rarity: "common",
+      source: ["backstory", "life"],
+      trigger: "deed",
+      replaces: ["krivaya_dorozhka", "khitrit"],
+      effect: "\u041E\u0431\u0445\u043E\u0434\u043D\u044B\u0435 \u0432\u0430\u0440\u0438\u0430\u043D\u0442\u044B \u0432\u044B\u0431\u0438\u0440\u0430\u0435\u0442 \u0440\u0435\u0436\u0435"
+    },
+    {
+      id: "khitrit",
+      name: "\u041D\u0430\u0443\u0447\u0438\u043B\u0441\u044F \u0445\u0438\u0442\u0440\u0438\u0442\u044C",
+      desc: "\u041F\u0440\u044F\u043C\u043E\u0439 \u0434\u043E\u0440\u043E\u0433\u043E\u0439 \u0445\u043E\u0434\u0438\u043B \u2014 \u043D\u0435 \u0434\u043E\u0448\u0451\u043B",
+      kind: "life",
+      vec: { chestnost: -2, lyubopytstvo: 1 },
+      rarity: "common",
+      source: ["backstory", "life"],
+      trigger: "habit",
+      conflicts: ["kak_na_dukhu"],
+      replaces: ["derzhit_slovo"],
+      effect: "\u041E\u0431\u0445\u043E\u0434\u043D\u044B\u0435 \u0432\u0430\u0440\u0438\u0430\u043D\u0442\u044B \u0432\u044B\u0431\u0438\u0440\u0430\u0435\u0442 \u0447\u0430\u0449\u0435"
+    },
+    {
+      id: "sam_golova",
+      name: "\u0421\u0430\u043C \u0441\u0435\u0431\u0435 \u0433\u043E\u043B\u043E\u0432\u0430",
+      desc: "\u0414\u0430\u0432\u043D\u043E \u043D\u0438\u043A\u043E\u0433\u043E \u043D\u0435 \u0441\u043F\u0440\u0430\u0448\u0438\u0432\u0430\u0435\u0442",
+      kind: "life",
+      vec: { poryadok: -1, gordost: 1 },
+      rarity: "common",
+      source: ["backstory", "life"],
+      trigger: "post",
+      conflicts: ["privyk_podchinyatsya"],
+      effect: "\u041D\u0430\u043A\u0430\u0437\u044B \u0441\u043B\u0443\u0448\u0430\u0435\u0442 \u0445\u0443\u0436\u0435; \u0440\u0435\u0448\u0430\u0435\u0442 \u0431\u044B\u0441\u0442\u0440\u0435\u0435"
+    },
+    {
+      id: "smirilsya",
+      name: "\u0421\u043C\u0438\u0440\u0438\u043B\u0441\u044F",
+      desc: "\u041F\u043E\u043D\u044F\u043B, \u0447\u0442\u043E \u0432\u044B\u0448\u0435 \u043D\u0435 \u043F\u0440\u044B\u0433\u043D\u0443\u0442\u044C",
+      kind: "life",
+      vec: { gordost: -2, chestolyubie: -1 },
+      rarity: "common",
+      source: ["backstory", "life"],
+      trigger: "break",
+      conflicts: ["metit_vysoko"],
+      replaces: ["vkusil_vlasti"],
+      effect: "\u041D\u0430 \u043D\u0435\u0436\u0435\u043B\u0430\u043D\u043D\u043E\u0439 \u0434\u043E\u043B\u0436\u043D\u043E\u0441\u0442\u0438 \u043D\u0435 \u0442\u043E\u0441\u043A\u0443\u0435\u0442; \u0432 \u0441\u043F\u043E\u0440\u0435 \u0443\u0441\u0442\u0443\u043F\u0430\u0435\u0442"
+    },
+    {
+      id: "slushaet_les",
+      name: "\u0421\u043B\u0443\u0448\u0430\u0435\u0442 \u043B\u0435\u0441",
+      desc: "\u0421\u043B\u0438\u0448\u043A\u043E\u043C \u0434\u043E\u043B\u0433\u043E \u0445\u043E\u0434\u0438\u043B \u0443 \u043E\u043F\u0443\u0448\u043A\u0438",
+      kind: "life",
+      vec: { vera: 1, obshchitelnost: -1 },
+      rarity: "common",
+      source: ["backstory", "life"],
+      trigger: "habit",
+      effect: "\u041B\u0435\u0441\u043D\u043E\u0439 \u043D\u0430\u0440\u043E\u0434 \u043A \u043D\u0435\u043C\u0443 \u0434\u043E\u0431\u0440\u0435\u0435; \u043B\u044E\u0434\u0438 \u2014 \u043D\u0430\u0441\u0442\u043E\u0440\u043E\u0436\u0435\u043D\u043D\u0435\u0435"
+    },
+    {
+      id: "nikomu",
+      name: "\u041D\u0438\u043A\u043E\u043C\u0443 \u043D\u0435 \u0432\u0435\u0440\u0438\u0442",
+      desc: "\u041F\u0440\u0435\u0434\u0430\u043B\u0438 \u0440\u0430\u0437 \u2014 \u0445\u0432\u0430\u0442\u0438\u0442",
+      kind: "life",
+      vec: { privyazannost: -1, obshchitelnost: -1, zhestkost: 1 },
+      rarity: "rare",
+      source: ["backstory", "life"],
+      trigger: "rel",
+      conflicts: ["dusha_naraspashku"],
+      replaces: ["kumovya"],
+      effect: "\u041E\u0442\u043D\u043E\u0448\u0435\u043D\u0438\u044F \u0432 \u0441\u043E\u0432\u0435\u0442\u0435 \u0441\u043A\u043B\u0430\u0434\u044B\u0432\u0430\u044E\u0442\u0441\u044F \u043C\u0435\u0434\u043B\u0435\u043D\u043D\u0435\u0435; \u043E\u0431\u043C\u0430\u043D\u0443\u0442\u044C \u0435\u0433\u043E \u0442\u0440\u0443\u0434\u043D\u0435\u0435"
+    },
+    {
+      id: "zamaterel",
+      name: "\u0417\u0430\u043C\u0430\u0442\u0435\u0440\u0435\u043B",
+      desc: "\u041F\u0440\u043E\u0448\u0451\u043B \u0447\u0435\u0440\u0435\u0437 \u0442\u0430\u043A\u043E\u0435, \u0447\u0442\u043E \u043F\u0440\u0435\u0436\u043D\u0438\u0435 \u0441\u0442\u0440\u0430\u0445\u0438 \u0441\u043C\u0435\u0448\u043D\u044B",
+      kind: "life",
+      vec: { zhestkost: 1, smelost: 1, terpenie: 1 },
+      rarity: "rare",
+      source: ["backstory", "life"],
+      trigger: "deed",
+      replaces: ["obzhyogsya"],
+      effect: "\u0412 \u0441\u043F\u043E\u0440\u0435 \u0441\u0438\u043B\u044C\u043D\u0435\u0435, \u0440\u0435\u0448\u0435\u043D\u0438\u044F \u0440\u043E\u0432\u043D\u0435\u0435"
+    },
+    {
+      id: "razmyak",
+      name: "\u0420\u0430\u0437\u043C\u044F\u043A",
+      desc: "\u0421\u044B\u0442\u0430\u044F \u0436\u0438\u0437\u043D\u044C \u043E\u0442\u0443\u0447\u0438\u043B\u0430 \u043E\u0442 \u0442\u044F\u0436\u0451\u043B\u044B\u0445 \u0440\u0435\u0448\u0435\u043D\u0438\u0439",
+      kind: "life",
+      vec: { zhestkost: -1, poryadok: -1, smelost: -1 },
+      rarity: "common",
+      source: ["backstory", "life"],
+      trigger: "habit",
+      conflicts: ["zamaterel", "ruka_ne_drognet"],
+      effect: "\u0421\u0443\u0440\u043E\u0432\u044B\u0435 \u0432\u0430\u0440\u0438\u0430\u043D\u0442\u044B \u0432\u044B\u0431\u0438\u0440\u0430\u0435\u0442 \u0440\u0435\u0436\u0435"
+    },
+    {
+      id: "torguetsya",
+      name: "\u0412\u0437\u044F\u043B \u043F\u0440\u0438\u0432\u044B\u0447\u043A\u0443 \u0442\u043E\u0440\u0433\u043E\u0432\u0430\u0442\u044C\u0441\u044F",
+      desc: "\u0411\u0435\u0437 \u0442\u043E\u0440\u0433\u0430 \u0438 \u0445\u043B\u0435\u0431\u0430 \u043D\u0435 \u043A\u0443\u043F\u0438\u0442",
+      kind: "life",
+      vec: { shchedrost: -1, obshchitelnost: 1 },
+      rarity: "common",
+      source: ["backstory", "life"],
+      trigger: "habit",
+      effect: "\u0422\u043E\u0440\u0433\u043E\u0432\u044B\u0435 \u0432\u0430\u0440\u0438\u0430\u043D\u0442\u044B \u043F\u0440\u0438\u043D\u043E\u0441\u044F\u0442 \u0447\u0443\u0442\u044C \u0431\u043E\u043B\u044C\u0448\u0435"
+    },
+    {
+      id: "zarok",
+      name: "\u0414\u0430\u043B \u0437\u0430\u0440\u043E\u043A",
+      desc: "\u041F\u043E\u043E\u0431\u0435\u0449\u0430\u043B \u2014 \u0441\u0435\u0431\u0435, \u0431\u043E\u0433\u0443 \u0438\u043B\u0438 \u043F\u043E\u043A\u043E\u0439\u043D\u0438\u043A\u0443 \u2014 \u0438 \u0434\u0435\u0440\u0436\u0438\u0442",
+      kind: "life",
+      vec: { terpenie: 1, poryadok: 1, vera: 1 },
+      rarity: "rare",
+      source: ["backstory", "life"],
+      trigger: "break",
+      replaces: ["charka", "gulyaka"],
+      effect: "\u0420\u0435\u0448\u0435\u043D\u0438\u044F \u043F\u0440\u0435\u0434\u0441\u043A\u0430\u0437\u0443\u0435\u043C\u0435\u0435"
     },
     // --- перки ---
     {
@@ -1064,6 +1535,7 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
       vec: { lyubopytstvo: 1, terpenie: 1 },
       rarity: "common",
       source: ["life", "post"],
+      trigger: "deed",
       requires: ["glaz_almaz", "suyot_nos", "poka_ne_potrogaet", "trezvaya_golova"],
       effect: "\u0420\u0430\u0437\u0433\u043E\u0432\u043E\u0440 \u043E \u043D\u0451\u043C \u043E\u0442\u043A\u0440\u044B\u0432\u0430\u0435\u0442 \u0431\u043E\u043B\u044C\u0448\u0435; \u043F\u0438\u0441\u0430\u0440\u0435\u043C \u2014 \u0443\u043C\u0435\u043D\u0438\u0435 \u043B\u0443\u0447\u0448\u0435"
     },
@@ -1075,6 +1547,7 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
       vec: { poryadok: 1, shchedrost: -1 },
       rarity: "common",
       source: ["life", "post"],
+      trigger: "post",
       requires: ["kopeyka_k_kopeyke", "chuet_vygodu", "vsyo_po_polkam", "zimoy_snega"],
       effect: "\u041A\u0430\u0437\u043D\u0430\u0447\u0435\u0435\u043C \u0438 \u043A\u043B\u044E\u0447\u043D\u0438\u043A\u043E\u043C \u043E\u0448\u0438\u0431\u0430\u0435\u0442\u0441\u044F \u0440\u0435\u0436\u0435"
     },
@@ -1086,6 +1559,7 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
       vec: { lyubopytstvo: 1, smelost: 1 },
       rarity: "common",
       source: ["life", "post"],
+      trigger: "deed",
       requires: ["legok_na_podyom", "ne_robkogo_desyatka", "odin_v_pole", "lezet_na_rozhon"],
       effect: "\u0423 \u043E\u043F\u0443\u0448\u043A\u0438 \u0438 \u043D\u0430 \u0434\u043E\u0440\u043E\u0433\u0430\u0445 \u2014 \u0443\u043C\u0435\u043D\u0438\u0435 \u043B\u0443\u0447\u0448\u0435"
     },
@@ -1097,6 +1571,7 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
       vec: { vera: 1, lyubopytstvo: 1 },
       rarity: "common",
       source: ["life", "post"],
+      trigger: "deed",
       requires: ["khodit_k_vedunye", "chtit_primety", "kak_dedy"],
       effect: "\u041C\u043E\u0440 \u0438 \u0440\u0430\u043D\u0435\u043D\u044B\u0435 \u043E\u0431\u0445\u043E\u0434\u044F\u0442\u0441\u044F \u0434\u0435\u0448\u0435\u0432\u043B\u0435"
     },
@@ -1108,7 +1583,8 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
       vec: { poryadok: 2, zhestkost: 1 },
       rarity: "common",
       source: ["life", "post"],
-      requires: ["vsyo_po_polkam", "ruka_ne_drognet", "derzhit_slovo", "tyazhely_vzglyad"],
+      trigger: "post",
+      requires: ["vsyo_po_polkam", "ruka_ne_drognet", "derzhit_slovo", "tyazhely_vzglyad", "privyk_komandovat", "sluzhaka"],
       effect: "\u0414\u0435\u0441\u044F\u0442\u043D\u0438\u043A\u043E\u043C \u2014 \u0443\u043C\u0435\u043D\u0438\u0435 \u043B\u0443\u0447\u0448\u0435, \u043F\u043E\u0440\u044F\u0434\u043E\u043A \u043A\u0440\u0435\u043F\u0447\u0435"
     },
     {
@@ -1119,6 +1595,7 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
       vec: { shchedrost: -1, obshchitelnost: 1 },
       rarity: "common",
       source: ["life", "post"],
+      trigger: "post",
       requires: ["prodast_i_kupit", "svoego_ne_upustit", "bez_myla", "chuet_vygodu"],
       effect: "\u0422\u043E\u0440\u0433\u043E\u0432\u044B\u0435 \u0432\u0430\u0440\u0438\u0430\u043D\u0442\u044B \u043F\u0440\u0438\u043D\u043E\u0441\u044F\u0442 \u0431\u043E\u043B\u044C\u0448\u0435 \u043A\u0430\u0437\u043D\u044B"
     },
@@ -1130,7 +1607,8 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
       vec: { zhestkost: -1, terpenie: 1, obshchitelnost: 1 },
       rarity: "rare",
       source: ["life", "post"],
-      requires: ["zhaleet_ubogikh", "vsem_kum", "terpit_i_zhdyot", "myagko_stelet"],
+      trigger: "deed",
+      requires: ["zhaleet_ubogikh", "vsem_kum", "terpit_i_zhdyot", "myagko_stelet", "serdobolny", "kumovya"],
       effect: "\u0421\u0441\u043E\u0440\u044B \u0432 \u0441\u043E\u0432\u0435\u0442\u0435 \u043F\u0440\u0438 \u043D\u0451\u043C \u0433\u0430\u0441\u043D\u0443\u0442 \u0431\u044B\u0441\u0442\u0440\u0435\u0435"
     },
     {
@@ -1139,8 +1617,9 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
       desc: "\u0418 \u043B\u0435\u0441 \u0435\u043C\u0443 \u043E\u0442\u0432\u0435\u0447\u0430\u0435\u0442",
       kind: "perk",
       vec: { vera: 2, obshchitelnost: -1 },
-      rarity: "exceptional",
+      rarity: "rare",
       source: ["life", "post"],
+      trigger: "deed",
       requires: ["chtit_primety", "kak_dedy", "khodit_k_vedunye"],
       effect: "\u041B\u0435\u0441\u043D\u0438\u0447\u0438\u043C \u2014 \u0443\u043C\u0435\u043D\u0438\u0435 \u043B\u0443\u0447\u0448\u0435; \u043B\u0435\u0441\u043D\u043E\u0439 \u043D\u0430\u0440\u043E\u0434 \u0435\u043C\u0443 \u0432\u0435\u0440\u0438\u0442"
     },
@@ -1152,6 +1631,7 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
       vec: { zhestkost: 1, gordost: 1 },
       rarity: "common",
       source: ["life", "post"],
+      trigger: "post",
       requires: ["tyazhely_vzglyad", "ruka_ne_drognet", "shapku_ne_lomaet", "kost_v_gorle"],
       effect: "\u0421\u0430\u0431\u043E\u0442\u0430\u0436 \u043F\u0440\u043E\u0442\u0438\u0432 \u043D\u0435\u0433\u043E \u0441\u043B\u0443\u0447\u0430\u0435\u0442\u0441\u044F \u0440\u0435\u0436\u0435"
     },
@@ -1163,6 +1643,7 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
       vec: { obshchitelnost: 1, privyazannost: 1 },
       rarity: "common",
       source: ["life", "post"],
+      trigger: "post",
       requires: ["vsem_kum", "pomnit_rodstvo", "dusha_naraspashku", "khlebosol"],
       effect: "\u0414\u0435\u0440\u0435\u0432\u043D\u0438 \u0435\u043C\u0443 \u0432\u0435\u0440\u044F\u0442; \u0441\u0442\u0430\u0440\u043E\u0441\u0442\u043E\u0439 \u2014 \u0443\u043C\u0435\u043D\u0438\u0435 \u043B\u0443\u0447\u0448\u0435"
     },
@@ -1174,6 +1655,7 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
       vec: { chestnost: 1, lyubopytstvo: 1 },
       rarity: "rare",
       source: ["life", "post"],
+      trigger: "deed",
       requires: ["rubit_pravdu", "kak_na_dukhu", "poka_ne_potrogaet", "strelyany_vorobey"],
       effect: "\u0417\u0430\u043D\u0438\u0437\u0438\u0442\u044C \u043E\u043F\u0438\u0441\u044C \u0438\u043B\u0438 \u0441\u0431\u044B\u0442\u044C \u043F\u043E\u0440\u0447\u0435\u043D\u043E\u0435 \u043F\u0440\u0438 \u043D\u0451\u043C \u043D\u0435 \u0432\u044B\u0439\u0434\u0435\u0442"
     },
@@ -1185,9 +1667,164 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
       vec: { smelost: -1, poryadok: 1 },
       rarity: "common",
       source: ["life", "post"],
+      trigger: "post",
       requires: ["semero_otmerit", "strelyany_vorobey", "glaz_almaz", "dolgo_zapryagaet"],
       effect: "\u041D\u0430\u0431\u0435\u0433\u0438 \u0438 \u043A\u0440\u0430\u0436\u0438 \u0432 \u0435\u0433\u043E \u0441\u0444\u0435\u0440\u0435 \u043E\u0431\u0445\u043E\u0434\u044F\u0442\u0441\u044F \u0434\u0435\u0448\u0435\u0432\u043B\u0435"
+    },
+    {
+      id: "lekar",
+      name: "\u041B\u0435\u043A\u0430\u0440\u044C",
+      desc: "\u0412\u043F\u0440\u0430\u0432\u0438\u0442, \u0437\u0430\u0448\u044C\u0451\u0442 \u0438 \u043D\u0435 \u0434\u0430\u0441\u0442 \u043F\u043E\u043C\u0435\u0440\u0435\u0442\u044C \u043E\u0442 \u0433\u043E\u0440\u044F\u0447\u043A\u0438",
+      kind: "perk",
+      vec: { zhestkost: -1, lyubopytstvo: 1, terpenie: 1 },
+      rarity: "rare",
+      source: ["life", "post"],
+      trigger: "deed",
+      requires: ["zhaleet_ubogikh", "khodit_k_vedunye", "znaet_travy", "serdobolny"],
+      effect: "\u0420\u0430\u043D\u0435\u043D\u044B\u0435 \u0438 \u0431\u043E\u043B\u044C\u043D\u044B\u0435 \u043E\u0431\u0445\u043E\u0434\u044F\u0442\u0441\u044F \u0434\u0435\u0448\u0435\u0432\u043B\u0435"
+    },
+    {
+      id: "zakony",
+      name: "\u0417\u043D\u0430\u0435\u0442 \u0437\u0430\u043A\u043E\u043D\u044B",
+      desc: "\u041F\u043E\u043C\u043D\u0438\u0442, \u0447\u0442\u043E \u043F\u0438\u0441\u0430\u043D\u043E \u0432 \u0433\u0440\u0430\u043C\u043E\u0442\u0430\u0445, \u0438 \u0447\u0442\u043E \u2014 \u043C\u0435\u0436\u0434\u0443 \u0441\u0442\u0440\u043E\u043A",
+      kind: "perk",
+      vec: { poryadok: 1, chestnost: 1 },
+      rarity: "common",
+      source: ["life", "post"],
+      trigger: "post",
+      requires: ["derzhit_slovo", "vsyo_po_polkam", "sluzhaka", "glaz_almaz"],
+      effect: "\u0422\u044F\u0436\u0431\u044B \u0438 \u0441\u043F\u043E\u0440\u044B \u0441 \u0434\u0432\u043E\u0440\u043E\u043C \u0440\u0435\u0448\u0430\u0435\u0442 \u043B\u0443\u0447\u0448\u0435"
+    },
+    {
+      id: "pogoda",
+      name: "\u0427\u0443\u0435\u0442 \u043F\u043E\u0433\u043E\u0434\u0443",
+      desc: "\u0421\u043A\u0430\u0436\u0435\u0442 \u043F\u0440\u043E \u0433\u0440\u0430\u0434 \u0437\u0430 \u0442\u0440\u0438 \u0434\u043D\u044F",
+      kind: "perk",
+      vec: { vera: 1, terpenie: 1 },
+      rarity: "common",
+      source: ["life", "post"],
+      trigger: "deed",
+      requires: ["chtit_primety", "kak_dedy", "starover", "slushaet_les"],
+      effect: "\u0423\u0440\u043E\u0436\u0430\u0439\u043D\u044B\u0435 \u0441\u043E\u0431\u044B\u0442\u0438\u044F \u0440\u0435\u0448\u0430\u0435\u0442 \u043B\u0443\u0447\u0448\u0435"
+    },
+    {
+      id: "zasada",
+      name: "\u041C\u0430\u0441\u0442\u0435\u0440 \u0437\u0430\u0441\u0430\u0434",
+      desc: "\u0423\u043C\u0435\u0435\u0442 \u0436\u0434\u0430\u0442\u044C \u0442\u0430\u043C, \u0433\u0434\u0435 \u0434\u0440\u0443\u0433\u043E\u0439 \u0431\u044B \u0443\u0448\u0451\u043B",
+      kind: "perk",
+      vec: { terpenie: 1, smelost: 1, chestnost: -1 },
+      rarity: "common",
+      source: ["life", "post"],
+      trigger: "deed",
+      requires: ["krivaya_dorozhka", "strelyany_vorobey", "terpit_i_zhdyot", "bity"],
+      effect: "\u0420\u0430\u0437\u0431\u043E\u0439\u043D\u0438\u043A\u0438 \u0438 \u0442\u0432\u0430\u0440\u0438 \u043E\u0431\u0445\u043E\u0434\u044F\u0442\u0441\u044F \u0434\u0435\u0448\u0435\u0432\u043B\u0435"
+    },
+    {
+      id: "yazyki",
+      name: "\u0420\u0430\u0437\u0432\u044F\u0437\u044B\u0432\u0430\u0435\u0442 \u044F\u0437\u044B\u043A\u0438",
+      desc: "\u0415\u043C\u0443 \u0440\u0430\u0441\u0441\u043A\u0430\u0437\u044B\u0432\u0430\u044E\u0442 \u0442\u043E, \u0447\u0435\u0433\u043E \u043D\u0435 \u0445\u043E\u0442\u0435\u043B\u0438",
+      kind: "perk",
+      vec: { obshchitelnost: 1, chestnost: -1 },
+      rarity: "common",
+      source: ["life", "post"],
+      trigger: "deed",
+      requires: ["bez_myla", "suyot_nos", "torguetsya", "kumovya"],
+      effect: "\u0427\u0443\u0436\u0438\u0435 \u0442\u0430\u0439\u043D\u044B \u0438 \u0441\u0442\u0440\u0435\u043C\u043B\u0435\u043D\u0438\u044F \u043E\u0442\u043A\u0440\u044B\u0432\u0430\u044E\u0442\u0441\u044F \u0431\u044B\u0441\u0442\u0440\u0435\u0435"
+    },
+    {
+      id: "khodok",
+      name: "\u0425\u043E\u0434\u043E\u043A \u043F\u043E \u043B\u0430\u0431\u0438\u0440\u0438\u043D\u0442\u0443",
+      desc: "\u0421\u043F\u0443\u0441\u043A\u0430\u043B\u0441\u044F \u0438 \u0432\u0435\u0440\u043D\u0443\u043B\u0441\u044F \u2014 \u043D\u0435 \u0440\u0430\u0437",
+      kind: "perk",
+      vec: { smelost: 1, lyubopytstvo: 1, vera: -1 },
+      rarity: "rare",
+      source: ["life", "post"],
+      trigger: "deed",
+      requires: ["ne_robkogo_desyatka", "povidal_svet", "ni_v_son_ni_v_chokh", "lezet_na_rozhon"],
+      effect: "\u0414\u0435\u043B\u0430 \u0441 \u043F\u0440\u0438\u043A\u043B\u044E\u0447\u0435\u043D\u0446\u0430\u043C\u0438 \u0438 \u043B\u0430\u0431\u0438\u0440\u0438\u043D\u0442\u043E\u043C \u0440\u0435\u0448\u0430\u0435\u0442 \u043B\u0443\u0447\u0448\u0435"
+    },
+    {
+      id: "golos",
+      name: "\u0413\u043E\u043B\u043E\u0441 \u043D\u0430 \u0441\u0445\u043E\u0434\u0435",
+      desc: "\u041A\u043E\u0433\u0434\u0430 \u043E\u043D \u0433\u043E\u0432\u043E\u0440\u0438\u0442, \u0441\u0445\u043E\u0434 \u043C\u043E\u043B\u0447\u0438\u0442",
+      kind: "perk",
+      vec: { obshchitelnost: 1, gordost: 1 },
+      rarity: "common",
+      source: ["life", "post"],
+      trigger: "post",
+      requires: ["dusha_naraspashku", "shapku_ne_lomaet", "vsem_kum", "privyk_komandovat"],
+      effect: "\u0414\u0435\u0440\u0435\u0432\u043D\u0438 \u0441\u043B\u0443\u0448\u0430\u044E\u0442 \u0435\u0433\u043E \u0434\u0430\u0436\u0435 \u043F\u0440\u043E\u0442\u0438\u0432 \u0441\u0432\u043E\u0435\u0439 \u0432\u044B\u0433\u043E\u0434\u044B"
+    },
+    {
+      id: "tsena",
+      name: "\u0417\u043D\u0430\u0435\u0442 \u0446\u0435\u043D\u0443 \u0432\u0441\u0435\u043C\u0443",
+      desc: "\u0418 \u0437\u0435\u0440\u043D\u0443, \u0438 \u0441\u043B\u043E\u0432\u0443, \u0438 \u0447\u0435\u043B\u043E\u0432\u0435\u043A\u0443",
+      kind: "perk",
+      vec: { shchedrost: -1, lyubopytstvo: 1 },
+      rarity: "common",
+      source: ["life", "post"],
+      trigger: "post",
+      requires: ["chuet_vygodu", "prodast_i_kupit", "torguetsya", "prizhimisty"],
+      effect: "\u041D\u0435 \u043F\u0435\u0440\u0435\u043F\u043B\u0430\u0447\u0438\u0432\u0430\u0435\u0442: \u0442\u0440\u0430\u0442\u044B \u043A\u0430\u0437\u043D\u044B \u0432 \u0441\u043E\u0431\u044B\u0442\u0438\u044F\u0445 \u043C\u0435\u043D\u044C\u0448\u0435"
+    },
+    {
+      id: "pri_dvore",
+      name: "\u0421\u0432\u043E\u0439 \u0447\u0435\u043B\u043E\u0432\u0435\u043A \u043F\u0440\u0438 \u0434\u0432\u043E\u0440\u0435",
+      desc: "\u0417\u043D\u0430\u0435\u0442, \u043A\u043E\u043C\u0443 \u043F\u043E\u043A\u043B\u043E\u043D\u0438\u0442\u044C\u0441\u044F \u0438 \u043A\u043E\u043C\u0443 \u0437\u0430\u043D\u0435\u0441\u0442\u0438",
+      kind: "perk",
+      vec: { chestolyubie: 1, chestnost: -1, obshchitelnost: 1 },
+      rarity: "rare",
+      source: ["life", "post"],
+      trigger: "deed",
+      requires: ["bez_myla", "obros_svyazyami", "i_nashim_i_vashim", "metit_vysoko"],
+      effect: "\u0414\u0432\u043E\u0440 \u043A \u043D\u0435\u043C\u0443 \u0442\u0435\u0440\u043F\u0438\u043C\u0435\u0435; \u043E\u0442\u0441\u0440\u043E\u0447\u043A\u0438 \u0434\u0430\u044E\u0442\u0441\u044F \u043B\u0435\u0433\u0447\u0435"
+    },
+    {
+      id: "uteshitel",
+      name: "\u0423\u0442\u0435\u0448\u0438\u0442\u0435\u043B\u044C",
+      desc: "\u041F\u043E\u0441\u043B\u0435 \u0440\u0430\u0437\u0433\u043E\u0432\u043E\u0440\u0430 \u0441 \u043D\u0438\u043C \u043B\u0435\u0433\u0447\u0435",
+      kind: "perk",
+      vec: { zhestkost: -1, privyazannost: 1 },
+      rarity: "common",
+      source: ["life", "post"],
+      trigger: "deed",
+      requires: ["serdobolny", "skor_na_slezu", "sirota", "ottayal"],
+      effect: "\u041E\u0442\u043D\u043E\u0448\u0435\u043D\u0438\u0435 \u043B\u044E\u0434\u0435\u0439 \u043A \u0421\u0435\u043D\u0435\u0448\u0430\u043B\u044E \u043F\u0440\u0438 \u043D\u0451\u043C \u043F\u0430\u0434\u0430\u0435\u0442 \u043C\u0435\u0434\u043B\u0435\u043D\u043D\u0435\u0435"
     }
+  ];
+
+  // src/data/backstory.ts
+  var BACKSTORY = [
+    { id: "otets_prodal_lug", text: "\u0412\u0438\u0434\u0435\u043B{\u0430}, \u043A\u0430\u043A \u043E\u0442\u0435\u0446 \u043F\u0440\u043E\u0434\u0430\u043B \u043E\u0431\u0449\u0438\u0439 \u043B\u0443\u0433 \u0437\u0430\u0435\u0437\u0436\u0435\u043C\u0443 \u043A\u0443\u043F\u0446\u0443, \u0438 \u0434\u0435\u0440\u0435\u0432\u043D\u044F \u0433\u043E\u043B\u043E\u0434\u0430\u043B\u0430 \u0437\u0438\u043C\u0443.", shift: { zabota: 2, vygoda: -1 } },
+    { id: "vydal_vora", text: "\u0412\u044B\u0434\u0430\u043B{\u0430} \u0432\u043E\u0440\u0430 \u0431\u0430\u0440\u043E\u043D\u0443 \u0438 \u043F\u043E\u0442\u043E\u043C \u0436\u0430\u043B\u0435\u043B{\u0430}: \u0432\u043E\u0440\u0430 \u043F\u043E\u0432\u0435\u0441\u0438\u043B\u0438 \u0437\u0430 \u043C\u0435\u0448\u043E\u043A \u043E\u0432\u0441\u0430.", shift: { dolg: 1, zabota: 1 } },
+    { id: "spas_prikl", text: "\u0412 \u0434\u0435\u0442\u0441\u0442\u0432\u0435 \u0437\u0430\u0431\u043B\u0443\u0434\u0438\u043B{\u0430\u0441\u044C} \u0443 \u043E\u043F\u0443\u0448\u043A\u0438; \u0432\u044B\u0432\u0435\u043B\u0438 \u043F\u0440\u0438\u043A\u043B\u044E\u0447\u0435\u043D\u0446\u044B, \u0448\u0435\u0434\u0448\u0438\u0435 \u0438\u0437 \u0441\u0442\u0430\u0440\u044B\u0445 \u0440\u0443\u0438\u043D.", shift: { derzost: 2 }, aspiration: "labirint" },
+    { id: "otets_kaznachey", text: "\u041E\u0442\u0435\u0446 \u0441\u043B\u0443\u0436\u0438\u043B \u043A\u0430\u0437\u043D\u0430\u0447\u0435\u0435\u043C \u0443 \u043F\u0440\u0435\u0436\u043D\u0435\u0433\u043E \u0431\u0430\u0440\u043E\u043D\u0430 \u0438 \u0443\u0447\u0438\u043B \u0441\u0447\u0438\u0442\u0430\u0442\u044C \u0440\u0430\u043D\u044C\u0448\u0435, \u0447\u0435\u043C \u0447\u0438\u0442\u0430\u0442\u044C.", shift: { vygoda: 2, dolg: 1 }, aspiration: "post_pisar" },
+    { id: "pozhar", text: "\u041F\u0435\u0440\u0435\u0436\u0438\u043B{\u0430} \u043F\u043E\u0436\u0430\u0440 \u0432 \u0434\u0435\u0440\u0435\u0432\u043D\u0435; \u0442\u0443\u0448\u0438\u043B\u0438 \u0432\u0441\u0435\u043C \u043C\u0438\u0440\u043E\u043C, \u0438 \u044D\u0442\u043E \u0437\u0430\u043F\u043E\u043C\u043D\u0438\u043B\u043E\u0441\u044C \u043D\u0430\u0432\u0441\u0435\u0433\u0434\u0430.", shift: { zabota: 2, obychai: 1 } },
+    { id: "babka_znakharka", text: "\u0420\u043E\u0441\u043B{\u0430} \u043F\u0440\u0438 \u0431\u0430\u0431\u043A\u0435-\u0437\u043D\u0430\u0445\u0430\u0440\u043A\u0435, \u043A\u043E\u0442\u043E\u0440\u0430\u044F \u043D\u043E\u0441\u0438\u043B\u0430 \u043B\u0435\u0441\u0443 \u0445\u043B\u0435\u0431 \u043D\u0430 \u043A\u0430\u0436\u0434\u043E\u0435 \u043F\u043E\u043B\u043D\u043E\u043B\u0443\u043D\u0438\u0435.", shift: { obychai: 3 }, aspiration: "post_lesnichiy" },
+    { id: "ushel_v_naemniki", text: "\u0414\u0432\u0430 \u0433\u043E\u0434\u0430 \u0445\u043E\u0434\u0438\u043B{\u0430} \u0441 \u043D\u0430\u0451\u043C\u043D\u0438\u043A\u0430\u043C\u0438 \u043F\u043E \u0434\u043E\u0440\u043E\u0433\u0430\u043C \u0413\u0435\u0440\u0446\u043E\u0433\u0441\u0442\u0432\u0430.", shift: { derzost: 2, dolg: -1, vygoda: 1 } },
+    { id: "dolg_kuptsu", text: "\u0421\u0435\u043C\u044C\u044F \u0433\u043E\u0434\u0430\u043C\u0438 \u043E\u0442\u0434\u0430\u0432\u0430\u043B\u0430 \u0434\u043E\u043B\u0433 \u043A\u0443\u043F\u0446\u0443; \u043E\u0442\u0434\u0430\u043B\u0438 \u0432\u0441\u0451 \u0434\u043E \u0433\u0440\u043E\u0448\u0430.", shift: { dolg: 2, vygoda: 1 } },
+    { id: "obmanul_kupets", text: "\u0411\u044B\u043B{\u0430} \u043E\u0431\u043C\u0430\u043D\u0443\u0442{\u0430} \u043A\u0443\u043F\u0446\u043E\u043C \u043D\u0430 \u044F\u0440\u043C\u0430\u0440\u043A\u0435 \u0438 \u0441 \u0442\u0435\u0445 \u043F\u043E\u0440 \u043F\u0440\u043E\u0432\u0435\u0440\u044F\u0435\u0442 \u043A\u0430\u0436\u0434\u0443\u044E \u0431\u0443\u043C\u0430\u0433\u0443.", shift: { vygoda: 1, derzost: -1 } },
+    { id: "videl_tvar", text: "\u0412\u0438\u0434\u0435\u043B{\u0430} \u0442\u0432\u0430\u0440\u044C \u0438\u0437 \u043B\u0435\u0441\u0430 \u0432\u0431\u043B\u0438\u0437\u0438 \u0438 \u0432\u044B\u0436\u0438\u043B{\u0430}, \u043F\u043E\u0442\u043E\u043C\u0443 \u0447\u0442\u043E \u043D\u0435 \u043F\u043E\u0431\u0435\u0436\u0430\u043B{\u0430}.", shift: { derzost: 1, obychai: 1 } },
+    { id: "bunt", text: "\u0417\u0430\u0441\u0442\u0430\u043B{\u0430} \u043A\u0440\u0435\u0441\u0442\u044C\u044F\u043D\u0441\u043A\u0438\u0439 \u0431\u0443\u043D\u0442 \u043F\u0440\u0438 \u043F\u0440\u0435\u0436\u043D\u0435\u043C \u0431\u0430\u0440\u043E\u043D\u0435 \u0438 \u0432\u0438\u0434\u0435\u043B{\u0430}, \u0447\u0435\u043C \u043E\u043D \u043A\u043E\u043D\u0447\u0438\u043B\u0441\u044F.", shift: { dolg: 2, zabota: -1 } },
+    { id: "vyrubka", text: "\u0420\u0443\u0431\u0438\u043B{\u0430} \u043B\u0435\u0441 \u043D\u0430 \u043F\u0440\u043E\u0434\u0430\u0436\u0443, \u043F\u043E\u043A\u0430 \u043D\u0430 \u0432\u044B\u0440\u0443\u0431\u043A\u0435 \u043D\u0435 \u043F\u0440\u043E\u043F\u0430\u043B\u0438 \u0434\u0432\u043E\u0435.", shift: { obychai: 2, vygoda: -1 } },
+    { id: "pri_dvore", text: "\u0413\u043E\u0434 \u0441\u043B\u0443\u0436\u0438\u043B{\u0430} \u043F\u0440\u0438 \u0434\u0432\u043E\u0440\u0435 \u0413\u0435\u0440\u0446\u043E\u0433\u0430 \u0438 \u043D\u0430\u0441\u043C\u043E\u0442\u0440\u0435\u043B{\u0430\u0441\u044C} \u043D\u0430 \u0447\u0443\u0436\u0443\u044E \u0440\u043E\u0441\u043A\u043E\u0448\u044C.", shift: { vygoda: 2, dolg: 1 }, aspiration: "gorod" },
+    { id: "nasledstvo", text: "\u041E\u0441\u0442\u0430\u043B{\u0441\u044F} \u0431\u0435\u0437 \u043D\u0430\u0441\u043B\u0435\u0434\u0441\u0442\u0432\u0430: \u0432\u0441\u0451 \u0443\u0448\u043B\u043E \u0441\u0442\u0430\u0440\u0448\u0435\u043C\u0443 \u0431\u0440\u0430\u0442\u0443.", shift: { vygoda: 1, derzost: 1 }, aspiration: "nadel" },
+    { id: "vyrastil_sirot", text: "\u0412\u044B\u0440\u0430\u0441\u0442\u0438\u043B{\u0430} \u0434\u0432\u043E\u0438\u0445 \u0447\u0443\u0436\u0438\u0445 \u0441\u0438\u0440\u043E\u0442 \u043A\u0430\u043A \u0441\u0432\u043E\u0438\u0445.", shift: { zabota: 3 } },
+    { id: "drak_s_other", text: "\u041D\u0430 \u043F\u0440\u0430\u0437\u0434\u043D\u0438\u043A\u0435 \u0443\u0440\u043E\u0436\u0430\u044F \u0434\u0435\u043B\u043E \u0434\u043E\u0448\u043B\u043E \u0434\u043E \u0434\u0440\u0430\u043A\u0438 \u0438\u0437-\u0437\u0430 \u0434\u0435\u0432\u0443\u0448\u043A\u0438 \u2014 {other} \u0434\u043E \u0441\u0438\u0445 \u043F\u043E\u0440 \u043D\u0435 \u0437\u0430\u0431\u044B\u043B{o\u0430}.", shift: { derzost: 1 }, link: -4 },
+    { id: "spas_other", text: "\u0412 \u043F\u043E\u043B\u043E\u0432\u043E\u0434\u044C\u0435 {other} \u0442\u043E\u043D\u0443\u043B{o\u0430}, \u0438 {name} \u0432\u044B\u0442\u0430\u0449\u0438\u043B{\u0430} \u0438\u0437 \u0440\u0435\u043A\u0438.", shift: { zabota: 1, derzost: 1 }, link: 4 },
+    { id: "vyporol_syna", text: "\u041A\u043E\u0433\u0434\u0430-\u0442\u043E \u0432\u0435\u043B\u0435\u043B{\u0430} \u0432\u044B\u043F\u043E\u0440\u043E\u0442\u044C \u0437\u0430 \u043A\u0440\u0430\u0436\u0443 \u0440\u043E\u0434\u0438\u0447\u0430 \u2014 {other} \u0442\u0430\u043A \u0438 \u043D\u0435 \u043F\u0440\u043E\u0441\u0442\u0438\u043B{o\u0430}.", shift: { dolg: 1 }, link: -5 },
+    { id: "uchilsya_u_other", text: "{other} \u043A\u043E\u0433\u0434\u0430-\u0442\u043E \u0443\u0447\u0438\u043B{o\u0430} {\u0435\u0433\u043E} \u0440\u0435\u043C\u0435\u0441\u043B\u0443 \u2014 \u0441 \u0442\u0435\u0445 \u043F\u043E\u0440 \u043E\u043D\u0438 \u0431\u043B\u0438\u0437\u043A\u0438.", shift: { dolg: 1 }, link: 4 },
+    { id: "dolg_other", text: "\u0411\u0440\u0430\u043B{\u0430} \u0432 \u0434\u043E\u043B\u0433 \u0438 \u0432\u0435\u0440\u043D\u0443\u043B{\u0430} \u043D\u0435 \u0432\u0441\u0451 \u2014 {other} \u044D\u0442\u043E \u043F\u043E\u043C\u043D\u0438\u0442.", shift: { vygoda: 1 }, link: -3 },
+    { id: "kum_other", text: "{other} \u043A\u0440\u0435\u0441\u0442\u0438\u043B{o\u0430} {\u0435\u0433\u043E} \u0440\u0435\u0431\u0451\u043D\u043A\u0430 \u2014 \u0442\u0435\u043F\u0435\u0440\u044C \u043E\u043D\u0438 \u043A\u0443\u043C\u043E\u0432\u044C\u044F.", shift: { obychai: 1 }, link: 3 },
+    { id: "starshiy_sluga", text: "\u0422\u0440\u0438\u0434\u0446\u0430\u0442\u044C \u043B\u0435\u0442 \u0441\u043B\u0443\u0436\u0438\u043B{\u0430} \u0432 \u0437\u0430\u043C\u043A\u0435 \u0438 \u0437\u043D\u0430\u0435\u0442 \u043A\u0430\u0436\u0434\u0443\u044E \u0449\u0435\u043B\u044C.", shift: { dolg: 2, obychai: 1 }, aspiration: "post_klyuchnik" },
+    { id: "vodil_karavany", text: "\u0412\u043E\u0434\u0438\u043B{\u0430} \u043E\u0445\u0440\u0430\u043D\u0443 \u043F\u0440\u0438 \u043A\u0430\u0440\u0430\u0432\u0430\u043D\u0430\u0445 \u0434\u043E \u0433\u043E\u0440\u043E\u0434\u0430.", shift: { derzost: 1, dolg: 1 }, aspiration: "post_desyatnik" },
+    { id: "vybrali_shodom", text: "\u041E\u0434\u043D\u0430\u0436\u0434\u044B \u0441\u0445\u043E\u0434 \u0432\u044B\u0431\u0440\u0430\u043B {\u0435\u0433\u043E} \u0433\u043E\u0432\u043E\u0440\u0438\u0442\u044C \u0437\u0430 \u0434\u0435\u0440\u0435\u0432\u043D\u044E \u2014 \u0438 \u043D\u0435 \u043F\u043E\u0436\u0430\u043B\u0435\u043B.", shift: { zabota: 2 }, aspiration: "post_starosta" },
+    { id: "ustal", text: "\u041F\u043E\u0445\u043E\u0440\u043E\u043D\u0438\u043B{\u0430} \u0442\u0440\u043E\u0438\u0445 \u0431\u043B\u0438\u0437\u043A\u0438\u0445 \u0437\u0430 \u043E\u0434\u043D\u0443 \u0437\u0438\u043C\u0443 \u0438 \u0441 \u0442\u0435\u0445 \u043F\u043E\u0440 \u0438\u0449\u0435\u0442 \u0442\u0438\u0448\u0438\u043D\u044B.", shift: { derzost: -2, zabota: 1 }, aspiration: "pokoy" },
+    { id: "ugovor_s_lesom", text: "\u0421\u043B\u044B\u0448\u0430\u043B{\u0430} \u043E\u0442 \u0434\u0435\u0434\u0430, \u0447\u0442\u043E \u0443 \u0437\u0430\u043C\u043A\u0430 \u0431\u044B\u043B \u0443\u0433\u043E\u0432\u043E\u0440 \u0441 \u043B\u0435\u0441\u043E\u043C, \u2014 \u0438 \u0432\u0435\u0440\u0438\u0442 \u0432 \u044D\u0442\u043E.", shift: { obychai: 2, dolg: 1 } },
+    { id: "kontrabanda", text: "\u0412\u043E\u0437\u0438\u043B{\u0430} \u0441\u043E\u043B\u044C \u043C\u0438\u043C\u043E \u043F\u043E\u0448\u043B\u0438\u043D\u044B, \u043F\u043E\u043A\u0430 \u043D\u0435 \u043F\u043E\u0439\u043C\u0430\u043B\u0438.", shift: { vygoda: 2, dolg: -2 } },
+    { id: "zhenitba_po_raschetu", text: "\u0421\u0432\u0430\u0442\u043E\u0432\u0441\u0442\u0432\u043E \u043F\u043E \u0440\u0430\u0441\u0447\u0451\u0442\u0443 \u043D\u0435 \u0441\u043B\u043E\u0436\u0438\u043B\u043E\u0441\u044C, \u0438 {\u043E\u043D} \u043D\u0435 \u0436\u0430\u043B\u0435\u0435\u0442.", shift: { zabota: 1, vygoda: -1 } },
+    { id: "pobeda_v_spore", text: "\u0412\u044B\u0438\u0433\u0440\u0430\u043B{\u0430} \u0442\u044F\u0436\u0431\u0443 \u0443 \u0441\u043E\u0441\u0435\u0434\u0441\u043A\u043E\u0433\u043E \u0443\u043F\u0440\u0430\u0432\u043B\u044F\u044E\u0449\u0435\u0433\u043E, \u0441\u043E\u0441\u043B\u0430\u0432\u0448\u0438\u0441\u044C \u043D\u0430 \u0441\u0442\u0430\u0440\u0443\u044E \u0433\u0440\u0430\u043C\u043E\u0442\u0443.", shift: { obychai: 1, dolg: 1, derzost: 1 } },
+    { id: "golod", text: "\u041F\u0435\u0440\u0435\u0436\u0438\u043B{\u0430} \u0433\u043E\u043B\u043E\u0434\u043D\u044B\u0439 \u0433\u043E\u0434 \u0438 \u0441 \u0442\u0435\u0445 \u043F\u043E\u0440 \u0434\u0435\u0440\u0436\u0438\u0442 \u0437\u0430\u043F\u0430\u0441 \u043D\u0430 \u0447\u0451\u0440\u043D\u044B\u0439 \u0434\u0435\u043D\u044C.", shift: { vygoda: 1, zabota: 1, derzost: -1 } }
   ];
 
   // src/sim/balance.ts
@@ -1333,25 +1970,32 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
     },
     // натура: рост древа черт от точек кристаллизации (src/sim/natura.ts, замысел — docs/design/natura.md). К совету не подключена.
     natura: {
-      birthMin: k(5, 2, 8, 1, "\u041D\u0430\u0442\u0443\u0440\u0430: \u0447\u0435\u0440\u0442 \u043F\u0440\u0438 \u0440\u043E\u0436\u0434\u0435\u043D\u0438\u0438 \u043D\u0435 \u043C\u0435\u043D\u044C\u0448\u0435"),
-      birthMax: k(7, 2, 10, 1, "\u041D\u0430\u0442\u0443\u0440\u0430: \u0447\u0435\u0440\u0442 \u043F\u0440\u0438 \u0440\u043E\u0436\u0434\u0435\u043D\u0438\u0438 \u043D\u0435 \u0431\u043E\u043B\u044C\u0448\u0435"),
-      anchorsNear: k(3, 1, 3, 1, "\u041D\u0430\u0442\u0443\u0440\u0430: \u044F\u043A\u043E\u0440\u0435\u0439 \u0438\u0437 \u0442\u043E\u0447\u0435\u043A \u043A\u0440\u0438\u0441\u0442\u0430\u043B\u043B\u0438\u0437\u0430\u0446\u0438\u0438 \u044F\u0434\u0440\u0430 (\u0441\u0432\u0435\u0440\u0445 \u043E\u0434\u043D\u043E\u0433\u043E \u0434\u0430\u043B\u044C\u043D\u0435\u0433\u043E)"),
+      innateMin: k(1, 0, 3, 1, "\u041D\u0430\u0442\u0443\u0440\u0430: \u0432\u0440\u043E\u0436\u0434\u0451\u043D\u043D\u044B\u0445 \u0447\u0435\u0440\u0442 \u043D\u0435 \u043C\u0435\u043D\u044C\u0448\u0435 (\u043E\u043D\u0438 \u0436\u0435 \u044F\u043A\u043E\u0440\u044F \u044F\u0434\u0440\u0430)"),
+      innateMax: k(2, 1, 4, 1, "\u041D\u0430\u0442\u0443\u0440\u0430: \u0432\u0440\u043E\u0436\u0434\u0451\u043D\u043D\u044B\u0445 \u0447\u0435\u0440\u0442 \u043D\u0435 \u0431\u043E\u043B\u044C\u0448\u0435"),
+      adultAge: k(30, 15, 60, 1, "\u041D\u0430\u0442\u0443\u0440\u0430: \u0432\u043E\u0437\u0440\u0430\u0441\u0442 \u0432\u0437\u0440\u043E\u0441\u043B\u043E\u0441\u0442\u0438 \u2014 \u0441 \u043D\u0435\u0433\u043E \u0441\u0447\u0438\u0442\u0430\u044E\u0442\u0441\u044F \u0447\u0435\u0440\u0442\u044B, \u043D\u0430\u0436\u0438\u0442\u044B\u0435 \u0434\u043E \u0438\u0433\u0440\u044B"),
+      beforeMin: k(2, 2, 6, 1, "\u041D\u0430\u0442\u0443\u0440\u0430: \u0447\u0435\u0440\u0442, \u043D\u0430\u0436\u0438\u0442\u044B\u0445 \u0434\u043E \u0438\u0433\u0440\u044B, \u0443 \u0442\u043E\u043B\u044C\u043A\u043E \u0447\u0442\u043E \u043F\u043E\u0432\u0437\u0440\u043E\u0441\u043B\u0435\u0432\u0448\u0435\u0433\u043E"),
+      beforeMax: k(6, 2, 12, 1, "\u041D\u0430\u0442\u0443\u0440\u0430: \u0447\u0435\u0440\u0442, \u043D\u0430\u0436\u0438\u0442\u044B\u0445 \u0434\u043E \u0438\u0433\u0440\u044B, \u043D\u0435 \u0431\u043E\u043B\u044C\u0448\u0435"),
+      beforeAgeStep: k(25, 5, 80, 5, "\u041D\u0430\u0442\u0443\u0440\u0430: \u043A\u0430\u0436\u0434\u044B\u0435 \u0441\u0442\u043E\u043B\u044C\u043A\u043E \u043B\u0435\u0442 \u043F\u043E\u0441\u043B\u0435 \u0432\u0437\u0440\u043E\u0441\u043B\u043E\u0441\u0442\u0438 \u2014 \u0435\u0449\u0451 \u043E\u0434\u043D\u0430 \u043D\u0430\u0436\u0438\u0442\u0430\u044F \u0447\u0435\u0440\u0442\u0430"),
+      eventList: k(8, 2, 30, 1, "\u041D\u0430\u0442\u0443\u0440\u0430: \u0441\u043A\u043E\u043B\u044C\u043A\u043E \u0447\u0435\u0440\u0442 \u043F\u0440\u0435\u0434\u043B\u0430\u0433\u0430\u0435\u0442 \u0441\u043E\u0431\u044B\u0442\u0438\u0435 (\u043A\u043E\u0440\u043E\u0442\u043A\u0438\u0439 \u0441\u043F\u0438\u0441\u043E\u043A, \u0438\u0437 \u043D\u0435\u0433\u043E \u0432\u044B\u0431\u0438\u0440\u0430\u0435\u0442 \u043D\u0430\u0442\u0443\u0440\u0430)"),
+      signSoft: k(5, 2, 12, 0.5, "\u041D\u0430\u0442\u0443\u0440\u0430: \u0443\u0431\u044B\u0432\u0430\u044E\u0449\u0435\u0435 \u0441\u043B\u043E\u0436\u0435\u043D\u0438\u0435 \u043F\u0440\u0438\u0437\u043D\u0430\u043A\u043E\u0432 \u2014 \u0447\u0435\u043C \u043C\u0435\u043D\u044C\u0448\u0435, \u0442\u0435\u043C \u0440\u0430\u043D\u044C\u0448\u0435 \u043F\u0440\u0438\u0437\u043D\u0430\u043A \u0443\u043F\u0438\u0440\u0430\u0435\u0442\u0441\u044F"),
       farCos: k(0.15, 0, 0.6, 0.05, "\u041D\u0430\u0442\u0443\u0440\u0430: \u0434\u0430\u043B\u044C\u043D\u0438\u0439 \u044F\u043A\u043E\u0440\u044C \u2014 \u0431\u043B\u0438\u0437\u043E\u0441\u0442\u044C \u043A \u044F\u0434\u0440\u0443 \u043F\u043E \u043C\u043E\u0434\u0443\u043B\u044E \u043D\u0435 \u0431\u043E\u043B\u044C\u0448\u0435 \u044D\u0442\u043E\u0433\u043E"),
       contraCos: k(0.3, 0.05, 1, 0.05, "\u041D\u0430\u0442\u0443\u0440\u0430: \u043F\u0440\u043E\u0442\u0438\u0432\u043E\u0440\u0435\u0447\u0438\u0435 \u2014 \u0447\u0435\u0440\u0442\u0430 \u043F\u0440\u043E\u0442\u0438\u0432 \u044F\u0434\u0440\u0430 \u043D\u0435 \u0441\u043B\u0430\u0431\u0435\u0435 \u044D\u0442\u043E\u0433\u043E"),
       farShare: k(0.1, 0, 1, 0.05, "\u041D\u0430\u0442\u0443\u0440\u0430: \u0448\u0430\u043D\u0441, \u0447\u0442\u043E \u043E\u0447\u0435\u0440\u0435\u0434\u043D\u0430\u044F \u0447\u0435\u0440\u0442\u0430 \u0440\u0430\u0441\u0442\u0451\u0442 \u043E\u0442 \u0434\u0430\u043B\u044C\u043D\u0435\u0433\u043E \u044F\u043A\u043E\u0440\u044F"),
       corePull: k(3, 0, 3, 0.1, "\u041D\u0430\u0442\u0443\u0440\u0430: \u043D\u0430\u0441\u043A\u043E\u043B\u044C\u043A\u043E \u043A\u0443\u0441\u0442 \u0443 \u044F\u043A\u043E\u0440\u044F \u044F\u0434\u0440\u0430 \u0442\u044F\u043D\u0435\u0442\u0441\u044F \u043A \u0441\u0430\u043C\u043E\u043C\u0443 \u044F\u0434\u0440\u0443, \u0430 \u043D\u0435 \u0442\u043E\u043B\u044C\u043A\u043E \u043A \u044F\u043A\u043E\u0440\u044E"),
-      temperature: k(0.2, 0.1, 4, 0.05, "\u041D\u0430\u0442\u0443\u0440\u0430: \u0442\u0435\u043C\u043F\u0435\u0440\u0430\u0442\u0443\u0440\u0430 \u0432\u044B\u0431\u043E\u0440\u0430 (\u043D\u0438\u0436\u0435 \u2014 \u0447\u0430\u0449\u0435 \u0441\u0430\u043C\u044B\u0439 \u0431\u043B\u0438\u0437\u043A\u0438\u0439, \u0432\u044B\u0448\u0435 \u2014 \u0440\u043E\u0432\u043D\u0435\u0435)"),
+      temperature: k(0.3, 0.1, 4, 0.05, "\u041D\u0430\u0442\u0443\u0440\u0430: \u0442\u0435\u043C\u043F\u0435\u0440\u0430\u0442\u0443\u0440\u0430 \u0432\u044B\u0431\u043E\u0440\u0430 (\u043D\u0438\u0436\u0435 \u2014 \u0447\u0430\u0449\u0435 \u0441\u0430\u043C\u044B\u0439 \u0431\u043B\u0438\u0437\u043A\u0438\u0439, \u0432\u044B\u0448\u0435 \u2014 \u0440\u043E\u0432\u043D\u0435\u0435)"),
       closenessFloor: k(0, 0, 1, 0.05, "\u041D\u0430\u0442\u0443\u0440\u0430: \u0432\u0435\u0441 \u0447\u0435\u0440\u0442\u044B, \u043D\u0435 \u043F\u043E\u0445\u043E\u0436\u0435\u0439 \u043D\u0430 \u044F\u043A\u043E\u0440\u044C (\u043F\u043E\u0434\u043C\u0435\u0448\u0438\u0432\u0430\u0435\u0442 \u0447\u0443\u0436\u043E\u0435)"),
       satK: k(0.2, 0, 3, 0.1, "\u041D\u0430\u0442\u0443\u0440\u0430: \u043D\u0430\u0441\u044B\u0449\u0435\u043D\u0438\u0435 \u2014 \u043D\u0430\u0441\u043A\u043E\u043B\u044C\u043A\u043E \u0443\u0436\u0435 \u043D\u0430\u0431\u0440\u0430\u043D\u043D\u044B\u0439 \u043F\u0440\u0438\u0437\u043D\u0430\u043A \u043E\u0441\u043B\u0430\u0431\u043B\u044F\u0435\u0442 \u0442\u044F\u0433\u0443 \u043A \u043D\u0435\u043C\u0443"),
       coreSat: k(0.3, 0, 1, 0.1, "\u041D\u0430\u0442\u0443\u0440\u0430: \u043A\u0430\u043A\u0430\u044F \u0434\u043E\u043B\u044F \u044F\u0434\u0440\u0430 \u0438\u0434\u0451\u0442 \u0432 \u0441\u0447\u0451\u0442 \u043D\u0430\u0441\u044B\u0449\u0435\u043D\u0438\u044F"),
       eventK: k(1, 0, 3, 0.1, "\u041D\u0430\u0442\u0443\u0440\u0430: \u043D\u0430\u0441\u043A\u043E\u043B\u044C\u043A\u043E \u0441\u043E\u0431\u044B\u0442\u0438\u044F \u0436\u0438\u0437\u043D\u0438 \u0442\u044F\u043D\u0443\u0442 \u0432\u044B\u0431\u043E\u0440 \u0447\u0435\u0440\u0442\u044B \u0432 \u0441\u0432\u043E\u044E \u0441\u0442\u043E\u0440\u043E\u043D\u0443"),
       repeatPenalty: k(0.4, 0, 1, 0.05, "\u041D\u0430\u0442\u0443\u0440\u0430: \u043C\u043D\u043E\u0436\u0438\u0442\u0435\u043B\u044C \u0432\u0435\u0441\u0430 \u0447\u0435\u0440\u0442\u044B, \u0443\u0436\u0435 \u0432\u0437\u044F\u0442\u043E\u0439 \u0434\u0440\u0443\u0433\u0438\u043C \u0432 \u044D\u0442\u043E\u0439 \u043F\u0430\u0440\u0442\u0438\u0438"),
+      perkWeight: k(2.5, 0.5, 10, 0.5, "\u041D\u0430\u0442\u0443\u0440\u0430: \u0432\u0435\u0441 \u043F\u0435\u0440\u043A\u0430 \u043F\u0440\u043E\u0442\u0438\u0432 \u043D\u0430\u0436\u0438\u0442\u043E\u0439 \u0447\u0435\u0440\u0442\u044B, \u043A\u043E\u0433\u0434\u0430 \u0432 \u0438\u0433\u0440\u0435 \u0435\u0441\u0442\u044C \u043F\u043E\u0432\u043E\u0434"),
       rareWeight: k(0.45, 0.05, 1, 0.05, "\u041D\u0430\u0442\u0443\u0440\u0430: \u0432\u0435\u0441 \u0440\u0435\u0434\u043A\u043E\u0439 \u0447\u0435\u0440\u0442\u044B \u043F\u0440\u043E\u0442\u0438\u0432 \u043E\u0431\u044B\u0447\u043D\u043E\u0439"),
       exceptionalWeight: k(0.15, 0.01, 1, 0.01, "\u041D\u0430\u0442\u0443\u0440\u0430: \u0432\u0435\u0441 \u0438\u0441\u043A\u043B\u044E\u0447\u0438\u0442\u0435\u043B\u044C\u043D\u043E\u0439 \u0447\u0435\u0440\u0442\u044B \u043F\u0440\u043E\u0442\u0438\u0432 \u043E\u0431\u044B\u0447\u043D\u043E\u0439"),
-      coreScale: k(1, 0.2, 2, 0.1, "\u041D\u0430\u0442\u0443\u0440\u0430: \u043C\u043D\u043E\u0436\u0438\u0442\u0435\u043B\u044C \u044F\u0434\u0440\u0430 \u0432 \u043F\u0440\u0438\u0437\u043D\u0430\u043A\u0430\u0445 \u0447\u0435\u043B\u043E\u0432\u0435\u043A\u0430"),
-      lifeSteps: k(1, 0, 6, 1, "\u041D\u0430\u0442\u0443\u0440\u0430, \u043E\u0442\u0447\u0451\u0442: \u0441\u043A\u043E\u043B\u044C\u043A\u043E \u0447\u0435\u0440\u0442 \u0436\u0438\u0437\u043D\u0438 \u0438 \u043F\u0435\u0440\u043A\u043E\u0432 \u0434\u043E\u0440\u0430\u0441\u0442\u0430\u0435\u0442 \u043F\u043E\u0441\u043B\u0435 \u0440\u043E\u0436\u0434\u0435\u043D\u0438\u044F"),
-      fateEvents: k(2, 0, 6, 1, "\u041D\u0430\u0442\u0443\u0440\u0430, \u043E\u0442\u0447\u0451\u0442: \u0441\u043A\u043E\u043B\u044C\u043A\u043E \u0441\u043E\u0431\u044B\u0442\u0438\u0439 \u0441\u0443\u0434\u044C\u0431\u044B \u0442\u044F\u043D\u0443\u0442 \u0440\u043E\u0441\u0442 \u043F\u0440\u0438 \u0440\u043E\u0436\u0434\u0435\u043D\u0438\u0438"),
-      fateStrength: k(2, 1, 5, 1, "\u041D\u0430\u0442\u0443\u0440\u0430, \u043E\u0442\u0447\u0451\u0442: \u0441\u0438\u043B\u0430 \u0441\u043E\u0431\u044B\u0442\u0438\u044F \u0441\u0443\u0434\u044C\u0431\u044B \u043F\u043E \u043F\u0440\u0438\u0437\u043D\u0430\u043A\u0443"),
+      coreScale: k(0.8, 0.2, 2, 0.1, "\u041D\u0430\u0442\u0443\u0440\u0430: \u043C\u043D\u043E\u0436\u0438\u0442\u0435\u043B\u044C \u044F\u0434\u0440\u0430 \u0432 \u043F\u0440\u0438\u0437\u043D\u0430\u043A\u0430\u0445 \u0447\u0435\u043B\u043E\u0432\u0435\u043A\u0430"),
+      lifeSteps: k(2, 0, 8, 1, "\u041D\u0430\u0442\u0443\u0440\u0430, \u043E\u0442\u0447\u0451\u0442: \u0441\u043A\u043E\u043B\u044C\u043A\u043E \u0447\u0435\u0440\u0442 \u0438 \u043F\u0435\u0440\u043A\u043E\u0432 \u0447\u0435\u043B\u043E\u0432\u0435\u043A \u043D\u0430\u0436\u0438\u0432\u0430\u0435\u0442 \u0432 \u0438\u0433\u0440\u0435"),
+      ageMin: k(30, 15, 100, 5, "\u041D\u0430\u0442\u0443\u0440\u0430, \u043E\u0442\u0447\u0451\u0442: \u0432\u043E\u0437\u0440\u0430\u0441\u0442 \u043B\u044E\u0434\u0435\u0439 \u0432 \u043F\u0440\u043E\u0433\u043E\u043D\u0435 \u2014 \u043E\u0442"),
+      ageMax: k(150, 40, 200, 5, "\u041D\u0430\u0442\u0443\u0440\u0430, \u043E\u0442\u0447\u0451\u0442: \u0432\u043E\u0437\u0440\u0430\u0441\u0442 \u043B\u044E\u0434\u0435\u0439 \u0432 \u043F\u0440\u043E\u0433\u043E\u043D\u0435 \u2014 \u0434\u043E"),
+      axisGain: k(1.5, 0.5, 3, 0.1, "\u041D\u0430\u0442\u0443\u0440\u0430: \u043E\u0431\u0449\u0438\u0439 \u043C\u043D\u043E\u0436\u0438\u0442\u0435\u043B\u044C \u0432\u0435\u0441\u043E\u0432 \u0434\u0435\u043B\u043E\u0432\u044B\u0445 \u0441\u043A\u043B\u043E\u043D\u043D\u043E\u0441\u0442\u0435\u0439 (\u0432\u044B\u0448\u0435 \u2014 \u0445\u0430\u0440\u0430\u043A\u0442\u0435\u0440\u044B \u0440\u0435\u0437\u0447\u0435)"),
       // деловые склонности из признаков: склонность = середина звезды + сумма (вес × признак)
       w: {
         dolg: {
@@ -1392,10 +2036,12 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
       // цели отчёта npm run natura (раздел 6 черновика): по ним печатаются предупреждения
       goal: {
         jaccard: k(0.5, 0.1, 1, 0.05, "\u041D\u0430\u0442\u0443\u0440\u0430, \u0446\u0435\u043B\u044C: \u043C\u0435\u0434\u0438\u0430\u043D\u043D\u0430\u044F \u043F\u043E\u0445\u043E\u0436\u0435\u0441\u0442\u044C \u0434\u0432\u0443\u0445 \u0440\u0435\u0440\u043E\u043B\u043B\u043E\u0432 \u043E\u0434\u043D\u043E\u0439 \u043D\u0430\u0442\u0443\u0440\u044B \u043D\u0435 \u0431\u043E\u043B\u044C\u0448\u0435"),
-        nnMin: k(0.6, 0, 1, 0.05, "\u041D\u0430\u0442\u0443\u0440\u0430, \u0446\u0435\u043B\u044C: \u043D\u0430\u0442\u0443\u0440\u0430 \u0443\u0433\u0430\u0434\u044B\u0432\u0430\u0435\u0442\u0441\u044F \u043F\u043E \u0447\u0435\u0440\u0442\u0430\u043C \u043D\u0435 \u0440\u0435\u0436\u0435"),
-        nnMax: k(0.85, 0, 1, 0.05, "\u041D\u0430\u0442\u0443\u0440\u0430, \u0446\u0435\u043B\u044C: \u043D\u0430\u0442\u0443\u0440\u0430 \u0443\u0433\u0430\u0434\u044B\u0432\u0430\u0435\u0442\u0441\u044F \u043F\u043E \u0447\u0435\u0440\u0442\u0430\u043C \u043D\u0435 \u0447\u0430\u0449\u0435"),
+        nnMin: k(0.2, 0, 1, 0.05, "\u041D\u0430\u0442\u0443\u0440\u0430, \u0446\u0435\u043B\u044C: \u043D\u0430\u0442\u0443\u0440\u0430 \u0443\u0433\u0430\u0434\u044B\u0432\u0430\u0435\u0442\u0441\u044F \u043F\u043E \u043D\u0430\u0431\u043E\u0440\u0443 \u0447\u0435\u0440\u0442 \u043D\u0435 \u0440\u0435\u0436\u0435 (\u043D\u0438\u0436\u0435 \u2014 \u0447\u0435\u0440\u0442\u044B \u043E\u0442 \u043D\u0430\u0442\u0443\u0440\u044B \u043D\u0435 \u0437\u0430\u0432\u0438\u0441\u044F\u0442)"),
+        nnMax: k(0.6, 0, 1, 0.05, "\u041D\u0430\u0442\u0443\u0440\u0430, \u0446\u0435\u043B\u044C: \u043D\u0430\u0442\u0443\u0440\u0430 \u0443\u0433\u0430\u0434\u044B\u0432\u0430\u0435\u0442\u0441\u044F \u043F\u043E \u043D\u0430\u0431\u043E\u0440\u0443 \u0447\u0435\u0440\u0442 \u043D\u0435 \u0447\u0430\u0449\u0435 (\u0432\u044B\u0448\u0435 \u2014 \u0448\u0430\u0431\u043B\u043E\u043D)"),
+        signNn: k(0.7, 0, 1, 0.05, "\u041D\u0430\u0442\u0443\u0440\u0430, \u0446\u0435\u043B\u044C: \u043D\u0430\u0442\u0443\u0440\u0430 \u0443\u0433\u0430\u0434\u044B\u0432\u0430\u0435\u0442\u0441\u044F \u043F\u043E \u043F\u0440\u0438\u0437\u043D\u0430\u043A\u0430\u043C \u043D\u0435 \u0440\u0435\u0436\u0435"),
+        lifeShare: k(0.6, 0, 1, 0.05, "\u041D\u0430\u0442\u0443\u0440\u0430, \u0446\u0435\u043B\u044C: \u0434\u043E\u043B\u044F \u043D\u0430\u0436\u0438\u0442\u044B\u0445 \u0447\u0435\u0440\u0442 \u0438 \u043F\u0435\u0440\u043A\u043E\u0432 \u0443 \u0447\u0435\u043B\u043E\u0432\u0435\u043A\u0430 \u043D\u0435 \u043C\u0435\u043D\u044C\u0448\u0435"),
         commonShare: k(0.25, 0.05, 1, 0.05, "\u041D\u0430\u0442\u0443\u0440\u0430, \u0446\u0435\u043B\u044C: \u043E\u0431\u044B\u0447\u043D\u0430\u044F \u0447\u0435\u0440\u0442\u0430 \u0432\u044B\u043F\u0430\u0434\u0430\u0435\u0442 \u043D\u0435 \u0431\u043E\u043B\u044C\u0448\u0435 \u0447\u0435\u043C \u0443 \u0442\u0430\u043A\u043E\u0439 \u0434\u043E\u043B\u0438 \u043B\u044E\u0434\u0435\u0439"),
-        signSpread: k(0.8, 0, 3, 0.1, "\u041D\u0430\u0442\u0443\u0440\u0430, \u0446\u0435\u043B\u044C: \u0440\u0430\u0437\u0431\u0440\u043E\u0441 \u043A\u0430\u0436\u0434\u043E\u0433\u043E \u043F\u0440\u0438\u0437\u043D\u0430\u043A\u0430 \u0441\u0440\u0435\u0434\u0438 \u0440\u0435\u0440\u043E\u043B\u043B\u043E\u0432 \u043E\u0434\u043D\u043E\u0439 \u043D\u0430\u0442\u0443\u0440\u044B \u043D\u0435 \u043D\u0438\u0436\u0435"),
+        signSpread: k(0.6, 0, 3, 0.1, "\u041D\u0430\u0442\u0443\u0440\u0430, \u0446\u0435\u043B\u044C: \u0440\u0430\u0437\u0431\u0440\u043E\u0441 \u043A\u0430\u0436\u0434\u043E\u0433\u043E \u043F\u0440\u0438\u0437\u043D\u0430\u043A\u0430 \u0441\u0440\u0435\u0434\u0438 \u0440\u0435\u0440\u043E\u043B\u043B\u043E\u0432 \u043E\u0434\u043D\u043E\u0439 \u043D\u0430\u0442\u0443\u0440\u044B \u043D\u0435 \u043D\u0438\u0436\u0435"),
         axisMean: k(1, 0, 3, 0.1, "\u041D\u0430\u0442\u0443\u0440\u0430, \u0446\u0435\u043B\u044C: \u0441\u0440\u0435\u0434\u043D\u0435\u0435 \u0434\u0435\u043B\u043E\u0432\u043E\u0439 \u0441\u043A\u043B\u043E\u043D\u043D\u043E\u0441\u0442\u0438 \u043E\u0442\u043B\u0438\u0447\u0430\u0435\u0442\u0441\u044F \u043E\u0442 \u043D\u044B\u043D\u0435\u0448\u043D\u0435\u0433\u043E \u043D\u0435 \u0431\u043E\u043B\u044C\u0448\u0435 \u0447\u0435\u043C \u043D\u0430"),
         axisSpreadMin: k(0.6, 0, 1, 0.05, "\u041D\u0430\u0442\u0443\u0440\u0430, \u0446\u0435\u043B\u044C: \u0440\u0430\u0437\u0431\u0440\u043E\u0441 \u0434\u0435\u043B\u043E\u0432\u043E\u0439 \u0441\u043A\u043B\u043E\u043D\u043D\u043E\u0441\u0442\u0438 \u2014 \u043D\u0435 \u043C\u0435\u043D\u044C\u0448\u0435 \u0442\u0430\u043A\u043E\u0439 \u0434\u043E\u043B\u0438 \u043E\u0442 \u043D\u044B\u043D\u0435\u0448\u043D\u0435\u0433\u043E"),
         axisSpreadMax: k(1.6, 1, 3, 0.05, "\u041D\u0430\u0442\u0443\u0440\u0430, \u0446\u0435\u043B\u044C: \u0440\u0430\u0437\u0431\u0440\u043E\u0441 \u0434\u0435\u043B\u043E\u0432\u043E\u0439 \u0441\u043A\u043B\u043E\u043D\u043D\u043E\u0441\u0442\u0438 \u2014 \u043D\u0435 \u0431\u043E\u043B\u044C\u0448\u0435 \u0442\u0430\u043A\u043E\u0439 \u0434\u043E\u043B\u0438 \u043E\u0442 \u043D\u044B\u043D\u0435\u0448\u043D\u0435\u0433\u043E")
@@ -1506,40 +2152,6 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
     khitry: ["\u0413\u043E\u0432\u043E\u0440\u044F\u0442, \u0441\u0435\u0431\u0435 \u043D\u0430 \u0443\u043C\u0435.", "\u0413\u043E\u0432\u043E\u0440\u044F\u0442, \u043F\u0440\u044F\u043C\u043E\u0439 \u0434\u043E\u0440\u043E\u0433\u043E\u0439 \u043D\u0435 \u0445\u043E\u0434\u0438\u0442.", "\u0413\u043E\u0432\u043E\u0440\u044F\u0442, \u0443\u043B\u044B\u0431\u0430\u0435\u0442\u0441\u044F, \u0430 \u0434\u0435\u043B\u0430\u0435\u0442 \u043F\u043E-\u0441\u0432\u043E\u0435\u043C\u0443."],
     ostorozhny: ["\u0413\u043E\u0432\u043E\u0440\u044F\u0442, \u0441\u0435\u043C\u044C \u0440\u0430\u0437 \u043E\u0442\u043C\u0435\u0440\u0438\u0442.", "\u0413\u043E\u0432\u043E\u0440\u044F\u0442, \u043D\u0430 \u0440\u0438\u0441\u043A \u043D\u0435 \u043F\u043E\u0439\u0434\u0451\u0442.", "\u0413\u043E\u0432\u043E\u0440\u044F\u0442, \u0434\u0443\u0435\u0442 \u043D\u0430 \u0432\u043E\u0434\u0443."]
   };
-
-  // src/data/backstory.ts
-  var BACKSTORY = [
-    { id: "otets_prodal_lug", text: "\u0412\u0438\u0434\u0435\u043B{\u0430}, \u043A\u0430\u043A \u043E\u0442\u0435\u0446 \u043F\u0440\u043E\u0434\u0430\u043B \u043E\u0431\u0449\u0438\u0439 \u043B\u0443\u0433 \u0437\u0430\u0435\u0437\u0436\u0435\u043C\u0443 \u043A\u0443\u043F\u0446\u0443, \u0438 \u0434\u0435\u0440\u0435\u0432\u043D\u044F \u0433\u043E\u043B\u043E\u0434\u0430\u043B\u0430 \u0437\u0438\u043C\u0443.", shift: { zabota: 2, vygoda: -1 } },
-    { id: "vydal_vora", text: "\u0412\u044B\u0434\u0430\u043B{\u0430} \u0432\u043E\u0440\u0430 \u0431\u0430\u0440\u043E\u043D\u0443 \u0438 \u043F\u043E\u0442\u043E\u043C \u0436\u0430\u043B\u0435\u043B{\u0430}: \u0432\u043E\u0440\u0430 \u043F\u043E\u0432\u0435\u0441\u0438\u043B\u0438 \u0437\u0430 \u043C\u0435\u0448\u043E\u043A \u043E\u0432\u0441\u0430.", shift: { dolg: 1, zabota: 1 } },
-    { id: "spas_prikl", text: "\u0412 \u0434\u0435\u0442\u0441\u0442\u0432\u0435 \u0437\u0430\u0431\u043B\u0443\u0434\u0438\u043B{\u0430\u0441\u044C} \u0443 \u043E\u043F\u0443\u0448\u043A\u0438; \u0432\u044B\u0432\u0435\u043B\u0438 \u043F\u0440\u0438\u043A\u043B\u044E\u0447\u0435\u043D\u0446\u044B, \u0448\u0435\u0434\u0448\u0438\u0435 \u0438\u0437 \u0441\u0442\u0430\u0440\u044B\u0445 \u0440\u0443\u0438\u043D.", shift: { derzost: 2 }, aspiration: "labirint" },
-    { id: "otets_kaznachey", text: "\u041E\u0442\u0435\u0446 \u0441\u043B\u0443\u0436\u0438\u043B \u043A\u0430\u0437\u043D\u0430\u0447\u0435\u0435\u043C \u0443 \u043F\u0440\u0435\u0436\u043D\u0435\u0433\u043E \u0431\u0430\u0440\u043E\u043D\u0430 \u0438 \u0443\u0447\u0438\u043B \u0441\u0447\u0438\u0442\u0430\u0442\u044C \u0440\u0430\u043D\u044C\u0448\u0435, \u0447\u0435\u043C \u0447\u0438\u0442\u0430\u0442\u044C.", shift: { vygoda: 2, dolg: 1 }, aspiration: "post_pisar" },
-    { id: "pozhar", text: "\u041F\u0435\u0440\u0435\u0436\u0438\u043B{\u0430} \u043F\u043E\u0436\u0430\u0440 \u0432 \u0434\u0435\u0440\u0435\u0432\u043D\u0435; \u0442\u0443\u0448\u0438\u043B\u0438 \u0432\u0441\u0435\u043C \u043C\u0438\u0440\u043E\u043C, \u0438 \u044D\u0442\u043E \u0437\u0430\u043F\u043E\u043C\u043D\u0438\u043B\u043E\u0441\u044C \u043D\u0430\u0432\u0441\u0435\u0433\u0434\u0430.", shift: { zabota: 2, obychai: 1 } },
-    { id: "babka_znakharka", text: "\u0420\u043E\u0441\u043B{\u0430} \u043F\u0440\u0438 \u0431\u0430\u0431\u043A\u0435-\u0437\u043D\u0430\u0445\u0430\u0440\u043A\u0435, \u043A\u043E\u0442\u043E\u0440\u0430\u044F \u043D\u043E\u0441\u0438\u043B\u0430 \u043B\u0435\u0441\u0443 \u0445\u043B\u0435\u0431 \u043D\u0430 \u043A\u0430\u0436\u0434\u043E\u0435 \u043F\u043E\u043B\u043D\u043E\u043B\u0443\u043D\u0438\u0435.", shift: { obychai: 3 }, aspiration: "post_lesnichiy" },
-    { id: "ushel_v_naemniki", text: "\u0414\u0432\u0430 \u0433\u043E\u0434\u0430 \u0445\u043E\u0434\u0438\u043B{\u0430} \u0441 \u043D\u0430\u0451\u043C\u043D\u0438\u043A\u0430\u043C\u0438 \u043F\u043E \u0434\u043E\u0440\u043E\u0433\u0430\u043C \u0413\u0435\u0440\u0446\u043E\u0433\u0441\u0442\u0432\u0430.", shift: { derzost: 2, dolg: -1, vygoda: 1 } },
-    { id: "dolg_kuptsu", text: "\u0421\u0435\u043C\u044C\u044F \u0433\u043E\u0434\u0430\u043C\u0438 \u043E\u0442\u0434\u0430\u0432\u0430\u043B\u0430 \u0434\u043E\u043B\u0433 \u043A\u0443\u043F\u0446\u0443; \u043E\u0442\u0434\u0430\u043B\u0438 \u0432\u0441\u0451 \u0434\u043E \u0433\u0440\u043E\u0448\u0430.", shift: { dolg: 2, vygoda: 1 } },
-    { id: "obmanul_kupets", text: "\u0411\u044B\u043B{\u0430} \u043E\u0431\u043C\u0430\u043D\u0443\u0442{\u0430} \u043A\u0443\u043F\u0446\u043E\u043C \u043D\u0430 \u044F\u0440\u043C\u0430\u0440\u043A\u0435 \u0438 \u0441 \u0442\u0435\u0445 \u043F\u043E\u0440 \u043F\u0440\u043E\u0432\u0435\u0440\u044F\u0435\u0442 \u043A\u0430\u0436\u0434\u0443\u044E \u0431\u0443\u043C\u0430\u0433\u0443.", shift: { vygoda: 1, derzost: -1 } },
-    { id: "videl_tvar", text: "\u0412\u0438\u0434\u0435\u043B{\u0430} \u0442\u0432\u0430\u0440\u044C \u0438\u0437 \u043B\u0435\u0441\u0430 \u0432\u0431\u043B\u0438\u0437\u0438 \u0438 \u0432\u044B\u0436\u0438\u043B{\u0430}, \u043F\u043E\u0442\u043E\u043C\u0443 \u0447\u0442\u043E \u043D\u0435 \u043F\u043E\u0431\u0435\u0436\u0430\u043B{\u0430}.", shift: { derzost: 1, obychai: 1 } },
-    { id: "bunt", text: "\u0417\u0430\u0441\u0442\u0430\u043B{\u0430} \u043A\u0440\u0435\u0441\u0442\u044C\u044F\u043D\u0441\u043A\u0438\u0439 \u0431\u0443\u043D\u0442 \u043F\u0440\u0438 \u043F\u0440\u0435\u0436\u043D\u0435\u043C \u0431\u0430\u0440\u043E\u043D\u0435 \u0438 \u0432\u0438\u0434\u0435\u043B{\u0430}, \u0447\u0435\u043C \u043E\u043D \u043A\u043E\u043D\u0447\u0438\u043B\u0441\u044F.", shift: { dolg: 2, zabota: -1 } },
-    { id: "vyrubka", text: "\u0420\u0443\u0431\u0438\u043B{\u0430} \u043B\u0435\u0441 \u043D\u0430 \u043F\u0440\u043E\u0434\u0430\u0436\u0443, \u043F\u043E\u043A\u0430 \u043D\u0430 \u0432\u044B\u0440\u0443\u0431\u043A\u0435 \u043D\u0435 \u043F\u0440\u043E\u043F\u0430\u043B\u0438 \u0434\u0432\u043E\u0435.", shift: { obychai: 2, vygoda: -1 } },
-    { id: "pri_dvore", text: "\u0413\u043E\u0434 \u0441\u043B\u0443\u0436\u0438\u043B{\u0430} \u043F\u0440\u0438 \u0434\u0432\u043E\u0440\u0435 \u0413\u0435\u0440\u0446\u043E\u0433\u0430 \u0438 \u043D\u0430\u0441\u043C\u043E\u0442\u0440\u0435\u043B{\u0430\u0441\u044C} \u043D\u0430 \u0447\u0443\u0436\u0443\u044E \u0440\u043E\u0441\u043A\u043E\u0448\u044C.", shift: { vygoda: 2, dolg: 1 }, aspiration: "gorod" },
-    { id: "nasledstvo", text: "\u041E\u0441\u0442\u0430\u043B{\u0441\u044F} \u0431\u0435\u0437 \u043D\u0430\u0441\u043B\u0435\u0434\u0441\u0442\u0432\u0430: \u0432\u0441\u0451 \u0443\u0448\u043B\u043E \u0441\u0442\u0430\u0440\u0448\u0435\u043C\u0443 \u0431\u0440\u0430\u0442\u0443.", shift: { vygoda: 1, derzost: 1 }, aspiration: "nadel" },
-    { id: "vyrastil_sirot", text: "\u0412\u044B\u0440\u0430\u0441\u0442\u0438\u043B{\u0430} \u0434\u0432\u043E\u0438\u0445 \u0447\u0443\u0436\u0438\u0445 \u0441\u0438\u0440\u043E\u0442 \u043A\u0430\u043A \u0441\u0432\u043E\u0438\u0445.", shift: { zabota: 3 } },
-    { id: "drak_s_other", text: "\u041D\u0430 \u043F\u0440\u0430\u0437\u0434\u043D\u0438\u043A\u0435 \u0443\u0440\u043E\u0436\u0430\u044F \u0434\u0435\u043B\u043E \u0434\u043E\u0448\u043B\u043E \u0434\u043E \u0434\u0440\u0430\u043A\u0438 \u0438\u0437-\u0437\u0430 \u0434\u0435\u0432\u0443\u0448\u043A\u0438 \u2014 {other} \u0434\u043E \u0441\u0438\u0445 \u043F\u043E\u0440 \u043D\u0435 \u0437\u0430\u0431\u044B\u043B{o\u0430}.", shift: { derzost: 1 }, link: -4 },
-    { id: "spas_other", text: "\u0412 \u043F\u043E\u043B\u043E\u0432\u043E\u0434\u044C\u0435 {other} \u0442\u043E\u043D\u0443\u043B{o\u0430}, \u0438 {name} \u0432\u044B\u0442\u0430\u0449\u0438\u043B{\u0430} \u0438\u0437 \u0440\u0435\u043A\u0438.", shift: { zabota: 1, derzost: 1 }, link: 4 },
-    { id: "vyporol_syna", text: "\u041A\u043E\u0433\u0434\u0430-\u0442\u043E \u0432\u0435\u043B\u0435\u043B{\u0430} \u0432\u044B\u043F\u043E\u0440\u043E\u0442\u044C \u0437\u0430 \u043A\u0440\u0430\u0436\u0443 \u0440\u043E\u0434\u0438\u0447\u0430 \u2014 {other} \u0442\u0430\u043A \u0438 \u043D\u0435 \u043F\u0440\u043E\u0441\u0442\u0438\u043B{o\u0430}.", shift: { dolg: 1 }, link: -5 },
-    { id: "uchilsya_u_other", text: "{other} \u043A\u043E\u0433\u0434\u0430-\u0442\u043E \u0443\u0447\u0438\u043B{o\u0430} {\u0435\u0433\u043E} \u0440\u0435\u043C\u0435\u0441\u043B\u0443 \u2014 \u0441 \u0442\u0435\u0445 \u043F\u043E\u0440 \u043E\u043D\u0438 \u0431\u043B\u0438\u0437\u043A\u0438.", shift: { dolg: 1 }, link: 4 },
-    { id: "dolg_other", text: "\u0411\u0440\u0430\u043B{\u0430} \u0432 \u0434\u043E\u043B\u0433 \u0438 \u0432\u0435\u0440\u043D\u0443\u043B{\u0430} \u043D\u0435 \u0432\u0441\u0451 \u2014 {other} \u044D\u0442\u043E \u043F\u043E\u043C\u043D\u0438\u0442.", shift: { vygoda: 1 }, link: -3 },
-    { id: "kum_other", text: "{other} \u043A\u0440\u0435\u0441\u0442\u0438\u043B{o\u0430} {\u0435\u0433\u043E} \u0440\u0435\u0431\u0451\u043D\u043A\u0430 \u2014 \u0442\u0435\u043F\u0435\u0440\u044C \u043E\u043D\u0438 \u043A\u0443\u043C\u043E\u0432\u044C\u044F.", shift: { obychai: 1 }, link: 3 },
-    { id: "starshiy_sluga", text: "\u0422\u0440\u0438\u0434\u0446\u0430\u0442\u044C \u043B\u0435\u0442 \u0441\u043B\u0443\u0436\u0438\u043B{\u0430} \u0432 \u0437\u0430\u043C\u043A\u0435 \u0438 \u0437\u043D\u0430\u0435\u0442 \u043A\u0430\u0436\u0434\u0443\u044E \u0449\u0435\u043B\u044C.", shift: { dolg: 2, obychai: 1 }, aspiration: "post_klyuchnik" },
-    { id: "vodil_karavany", text: "\u0412\u043E\u0434\u0438\u043B{\u0430} \u043E\u0445\u0440\u0430\u043D\u0443 \u043F\u0440\u0438 \u043A\u0430\u0440\u0430\u0432\u0430\u043D\u0430\u0445 \u0434\u043E \u0433\u043E\u0440\u043E\u0434\u0430.", shift: { derzost: 1, dolg: 1 }, aspiration: "post_desyatnik" },
-    { id: "vybrali_shodom", text: "\u041E\u0434\u043D\u0430\u0436\u0434\u044B \u0441\u0445\u043E\u0434 \u0432\u044B\u0431\u0440\u0430\u043B {\u0435\u0433\u043E} \u0433\u043E\u0432\u043E\u0440\u0438\u0442\u044C \u0437\u0430 \u0434\u0435\u0440\u0435\u0432\u043D\u044E \u2014 \u0438 \u043D\u0435 \u043F\u043E\u0436\u0430\u043B\u0435\u043B.", shift: { zabota: 2 }, aspiration: "post_starosta" },
-    { id: "ustal", text: "\u041F\u043E\u0445\u043E\u0440\u043E\u043D\u0438\u043B{\u0430} \u0442\u0440\u043E\u0438\u0445 \u0431\u043B\u0438\u0437\u043A\u0438\u0445 \u0437\u0430 \u043E\u0434\u043D\u0443 \u0437\u0438\u043C\u0443 \u0438 \u0441 \u0442\u0435\u0445 \u043F\u043E\u0440 \u0438\u0449\u0435\u0442 \u0442\u0438\u0448\u0438\u043D\u044B.", shift: { derzost: -2, zabota: 1 }, aspiration: "pokoy" },
-    { id: "ugovor_s_lesom", text: "\u0421\u043B\u044B\u0448\u0430\u043B{\u0430} \u043E\u0442 \u0434\u0435\u0434\u0430, \u0447\u0442\u043E \u0443 \u0437\u0430\u043C\u043A\u0430 \u0431\u044B\u043B \u0443\u0433\u043E\u0432\u043E\u0440 \u0441 \u043B\u0435\u0441\u043E\u043C, \u2014 \u0438 \u0432\u0435\u0440\u0438\u0442 \u0432 \u044D\u0442\u043E.", shift: { obychai: 2, dolg: 1 } },
-    { id: "kontrabanda", text: "\u0412\u043E\u0437\u0438\u043B{\u0430} \u0441\u043E\u043B\u044C \u043C\u0438\u043C\u043E \u043F\u043E\u0448\u043B\u0438\u043D\u044B, \u043F\u043E\u043A\u0430 \u043D\u0435 \u043F\u043E\u0439\u043C\u0430\u043B\u0438.", shift: { vygoda: 2, dolg: -2 } },
-    { id: "zhenitba_po_raschetu", text: "\u0421\u0432\u0430\u0442\u043E\u0432\u0441\u0442\u0432\u043E \u043F\u043E \u0440\u0430\u0441\u0447\u0451\u0442\u0443 \u043D\u0435 \u0441\u043B\u043E\u0436\u0438\u043B\u043E\u0441\u044C, \u0438 {\u043E\u043D} \u043D\u0435 \u0436\u0430\u043B\u0435\u0435\u0442.", shift: { zabota: 1, vygoda: -1 } },
-    { id: "pobeda_v_spore", text: "\u0412\u044B\u0438\u0433\u0440\u0430\u043B{\u0430} \u0442\u044F\u0436\u0431\u0443 \u0443 \u0441\u043E\u0441\u0435\u0434\u0441\u043A\u043E\u0433\u043E \u0443\u043F\u0440\u0430\u0432\u043B\u044F\u044E\u0449\u0435\u0433\u043E, \u0441\u043E\u0441\u043B\u0430\u0432\u0448\u0438\u0441\u044C \u043D\u0430 \u0441\u0442\u0430\u0440\u0443\u044E \u0433\u0440\u0430\u043C\u043E\u0442\u0443.", shift: { obychai: 1, dolg: 1, derzost: 1 } },
-    { id: "golod", text: "\u041F\u0435\u0440\u0435\u0436\u0438\u043B{\u0430} \u0433\u043E\u043B\u043E\u0434\u043D\u044B\u0439 \u0433\u043E\u0434 \u0438 \u0441 \u0442\u0435\u0445 \u043F\u043E\u0440 \u0434\u0435\u0440\u0436\u0438\u0442 \u0437\u0430\u043F\u0430\u0441 \u043D\u0430 \u0447\u0451\u0440\u043D\u044B\u0439 \u0434\u0435\u043D\u044C.", shift: { vygoda: 1, zabota: 1, derzost: -1 } }
-  ];
 
   // src/data/events.ts
   var EVENTS = [
@@ -2057,6 +2669,7 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
   // src/sim/natura.ts
   var SIGN_MAX = 5;
   var SIGN_IDS = SIGNS.map((s) => s.id);
+  var TRIGGERS = ["habit", "post", "rel", "break", "deed"];
   var clamp2 = (v, a, b) => Math.max(a, Math.min(b, v));
   var round12 = (v) => Math.round(v * 10) / 10;
   var dot = (a, b) => SIGN_IDS.reduce((s, k2) => s + (a[k2] ?? 0) * (b[k2] ?? 0), 0);
@@ -2085,11 +2698,19 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
   var isContra = (n, t) => cos(n.core, t.vec) <= -BALANCE.natura.contraCos;
   function signsOf(nature, traits) {
     const raw = sum([sum([nature.core], BALANCE.natura.coreScale), ...traits.map((t) => t.vec)]);
-    return Object.fromEntries(SIGN_IDS.map((k2) => [k2, round12(clamp2(raw[k2] ?? 0, -SIGN_MAX, SIGN_MAX))]));
+    return Object.fromEntries(SIGN_IDS.map((k2) => [k2, round12(SIGN_MAX * Math.tanh((raw[k2] ?? 0) / BALANCE.natura.signSoft))]));
+  }
+  function eventVec(ev) {
+    const w = BALANCE.natura.w;
+    return sum(AXES.filter((a) => ev.shift[a]).map((a) => sum([w[a]], ev.shift[a])));
+  }
+  function beforeCount(age) {
+    const extra = Math.floor(Math.max(0, age - BALANCE.natura.adultAge) / BALANCE.natura.beforeAgeStep);
+    return clamp2(BALANCE.natura.beforeMin + extra, BALANCE.natura.beforeMin, Math.max(BALANCE.natura.beforeMin, BALANCE.natura.beforeMax));
   }
   function businessStar(signs) {
     const w = BALANCE.natura.w;
-    return Object.fromEntries(AXES.map((a) => [a, round12(clamp2(BALANCE.star.center + BALANCE.natura.shift[a] + dot(w[a], signs), 0, STAR_MAX))]));
+    return Object.fromEntries(AXES.map((a) => [a, round12(clamp2(BALANCE.star.center + BALANCE.natura.shift[a] + BALANCE.natura.axisGain * dot(w[a], signs), 0, STAR_MAX))]));
   }
   var rarityWeight = (t) => t.rarity === "rare" ? BALANCE.natura.rareWeight : t.rarity === "exceptional" ? BALANCE.natura.exceptionalWeight : 1;
   function saturation(nature, traits, t) {
@@ -2114,24 +2735,20 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
     }
     return items[items.length - 1];
   }
-  function allowed(traits, kinds) {
-    return BAG.filter((t) => kinds.includes(t.kind) && !traits.includes(t) && !traits.some((x) => inConflict(x, t)) && (!t.requires || t.requires.some((id) => traits.some((x) => x.id === id))));
+  function allowed(p, kinds, swap = false) {
+    const blocks = (held, t) => inConflict(held, t) && !(swap && held.kind === "life" && t.replaces?.includes(held.id) && !isAnchor(p, held.id));
+    return BAG.filter((t) => kinds.includes(t.kind) && !p.traits.includes(t) && !p.traits.some((x) => blocks(x, t)) && (!t.requires || t.requires.some((id) => p.traits.some((x) => x.id === id))));
   }
-  function growFrom(rng, p, kinds, opts) {
-    const t = pickFrom(rng, p, kinds, opts);
-    if (t) {
-      p.traits.push(t.trait);
-      p.from[t.trait.id] = t.anchor;
-    }
-    return t?.trait;
+  var isAnchor = (p, id) => p.anchors.includes(id) || p.far === id || p.contra === id;
+  function growthTarget(rng, p) {
+    const fromFar = !!p.far && (rng.chance(BALANCE.natura.farShare) || !p.anchors.length);
+    if (fromFar) return { anchor: p.far, target: bagTrait(p.far).vec };
+    if (!p.anchors.length) return { anchor: "", target: p.nature.core };
+    const anchor = rng.pick(p.anchors);
+    return { anchor, target: sum([unit(bagTrait(anchor).vec), sum([unit(p.nature.core)], BALANCE.natura.corePull)]) };
   }
-  function pickFrom(rng, p, kinds, opts) {
-    const fromFar = rng.chance(BALANCE.natura.farShare) || !p.anchors.length;
-    const anchorId = fromFar ? p.far : rng.pick(p.anchors);
-    const anchor = bagTrait(anchorId).vec;
-    const target = fromFar ? anchor : sum([unit(anchor), sum([unit(p.nature.core)], BALANCE.natura.corePull)]);
-    const trait = pickWeighted(rng, allowed(p.traits, kinds), (t) => candidateWeight(p.nature, p.traits, t, target, opts));
-    return trait && { trait, anchor: anchorId };
+  function shortList(pool, ev) {
+    return pool.map((t, i) => ({ t, i, c: cos(t.vec, ev) })).sort((a, b) => b.c - a.c || a.i - b.i).slice(0, BALANCE.natura.eventList).map((x) => x.t);
   }
   function refresh(p) {
     p.signs = signsOf(p.nature, p.traits);
@@ -2139,36 +2756,66 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
     return p;
   }
   function growPerson(rng, nature, opts = {}) {
-    const count = opts.count ?? rng.int(BALANCE.natura.birthMin, Math.max(BALANCE.natura.birthMin, BALANCE.natura.birthMax));
-    const p = { nature, traits: [], anchors: [], far: "", contra: "", from: {}, events: opts.events ?? [], signs: signsOf(nature, []), star: businessStar(signsOf(nature, [])) };
-    const born = () => allowed(p.traits, ["born"]);
-    const w = (target) => (t) => candidateWeight(nature, p.traits, t, target, opts);
-    for (const crystal of rng.shuffle(nature.crystals).slice(0, BALANCE.natura.anchorsNear)) {
-      const t = pickWeighted(rng, born().filter((x) => cos(x.vec, crystal) > 0), w(crystal));
+    const age = opts.age ?? rng.int(BALANCE.natura.ageMin, Math.max(BALANCE.natura.ageMin, BALANCE.natura.ageMax));
+    const zero = signsOf(nature, []);
+    const p = {
+      nature,
+      age,
+      traits: [],
+      anchors: [],
+      far: "",
+      contra: "",
+      from: {},
+      via: {},
+      inGame: [],
+      lost: [],
+      events: opts.events ?? [],
+      signs: zero,
+      star: businessStar(zero)
+    };
+    const w = (target, events) => (t) => candidateWeight(nature, p.traits, t, target, { events, taken: opts.taken });
+    const innate = rng.int(BALANCE.natura.innateMin, Math.max(BALANCE.natura.innateMin, BALANCE.natura.innateMax));
+    for (const crystal of rng.shuffle(nature.crystals).slice(0, innate)) {
+      const t = pickWeighted(rng, allowed(p, ["born"]).filter((x) => cos(x.vec, crystal) > 0), w(crystal, opts.events));
       if (t) {
         p.traits.push(t);
         p.anchors.push(t.id);
       }
     }
-    const far = pickWeighted(rng, born().filter((x) => isFar(nature, x)), w());
-    if (far) {
-      p.traits.push(far);
-      p.far = far.id;
-    }
+    const count = beforeCount(age);
+    const story = opts.backstory ?? rng.shuffle(BACKSTORY).slice(0, count);
     const hasContra = () => p.traits.find((x) => isContra(nature, x));
-    while (p.traits.length < count - (hasContra() ? 0 : 1)) {
-      if (!growFrom(rng, p, ["born"], opts)) break;
-    }
-    if (!hasContra()) {
-      const t = pickWeighted(rng, born().filter((x) => isContra(nature, x)), w());
-      if (t) p.traits.push(t);
-    }
+    story.slice(0, count).forEach((ev, i) => {
+      const vec = eventVec(ev);
+      const life = allowed(p, ["life"]).filter((x) => x.source.includes("backstory"));
+      const far = i === 0, contra = !far && i === Math.min(count, story.length) - 1 && !hasContra();
+      const narrowed = far ? life.filter((x) => isFar(nature, x)) : contra ? life.filter((x) => isContra(nature, x)) : life;
+      const grow = far || contra ? void 0 : growthTarget(rng, p);
+      const list = shortList(narrowed.length ? narrowed : life, vec), events = [vec, ...opts.events ?? []];
+      const t = pickWeighted(rng, list, w(grow?.target, events)) ?? pickWeighted(rng, list, w(void 0, events));
+      if (!t) return;
+      p.traits.push(t);
+      p.via[t.id] = ev.id;
+      if (far) p.far = t.id;
+      else if (grow?.anchor) p.from[t.id] = grow.anchor;
+    });
     p.contra = hasContra()?.id ?? "";
+    delete p.from[p.contra];
     return refresh(p);
   }
   function growLife(rng, p, opts = {}) {
-    const t = growFrom(rng, p, ["life", "perk"], opts);
+    const pool = allowed(p, ["life", "perk"], true).filter((t2) => !opts.trigger || t2.trigger === opts.trigger);
+    const grow = growthTarget(rng, p);
+    const weight = (target) => (x) => candidateWeight(p.nature, p.traits, x, target, opts) * (x.kind === "perk" ? BALANCE.natura.perkWeight : 1);
+    const t = pickWeighted(rng, pool, weight(grow.target)) ?? pickWeighted(rng, pool, weight());
     if (!t) return void 0;
+    const gone = p.traits.filter((x) => x.kind === "life" && t.replaces?.includes(x.id) && !isAnchor(p, x.id));
+    p.traits = p.traits.filter((x) => !gone.includes(x));
+    p.lost.push(...gone.map((x) => x.id));
+    p.inGame = p.inGame.filter((id) => !gone.some((x) => x.id === id));
+    p.traits.push(t);
+    p.inGame.push(t.id);
+    if (grow.anchor) p.from[t.id] = grow.anchor;
     if (opts.events) p.events = [...p.events, ...opts.events];
     refresh(p);
     return t;
@@ -2183,14 +2830,10 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
       return p;
     });
   }
-  function fateEvent(rng) {
-    return { [rng.pick(SIGN_IDS)]: rng.chance(1 / 2) ? BALANCE.natura.fateStrength : -BALANCE.natura.fateStrength };
-  }
-  function rollPerson(seed, nature) {
+  function rollPerson(seed, nature, age) {
     const rng = new Rng(seed);
-    const events = Array.from({ length: BALANCE.natura.fateEvents }, () => fateEvent(rng));
-    const p = growPerson(rng, nature, { events });
-    for (let i = 0; i < BALANCE.natura.lifeSteps; i++) growLife(rng, p, { events: [fateEvent(rng)] });
+    const p = growPerson(rng, nature, { age });
+    for (let i = 0; i < BALANCE.natura.lifeSteps; i++) growLife(rng, p, { trigger: rng.pick(TRIGGERS), events: [eventVec(rng.pick(BACKSTORY))] });
     return p;
   }
 
@@ -2234,7 +2877,7 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
       const own = [];
       for (let a = 0; a < idx.length; a++) for (let b = a + 1; b < idx.length; b++) own.push(jaccard(sets[idx[a]], sets[idx[b]]));
       all.push(...own);
-      perNature[n.id] = { jaccard: round3(median(own)), nn: 0 };
+      perNature[n.id] = { jaccard: round3(median(own)), nn: 0, signNn: 0 };
       if (median(own) >= worst.value) worst = { nature: n.name, value: round3(median(own)) };
     }
     let hit = 0;
@@ -2256,7 +2899,29 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
       hit += total ? same / total : 0;
       perNature[people2[i].nature.id].nn += total ? same / total : 0;
     }
-    for (const n of NATURES) perNature[n.id].nn = round3(perNature[n.id].nn / Math.max(1, people2.filter((p) => p.nature === n).length));
+    let signHit = 0;
+    const prof = people2.map((p) => SIGNS.map((x) => p.signs[x.id]));
+    for (let i = 0; i < people2.length; i++) {
+      let best = Infinity, at = -1;
+      for (let j = 0; j < people2.length; j++) {
+        if (j === i) continue;
+        let d = 0;
+        for (let q = 0; q < prof[i].length; q++) d += (prof[i][q] - prof[j][q]) * (prof[i][q] - prof[j][q]);
+        if (d < best) {
+          best = d;
+          at = j;
+        }
+      }
+      if (at >= 0 && people2[at].nature === people2[i].nature) {
+        signHit++;
+        perNature[people2[i].nature.id].signNn++;
+      }
+    }
+    for (const n of NATURES) {
+      const size = Math.max(1, people2.filter((p) => p.nature === n).length);
+      perNature[n.id].nn = round3(perNature[n.id].nn / size);
+      perNature[n.id].signNn = round3(perNature[n.id].signNn / size);
+    }
     const count = /* @__PURE__ */ new Map();
     for (const p of people2) for (const t of p.traits) count.set(t.id, (count.get(t.id) ?? 0) + 1);
     const common = BAG.filter((t) => t.rarity === "common").map((t) => ({ trait: t.name, share: round3((count.get(t.id) ?? 0) / Math.max(1, rolls)) }));
@@ -2270,6 +2935,8 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
       jaccard: round3(median(all)),
       jaccardWorst: worst,
       nn: round3(hit / Math.max(1, people2.length)),
+      signNn: round3(signHit / Math.max(1, people2.length)),
+      lifeShare: round3(mean(people2.map((p) => p.traits.filter((t) => t.kind !== "born").length / Math.max(1, p.traits.length)))),
       never: BAG.filter((t) => !count.has(t.id)).map((t) => t.name),
       commonMax: common.reduce((a, b) => b.share > a.share ? b : a, { trait: "", share: 0 }),
       signSpread,
@@ -2287,8 +2954,10 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
   function naturaWarnings(m2) {
     const G = BALANCE.natura.goal, out = [];
     if (m2.jaccard > G.jaccard) out.push(`\u0440\u0435\u0440\u043E\u043B\u043B\u044B \u043E\u0434\u043D\u043E\u0439 \u043D\u0430\u0442\u0443\u0440\u044B \u0441\u043B\u0438\u0448\u043A\u043E\u043C \u043F\u043E\u0445\u043E\u0436\u0438: ${m2.jaccard} \u043F\u0440\u0438 \u0446\u0435\u043B\u0438 \u043D\u0435 \u0431\u043E\u043B\u044C\u0448\u0435 ${G.jaccard}`);
-    if (m2.nn < G.nnMin) out.push(`\u043D\u0430\u0442\u0443\u0440\u044B \u0441\u043B\u0438\u0432\u0430\u044E\u0442\u0441\u044F: \u0443\u0433\u0430\u0434\u044B\u0432\u0430\u0435\u0442\u0441\u044F ${m2.nn} \u043F\u0440\u0438 \u0446\u0435\u043B\u0438 \u043D\u0435 \u043C\u0435\u043D\u044C\u0448\u0435 ${G.nnMin}`);
-    if (m2.nn > G.nnMax) out.push(`\u043D\u0430\u0442\u0443\u0440\u044B \u0448\u0430\u0431\u043B\u043E\u043D\u043D\u044B: \u0443\u0433\u0430\u0434\u044B\u0432\u0430\u0435\u0442\u0441\u044F ${m2.nn} \u043F\u0440\u0438 \u0446\u0435\u043B\u0438 \u043D\u0435 \u0431\u043E\u043B\u044C\u0448\u0435 ${G.nnMax}`);
+    if (m2.nn < G.nnMin) out.push(`\u0447\u0435\u0440\u0442\u044B \u043E\u0442 \u043D\u0430\u0442\u0443\u0440\u044B \u043F\u043E\u0447\u0442\u0438 \u043D\u0435 \u0437\u0430\u0432\u0438\u0441\u044F\u0442: \u043F\u043E \u043D\u0430\u0431\u043E\u0440\u0443 \u0447\u0435\u0440\u0442 \u043E\u043D\u0430 \u0443\u0433\u0430\u0434\u044B\u0432\u0430\u0435\u0442\u0441\u044F \u0432 ${m2.nn} \u043F\u0440\u0438 \u0446\u0435\u043B\u0438 \u043D\u0435 \u043C\u0435\u043D\u044C\u0448\u0435 ${G.nnMin}`);
+    if (m2.nn > G.nnMax) out.push(`\u043D\u0430\u0442\u0443\u0440\u044B \u0448\u0430\u0431\u043B\u043E\u043D\u043D\u044B: \u043F\u043E \u043D\u0430\u0431\u043E\u0440\u0443 \u0447\u0435\u0440\u0442 \u0443\u0433\u0430\u0434\u044B\u0432\u0430\u0435\u0442\u0441\u044F ${m2.nn} \u043F\u0440\u0438 \u0446\u0435\u043B\u0438 \u043D\u0435 \u0431\u043E\u043B\u044C\u0448\u0435 ${G.nnMax}`);
+    if (m2.signNn < G.signNn) out.push(`\u043D\u0430\u0442\u0443\u0440\u044B \u0441\u043B\u0438\u0432\u0430\u044E\u0442\u0441\u044F: \u043F\u043E \u043F\u0440\u0438\u0437\u043D\u0430\u043A\u0430\u043C \u0443\u0433\u0430\u0434\u044B\u0432\u0430\u0435\u0442\u0441\u044F ${m2.signNn} \u043F\u0440\u0438 \u0446\u0435\u043B\u0438 \u043D\u0435 \u043C\u0435\u043D\u044C\u0448\u0435 ${G.signNn}`);
+    if (m2.lifeShare < G.lifeShare) out.push(`\u043D\u0430\u0436\u0438\u0442\u043E\u0433\u043E \u043C\u0430\u043B\u043E: \u0434\u043E\u043B\u044F \u043D\u0430\u0436\u0438\u0442\u044B\u0445 \u0447\u0435\u0440\u0442 ${m2.lifeShare} \u043F\u0440\u0438 \u0446\u0435\u043B\u0438 \u043D\u0435 \u043C\u0435\u043D\u044C\u0448\u0435 ${G.lifeShare}`);
     if (m2.never.length) out.push(`\u043D\u0435 \u0432\u044B\u043F\u0430\u0434\u0430\u044E\u0442 \u043D\u0438\u043A\u043E\u0433\u0434\u0430: ${m2.never.join(", ")}`);
     if (m2.commonMax.share > G.commonShare) out.push(`\u0447\u0435\u0440\u0442\u0430 \xAB${m2.commonMax.trait}\xBB \u0432\u044B\u043F\u0430\u0434\u0430\u0435\u0442 \u0441\u043B\u0438\u0448\u043A\u043E\u043C \u0447\u0430\u0441\u0442\u043E: ${m2.commonMax.share} \u043F\u0440\u0438 \u0446\u0435\u043B\u0438 \u043D\u0435 \u0431\u043E\u043B\u044C\u0448\u0435 ${G.commonShare}`);
     for (const s of SIGNS) {
@@ -2329,7 +2998,8 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
   var f1 = (v) => v.toFixed(1).replace(".", ",");
   var f2 = (v) => v.toFixed(2).replace(".", ",");
   var mean2 = (xs) => xs.length ? xs.reduce((s, v) => s + v, 0) / xs.length : 0;
-  var KIND = { born: "\u0440\u043E\u0436\u0434\u0435\u043D\u0438\u0435", life: "\u0436\u0438\u0437\u043D\u044C", perk: "\u043F\u0435\u0440\u043A" };
+  var KIND = { born: "\u0432\u0440\u043E\u0436\u0434\u0451\u043D\u043D\u0430\u044F", life: "\u043D\u0430\u0436\u0438\u0442\u0430\u044F", perk: "\u043F\u0435\u0440\u043A" };
+  var TRIGGER = { habit: "\u043F\u0440\u0438\u0432\u044B\u0447\u043A\u0430", post: "\u0434\u043E\u043B\u0436\u043D\u043E\u0441\u0442\u044C", rel: "\u043E\u0442\u043D\u043E\u0448\u0435\u043D\u0438\u044F", break: "\u043F\u0435\u0440\u0435\u043B\u043E\u043C", deed: "\u043F\u043E\u0441\u0442\u0443\u043F\u043E\u043A" };
   var RARITY = { common: "", rare: " \u2605", exceptional: " \u2605\u2605" };
   var AXIS_RGB = { dolg: "75,93,138", vygoda: "160,120,42", zabota: "78,125,74", derzost: "161,69,46", obychai: "107,79,134" };
   var signDef = (id) => SIGNS.find((s) => s.id === id);
@@ -2342,12 +3012,14 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
     const title = `${t.desc}. ${t.effect}`;
     return `<span class="tag ${t.kind}" title="${esc(title)}">${esc(t.name)}${RARITY[t.rarity]}</span>${role ? `<span class="tag role">${role}</span>` : ""}`;
   };
-  var roleOf = (p, id) => id === p.contra ? "\u043F\u0440\u043E\u0442\u0438\u0432 \u043D\u0430\u0442\u0443\u0440\u044B" : id === p.far ? "\u0438\u0437\u0434\u0430\u043B\u0435\u043A\u0430" : p.anchors.includes(id) ? "\u044F\u043A\u043E\u0440\u044C" : "";
+  var roleOf = (p, id) => id === p.contra ? "\u043F\u0440\u043E\u0442\u0438\u0432 \u043D\u0430\u0442\u0443\u0440\u044B" : id === p.far ? "\u0438\u0437\u0434\u0430\u043B\u0435\u043A\u0430" : p.inGame.includes(id) ? "\u0432 \u0438\u0433\u0440\u0435" : "";
+  var storyText = (id) => (BACKSTORY.find((ev) => ev.id === id)?.text ?? "").replace(/\{name\}/g, "\u043E\u043D").replace(/\{other\}/g, "\u0434\u0440\u0443\u0433\u043E\u0439").replace(/\{[^}]*\}/g, "");
   var track = (share, color, extra = "") => `<div class="track">${extra}<div class="fill" style="width:${Math.min(100, Math.max(0, share * 100)).toFixed(1)}%;background:${color}"></div></div>`;
   var starLine = (s) => AXES.map((a) => `<span style="color:var(--axis-${a})"><b>${AXIS_NAMES[a]}</b> ${f1(s[a])}</span>`).join(" \xB7 ");
   var GROUPS = [
-    { title: "\u0420\u043E\u0441\u0442 \u0434\u0440\u0435\u0432\u0430", open: true, has: (p) => p.split(".").length === 2 && !/lifeSteps|fate/.test(p) },
-    { title: "\u0416\u0438\u0437\u043D\u044C \u0438 \u0441\u0443\u0434\u044C\u0431\u0430 \u0432 \u043F\u0440\u043E\u0433\u043E\u043D\u0435", open: true, has: (p) => /lifeSteps|fate/.test(p) },
+    { title: "\u0421\u043A\u043E\u043B\u044C\u043A\u043E \u0447\u0435\u0440\u0442 \u0438 \u043E\u0442\u043A\u0443\u0434\u0430", open: true, has: (p) => /innate|before|adultAge|eventList|lifeSteps|ageM|perkWeight/.test(p) },
+    { title: "\u0420\u043E\u0441\u0442 \u0434\u0440\u0435\u0432\u0430", open: true, has: (p) => p.split(".").length === 2 && !/innate|before|adultAge|eventList|lifeSteps|ageM|perkWeight|signSoft|coreScale|axisGain/.test(p) },
+    { title: "\u041F\u0440\u0438\u0437\u043D\u0430\u043A\u0438 \u0438 \u0441\u043A\u043B\u043E\u043D\u043D\u043E\u0441\u0442\u0438", open: false, has: (p) => /signSoft|coreScale|axisGain/.test(p) },
     { title: "\u0412\u0435\u0441\u0430 \u0434\u0435\u043B\u043E\u0432\u044B\u0445 \u0441\u043A\u043B\u043E\u043D\u043D\u043E\u0441\u0442\u0435\u0439", open: false, has: (p) => p.startsWith("natura.w.") },
     { title: "\u041F\u043E\u043F\u0440\u0430\u0432\u043A\u0438 \u0441\u0435\u0440\u0435\u0434\u0438\u043D\u044B \u0441\u043A\u043B\u043E\u043D\u043D\u043E\u0441\u0442\u0435\u0439", open: false, has: (p) => p.startsWith("natura.shift.") },
     { title: "\u0426\u0435\u043B\u0438 \u043E\u0442\u0447\u0451\u0442\u0430", open: false, has: (p) => p.startsWith("natura.goal.") }
@@ -2392,11 +3064,13 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
     const card = (title, v, goal, ok) => `<div class="card${ok === null ? " info" : ok ? "" : " bad"}"><div>${title}</div><div class="v">${v}</div><div class="goal">${goal}</div></div>`;
     $("metric-cards").innerHTML = [
       card("\u041F\u043E\u0445\u043E\u0436\u0435\u0441\u0442\u044C \u0440\u0435\u0440\u043E\u043B\u043B\u043E\u0432 \u043E\u0434\u043D\u043E\u0439 \u043D\u0430\u0442\u0443\u0440\u044B", f2(m.jaccard), `\u0446\u0435\u043B\u044C: \u043D\u0435 \u0431\u043E\u043B\u044C\u0448\u0435 ${G.jaccard} \xB7 \u0445\u0443\u0434\u0448\u0430\u044F: ${esc(m.jaccardWorst.nature)}, ${f2(m.jaccardWorst.value)}`, m.jaccard <= G.jaccard),
-      card("\u041D\u0430\u0442\u0443\u0440\u0430 \u0443\u0433\u0430\u0434\u044B\u0432\u0430\u0435\u0442\u0441\u044F \u043F\u043E \u0447\u0435\u0440\u0442\u0430\u043C", pct(m.nn), `\u0446\u0435\u043B\u044C: ${pct(G.nnMin)}\u2013${pct(G.nnMax)}`, m.nn >= G.nnMin && m.nn <= G.nnMax),
+      card("\u0414\u043E\u043B\u044F \u043D\u0430\u0436\u0438\u0442\u043E\u0433\u043E \u0443 \u0447\u0435\u043B\u043E\u0432\u0435\u043A\u0430", pct(m.lifeShare), `\u0446\u0435\u043B\u044C: \u043D\u0435 \u043C\u0435\u043D\u044C\u0448\u0435 ${pct(G.lifeShare)}`, m.lifeShare >= G.lifeShare),
+      card("\u041D\u0430\u0442\u0443\u0440\u0430 \u0443\u0433\u0430\u0434\u044B\u0432\u0430\u0435\u0442\u0441\u044F \u043F\u043E \u043F\u0440\u0438\u0437\u043D\u0430\u043A\u0430\u043C", pct(m.signNn), `\u0446\u0435\u043B\u044C: \u043D\u0435 \u043C\u0435\u043D\u044C\u0448\u0435 ${pct(G.signNn)}`, m.signNn >= G.signNn),
+      card("\u041D\u0430\u0442\u0443\u0440\u0430 \u0443\u0433\u0430\u0434\u044B\u0432\u0430\u0435\u0442\u0441\u044F \u043F\u043E \u043D\u0430\u0431\u043E\u0440\u0443 \u0447\u0435\u0440\u0442", pct(m.nn), `\u0446\u0435\u043B\u044C: ${pct(G.nnMin)}\u2013${pct(G.nnMax)} \u2014 \u043D\u0438\u0436\u0435 \u0447\u0435\u0440\u0442\u044B \u0441\u043B\u0443\u0447\u0430\u0439\u043D\u044B, \u0432\u044B\u0448\u0435 \u0448\u0430\u0431\u043B\u043E\u043D`, m.nn >= G.nnMin && m.nn <= G.nnMax),
       card("\u041D\u0435 \u0432\u044B\u043F\u0430\u043B\u0438 \u043D\u0438 \u0440\u0430\u0437\u0443", String(m.never.length), m.never.length ? esc(m.never.join(", ")) : "\u0446\u0435\u043B\u044C: \u0442\u0430\u043A\u0438\u0445 \u043D\u0435\u0442", !m.never.length),
       card("\u0421\u0430\u043C\u0430\u044F \u0447\u0430\u0441\u0442\u0430\u044F \u043E\u0431\u044B\u0447\u043D\u0430\u044F \u0447\u0435\u0440\u0442\u0430", pct(m.commonMax.share), `\xAB${esc(m.commonMax.trait)}\xBB \xB7 \u0446\u0435\u043B\u044C: \u043D\u0435 \u0431\u043E\u043B\u044C\u0448\u0435 ${pct(G.commonShare)}`, m.commonMax.share <= G.commonShare),
       card("\u041D\u0430\u0438\u043C\u0435\u043D\u044C\u0448\u0438\u0439 \u0440\u0430\u0437\u0431\u0440\u043E\u0441 \u043F\u0440\u0438\u0437\u043D\u0430\u043A\u0430", f2(minSpread), `\u0446\u0435\u043B\u044C: \u043D\u0435 \u043D\u0438\u0436\u0435 ${G.signSpread}`, minSpread >= G.signSpread),
-      card("\u0427\u0435\u0440\u0442 \u043D\u0430 \u0447\u0435\u043B\u043E\u0432\u0435\u043A\u0430", f1(m.traitsMean), `\u0440\u043E\u0436\u0434\u0435\u043D\u0438\u0435 ${f1(m.kinds.born)} \xB7 \u0436\u0438\u0437\u043D\u044C ${f1(m.kinds.life)} \xB7 \u043F\u0435\u0440\u043A\u0438 ${f1(m.kinds.perk)}`, null),
+      card("\u0427\u0435\u0440\u0442 \u043D\u0430 \u0447\u0435\u043B\u043E\u0432\u0435\u043A\u0430", f1(m.traitsMean), `\u0432\u0440\u043E\u0436\u0434\u0451\u043D\u043D\u044B\u0445 ${f1(m.kinds.born)} \xB7 \u043D\u0430\u0436\u0438\u0442\u044B\u0445 ${f1(m.kinds.life)} \xB7 \u043F\u0435\u0440\u043A\u043E\u0432 ${f1(m.kinds.perk)}`, null),
       card("\u0412 \u043C\u0435\u0448\u043A\u0435", String(BAG.length), ["born", "life", "perk"].map((k2) => `${KIND[k2]} ${BAG.filter((t) => t.kind === k2).length}`).join(" \xB7 "), null)
     ].join("");
     const warns = naturaWarnings(m);
@@ -2417,11 +3091,13 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
     $("chart-kinds").innerHTML = `<div class="bars">${["born", "life", "perk"].map((k2) => `<div>${KIND[k2]}</div>${track(m.kinds[k2] / kmax, `var(--${k2})`)}<div class="num">${f2(m.kinds[k2])}</div>`).join("")}</div>`;
     const band = `<div class="band" style="left:${G.nnMin * 100}%;width:${(G.nnMax - G.nnMin) * 100}%"></div>`;
     const jmark = `<div class="mark" style="left:${G.jaccard * 100}%"></div>`;
-    $("chart-natures").innerHTML = `<div class="bars two">${NATURES.map((x) => {
+    $("chart-natures").innerHTML = `<div class="bars three"><div></div><div class="muted">\u043F\u043E\u0445\u043E\u0436\u0435\u0441\u0442\u044C \u0440\u0435\u0440\u043E\u043B\u043B\u043E\u0432</div><div></div>
+    <div class="muted">\u0443\u0433\u0430\u0434\u044B\u0432\u0430\u0435\u0442\u0441\u044F \u043F\u043E \u043D\u0430\u0431\u043E\u0440\u0443 \u0447\u0435\u0440\u0442</div><div></div><div class="muted">\u0443\u0433\u0430\u0434\u044B\u0432\u0430\u0435\u0442\u0441\u044F \u043F\u043E \u043F\u0440\u0438\u0437\u043D\u0430\u043A\u0430\u043C</div><div></div>${NATURES.map((x) => {
       const r = m.perNature[x.id];
       const okNn = r.nn >= G.nnMin && r.nn <= G.nnMax;
       return `<div>${esc(x.name)}</div>${track(r.jaccard, r.jaccard <= G.jaccard ? "var(--born)" : "var(--bad)", jmark)}<div class="num">${f2(r.jaccard)}</div>
-      ${track(r.nn, okNn ? "var(--good)" : "var(--perk)", band)}<div class="num">${pct(r.nn)}</div>`;
+      ${track(r.nn, okNn ? "var(--good)" : "var(--perk)", band)}<div class="num">${pct(r.nn)}</div>
+      ${track(r.signNn, r.signNn >= G.signNn ? "var(--good)" : "var(--bad)", `<div class="mark" style="left:${G.signNn * 100}%"></div>`)}<div class="num">${pct(r.signNn)}</div>`;
     }).join("")}</div>`;
     const byNature = (x) => people.filter((p) => p.nature === x);
     const signCell = (x, s) => {
@@ -2443,13 +3119,18 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
       ${track(now.mean / 10, "#b9b2a2")}<div class="num">\u0441\u0435\u0439\u0447\u0430\u0441 ${f1(now.mean)} \xB1 ${f1(now.spread)}, \u0443 ${pct(now.top)}</div>`;
     }).join("")}</div>`;
   }
-  function traitBlock(t, role = "") {
-    return `<div class="trait">${traitTag(t, role)} ${vecTags(t.vec)}<small>${esc(t.desc)}. ${esc(t.effect)}.</small></div>`;
+  function traitBlock(p, t) {
+    const origin = t.kind === "born" ? "\u0432\u0440\u043E\u0436\u0434\u0451\u043D\u043D\u0430\u044F" : p.inGame.includes(t.id) ? `\u0432 \u0438\u0433\u0440\u0435, \u043F\u043E\u0432\u043E\u0434 \u2014 ${TRIGGER[t.trigger ?? ""]}` : `\u0434\u043E \u0438\u0433\u0440\u044B: ${storyText(p.via[t.id])}`;
+    return `<div class="trait">${traitTag(t)} ${vecTags(t.vec)}<small><b>${esc(origin)}</b></small><small>${esc(t.desc)}. ${esc(t.effect)}.</small></div>`;
   }
   function personHtml(p) {
     const grown = (anchor) => p.traits.filter((t) => p.from[t.id] === anchor && t.id !== p.contra);
-    const bush = (title, id) => `<div class="bush"><h4>${title}</h4>${traitBlock(bagTrait(id))}${grown(id).map((t) => traitBlock(t, t.kind === "born" ? "" : KIND[t.kind])).join("")}</div>`;
-    const contra = p.contra && p.contra !== p.far ? `<div class="bush"><h4>\u041F\u0440\u043E\u0442\u0438\u0432\u043E\u0440\u0435\u0447\u0438\u0435: \u043F\u0440\u043E\u0442\u0438\u0432 \u044F\u0434\u0440\u0430</h4>${traitBlock(bagTrait(p.contra))}</div>` : "";
+    const has = (id) => p.traits.some((t) => t.id === id);
+    const bush = (title, id) => `<div class="bush"><h4>${title}</h4>${has(id) ? traitBlock(p, bagTrait(id)) : ""}${grown(id).map((t) => traitBlock(p, t)).join("")}</div>`;
+    const contra = p.contra && p.contra !== p.far && has(p.contra) ? `<div class="bush"><h4>\u041F\u0440\u043E\u0442\u0438\u0432\u043E\u0440\u0435\u0447\u0438\u0435: \u043F\u0440\u043E\u0442\u0438\u0432 \u044F\u0434\u0440\u0430</h4>${traitBlock(p, bagTrait(p.contra))}</div>` : "";
+    const loose = p.traits.filter((t) => !p.anchors.includes(t.id) && t.id !== p.far && t.id !== p.contra && !p.from[t.id]);
+    const rest = loose.length ? `<div class="bush"><h4>\u0421\u0430\u043C\u043E \u043F\u043E \u0441\u0435\u0431\u0435: \u0441\u043B\u0435\u0434 \u0441\u043E\u0431\u044B\u0442\u0438\u044F, \u043A \u044F\u043A\u043E\u0440\u044F\u043C \u043D\u0435 \u0442\u044F\u043D\u0435\u0442\u0441\u044F</h4>${loose.map((t) => traitBlock(p, t)).join("")}</div>` : "";
+    const lost = p.lost.length ? `<p class="muted">\u0412\u044B\u0442\u0435\u0441\u043D\u0435\u043D\u043E \u043D\u043E\u0432\u044B\u043C\u0438 \u0447\u0435\u0440\u0442\u0430\u043C\u0438: ${p.lost.map((id) => esc(bagTrait(id).name)).join(", ")}</p>` : "";
     const signs = SIGNS.map((s) => {
       const v = p.signs[s.id], core = (p.nature.core[s.id] ?? 0) * BALANCE.natura.coreScale;
       const w = Math.abs(v) * 10, left = v >= 0 ? 50 : 50 - w;
@@ -2458,55 +3139,57 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
       <div>${esc(s.plus)}</div><div class="num">${v > 0 ? "+" : ""}${f1(v)}</div>`;
     }).join("");
     const star = AXES.map((a) => `<div>${AXIS_NAMES[a]}</div>${track(p.star[a] / 10, `var(--axis-${a})`)}<div class="num">${f1(p.star[a])}</div>`).join("");
-    const events = p.events.length ? `<p class="muted">\u0421\u0443\u0434\u044C\u0431\u0430 \u0442\u044F\u043D\u0443\u043B\u0430 \u043A: ${p.events.map(vecTags).join(" ")}</p>` : "";
-    return `<p><b>${esc(p.nature.name)}</b> \xB7 \u044F\u0434\u0440\u043E: ${vecTags(p.nature.core)} \xB7 \u0447\u0435\u0440\u0442: ${p.traits.length}</p>${events}
-    <div class="tree">${p.anchors.map((id, i) => bush(`\u042F\u043A\u043E\u0440\u044C \u044F\u0434\u0440\u0430 ${i + 1} \u0438 \u0435\u0433\u043E \u043A\u0443\u0441\u0442`, id)).join("")}${p.far ? bush("\u0414\u0430\u043B\u044C\u043D\u0438\u0439 \u044F\u043A\u043E\u0440\u044C \u0438 \u0435\u0433\u043E \u043A\u0443\u0441\u0442", p.far) : ""}${contra}</div>
+    const kinds = ["born", "life", "perk"].map((k2) => `${KIND[k2]}: ${p.traits.filter((t) => t.kind === k2).length}`).join(", ");
+    return `<p><b>${esc(p.nature.name)}</b>, ${p.age} \u043B\u0435\u0442 \xB7 \u044F\u0434\u0440\u043E: ${vecTags(p.nature.core)} \xB7 \u0447\u0435\u0440\u0442: ${p.traits.length} (${kinds})</p>${lost}
+    <div class="tree">${p.anchors.map((id, i) => bush(`\u0412\u0440\u043E\u0436\u0434\u0451\u043D\u043D\u044B\u0439 \u044F\u043A\u043E\u0440\u044C ${i + 1} \u0438 \u0435\u0433\u043E \u043A\u0443\u0441\u0442`, id)).join("")}${p.far ? bush("\u0414\u0430\u043B\u044C\u043D\u0438\u0439 \u044F\u043A\u043E\u0440\u044C (\u043D\u0430\u0436\u0438\u0442) \u0438 \u0435\u0433\u043E \u043A\u0443\u0441\u0442", p.far) : ""}${contra}${rest}</div>
     <div class="split"><div><h3>\u041F\u0440\u0438\u0437\u043D\u0430\u043A\u0438 (\u0447\u0451\u0440\u043D\u0430\u044F \u043C\u0435\u0442\u043A\u0430 \u2014 \u044F\u0434\u0440\u043E)</h3><div class="bipolar">${signs}</div></div>
     <div><h3>\u0414\u0435\u043B\u043E\u0432\u044B\u0435 \u0441\u043A\u043B\u043E\u043D\u043D\u043E\u0441\u0442\u0438 \u0438\u0437 \u043F\u0440\u0438\u0437\u043D\u0430\u043A\u043E\u0432</h3><div class="bars">${star}</div></div></div>`;
   }
   function renderPerson() {
     const nature = NATURES.find((x) => x.id === val("nature")) ?? NATURES[0];
     const seed = `${val("seed")}-\u0447\u0435\u043B\u043E\u0432\u0435\u043A-${personRoll}`;
-    $("person-view").innerHTML = personHtml(rollPerson(seed, nature));
+    const age = val("age") ? Number(val("age")) : void 0;
+    $("person-view").innerHTML = personHtml(rollPerson(seed, nature, age));
     $("person-rerolls").innerHTML = Array.from({ length: 12 }, (_, i) => {
-      const p = rollPerson(`${seed}-${i}`, nature);
-      return `<div class="reroll">${p.traits.map((t) => traitTag(t, roleOf(p, t.id))).join("")}<div class="muted">${starLine(p.star)}</div></div>`;
+      const p = rollPerson(`${seed}-${i}`, nature, age);
+      return `<div class="reroll"><span class="muted">${p.age} \u043B\u0435\u0442</span> ${p.traits.map((t) => traitTag(t, roleOf(p, t.id))).join("")}<div class="muted">${starLine(p.star)}</div></div>`;
     }).join("");
   }
   function renderParty() {
     const party = growParty(val("seed"), 10);
-    $("party-view").innerHTML = `<table><tr><th>\u041D\u0430\u0442\u0443\u0440\u0430</th><th>\u0427\u0435\u0440\u0442\u044B</th><th>\u0421\u043A\u043B\u043E\u043D\u043D\u043E\u0441\u0442\u0438</th></tr>${party.map((p) => `<tr><td><b>${esc(p.nature.name)}</b></td><td>${p.traits.map((t) => traitTag(t, roleOf(p, t.id))).join("")}</td><td>${starLine(p.star)}</td></tr>`).join("")}</table>`;
+    $("party-view").innerHTML = `<table><tr><th>\u041D\u0430\u0442\u0443\u0440\u0430</th><th>\u0412\u043E\u0437\u0440\u0430\u0441\u0442</th><th>\u0427\u0435\u0440\u0442\u044B</th><th>\u0421\u043A\u043B\u043E\u043D\u043D\u043E\u0441\u0442\u0438</th></tr>${party.map((p) => `<tr><td><b>${esc(p.nature.name)}</b></td><td class="c">${p.age}</td><td>${p.traits.map((t) => traitTag(t, roleOf(p, t.id))).join("")}</td><td>${starLine(p.star)}</td></tr>`).join("")}</table>`;
   }
   function renderTables() {
     const n = Math.max(1, people.length);
-    const born = BAG.filter((t) => t.kind === "born");
+    const born = BAG.filter((t) => t.kind === "born"), lifeBag = BAG.filter((t) => t.kind === "life");
     const names = (list) => (list ?? []).map((id) => esc(bagTrait(id).name)).join(", ");
-    $("table-natures").innerHTML = `<table><tr><th>\u041D\u0430\u0442\u0443\u0440\u0430</th><th>\u042F\u0434\u0440\u043E</th><th>\u0422\u043E\u0447\u043A\u0438 \u043A\u0440\u0438\u0441\u0442\u0430\u043B\u043B\u0438\u0437\u0430\u0446\u0438\u0438: \u0441\u043A\u043E\u043B\u044C\u043A\u043E \u0447\u0435\u0440\u0442 \u0440\u043E\u0436\u0434\u0435\u043D\u0438\u044F \u0443 \u043A\u0430\u0436\u0434\u043E\u0439</th>
-    <th>\u0414\u0430\u043B\u044C\u043D\u044F\u044F \u043E\u0431\u043B\u0430\u0441\u0442\u044C</th><th>\u041F\u0440\u043E\u0442\u0438\u0432 \u044F\u0434\u0440\u0430</th><th>\u0427\u0430\u0449\u0435 \u0432\u0441\u0435\u0433\u043E \u0432\u044B\u043F\u0430\u0434\u0430\u0435\u0442 \u0432 \u043F\u0440\u043E\u0433\u043E\u043D\u0435</th><th>\u0412\u0435\u0434\u0443\u0449\u0430\u044F \u0441\u043A\u043B\u043E\u043D\u043D\u043E\u0441\u0442\u044C</th></tr>${NATURES.map((x) => {
+    $("table-natures").innerHTML = `<table><tr><th>\u041D\u0430\u0442\u0443\u0440\u0430</th><th>\u042F\u0434\u0440\u043E</th><th>\u0422\u043E\u0447\u043A\u0438 \u043A\u0440\u0438\u0441\u0442\u0430\u043B\u043B\u0438\u0437\u0430\u0446\u0438\u0438: \u0441\u043A\u043E\u043B\u044C\u043A\u043E \u0432\u0440\u043E\u0436\u0434\u0451\u043D\u043D\u044B\u0445 \u0447\u0435\u0440\u0442 \u0443 \u043A\u0430\u0436\u0434\u043E\u0439</th>
+    <th>\u0414\u0430\u043B\u044C\u043D\u044F\u044F \u043E\u0431\u043B\u0430\u0441\u0442\u044C (\u043D\u0430\u0436\u0438\u0442\u044B\u0445)</th><th>\u041F\u0440\u043E\u0442\u0438\u0432 \u044F\u0434\u0440\u0430 (\u043D\u0430\u0436\u0438\u0442\u044B\u0445)</th><th>\u0427\u0430\u0449\u0435 \u0432\u0441\u0435\u0433\u043E \u0432\u044B\u043F\u0430\u0434\u0430\u0435\u0442 \u0432 \u043F\u0440\u043E\u0433\u043E\u043D\u0435</th><th>\u0412\u0435\u0434\u0443\u0449\u0430\u044F \u0441\u043A\u043B\u043E\u043D\u043D\u043E\u0441\u0442\u044C</th></tr>${NATURES.map((x) => {
       const own = people.filter((p) => p.nature === x);
       const freq = BAG.map((t) => ({ t, share: own.filter((p) => p.traits.includes(t)).length / Math.max(1, own.length) })).sort((a, b) => b.share - a.share).slice(0, 6);
       const crystals = x.crystals.map((c) => `${vecTags(c)} ${born.filter((t) => cos(t.vec, c) > 0).length}`).join(" ");
       const topAxis2 = AXES.reduce((best, a) => mean2(own.map((p) => p.star[a])) > mean2(own.map((p) => p.star[best])) ? a : best, AXES[0]);
       return `<tr><td><b>${esc(x.name)}</b><br><span class="muted">${x.id}</span></td><td>${vecTags(x.core)}</td><td>${crystals}</td>
-      <td class="c">${born.filter((t) => isFar(x, t)).length}</td><td class="c">${born.filter((t) => isContra(x, t)).length}</td>
+      <td class="c">${lifeBag.filter((t) => isFar(x, t)).length}</td><td class="c">${lifeBag.filter((t) => isContra(x, t)).length}</td>
       <td>${freq.map((r) => `${traitTag(r.t)} ${pct(r.share)}`).join(" ")}</td><td>${AXIS_NAMES[topAxis2]} ${f1(mean2(own.map((p) => p.star[topAxis2])))}</td></tr>`;
     }).join("")}</table>`;
     const kind = val("bag-kind"), sort = val("bag-sort");
     let bag = BAG.filter((t) => !kind || t.kind === kind);
     if (sort === "freq") bag = [...bag].sort((a, b) => m.count[b.id] - m.count[a.id]);
     if (sort === "name") bag = [...bag].sort((a, b) => a.name.localeCompare(b.name, "ru"));
-    $("table-bag").innerHTML = `<table><tr><th>\u0427\u0435\u0440\u0442\u0430</th><th>\u0412\u0438\u0434</th><th>\u0412\u0435\u043A\u0442\u043E\u0440</th><th>\u0427\u0442\u043E \u044D\u0442\u043E</th><th>\u041A\u0430\u043A \u0434\u0435\u0439\u0441\u0442\u0432\u0443\u0435\u0442</th><th>\u041D\u0435 \u0443\u0436\u0438\u0432\u0430\u0435\u0442\u0441\u044F \u0441</th><th>\u041D\u0443\u0436\u043D\u0430 \u043E\u0434\u043D\u0430 \u0438\u0437</th>
+    $("table-bag").innerHTML = `<table><tr><th>\u0427\u0435\u0440\u0442\u0430</th><th>\u0412\u0438\u0434</th><th>\u0412\u0435\u043A\u0442\u043E\u0440</th><th>\u0427\u0442\u043E \u044D\u0442\u043E</th><th>\u041A\u0430\u043A \u0434\u0435\u0439\u0441\u0442\u0432\u0443\u0435\u0442</th><th>\u041F\u043E\u0432\u043E\u0434 \u0432 \u0438\u0433\u0440\u0435</th><th>\u041D\u0435 \u0443\u0436\u0438\u0432\u0430\u0435\u0442\u0441\u044F \u0441</th><th>\u0412\u044B\u0442\u0435\u0441\u043D\u044F\u0435\u0442</th><th>\u041D\u0443\u0436\u043D\u0430 \u043E\u0434\u043D\u0430 \u0438\u0437</th>
     <th>\u0412\u044B\u043F\u0430\u0434\u0430\u0435\u0442</th><th>\u0423 \u043A\u0430\u043A\u0438\u0445 \u043D\u0430\u0442\u0443\u0440 \u0447\u0430\u0449\u0435</th></tr>${bag.map((t) => {
       const conflicts = BAG.filter((x) => x.conflicts?.includes(t.id) || t.conflicts?.includes(x.id)).map((x) => esc(x.name)).join(", ");
       const at = NATURES.map((x) => ({ x, c: people.filter((p) => p.nature === x && p.traits.includes(t)).length })).filter((r) => r.c).sort((a, b) => b.c - a.c).slice(0, 3);
-      return `<tr><td>${traitTag(t)}${t.hidden ? `<span class="tag role">\u0441\u043A\u0440\u044B\u0442\u0430\u044F</span>` : ""}<br><span class="muted">${t.id}</span></td><td>${KIND[t.kind]}</td><td>${vecTags(t.vec)}</td>
-      <td>${esc(t.desc)}</td><td>${esc(t.effect)}</td><td>${conflicts}</td><td>${names(t.requires)}</td>
+      const flags = `${t.hidden ? `<span class="tag role">\u0441\u043A\u0440\u044B\u0442\u0430\u044F</span>` : ""}${t.council ? `<span class="tag role">\u0443\u0436\u0435 \u0432 \u0441\u043E\u0432\u0435\u0442\u0435</span>` : ""}`;
+      return `<tr><td>${traitTag(t)}${flags}<br><span class="muted">${t.id}</span></td><td>${KIND[t.kind]}</td><td>${vecTags(t.vec)}</td>
+      <td>${esc(t.desc)}</td><td>${esc(t.effect)}</td><td>${TRIGGER[t.trigger ?? ""] ?? ""}</td><td>${conflicts}</td><td>${names(t.replaces)}</td><td>${names(t.requires)}</td>
       <td class="c${m.count[t.id] ? "" : " zero"}">${pct(m.count[t.id] / n)}</td><td>${at.map((r) => esc(r.x.name)).join(", ")}</td></tr>`;
     }).join("")}</table>`;
     const w = BALANCE.natura.w;
     const poleCount = (s, dir, k2) => BAG.filter((t) => t.kind === k2 && (t.vec[s] ?? 0) * dir > 0).length;
     const poles = (s, dir) => `${poleCount(s, dir, "born")} / ${poleCount(s, dir, "life")} / ${poleCount(s, dir, "perk")}`;
-    $("table-signs").innerHTML = `<table><tr><th>\u041F\u0440\u0438\u0437\u043D\u0430\u043A</th><th>\u041F\u043B\u044E\u0441</th><th>\u041C\u0438\u043D\u0443\u0441</th><th>\u0427\u0435\u0440\u0442 \u0443 \u043F\u043B\u044E\u0441\u0430<br>\u0440\u043E\u0436\u0434. / \u0436\u0438\u0437\u043D\u044C / \u043F\u0435\u0440\u043A\u0438</th><th>\u0427\u0435\u0440\u0442 \u0443 \u043C\u0438\u043D\u0443\u0441\u0430</th>
+    $("table-signs").innerHTML = `<table><tr><th>\u041F\u0440\u0438\u0437\u043D\u0430\u043A</th><th>\u041F\u043B\u044E\u0441</th><th>\u041C\u0438\u043D\u0443\u0441</th><th>\u0427\u0435\u0440\u0442 \u0443 \u043F\u043B\u044E\u0441\u0430<br>\u0432\u0440\u043E\u0436\u0434. / \u043D\u0430\u0436\u0438\u0442\u044B\u0435 / \u043F\u0435\u0440\u043A\u0438</th><th>\u0427\u0435\u0440\u0442 \u0443 \u043C\u0438\u043D\u0443\u0441\u0430</th>
     <th>\u041D\u0430\u0442\u0443\u0440 \u0441 \u043F\u043B\u044E\u0441\u043E\u043C \u0432 \u044F\u0434\u0440\u0435</th><th>\u041D\u0430\u0442\u0443\u0440 \u0441 \u043C\u0438\u043D\u0443\u0441\u043E\u043C</th>${AXES.map((a) => `<th>\u0432\u0435\u0441 \u0432 ${AXIS_NAMES[a]}</th>`).join("")}</tr>${SIGNS.map((s) => `<tr>
     <td class="muted">${s.id}</td><td>${esc(s.plus)}</td><td>${esc(s.minus)}</td><td class="c">${poles(s.id, 1)}</td><td class="c">${poles(s.id, -1)}</td>
     <td class="c">${NATURES.filter((x) => (x.core[s.id] ?? 0) > 0).length}</td><td class="c">${NATURES.filter((x) => (x.core[s.id] ?? 0) < 0).length}</td>
@@ -2555,6 +3238,7 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
     personRoll = 0;
     renderPerson();
   });
+  $("age").addEventListener("change", renderPerson);
   $("reroll").addEventListener("click", () => {
     personRoll++;
     renderPerson();
