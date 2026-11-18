@@ -32,6 +32,7 @@ function calm(seed = "хозяйство"): World {
 }
 // Старые проверки потоков считают исполнителя «как велено» за единицу: мастерство и опыт в них выключены ручками.
 function flat() {
+  setAt("economy.flow.scale", 1);   // и скудость земли: базовые потоки — как записаны в ручках
   for (const key of ["masteryMin", "masteryMax", "expNovice", "expSettled", "expMaster"]) setAt(`economy.doer.${key}`, 1);
   noHand();
 }

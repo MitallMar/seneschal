@@ -242,6 +242,7 @@ test("скрытую черту выдаёт поступок: обход — «
     b.trait = { ...keyTrait("khitry"), mods: { sly: 1 } }; b.know.trait = false;
     setAt("council.compromiseChance", 0);
     setAt("traits.bypassChance", chance);
+    setAt("council.cohesion", 1); setAt("council.feud", 1);   // лад и вражда остального совета здесь не меряются
     return { a, b, w, e: runEvent(w, event("plotina")) };
   };
   const no = run(0);
