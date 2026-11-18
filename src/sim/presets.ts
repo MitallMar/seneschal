@@ -3,7 +3,8 @@
 import type { PostId } from "../data/types";
 import { LIFE_TRAITS, POSTS } from "../data/core";
 import { BALANCE as B } from "./balance";
-import { newWorld, holder, setRel, fitness, STAR_MAX, type World, type Person } from "./sim";
+import { newWorld } from "./sim";
+import { holder, setRel, fitness, STAR_MAX, type World, type Person } from "./state";
 
 export interface Preset { id: string; name: string; desc: string; apply: (w: World) => void }
 

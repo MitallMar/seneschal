@@ -4,6 +4,7 @@ import { HEALTH_TRAITS } from "../data/health";
 import { BALANCE as B } from "./balance";
 import { Rng } from "./rng";
 import { birthHealth, makeFamily, liveThrough, healthTrait, SEASONS_IN_YEAR, type Health, type Family } from "./health";
+import { mean, round3 } from "./util";
 
 export interface HealthMetrics {
   people: number;
@@ -22,9 +23,7 @@ export interface HealthMetrics {
   life: { median: number; reachElder: number; reachMax: number; hist: { age: number; share: number }[]; medianHealthy: number; medianBad: number }; // срок жизни взрослого
 }
 
-const mean = (xs: number[]) => (xs.length ? xs.reduce((s, v) => s + v, 0) / xs.length : 0);
 const median = (xs: number[]) => { const a = [...xs].sort((x, y) => x - y); return a.length ? a[Math.floor(a.length / 2)] : 0; };
-const round3 = (v: number) => Math.round(v * 1000) / 1000;
 const isBad = (h: Health) => h.traits.some((id) => !healthTrait(id).good && healthTrait(id).origin !== "gained");
 
 // Люди на начало партии: семьи по familySize человек, возраст от ageMin до ageMax.

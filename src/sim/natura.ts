@@ -6,7 +6,8 @@ import { SIGNS, NATURES, BAG } from "../data/natura";
 import { BACKSTORY } from "../data/backstory";
 import { BALANCE as B } from "./balance";
 import { Rng } from "./rng";
-import { STAR_MAX } from "./sim";
+import { STAR_MAX } from "./state";
+import { clamp, round1 } from "./util";
 
 // Шкала признака (не баланс): −5…+5.
 export const SIGN_MAX = 5;
@@ -33,8 +34,6 @@ export interface GrowOpts { events?: SignVec[]; taken?: Map<string, number>; age
 export interface LifeOpts { events?: SignVec[]; taken?: Map<string, number>; trigger?: BagTrigger }
 export const TRIGGERS: BagTrigger[] = ["habit", "post", "rel", "break", "deed"];
 
-const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
-const round1 = (v: number) => Math.round(v * 10) / 10;
 const dot = (a: SignVec, b: SignVec) => SIGN_IDS.reduce((s, k) => s + (a[k] ?? 0) * (b[k] ?? 0), 0);
 // Близость двух векторов признаков: 1 — одно направление, 0 — ничего общего, −1 — противоположны.
 export function cos(a: SignVec, b: SignVec): number {

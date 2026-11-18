@@ -118,3 +118,21 @@ test("пороги слов идут по порядку: враги < сопе�
   assert.ok(BALANCE.staff.startTenureMin <= BALANCE.staff.startTenureMax);
   assert.ok(BALANCE.know.notable < BALANCE.know.strong, "слабо < заметно < сильно");
 });
+
+// Циклы импортов: модуль не должен тянуть сам себя через соседей. Импорты только типов (import type, export type) не в счёт: в сборку они не попадают.
+// Рефакторинг И20 режет ядро по модулям; до И20г здесь список оставшихся циклов, он только сокращается.
+const KNOWN_CYCLES: string[][] = [["sim/authority.ts", "sim/economy.ts"]];
+
+test("в src/ нет циклов импортов, кроме известных", () => {
+  const all = Object.keys(ALLOWED).flatMap(layerFiles);
+  const runtime = (text: string) => imports(noComments(text).replace(/(?:import|export)\s+type\b[^;]*;/g, ""));
+  const graph = new Map(all.map((f) => [f, runtime(readFileSync(f, "utf8")).map((t) => `${resolve(dirname(f), t)}.ts`).filter((t) => all.includes(t))]));
+  const reach = (from: string, seen = new Set<string>()): Set<string> => {
+    for (const to of graph.get(from)!) if (!seen.has(to)) reach(to, seen.add(to));
+    return seen;
+  };
+  const reachable = new Map(all.map((f) => [f, reach(f)]));
+  // группа цикла: файлы, которые достают друг друга
+  const groups = new Set(all.filter((f) => reachable.get(f)!.has(f)).map((f) => all.filter((g) => reachable.get(f)!.has(g) && reachable.get(g)!.has(f)).map(name).sort().join(" ↔ ")));
+  assert.deepEqual([...groups].sort(), KNOWN_CYCLES.map((c) => c.join(" ↔ ")).sort());
+});

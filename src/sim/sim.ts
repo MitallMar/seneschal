@@ -1,118 +1,24 @@
 // Ядро симуляции характеров и совета. Без интерфейса — можно гонять в браузере и в Node.
-import type { Axis, Star, PostId, Side, Effect, Trait, TraitMods, Deed, Mark, AspirationDef, GameEvent, EventOption } from "../data/types";
+import type { Axis, Star, PostId, Side, Effect, Trait, TraitMods, Deed, GameEvent, EventOption } from "../data/types";
 import { AXES, AXIS_NAMES, AXIS_DAT, OPPOSED, POSTS, TRAITS, LIFE_TRAITS, MARKS, ASPIRATIONS, ROSTER } from "../data/core";
 import { RUMORS_AXIS, RUMORS_TRAIT } from "../data/rumors";
 import { BACKSTORY, LEGACY } from "../data/backstory";
 import { EVENTS } from "../data/events";
 import { BALANCE as B } from "./balance";
 import { Rng } from "./rng";
+import { clamp, round1 } from "./util";
+import { STAR_MAX, REL_MAX, relKey, getRel, isStale, topAxis, postName, holder, fitness } from "./state";
+import type { Rumor, Person, Outcome, LogEntry, Legacy, World, Economy } from "./state";
 import { PROBE } from "./probe";
 import { SIDES, VILLAGES } from "../data/economy";
 import { councilSteady, councilFeud } from "./authority";
-import { initAuthority, addAuthority, priceOf, authorityWeak, addComplaint, authoritySeason, type AuthState } from "./authority";
+import { initAuthority, addAuthority, priceOf, authorityWeak, addComplaint, authoritySeason } from "./authority";
 import { takeHands, invest } from "./economy";
-import { initEconomy, economySeason, rollForecast, addLine, addTrust, belowFloor, courseLean, elderSaw, type Economy } from "./economy";
+import { initEconomy, economySeason, rollForecast, addLine, addTrust, belowFloor, courseLean, elderSaw } from "./economy";
 
-// Черта, приобретённая по ходу жизни. target — против кого она («Злопамятный к …»); known — знает ли о ней Сенешаль.
-// У должностной черты post — на какой должности нажита, away — сколько сезонов человек уже не на этой должности.
-export interface Gained { trait: Trait; target?: number; season: number; known: boolean; post?: PostId; away?: number }
+// Состояние партии и чтение из него — state.ts; пока sim.ts отдаёт их прежним импортёрам (фасад уйдёт в И20е).
+export * from "./state";
 
-// Молва: строка, которую Сенешаль знает о человеке сразу. О черте (trait) или о склонности (axis); wrong — молва неверная.
-export interface Rumor { text: string; axis?: Axis; trait?: string; wrong: boolean }
-
-// Что Сенешаль знает о человеке. Числа звезды игрок не видит никогда: только слова по известным осям.
-export interface Knowledge {
-  talks: number;               // сколько было разговоров
-  trait: boolean;              // ключевая черта известна
-  traitAsked: boolean;         // о черте уже говорили: скрытую разговор не открывает
-  aspiration: boolean;         // стремление известно
-  axes: boolean;               // склонности рассказал сам (третий разговор)
-  seen: Record<Axis, number>;  // сколько решений по оси видели в деле
-}
-
-export interface Person {
-  id: number;
-  name: string;
-  female: boolean;
-  age: number;
-  trait: Trait;             // ключевая черта, с рождения
-  gained: Gained[];         // приобретённые черты; в предел B.traits.maxGained не входят должностные
-  mark?: Mark;
-  star: Star;
-  startStar: Star;
-  bio: string[];
-  aspiration?: AspirationDef;
-  loyalty: number;          // отношение к Сенешалю, -10..10
-  post?: PostId;
-  tenure: number;           // сезонов на текущей должности
-  exp: number;              // опыт на текущей должности (сезоны, с потолком)
-  know: Knowledge;          // что Сенешаль знает о человеке
-  rumor?: Rumor;            // молва; нет — о человеке с начала известна черта
-  recent: { season: number; axes: Axis[] }[]; // решения последних сезонов: из них складывается привычка
-  order?: Axis;             // наказ Сенешаля
-  persuade?: number;        // насколько Сенешаль уговорил его уйти с должности, 0..1
-  agreed?: boolean;         // согласен уйти: снять можно без потери авторитета
-  choices: Record<Axis, number>; // сколько раз выбирал вариант с этой осью
-  decisions: number;
-  matchedTop: number;       // сколько раз выбор совпал с ведущей осью
-}
-
-// Чем кончилось событие: никого не было, решил один, сошлись, рассудил главный, договорились, компромисс, продавил,
-// соперник настоял, саботаж, враг смолчал, по приказу Сенешаля. bypass — проигравший сделал по-своему в обход.
-export type Outcome = "empty" | "alone" | "agree" | "judge" | "deal" | "compromise" | "push" | "rival" | "sabotage" | "silent" | "ordered";
-
-export interface LogEntry {
-  season: number;
-  kind: "event" | "season" | "staff" | "info";
-  title: string;
-  lines: string[];
-  effects?: Partial<Record<Effect, number>>;
-  tone?: "good" | "bad" | "mixed" | "neutral";
-  weights?: string[];       // из чего сложился выбор: веса вариантов у каждого, кто решал («Взгляд дизайнера»)
-  outcome?: Outcome;        // чем кончилось дело в совете: по нему считают отчёты ботов
-  bypass?: boolean;         // проигравший спор сделал по-своему в обход
-}
-
-// Дело на столе Сенешаля: событие, которое придёт в этом сезоне. order — приказ: какой вариант исполнить.
-export interface Desk { event: string; order?: string }
-
-// Должность, занятая не по годности, и покровитель посаженного: сторона или человек замка. Снял — запись уходит.
-export interface Legacy { post: PostId; how: string; side?: Side; person?: number }
-
-export interface World {
-  seed: string;
-  rng: Rng;
-  people: Person[];
-  rel: Map<string, number>;
-  posts: Record<PostId, number | null>;
-  head: number | null;
-  labOpen: boolean;
-  season: number;
-  factions: Record<Side, number>;          // доверие сторон; зоны — economy.ts
-  resources: { poryadok: number };         // порядок пока копится числом (шкала строгости — задача И13)
-  eco: Economy;                            // хозяйство и подать: запасы, курс, ведомость, урок
-  auth: AuthState;                         // авторитет: ведомость, жалобы на столе, пиры
-  desk: Desk | null;                       // дело на столе: событие будущего сезона, по которому Сенешаль может отдать приказ
-  authority: number;
-  deedsLeft: number;
-  legacy: Legacy[];  // наследство прежних баронов: должности, занятые не по годности, и почему
-  log: LogEntry[];
-}
-
-// Шкалы (не баланс): звезда 0..10, отношения и лояльность −10..10. На них рассчитаны экран и тексты.
-export const STAR_MAX = 10, REL_MAX = 10;
-
-const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
-const round1 = (v: number) => Math.round(v * 10) / 10;
-const relKey = (a: number, b: number) => (a < b ? `${a}|${b}` : `${b}|${a}`);
-
-export function getRel(w: World, a: number, b: number): number {
-  return w.rel.get(relKey(a, b)) ?? 0;
-}
-// Задать отношения двоих напрямую: для тестов и заготовок ситуаций в эмуляторе. Игра меняет отношения только через addRel.
-export function setRel(w: World, a: number, b: number, v: number): void {
-  w.rel.set(relKey(a, b), clamp(v, -REL_MAX, REL_MAX));
-}
 // Поправки черт человека: ключевая и приобретённые вместе. Черта с целью действует только против своей цели (vs).
 type ModKey = Exclude<keyof TraitMods, "grudge" | "loyalty">;
 function activeTraits(p: Person, vs?: Person): Trait[] {
@@ -151,20 +57,6 @@ export function expWord(p: Person): string {
   if (p.exp >= B.exp.settled) return "освоился";
   return "новичок";
 }
-export function isStale(p: Person): boolean {
-  return !!p.post && p.tenure >= B.exp.staleFrom;
-}
-export function topAxis(star: Star): Axis {
-  return AXES.reduce((best, a) => (star[a] > star[best] ? a : best), AXES[0]);
-}
-export function postName(id: PostId): string {
-  return POSTS.find((p) => p.id === id)!.name;
-}
-export function holder(w: World, post: PostId): Person | undefined {
-  const id = w.posts[post];
-  return id == null ? undefined : w.people[id];
-}
-
 function gender(text: string, p: Person, other?: Person): string {
   return text
     .replace(/\{name\}/g, p.name)
@@ -308,16 +200,6 @@ function makeRumor(w: World, p: Person): Rumor {
   if (!weak.length) wrong = false;
   const axis = wrong ? w.rng.pick(weak) : topAxis(p.star);
   return { text: gender(w.rng.pick(RUMORS_AXIS[axis]), p), axis, wrong };
-}
-
-// Годность к должности: насколько звезда совпадает с осями должности + метка
-export function fitness(p: Person, post: PostId): number {
-  const def = POSTS.find((x) => x.id === post)!;
-  let f = def.axes.reduce((s, a) => s + p.star[a], 0) / def.axes.length;
-  if (p.mark?.goodPost === post) f += B.exp.fitMarkGood;
-  if (p.mark?.badPost === post) f -= B.exp.fitMarkBad;
-  if (p.aspiration?.post === post) f += B.exp.fitAspiration;
-  return f;
 }
 
 export function autoAssign(w: World, initial = false) {
