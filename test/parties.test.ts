@@ -7,8 +7,9 @@ import assert from "node:assert/strict";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { AXES, POSTS } from "../src/data/core";
-import { newWorld, runSeason, assign, giveOrder, holder, setHead, talk } from "../src/sim/sim";
+import { newWorld, runSeason, assign, giveOrder, holder, setHead, talk, persuade, command, deskView } from "../src/sim/sim";
 import { setCourse, setFloor, payTax } from "../src/sim/economy";
+import { judge, feast } from "../src/sim/authority";
 import { COURSES, PAY } from "../src/data/economy";
 import { digest, dump } from "./_world";
 
@@ -16,7 +17,7 @@ const FILE = fileURLToPath(new URL("./parties.snapshot.json", import.meta.url));
 const SEEDS = ["замок", "лес", "герцог", "test"];
 const postIds = POSTS.map((p) => p.id);
 
-// 16 сезонов с действиями игрока: разговоры, перестановки, снятие с должности, наказы, смена главного, курс, нижняя черта, плата подати
+// 16 сезонов с действиями игрока: разговоры, перестановки, снятие с должности, наказы, смена главного, курс, нижняя черта, плата подати, пир, приказ, суд, уговор
 function party(seed: string, lab: boolean): string {
   const w = newWorld(seed, lab);
   for (let s = 0; s < 16; s++) {
@@ -37,6 +38,10 @@ function party(seed: string, lab: boolean): string {
     if (s === 9) w.eco.feedFirst = "derevni";
     if (s % 4 !== 3) payTax(w, PAY[(s * 3) % PAY.length].id, 1);
     if (s === 10) w.eco.autoPay = false;
+    if (s % 6 === 4) feast(w, s % 4 ? "pir" : "prazdnik");
+    if (s % 3 === 1) { const d = deskView(w); if (d) command(w, d.ev.options[s % d.ev.options.length].id); }
+    if (w.auth.complaints.length && s % 2) judge(w, w.auth.complaints[0].id);
+    if (s === 7 || s === 8) { const h = holder(w, "pisar"); if (h) persuade(w, h.id); }
     runSeason(w);
   }
   return digest(dump(w));

@@ -2,6 +2,7 @@ import { AXES, AXIS_NAMES, POSTS, FACTION_NAMES, RESOURCE_NAMES } from "../data/
 import { SIDES, SIDE_NAMES, SIDE_GIVES, CATEGORIES, CATEGORY_NAMES, CATEGORY_UNIT, COURSES, SEASON_NAMES } from "../data/economy";
 import type { Axis, PostId, Star, Effect, Category, CourseId, PayId, Stock } from "../data/types";
 import { BALANCE as B } from "../sim/balance";
+import { authorityCap, authoritySupport, judge, feast, feastGain, feastCost, FEASTS, type AuthLine, type FeastId } from "../sim/authority";
 import {
   zoneOf, patienceWord, handsNow, fieldHands, forecastFork, ledgerOf, payOptions, payTax, taxLeft, setCourse, setFloor,
   seasonKind, elderRel, doer, planSeason, type LedgerLine,
@@ -9,7 +10,7 @@ import {
 import {
   newWorld, runSeason, assign, assignCost, setHead, talk, giveOrder, holder, getRel, relWord,
   loyaltyWord, expWord, isStale, forecast, consistency, fitness, topAxis, postName,
-  axisKnown, axisWord, fitWord, headOpinion, nextTalk, rumorCheck, traitLabel,
+  axisKnown, axisWord, fitWord, headOpinion, nextTalk, rumorCheck, traitLabel, persuade, command, deskView,
   type World, type Person,
 } from "../sim/sim";
 
@@ -292,6 +293,57 @@ function renderSides() {
   $("eco-sides").innerHTML = sides + order + elders;
 }
 
+// ---------- Стол Сенешаля: авторитет, дело сезона, жалобы, обычаи ----------
+function authLine(l: AuthLine): string {
+  return `<div class="ll" data-kind="${l.kind}"><span class="lv ${l.v > 0 ? "pos" : "neg"}">${signed(l.v)}</span><span class="lt">${esc(l.text)}</span></div>`;
+}
+
+function renderDesk() {
+  const a = w.auth, support = authoritySupport(w), noDeeds = w.deedsLeft <= 0;
+  const last = a.last
+    ? `<div class="auth-ledger" id="auth-ledger"><b>Ведомость авторитета: ${seasonLabel(a.lastSeason)}</b>${a.last.map(authLine).join("") || "<p>Без перемен.</p>"}</div>`
+    : `<div class="auth-ledger" id="auth-ledger"><p>Ведомость авторитета появится после первого сезона.</p></div>`;
+  const now = a.cur.length ? `<div class="auth-ledger" id="auth-now"><b>В этом сезоне уже</b>${a.cur.map(authLine).join("")}</div>` : "";
+  const why = support.lines.map((l) => `${signed(l.v)} ${l.text.replace("опора: ", "")}`).join("; ") || "опоры нет";
+  $("auth").innerHTML = `<div id="auth-line">Авторитет <b>${fmt(w.authority)}</b> из ${fmt(authorityCap())} · опора за сезон <b>${signed(support.total) || "0"}</b></div>
+    <p class="hint" id="auth-support">${esc(why)}. Сверх потолка авторитет сгорает.</p>${now}${last}`;
+
+  const d = deskView(w);
+  if (!d) $("desk").innerHTML = `<h3>Дело сезона</h3><p class="hint">На столе пусто.</p>`;
+  else {
+    const advice = d.advisor && d.opinion ? `${esc(d.advisor.name)} (${postName(d.advisor.post!).toLowerCase()}) советует: «${esc(d.opinion.text)}».` : "Должность пуста: советовать некому.";
+    const buttons = d.ev.options.map((o) => {
+      const mine = d.opinion?.id === o.id ? " ← совет" : "";
+      return `<button data-command="${o.id}" ${noDeeds || d.order ? "disabled" : ""}>${esc(o.text)}${mine}</button>`;
+    }).join("");
+    const state = d.order ? `<p class="ordered" id="desk-order">Приказано: «${esc(d.order.text)}».</p>`
+      : `<p class="hint">Приказ — личное дело. Не прикажешь — совет решит сам. Приказал против совета и вышло хорошо — авторитет растёт, плохо — падает.</p>`;
+    $("desk").innerHTML = `<h3>Дело сезона: ${esc(d.ev.title)}</h3><p class="desk-text">${esc(d.ev.text)}</p>
+      <p class="desk-advice" id="desk-advice">${advice}</p><div class="desk-opts">${buttons}</div>${state}`;
+  }
+  $("desk").querySelectorAll<HTMLButtonElement>("button[data-command]").forEach((b) =>
+    b.addEventListener("click", () => { command(w, b.dataset.command!); render(); }));
+
+  const list = a.complaints.map((c) => {
+    const old = c.season < w.season ? " · лежит с прошлого сезона" : "";
+    return `<div class="complaint"><span>${esc(w.people[c.from].name)} на ${esc(w.people[c.on].name)}${old}</span>
+      <button data-judge="${c.id}" ${noDeeds ? "disabled" : ""}>Разобрать</button></div>`;
+  }).join("");
+  $("complaints").innerHTML = `<h3>Жалобы</h3>${list || `<p class="hint">Жалоб нет.</p>`}
+    ${list ? `<p class="hint">Суд лично — личное дело, авторитет +${fmt(B.authority.judge)}. Пролежит сезон — −${fmt(B.authority.complaintLeft)}.</p>` : ""}`;
+  $("complaints").querySelectorAll<HTMLButtonElement>("button[data-judge]").forEach((b) =>
+    b.addEventListener("click", () => { judge(w, Number(b.dataset.judge)); render(); }));
+
+  const feasts = FEASTS.map((f) => {
+    const cost = feastCost(f.id), off = noDeeds || w.eco.stock[f.pay] < cost;
+    return `<button data-feast="${f.id}" ${off ? "disabled" : ""} title="${esc(f.text)}">${f.name}: ${CATEGORY_NAMES[f.pay].toLowerCase()} −${fmt(cost)}</button>`;
+  }).join("");
+  $("feasts").innerHTML = `<h3>Обычаи и пиры</h3><div class="desk-opts">${feasts}</div>
+    <p class="hint" id="feast-gain">Личное дело. Сейчас даст авторитета +${fmt(feastGain(w))}; каждый следующий за год — вдвое меньше.</p>`;
+  $("feasts").querySelectorAll<HTMLButtonElement>("button[data-feast]").forEach((b) =>
+    b.addEventListener("click", () => { feast(w, b.dataset.feast as FeastId); render(); }));
+}
+
 function renderEconomy() {
   renderCats();
   renderTrack();
@@ -339,6 +391,8 @@ function renderPeople() {
     const orderSel = `<select data-order="${p.id}" title="Наказ (во 2-м акте, стоит 1 авторитета)"><option value="">наказ: нет</option>${AXES.map((a) => `<option value="${a}" ${p.order === a ? "selected" : ""}>наказ: ${AXIS_NAMES[a]}</option>`).join("")}</select>`;
     const topic = nextTalk(p);
     const talkBtn = `<button data-talk="${p.id}" ${w.deedsLeft <= 0 || !topic ? "disabled" : ""}>${topic ? `Поговорить: ${topic}` : "Всё рассказал"}</button>`;
+    const leaveBtn = !p.post ? "" : p.agreed ? `<span class="badge agreed">согласен${p.female ? "на" : ""} уйти</span>`
+      : `<button data-persuade="${p.id}" ${w.deedsLeft <= 0 ? "disabled" : ""} title="Личное дело: уговорить уйти с должности — тогда снять можно без потери авторитета">Уговорить уйти</button>`;
     const match = designer && p.decisions ? ` · по ведущей оси (${AXIS_NAMES[topAxis(p.star)]}): <b>${consistency(p)}%</b>` : "";
     return `<div class="card ${p.post ? "on-post" : ""}" data-id="${p.id}">
       <div class="card-head">
@@ -359,11 +413,15 @@ function renderPeople() {
       <div class="card-actions">
         ${talkBtn}
         ${orderSel}
+        ${leaveBtn}
       </div>
     </div>`;
   }).join("");
   $("people").querySelectorAll<HTMLButtonElement>("button[data-talk]").forEach((b) =>
     b.addEventListener("click", () => { talk(w, Number(b.dataset.talk)); render(); }),
+  );
+  $("people").querySelectorAll<HTMLButtonElement>("button[data-persuade]").forEach((b) =>
+    b.addEventListener("click", () => { persuade(w, Number(b.dataset.persuade)); render(); }),
   );
   $("people").querySelectorAll<HTMLSelectElement>("select[data-order]").forEach((s) =>
     s.addEventListener("change", () => { giveOrder(w, Number(s.dataset.order), (s.value || null) as Axis | null); render(); }),
@@ -389,11 +447,12 @@ function renderLog() {
 }
 
 function renderStatus() {
-  $("status").innerHTML = `Сейчас: <b>${seasonLabel(w.season)}</b> · Авторитет: <b>${w.authority}</b> · Личных дел: <b>${w.deedsLeft}</b>`;
+  $("status").innerHTML = `Сейчас: <b>${seasonLabel(w.season)}</b> · Авторитет: <b>${w.authority}</b> · Личных дел: <b>${w.deedsLeft}</b> · Потолок авторитета: ${authorityCap()}`;
 }
 
 function render() {
   renderStatus();
+  renderDesk();
   renderCouncil();
   renderRelations();
   renderEconomy();

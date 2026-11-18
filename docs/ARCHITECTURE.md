@@ -37,7 +37,7 @@
 **`rng.ts`** — класс `Rng(seed)`: `next`, `range`, `int`, `pick`, `chance`, `gauss`, `shuffle`. Единственный источник случайности: одно семя и одни действия игрока дают одну и ту же партию. Порядок обращений к генератору — часть поведения: лишний вызов `rng` меняет все партии.
 
 **`balance.ts`** — все числа баланса. Каждое записано ручкой `k(значение, min, max, step, 'подпись')`; из одного описания собираются:
-- `BALANCE` — дерево чисел, его читает логика (`BALANCE.council.sabotage`); первый уровень — раздел (`star`, `decide`, `exp`, `rel`, `council`, `loyalty`, `staff`, `know`, `traits`, `report`, `natura`, `health`, `economy`, `season`; `report` — цели отчёта `npm run axes`, `natura` — ручки генератора натур и цели его отчёта, `health` — ручки здоровья и цели его отчёта; все три на ход партии не влияют);
+- `BALANCE` — дерево чисел, его читает логика (`BALANCE.council.sabotage`); первый уровень — раздел (`star`, `decide`, `exp`, `rel`, `council`, `loyalty`, `staff`, `know`, `traits`, `report`, `natura`, `health`, `economy`, `authority`, `season`; `report` — цели отчёта `npm run axes`, `natura` — ручки генератора натур и цели его отчёта, `health` — ручки здоровья и цели его отчёта; все три на ход партии не влияют);
 - `KNOBS` — список `{ path, def, min, max, step, label }` для ползунков эмулятора;
 - `getAt(path)`, `setAt(path, value)` (зажимает в диапазон и округляет до шага, меняет число прямо в `BALANCE`), `snapshotBalance()`, `restoreBalance(snap)`, `resetBalance()`.
 
@@ -60,6 +60,8 @@
 | Сезон | `economySeason`, `rollForecast` | применяет план, недодача, осенью `collect` (плательщик по умолчанию и сборщица), курс и старосты двигают доверие, зимой новый урок |
 | Подать | `payOptions`, `payTax`, `autoPayTax`, `taxLeft`, `lessonOf` | способы «чем и с кого» с курсом и пределом; плата меняет запасы, доверие, руки |
 | Что видит игрок | `forecastFork`, `ledgerOf`, `elderRel` | вилка прогноза по годности счетовода; строки ведомости без спрятанных |
+
+**`authority.ts`** — авторитет (замысел — `docs/design/avtoritet.md`, как сделано — его раздел 9). Состояние — `World.auth` (`AuthState`): строки текущего сезона `cur`, ведомость прошлого `last`, жалобы на столе `complaints`, сезоны пиров, итоги по источникам `totals`; само число — `World.authority`. Всякое изменение идёт через `addAuthority(w, v, текст, вид)`: строка в ведомость, излишек сверх `authorityCap` сгорает. `authoritySupport` считает опору сезона, `authoritySeason` (зовёт `upkeep` после хозяйства) списывает брошенные жалобы и начисляет опору; `judge` и `feast` — личные дела игрока; `addComplaint` зовёт спор в совете. Подать двигает авторитет из `economy.ts` (`collect`). В `sim.ts` рядом: `World.desk` — дело сезона (`pickDesk`, `deskView`, `command`, внутренняя `runOrdered`) и уговор (`persuade`, `persuadeStep`, поля `Person.persuade` и `agreed`).
 
 **`economy-report.ts`** — метрики для `npm run economy` и тестов: `economyMetrics` (партии без игрока с выбранным плательщиком `PAYERS`), `freeYear` (год без событий, все стороны в одной зоне), `economyNotes` (замечания по целям `economy.goal`).
 

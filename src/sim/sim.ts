@@ -7,6 +7,7 @@ import { EVENTS } from "../data/events";
 import { BALANCE as B } from "./balance";
 import { Rng } from "./rng";
 import { SIDES, VILLAGES } from "../data/economy";
+import { initAuthority, addAuthority, addComplaint, authoritySeason, type AuthState } from "./authority";
 import { initEconomy, economySeason, rollForecast, addLine, addTrust, belowFloor, courseLean, elderSaw, type Economy } from "./economy";
 
 // Черта, приобретённая по ходу жизни. target — против кого она («Злопамятный к …»); known — знает ли о ней Сенешаль.
@@ -46,6 +47,8 @@ export interface Person {
   rumor?: Rumor;            // молва; нет — о человеке с начала известна черта
   recent: { season: number; axes: Axis[] }[]; // решения последних сезонов: из них складывается привычка
   order?: Axis;             // наказ Сенешаля
+  persuade?: number;        // насколько Сенешаль уговорил его уйти с должности, 0..1
+  agreed?: boolean;         // согласен уйти: снять можно без потери авторитета
   choices: Record<Axis, number>; // сколько раз выбирал вариант с этой осью
   decisions: number;
   matchedTop: number;       // сколько раз выбор совпал с ведущей осью
@@ -60,6 +63,9 @@ export interface LogEntry {
   tone?: "good" | "bad" | "mixed" | "neutral";
 }
 
+// Дело на столе Сенешаля: событие, которое придёт в этом сезоне. order — приказ: какой вариант исполнить.
+export interface Desk { event: string; order?: string }
+
 export interface World {
   seed: string;
   rng: Rng;
@@ -72,6 +78,8 @@ export interface World {
   factions: Record<Side, number>;          // доверие сторон; зоны — economy.ts
   resources: { poryadok: number };         // порядок пока копится числом (шкала строгости — задача И13)
   eco: Economy;                            // хозяйство и подать: запасы, курс, ведомость, урок
+  auth: AuthState;                         // авторитет: ведомость, жалобы на столе, пиры
+  desk: Desk | null;                       // дело на столе: событие будущего сезона, по которому Сенешаль может отдать приказ
   authority: number;
   deedsLeft: number;
   log: LogEntry[];
@@ -172,7 +180,7 @@ export function newWorld(seed: string, labOpen = false): World {
     posts: { starosta: null, desyatnik: null, klyuchnik: null, pisar: null, lesnichiy: null },
     head: null, labOpen, season: 1,
     factions: Object.fromEntries(SIDES.map((s) => [s, B.economy.start.trust])) as Record<Side, number>,
-    resources: { poryadok: 0 }, eco: undefined as unknown as Economy,
+    resources: { poryadok: 0 }, eco: undefined as unknown as Economy, auth: initAuthority(), desk: null,
     authority: B.staff.authorityStart, deedsLeft: B.season.deeds, log: [],
   };
 
@@ -258,6 +266,7 @@ export function newWorld(seed: string, labOpen = false): World {
     else p.rumor = makeRumor(w, p);
   }
   initEconomy(w);
+  pickDesk(w);
   const lines = [
     "Совет расставлен по годности. Должности заняты давно — у людей есть стаж.",
     "О каждом известно что-то одно: молва или черта. Остальное откроют разговоры и дела.",
@@ -332,7 +341,7 @@ export function assignCost(w: World, p: Person, post: PostId | null): { cost: nu
   return { cost, why: why.join("; ") || "бесплатно" };
 }
 function removeCost(p: Person): { cost: number; why: string } {
-  if (!p.post) return { cost: 0, why: "" };
+  if (!p.post || p.agreed) return { cost: 0, why: "" };
   const cost = B.staff.removeBase + Math.floor(p.tenure / B.staff.removePerSeasons);
   return { cost, why: `снять ${p.name} против воли (${p.tenure} сез. на месте) — ${cost}` };
 }
@@ -340,19 +349,24 @@ function removeCost(p: Person): { cost: number; why: string } {
 export function assign(w: World, personId: number, post: PostId | null) {
   const p = w.people[personId];
   if (post && w.posts[post] === personId) return;
-  const { cost } = assignCost(w, p, post);
-  w.authority = round1(w.authority - cost);
+  const { cost, why } = assignCost(w, p, post);
+  addAuthority(w, -cost, `перестановка: ${why}`, "staff");
   const lines: string[] = [];
   if (post) {
     const prev = holder(w, post);
     if (prev) {
       prev.post = undefined; prev.tenure = 0; prev.exp = Math.floor(prev.exp * B.staff.removedExpKeep);
-      prev.loyalty = clamp(prev.loyalty + (prev.aspiration?.post === post ? B.staff.removedDesiredLoyalty : B.staff.removedLoyalty), -REL_MAX, REL_MAX);
-      lines.push(`${prev.name} снят${prev.female ? "а" : ""} с должности «${postName(post)}» и обижен${prev.female ? "а" : ""}.`);
+      if (prev.agreed) lines.push(`${prev.name} оставил${prev.female ? "а" : ""} должность «${postName(post)}» по уговору, без обиды.`);
+      else {
+        prev.loyalty = clamp(prev.loyalty + (prev.aspiration?.post === post ? B.staff.removedDesiredLoyalty : B.staff.removedLoyalty), -REL_MAX, REL_MAX);
+        lines.push(`${prev.name} снят${prev.female ? "а" : ""} с должности «${postName(post)}» и обижен${prev.female ? "а" : ""}.`);
+      }
+      prev.agreed = false; prev.persuade = 0;
     }
   }
   if (p.post) { w.posts[p.post] = null; }
-  p.post = post ?? undefined; p.tenure = 0; p.exp = 0;
+  if (p.post && !post && p.agreed) lines.push(`${p.name} оставил${p.female ? "а" : ""} должность по уговору, без обиды.`);
+  p.post = post ?? undefined; p.tenure = 0; p.exp = 0; p.agreed = false; p.persuade = 0;
   if (post) {
     w.posts[post] = p.id;
     if (p.aspiration?.post === post) {
@@ -423,9 +437,29 @@ export function talk(w: World, id: number): boolean {
   return true;
 }
 
+// Медленный путь вместо авторитета: уговорить держателя должности уйти самому — личное дело, одно или два.
+// Чем лучше он относится к Сенешалю и чем послушнее, тем быстрее; кто недоволен — не уговорить.
+export function persuadeStep(p: Person): number {
+  const A = B.authority;
+  return clamp(A.persuadeBase + p.loyalty * A.persuadeLoyalty + mod(p, "obedience") * A.persuadeObedience, 0, 1);
+}
+export function persuade(w: World, id: number): boolean {
+  const p = w.people[id];
+  if (!p.post || p.agreed || w.deedsLeft <= 0) return false;
+  w.deedsLeft--;
+  const step = persuadeStep(p), f = p.female;
+  p.persuade = round1((p.persuade ?? 0) + step);
+  const lines = [`Сенешаль говорил с ${p.name} о том, чтобы оставить должность «${postName(p.post)}».`];
+  if (p.persuade >= 1) { p.agreed = true; lines.push(`${p.name} согласил${f ? "ась" : "ся"} уйти сам${f ? "а" : ""}: снять можно без потери авторитета и без обиды.`); }
+  else if (step <= 0) lines.push(`${p.name} и слушать не стал${f ? "а" : ""}: так ${f ? "её" : "его"} не уговорить.`);
+  else lines.push(`${p.name} пока не согласен${f ? "на" : ""}, но задумал${f ? "ась" : "ся"}: нужен ещё разговор.`);
+  w.log.push({ season: w.season, kind: "info", title: "Уговор", lines });
+  return true;
+}
+
 export function giveOrder(w: World, id: number, axis: Axis | null) {
   const p = w.people[id];
-  if (axis && !p.order) w.authority = round1(w.authority - B.staff.orderCost);
+  if (axis && !p.order) addAuthority(w, -B.staff.orderCost, `наказ: ${p.name}`, "staff");
   p.order = axis ?? undefined;
   if (axis) w.log.push({ season: w.season, kind: "staff", title: "Наказ", lines: [`${p.name}: «действуй по ${AXIS_DAT[axis]}». Авторитет −${B.staff.orderCost}.`] });
 }
@@ -653,7 +687,10 @@ function council(w: World, ev: GameEvent, a: Person, b: Person, lines: string[])
     const around = bypass(w, ev, win, lose, ld.opt, lines);
     if (around) return around;
     recordChoice(w, win, wd.opt, lines);
-    if (lose.loyalty < B.council.complaintLoyalty || w.rng.chance(B.council.complaintChance)) lines.push(`📜 Жалоба: ${lose.name} ждёт Сенешаля с жалобой на ${win.name}.`);
+    if (lose.loyalty < B.council.complaintLoyalty || w.rng.chance(B.council.complaintChance)) {
+      lines.push(`📜 Жалоба: ${lose.name} ждёт Сенешаля с жалобой на ${win.name}.`);
+      addComplaint(w, lose.id, win.id);
+    }
     return applyEffects(w, ev, wd.opt, 1, win, lines);
   }
   // враги
@@ -667,6 +704,7 @@ function council(w: World, ev: GameEvent, a: Person, b: Person, lines: string[])
     w.resources.poryadok = round1(w.resources.poryadok - B.council.sabotageOrder);
     eff.poryadok = round1((eff.poryadok ?? 0) - B.council.sabotageOrder);
     lines.push(`📜 Жалобы с обеих сторон ждут Сенешаля.`);
+    addComplaint(w, lose.id, win.id); addComplaint(w, win.id, lose.id);
     return eff;
   }
   lines.push(`Они враги, но ${lose.name} на этот раз смолчал${lose.female ? "а" : ""}. ${win.name} сделал${win.female ? "а" : ""} по-своему.`);
@@ -686,14 +724,68 @@ export function forecast(p: Person): string {
   return `скорее всего, будет действовать по ${AXIS_DAT[best]}`;
 }
 
+const eventPool = (w: World) => EVENTS.filter((e) => !e.adventurers || w.labOpen);
+// Дело на столе: одно из событий будущего сезона Сенешаль видит заранее.
+function pickDesk(w: World) {
+  w.desk = { event: w.rng.pick(eventPool(w)).id };
+}
+// Что лежит на столе: событие, советник (держатель первой задетой должности, какая занята) и его мнение — что бы он выбрал сам.
+export function deskView(w: World): { ev: GameEvent; advisor?: Person; opinion?: EventOption; order?: EventOption } | undefined {
+  const ev = w.desk ? eventPool(w).find((e) => e.id === w.desk!.event) : undefined;
+  if (!ev) return undefined;
+  const advisor = ev.posts.map((post) => holder(w, post)).find((x): x is Person => !!x);
+  const opinion = advisor ? scoreOptions(w, advisor, ev, false, true).reduce((a, b) => (b.base > a.base ? b : a)).opt : undefined;
+  return { ev, advisor, opinion, order: ev.options.find((o) => o.id === w.desk!.order) };
+}
+// Приказ при Сенешале дома — личное дело: по делу на столе исполнить этот вариант. Отменить нельзя.
+export function command(w: World, optionId: string): boolean {
+  const d = deskView(w);
+  if (!d || d.order || w.deedsLeft <= 0 || !d.ev.options.some((o) => o.id === optionId)) return false;
+  w.deedsLeft--;
+  w.desk!.order = optionId;
+  const opt = d.ev.options.find((o) => o.id === optionId)!;
+  const against = d.opinion && d.opinion.id !== opt.id ? ` ${d.advisor!.name} советует иначе: «${d.opinion.text}».` : "";
+  w.log.push({ season: w.season, kind: "staff", title: "Приказ", lines: [`По делу «${d.ev.title}» Сенешаль приказал: «${opt.text}».${against}`] });
+  return true;
+}
+// Дело по приказу: исполняет советник. Приказ против его мнения — ответственность Сенешаля: вышло хорошо — авторитет и уважение, плохо — потеря.
+function runOrdered(w: World, ev: GameEvent, opt: EventOption): LogEntry {
+  const d = deskView(w)!, p = d.advisor, A = B.authority;
+  const against = !!d.opinion && d.opinion.id !== opt.id;
+  const lines = [ev.text, `Сенешаль приказал: «${opt.text}».`];
+  let mult = 1;
+  if (p && against) {
+    lines.push(`${p.name} (${postName(p.post!)}) советовал${p.female ? "а" : ""} иначе: «${d.opinion!.text}».`);
+    if (p.loyalty < B.loyalty.trusts) { mult = B.economy.doer.dull; lines.push(`Исполняет без огонька: и не согласен${p.female ? "на" : ""}, и Сенешалю не слишком верит.`); }
+  } else if (p) lines.push(`${p.name} (${postName(p.post!)}) того же мнения.`);
+  else lines.push("Должности пусты — исполнять пришлось кому попало.");
+  const effects = applyEffects(w, ev, opt, p ? mult : B.economy.doer.empty, p, lines);
+  const sum = Object.values(effects).reduce((s, v) => s + v!, 0);
+  if (p && against && sum > 0) {
+    addAuthority(w, A.rightGain, `оказался прав: «${ev.title}» против мнения ${p.name}`, "order");
+    p.loyalty = round1(clamp(p.loyalty + A.rightLoyalty, -REL_MAX, REL_MAX));
+    lines.push(`Вышло хорошо: Сенешаль оказался прав. ${p.name} это запомнит. Авторитет +${A.rightGain}.`);
+  } else if (p && against && sum < 0) {
+    addAuthority(w, -A.rightLoss, `приказ обернулся плохо: «${ev.title}» против мнения ${p.name}`, "order");
+    lines.push(`Вышло плохо, а ${p.name} предупреждал${p.female ? "а" : ""}. Авторитет −${A.rightLoss}.`);
+  }
+  const entry: LogEntry = { season: w.season, kind: "event", title: `${ev.title} — по приказу`, lines, effects, tone: toneOf(effects) };
+  w.log.push(entry);
+  return entry;
+}
+
 export function runSeason(w: World) {
-  const pool = EVENTS.filter((e) => !e.adventurers || w.labOpen);
-  const evs = w.rng.shuffle(pool).slice(0, B.season.events);
-  for (const ev of evs) runEvent(w, ev);
+  const pool = eventPool(w);
+  const desk = deskView(w);
+  const rest = w.rng.shuffle(pool.filter((e) => e !== desk?.ev)).slice(0, B.season.events - (desk ? 1 : 0));
+  if (desk?.order) runOrdered(w, desk.ev, desk.order);
+  else if (desk) runEvent(w, desk.ev);
+  for (const ev of rest) runEvent(w, ev);
   upkeep(w);
   w.season++;
   w.deedsLeft = B.season.deeds;
   rollForecast(w);
+  pickDesk(w);
 }
 
 export function runEvents(w: World, n: number) {
@@ -733,6 +825,7 @@ function upkeep(w: World) {
     if (p.loyalty <= B.loyalty.bitter && w.rng.chance(B.loyalty.leaveChance)) lines.push(`⚠ ${p.name} озлоблен${p.female ? "а" : ""} и подумывает уйти.`);
   }
   economySeason(w, lines);
+  authoritySeason(w, lines);
   w.log.push({ season: w.season, kind: "season", title: `Итог сезона ${w.season}`, lines: lines.length ? lines : ["Ничего особенного."] });
 }
 
