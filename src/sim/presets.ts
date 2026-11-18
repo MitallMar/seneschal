@@ -21,6 +21,7 @@ function vacate(w: World, post: PostId) {
   if (!p) return;
   if (w.head === p.id) w.head = null;
   w.posts[post] = null; p.post = undefined; p.tenure = 0; p.exp = 0;
+  w.legacy = w.legacy.filter((l) => l.post !== post);
 }
 
 export const PRESETS: Preset[] = [
@@ -64,7 +65,7 @@ export const PRESETS: Preset[] = [
       const tenure = w.rng.int(B.staff.startTenureMin, B.staff.startTenureMax);
       vacate(w, d.id);
       w.posts[d.id] = next.id; next.post = d.id; next.tenure = tenure; next.exp = Math.min(tenure, B.exp.master);
-      w.legacy.push({ post: d.id, how: "по милости" });
+      w.legacy.push({ post: d.id, how: "по милости", side: "dvor" });
     }
     w.head ??= council(w).reduce((a, b) => (b.loyalty > a.loyalty ? b : a)).id;
   } },

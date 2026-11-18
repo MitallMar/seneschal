@@ -54,6 +54,9 @@ export const METRICS: MetricDef[] = [
   { id: "orderWeak", name: "…услышан, но прибавки не хватило", digits: 2, group: "замеры", diag: true },
   { id: "autoPaid", name: "мер внесено автоплатой совета после жатвы", digits: 1, group: "замеры", diag: true },
   { id: "aspAt", name: "сезон, к которому известны стремления совета", digits: 1, group: "замеры", diag: true },
+  { id: "year1", name: "урок закрыт в срок: год 1", digits: 0, pct: true, group: "замеры", diag: true },
+  { id: "year2", name: "урок закрыт в срок: год 2", digits: 0, pct: true, group: "замеры", diag: true },
+  { id: "year3", name: "урок закрыт в срок: год 3", digits: 0, pct: true, group: "замеры", diag: true },
   { id: "shortFood", name: "недодано еды за партию", digits: 2, group: "замеры", diag: true },
   { id: "shortSilver", name: "недодано серебра за партию", digits: 2, group: "замеры", diag: true },
   { id: "shortTrust", name: "доверия ушло из-за недодач", digits: 2, group: "замеры", diag: true },
@@ -90,6 +93,7 @@ export function metricsOf(run: BotRun): Metrics {
     authority: w.authority, atCap: w.authority >= authorityCap() ? 1 : 0, weak: w.authority < B.authority.weakBelow ? 1 : 0,
     orderFit: run.probe.order.fit, orderWorked: run.probe.order.worked, orderAlready: run.probe.order.already,
     orderDeaf: run.probe.order.deaf, orderWeak: run.probe.order.weak, autoPaid: run.probe.autoPaid, aspAt: run.aspAt,
+    year1: t.history[0]?.closed ? 1 : 0, year2: t.history[1]?.closed ? 1 : 0, year3: t.history[2]?.closed ? 1 : 0,
     shortFood: run.probe.short.food, shortSilver: run.probe.short.silver, shortTrust: run.probe.short.trust,
     support: a.support, spent: -a.staff, earned: a.judge + a.feast + a.order + a.tax + a.complaint, burned: -a.burn, right: a.order,
   };

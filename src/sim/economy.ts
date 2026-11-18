@@ -7,7 +7,7 @@ import { HANDS, LEVERS, type Hand, type Lever } from "../data/handwriting";
 import { POSTS, AXIS_NAMES } from "../data/core";
 import { SIDES, VILLAGES, SIDE_NAMES, CATEGORY_NAMES, COURSES, ELDERS, PAY, HANDS_FROM, STOCKS, SEASON_NAMES } from "../data/economy";
 import { BALANCE as B } from "./balance";
-import { addAuthority } from "./authority";
+import { addAuthority, councilSteady } from "./authority";
 import { PROBE } from "./probe";
 import { holder, fitness, isStale, topAxis, postName, STAR_MAX, REL_MAX, type World, type Person } from "./sim";
 
@@ -157,6 +157,8 @@ export function doer(w: World, post: PostId): Doer {
   const c = courseDef(w), top = topAxis(p.star);
   if (c?.pro.includes(top) && !stale) score++;   // засидевшегося курс не зажигает: он ведёт дело по-своему
   if (c?.contra.includes(top)) score -= w.eco.shaky ? 2 : 1;
+  // главный: признан всеми и вражды нет — довод «за» каждому в совете; главного нет, его не признают или в совете вражда — довод «против»
+  score += councilSteady(w).ok ? D.headFor : -D.headAgainst;
   if (score >= D.fireFrom) return made("с огоньком", D.fire);
   if (score <= D.dullFrom) return made("без огонька", D.dull);
   return made("как велено", D.plain);

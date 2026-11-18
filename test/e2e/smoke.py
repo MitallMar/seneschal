@@ -197,28 +197,27 @@ async def s_staff(br, errs):
         ok('получивший желанную должность благодарен', 'желанную должность' in log, log[:300])
         ok('перевод на желанную пустую должность бесплатен', holder_cost is None or after['authority'] == before['authority'], (before, after))
 
-@section('talk', 'личные дела: разговоры открывают черту, стремление и склонности по порядку и тратят дело, наказ стоит авторитета')
+@section('talk', 'личные дела: разговоры открывают стремление, склонности и черту по порядку и тратят дело, наказ стоит авторитета')
 async def s_talk(br, errs):
     pg = await open_game(br, errs, 'замок')
     who = next(c for c in await pg.evaluate(CARDS) if not c['onPost'] and c['name'] not in HIDDEN)   # о нём известна только молва
     me = lambda cards: next(c for c in cards if c['id'] == who['id'])
     btn = f"button[data-talk='{who['id']}']"
-    ok('до разговора: черта неизвестна, кнопка зовёт говорить о чертах', not who['traitKnown'] and who['talkText'] == 'Поговорить: черты', who)
+    ok('до разговора: черта неизвестна, кнопка зовёт говорить о стремлении', not who['traitKnown'] and who['talkText'] == 'Поговорить: стремление', who)
     await pg.click(btn)
     st = await status(pg); card = me(await pg.evaluate(CARDS)); log = await pg.evaluate(LOG)
     ok('разговор потратил личное дело', st['deeds'] == 2, st)
-    ok('первый разговор открыл ключевую черту — и только её', card['traitKnown'] and 'неизвестно' in card['asp'] and closed(card)
-       and 'разговоров: 1' in card['meta'], card)
-    ok('в летописи запись о разговоре с названием черты', 'Разговор' in log and 'Ключевая черта: «' + card['trait'] + '»' in log, log[:200])
+    ok('первый разговор открыл стремление — и только его', not card['traitKnown'] and 'неизвестно' not in card['asp'] and closed(card)
+       and 'разговоров: 1' in card['meta'] and card['talkText'] == 'Поговорить: склонности', card)
+    ok('в летописи запись о разговоре со стремлением', 'Разговор' in log and 'Стремление:' in log, log[:200])
     await pg.click(btn)
     card = me(await pg.evaluate(CARDS))
-    ok('второй разговор открыл стремление, склонности ещё закрыты', 'неизвестно' not in card['asp'] and closed(card)
-       and card['talkText'] == 'Поговорить: склонности', card)
-    await pg.click(btn)
-    st = await status(pg); cards = await pg.evaluate(CARDS); card = me(cards)
-    ok('третий разговор открыл склонности словами, без чисел', all(a['known'] and a['lvl'] in WORDS for a in card['axes'])
-       and card['rays'] == 5 and not re.search(r'\d\.\d', card['stats']), card['axes'])
+    ok('второй разговор открыл склонности словами, без чисел; черта ещё закрыта', all(a['known'] and a['lvl'] in WORDS for a in card['axes'])
+       and card['rays'] == 5 and not re.search(r'\d\.\d', card['stats']) and not card['traitKnown'] and card['talkText'] == 'Поговорить: черты', card['axes'])
     ok('в летописи склонности названы словами', re.search(r'Склонности: Долг — (сильно|заметно|слабо)', await pg.evaluate(LOG)) is not None)
+    await pg.click(btn)
+    st = await status(pg); cards = await pg.evaluate(CARDS); card = me(cards); log = await pg.evaluate(LOG)
+    ok('третий разговор открыл ключевую черту', card['traitKnown'] and 'Ключевая черта: «' + card['trait'] + '»' in log, log[:200])
     ok('рассказывать больше нечего: кнопка говорит об этом', card['talkText'] == 'Всё рассказал' and not card['talk'])
     ok('личные дела кончились: кнопки «Поговорить» выключены у всех', st['deeds'] == 0 and not any(c['talk'] for c in cards), st)
     council = await pg.evaluate(COUNCIL)
@@ -292,10 +291,12 @@ async def s_know(br, errs):
     sly = next(c for c in cards if c['name'] == HIDDEN[0])
     await pg.click(f"button[data-talk='{sly['id']}']")
     card = next(c for c in await pg.evaluate(CARDS) if c['id'] == sly['id']); log = await pg.evaluate(LOG)
-    ok('скрытую черту разговор не открыл: дело потрачено, на карточке «выдаст поступок»', not card['traitKnown'] and 'выдаст поступок' in card['trait']
-       and (await status(pg))['deeds'] == 2 and 'выдаст только поступок' in log, card['trait'])
-    ok('тем же разговором скрытный рассказал о стремлении; следующий разговор — о склонностях', 'неизвестно' not in card['asp']
+    ok('первый разговор со скрытным — о стремлении; следующий — о склонностях', 'неизвестно' not in card['asp'] and (await status(pg))['deeds'] == 2
        and 'Стремление:' in log and card['talkText'] == 'Поговорить: склонности', (card['asp'], card['talkText']))
+    await pg.click(f"button[data-talk='{sly['id']}']")
+    card = next(c for c in await pg.evaluate(CARDS) if c['id'] == sly['id']); log = await pg.evaluate(LOG)
+    ok('скрытую черту разговор не открыл: о ней сказано в разговоре о склонностях, на карточке «выдаст поступок»', not card['traitKnown']
+       and 'выдаст поступок' in card['trait'] and (await status(pg))['deeds'] == 1 and 'выдаст только поступок' in log and 'Склонности:' in log, card['trait'])
 
     await pg.click('#season')
     cards = await pg.evaluate(CARDS)
@@ -508,6 +509,22 @@ async def s_authority(br, errs):
             ok('суд лично: жалоба разобрана, авторитет не меньше, личное дело потрачено', after['authority'] >= before['authority'] and after['deeds'] == before['deeds'] - 1 and 'Суд лично' in await pg.evaluate(LOG), (before, after))
         if (await status(pg))['authority'] > 15: break
     ok('за тридцать сезонов авторитет ни разу не выше потолка', (await status(pg))['authority'] <= 15, await status(pg))
+    if not judged:   # в этой партии совет не ссорился: жалобу берём из заготовки «Враги в совете», там она приходит в первые сезоны
+        pg3 = await br.new_page()
+        pg3.on('pageerror', lambda e: errs.append('ошибка страницы: ' + str(e)))
+        await pg3.goto(PAGE + '?seed=замок&preset=vragi')
+        await pg3.wait_for_selector('#people .card')
+        for _ in range(12):
+            await pg3.click('#season')
+            if await pg3.evaluate("()=>document.querySelectorAll('#complaints button[data-judge]').length"):
+                before = await status(pg3)
+                await pg3.click('#complaints button[data-judge]')
+                after = await status(pg3)
+                judged = True
+                ok('суд лично: жалоба разобрана, авторитет не меньше, личное дело потрачено', after['authority'] >= before['authority']
+                   and after['deeds'] == before['deeds'] - 1 and 'Суд лично' in await pg3.evaluate(LOG), (before, after))
+                break
+        await pg3.close()
     ok('жалоба пришла на стол и была разобрана', judged)
     await shot(pg, 'authority')
 

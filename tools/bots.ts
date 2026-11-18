@@ -159,6 +159,38 @@ if (!brief && !onlyPair && levels.includes(4) && of("Х6б")) {
   printPair(pair("Х16б")!);
 }
 
+// Годы испытания и мерка цели 5 (boty.md, раздел 13): лучший и худший совет — по внесённой подати и её разбросу по семенам.
+if (!brief && !onlyPair && idle) {
+  const pct = (v: number) => `${(v * 100).toFixed(0)}%`, f1 = (v: number) => v.toFixed(1).replace(".", ",");
+  console.log("\n=== Годы испытания: доля партий, закрывших урок в срок ===");
+  for (const id of ["idle", "master", "Н0", "Н1"]) {
+    const s = of(id);
+    if (s) console.log(`  ${s.bot.name.padEnd(34)} год 1 — ${pct(s.mean.year1)} · год 2 — ${pct(s.mean.year2)} · год 3 — ${pct(s.mean.year3)} · все три — ${pct(s.mean.closedAll)}`);
+  }
+  console.log(`\n=== Цель 5. Лучший и худший совет: внесено подати, мер за акт (разброс по семенам у «Ничего не трогает» — ${f1(idle.sd.paid)}) ===`);
+  console.log(`  ${"обычная партия, совет сам".padEnd(44)} ${f1(idle.mean.paid)}`);
+  const rows: [string, number, number, number][] = [];
+  for (const p of r.presets.filter((x) => ["vragi", "novichki", "nasledstvo", "glavny"].includes(x.variant.preset ?? ""))) {
+    const d = p.diffs.find((x) => x.id === "paid")!;
+    rows.push([p.variant.name, d.diff, d.se, d.z]);
+  }
+  for (const id of ["master", "Х3"]) {
+    const s = of(id);
+    if (!s) continue;
+    const d = s.runs.map((x, i) => x.paid - idle.runs[i].paid), m = d.reduce((a, b) => a + b, 0) / d.length;
+    const se = Math.sqrt(d.reduce((a, b) => a + (b - m) ** 2, 0) / Math.max(1, d.length - 1) / d.length);
+    rows.push([`«${s.bot.name}»`, m, se, se ? m / se : 0]);
+  }
+  rows.sort((a, b) => a[1] - b[1]);
+  for (const [name, diff, se] of rows) {
+    console.log(`  ${name.padEnd(44)} ${diff > 0 ? "+" : ""}${f1(diff)} ±${f1(2 * se)} · ${(Math.abs(diff) / idle.sd.paid).toFixed(2).replace(".", ",")} разброса`);
+  }
+  if (rows.length > 1) {
+    const gap = rows[rows.length - 1][1] - rows[0][1];
+    console.log(`  от худшего до лучшего: ${f1(gap)} меры — ${(gap / idle.sd.paid).toFixed(2).replace(".", ",")} разброса по семенам`);
+  }
+}
+
 const flat = (): Record<string, number> => {
   const out: Record<string, number> = {};
   for (const s of r.stats) for (const id of KEY) out[`${s.bot.id}: ${def(id).name}`] = Math.round(s.mean[id] * 1000) / 1000;

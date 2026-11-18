@@ -75,6 +75,8 @@ test("молва проверяется, когда становится изв�
     const w = newWorld("молва");
     const p = w.people.find((x) => !x.trait.hidden)!;
     assert.equal(rumorCheck(p), "");
+    talk(w, p.id); talk(w, p.id);
+    assert.equal(rumorCheck(p), "", "стремление и склонности молву о черте не проверяют");
     talk(w, p.id);
     assert.equal(rumorCheck(p), verdict);
   }
@@ -88,24 +90,25 @@ test("молва проверяется, когда становится изв�
 
 // ---------- разговоры ----------
 
-test("разговоры открывают по порядку: ключевую черту, стремление, склонности словами; дальше говорить не о чем", () => {
+test("разговоры открывают по порядку: стремление, склонности словами, ключевую черту; дальше говорить не о чем", () => {
   setAt("know.startTraitChance", 0);
   const w = newWorld("разговоры");
   const p = w.people.find((x) => !x.trait.hidden && !x.gained.length)!;
-  assert.equal(nextTalk(p), "черты");
-  talk(w, p.id);
-  assert.deepEqual([p.know.trait, p.know.aspiration, p.know.axes], [true, false, false]);
-  assert.ok(said(lastLog(w).lines, `«${p.trait.name}»`));
   assert.equal(nextTalk(p), "стремление");
   talk(w, p.id);
-  assert.deepEqual([p.know.trait, p.know.aspiration, p.know.axes], [true, true, false]);
+  assert.deepEqual([p.know.trait, p.know.aspiration, p.know.axes], [false, true, false]);
   assert.ok(said(lastLog(w).lines, p.aspiration!.text));
   assert.ok(AXES.every((a) => !axisKnown(p, a)));
   assert.equal(nextTalk(p), "склонности");
   talk(w, p.id);
-  assert.ok(p.know.axes && AXES.every((a) => axisKnown(p, a)));
+  assert.deepEqual([p.know.trait, p.know.aspiration, p.know.axes], [false, true, true]);
+  assert.ok(AXES.every((a) => axisKnown(p, a)));
   const line = lastLog(w).lines.join(" ");
   assert.ok(/сильно|заметно|слабо/.test(line) && !/\d/.test(line), `склонности словами, без чисел: ${line}`);
+  assert.equal(nextTalk(p), "черты");
+  talk(w, p.id);
+  assert.deepEqual([p.know.trait, p.know.aspiration, p.know.axes], [true, true, true]);
+  assert.ok(said(lastLog(w).lines, `«${p.trait.name}»`));
   runSeason(w);
   assert.equal(nextTalk(p), null);
   assert.equal(talk(w, p.id), false);
@@ -132,10 +135,12 @@ test("нажитую до начала партии черту открывае�
   const w = newWorld("мастера");
   const p = w.people.find((x) => x.post && !x.trait.hidden)!;
   assert.ok(has(p, "master_dela") && !p.gained[0].known);
-  assert.equal(nextTalk(p), "черты");
+  assert.equal(nextTalk(p), "стремление");
+  talk(w, p.id); talk(w, p.id);
+  assert.equal(nextTalk(p), "черты", "после стремления и склонностей — нажитая черта");
   talk(w, p.id);
   assert.ok(p.gained[0].known && said(lastLog(w).lines, "Мастер своего дела"));
-  assert.equal(nextTalk(p), "стремление");
+  assert.equal(nextTalk(p), null);
 });
 
 // ---------- наблюдение ----------
@@ -177,18 +182,21 @@ test("скрытую черту разговор не открывает", () =>
   for (const id of ["zlopamyatny", "khitry"]) {
     const p = w.people.find((x) => x.trait.id === id)!;
     assert.ok(p.trait.hidden && !p.know.trait);
+    p.gained = []; w.deedsLeft = 2;
     assert.equal(talk(w, p.id), true);
-    assert.deepEqual([p.know.trait, p.know.traitAsked], [false, true]);
-    assert.ok(said(lastLog(w).lines, "выдаст только поступок"));
-    assert.ok(p.know.aspiration && said(lastLog(w).lines, "Стремление:"), "тем же разговором открыто стремление: личное дело не пропало");
+    assert.ok(p.know.aspiration && said(lastLog(w).lines, "Стремление:") && !p.know.traitAsked);
     assert.equal(nextTalk(p), "склонности");
+    assert.equal(talk(w, p.id), true);
+    assert.deepEqual([p.know.trait, p.know.traitAsked, p.know.axes], [false, true, true]);
+    assert.ok(said(lastLog(w).lines, "выдаст только поступок") && said(lastLog(w).lines, "Склонности:"), "«молчит» — тем же разговором, что склонности: личное дело не пропало");
+    assert.equal(nextTalk(p), null);
   }
 });
 
 test("скрытный, чьё стремление уже известно: первый разговор сразу о склонностях", () => {
   const w = newWorld("скрытые");
   const p = w.people.find((x) => x.trait.id === "khitry")!;
-  p.know.aspiration = true;
+  p.know.aspiration = true; p.gained = [];
   assert.equal(talk(w, p.id), true);
   assert.ok(said(lastLog(w).lines, "выдаст только поступок") && said(lastLog(w).lines, "Склонности:"));
   assert.ok(p.know.axes && !p.know.trait);
