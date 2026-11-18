@@ -1,5 +1,5 @@
 // Способы платить «чем и с кого»: курс, предел и что плата меняет в запасах, доверии и руках.
-import type { Stock, HandsFrom, PayId, PayDef } from "../../data/types";
+import type { Stock, Category, HandsFrom, PayId, PayDef } from "../../data/types";
 import { SIDE_NAMES, CATEGORY_NAMES, PAY, SEASON_NAMES } from "../../data/economy";
 import { BALANCE as B } from "../balance";
 import { clamp, round1, round2 } from "../util";
@@ -16,11 +16,14 @@ export const taxLeft = (w: World): number => round1(Math.max(0, w.eco.tax.due - 
 const loanEase = (w: World): number => Math.max(1, 1 + levers(w).loan * B.economy.hand.flow * 2);
 
 export interface PayOption { def: PayDef; rate: number; max: number; blocked?: string }
-// Чем и с кого можно закрыть остаток урока прямо сейчас: курс (единиц за меру) и предел в мерах.
-export function payOptions(w: World): PayOption[] {
-  const E = B.economy, e = w.eco, left = taxLeft(w), hands = handsNow(w);
-  const used = (id: PayId) => e.tax.by[id] ?? 0;
-  return PAY.map((def) => {
+// Счёт в мерах: урок подати или указ Герцога. accepts — какие категории берут в уплату (нет — любые); title — как назвать в ведомости.
+export interface Bill { due: number; paid: number; by: Partial<Record<PayId, number>>; accepts?: Category[]; title?: string }
+export const billLeft = (b: Bill): number => round1(Math.max(0, b.due - b.paid));
+// Чем и с кого можно закрыть остаток счёта прямо сейчас: курс (единиц за меру) и предел в мерах. Без счёта — урок подати.
+export function payOptions(w: World, bill: Bill = w.eco.tax): PayOption[] {
+  const E = B.economy, e = w.eco, left = billLeft(bill), hands = handsNow(w);
+  const used = (id: PayId) => bill.by[id] ?? 0;
+  return PAY.filter((def) => !bill.accepts || bill.accepts.includes(def.what)).map((def) => {
     let rate = E.rate[def.what === "lyudi" ? "lyudi" : def.what], max = 0, blocked: string | undefined;
     const refuses = def.side && zoneOf(w, def.side) === "отказывают";
     if (def.id === "serebro" || def.id === "eda" || def.id === "tovary") max = e.stock[def.what as Stock] / rate;
@@ -37,14 +40,14 @@ export function payOptions(w: World): PayOption[] {
   });
 }
 
-// Закрыть часть урока: measures мер способом id. Возвращает, сколько мер ушло на деле.
-export function payTax(w: World, id: PayId, measures: number, lines?: string[]): number {
-  const E = B.economy, e = w.eco, t = e.tax;
-  const opt = payOptions(w).find((o) => o.def.id === id)!;
-  const m = floor1(Math.min(Number(measures) || 0, opt.max));
-  if (m <= 0) return 0;
+// Закрыть часть счёта: measures мер способом id. Без счёта — урок подати. Возвращает, сколько мер ушло на деле.
+export function payTax(w: World, id: PayId, measures: number, lines?: string[], bill: Bill = w.eco.tax): number {
+  const E = B.economy, e = w.eco, t = e.tax, isTax = bill === t;
+  const opt = payOptions(w, bill).find((o) => o.def.id === id);
+  const m = opt ? floor1(Math.min(Number(measures) || 0, opt.max)) : 0;
+  if (!opt || m <= 0) return 0;
   const units = round2(m * opt.rate), def = opt.def, out: string[] = [];
-  const toTax = `в подать, ${m} мер`;
+  const toTax = isTax ? `в подать, ${m} мер` : `по указу «${bill.title}», ${m} мер`;
   if (id === "serebro" || id === "eda" || id === "tovary") addLine(w, { cat: def.what, v: -units, text: toTax, side: "dvor" });
   else if (id === "sbor_kuptsy") {
     addTrust(w, "kuptsy", -E.pay.levyTrust * m);
@@ -70,14 +73,14 @@ export function payTax(w: World, id: PayId, measures: number, lines?: string[]):
     } else addTrust(w, from, -E.pay.recruitTrust * units);
     addLine(w, { cat: "lyudi", v: -units, text: `рекруты на год — ${toTax}`, side: from });
   }
-  t.paid = round1(t.paid + m);
-  t.by[id] = round1((t.by[id] ?? 0) + m);
+  bill.paid = round1(bill.paid + m);
+  bill.by[id] = round1((bill.by[id] ?? 0) + m);
   out.push(`${def.name}: ${m} мер (${units} ${CATEGORY_NAMES[def.what].toLowerCase()}). Больно ${def.hurts}.`);
-  if (taxLeft(w) <= 0) {
-    t.early = seasonKind(w.season) < AUTUMN;
-    out.push(t.early ? "Урок закрыт досрочно." : "Урок закрыт.");
-  } else out.push(`Осталось ${taxLeft(w)} мер из ${t.due}.`);
+  if (billLeft(bill) <= 0) {
+    if (isTax) t.early = seasonKind(w.season) < AUTUMN;
+    out.push(!isTax ? "Указ исполнен." : t.early ? "Урок закрыт досрочно." : "Урок закрыт.");
+  } else out.push(`Осталось ${billLeft(bill)} мер из ${bill.due}.`);
   if (lines) lines.push(...out);
-  else w.log.push({ season: w.season, kind: "staff", title: "Подать", lines: out });
+  else w.log.push({ season: w.season, kind: "staff", title: isTax ? "Подать" : `Указ: ${bill.title}`, lines: out });
   return m;
 }

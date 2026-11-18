@@ -1,5 +1,5 @@
 // Последствия события: единственный вход в запасы, доверие сторон и порядок.
-import type { Effect, GameEvent, EventOption } from "../../data/types";
+import type { Effect, GameEvent, EventOption, Village } from "../../data/types";
 import { BALANCE as B } from "../balance";
 import { round1 } from "../util";
 import { postName } from "../state";
@@ -53,4 +53,18 @@ export function toneOf(eff: Partial<Record<Effect, number>>): LogEntry["tone"] {
   const vals = Object.values(eff);
   const pos = vals.filter((v) => v! > 0).length, neg = vals.filter((v) => v! < 0).length;
   return pos && !neg ? "good" : neg && !pos ? "bad" : pos && neg ? "mixed" : "neutral";
+}
+
+// Последствия без события совета и без исполнителя: местный отголосок мира. Тот же вход в запасы, доверие и порядок; village — если про одну деревню.
+export function applyDirect(w: World, effects: Partial<Record<Effect, number>>, k: number, text: string, village?: Village): Partial<Record<Effect, number>> {
+  const out: Partial<Record<Effect, number>> = {};
+  for (const [key, v] of Object.entries(effects) as [Effect, number][]) {
+    const val = round1(v * k);
+    out[key] = val;
+    if (key === "poryadok") w.resources.poryadok = round1(w.resources.poryadok + val);
+    else if (key === "kazna" || key === "pripasy") out[key] = addLine(w, { cat: key === "kazna" ? "serebro" : "eda", v: val, text });
+    else if (key === "derevni") for (const side of village ? [village] : VILLAGES) addTrust(w, side, val * B.economy.trust.event);
+    else addTrust(w, key, val * B.economy.trust.event);
+  }
+  return out;
 }

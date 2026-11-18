@@ -24,11 +24,11 @@ async def s_base(br, errs):
     ok('черта с начала известна только у членов совета', all(c['onPost'] for c in cards if c['traitKnown']))
     ok('вверху строка-подсказка, как узнавать людей', 'поговорить' in await pg.text_content('#tip') and 'в деле' in await pg.text_content('#tip'))
     ok('отношения в совете: таблица пять на пять со словами', await pg.evaluate("()=>document.querySelectorAll('#relations .rel').length") == 20)
-    ok('летопись начинается с записи о новой партии', await pg.evaluate(TITLES) == ['Новая партия, семя «замок»'])
+    ok('летопись начинается с записи о новой партии и вестей о погоде года', await pg.evaluate(TITLES) == ['Вести', 'Новая партия, семя «замок»'])
     await shot(pg, 'start')
 
     await pg.click('#season')
-    st = await status(pg); titles = await pg.evaluate(TITLES)
+    st = await status(pg); titles = [t for t in await pg.evaluate(TITLES) if t != 'Вести']   # вести мира идут своей записью
     ok('сезон прошёл: лето, в летописи три события и итог сезона сверху', st['season'] == 'лето, год 1' and len(titles) == 5
        and titles[0] == 'Итог сезона 1', (st, titles))
     ok('у события в летописи есть текст решения и последствия', await pg.evaluate(
@@ -47,8 +47,8 @@ async def s_base(br, errs):
     ok('новая партия с тем же семенем повторяет летопись слово в слово', await pg.evaluate(LOG) == log_a)
     await pg.fill('#seed', 'другое семя'); await pg.click('#new')
     st = await status(pg)
-    ok('новая партия сбрасывает сезон и летопись', st['season'] == 'весна, год 1' and await pg.evaluate(TITLES) == ['Новая партия, семя «другое семя»'], st)
+    ok('новая партия сбрасывает сезон и летопись', st['season'] == 'весна, год 1' and await pg.evaluate(TITLES) == ['Вести', 'Новая партия, семя «другое семя»'], st)
     await pg.click('#season'); await pg.click('#season5')
     ok('другое семя даёт другую летопись', await pg.evaluate(LOG) != log_a)
     await pg.fill('#seed', ''); await pg.click('#new')
-    ok('пустое семя — партия по семени «замок»', await pg.evaluate(TITLES) == ['Новая партия, семя «замок»'])
+    ok('пустое семя — партия по семени «замок»', await pg.evaluate(TITLES) == ['Вести', 'Новая партия, семя «замок»'])

@@ -4,7 +4,7 @@
 // Своя случайность бота — отдельный генератор; генератор мира бот не трогает.
 import type { Axis, CourseId, PayId, PostId } from "../data/types";
 import { AXES, POSTS } from "../data/core";
-import { COURSES } from "../data/economy";
+import { COURSES, SEASON_NAMES } from "../data/economy";
 import { BALANCE as B } from "./balance";
 import { Rng } from "./rng";
 import { assign, setHead, giveOrder } from "./council/staff";
@@ -15,6 +15,7 @@ import { relWord, fitWord } from "./council/know";
 import { newPreset } from "./presets";
 import { setCourse, setFloor, courseDef } from "./economy/doer";
 import { payTax, payOptions, taxLeft } from "./economy/pay";
+import { payDecree } from "./world/apply";
 import { seasonKind } from "./economy/zones";
 import { forecastFork } from "./economy/view";
 import { judge, feast, feastCost, feastsThisYear, authorityCap, complaintLeft, councilSteady, FEASTS } from "./authority";
@@ -242,12 +243,24 @@ function payAbove(w: World, goods = true) {
   payTax(w, "eda", (e.stock.eda - e.floor.eda) / R.eda);
   if (goods) payTax(w, "tovary", e.stock.tovary / R.tovary);
 }
+// Указ бот-плательщик закрывает тем же порядком, что подать, в последний сезон срока: запасом не ниже нижних черт и своим добавочным способом.
+// Чего указ не берёт (людей — запасом), остаётся совету.
+function decrees(w: World, h: Habit) {
+  const e = w.eco, R = B.economy.rate;
+  for (const d of w.world.decrees.filter((x) => x.until <= w.season)) {
+    payDecree(w, d.id, "serebro", (e.stock.serebro - e.floor.serebro) / R.serebro);
+    payDecree(w, d.id, "eda", (e.stock.eda - e.floor.eda) / R.eda);
+    payDecree(w, d.id, "tovary", e.stock.tovary / R.tovary);
+    if (h.extra) payDecree(w, d.id, h.extra, d.due);
+  }
+}
 function pay(w: World, h: Habit) {
   const kind = seasonKind(w.season), autumn = kind === 2;
   if (h.pay === "council") return;
   if (h.pay === "silver") { if (autumn) payTax(w, "serebro", (w.eco.stock.serebro - w.eco.floor.serebro) / B.economy.rate.serebro); return; }
   if (h.pay === "hands") { if (autumn) payAbove(w); return; }
   if (h.pay === "ahead") { if (kind !== WINTER) payAbove(w); return; } // зимой урок ещё прошлогодний: новый объявят только к весне
+  decrees(w, h);
   if (autumn || (h.pay === "early" && kind === 1)) payAbove(w);
   if (!autumn || !h.extra) return;
   // чего не хватит и после жатвы — по прогнозу счетоводов (нижний край вилки): его видит игрок
@@ -298,7 +311,8 @@ function randomTurn(w: World, rng: Rng) {
 }
 
 // probe — счётчики зонда за партию; aspAt — к какому сезону известны стремления всего совета (не узнал — сезонов партии плюс один).
-export interface BotRun { w: World; calm: number; applicable: boolean; seasons: number; probe: Probe; aspAt: number }
+// shortByYear — в скольких сезонах каждого года была недодача: отчёт сверяет их с погодой года.
+export interface BotRun { w: World; calm: number; applicable: boolean; seasons: number; probe: Probe; aspAt: number; shortByYear: number[] }
 // Одна партия бота. applicable — годится ли партия для пары (О3 играется только там, где в совете есть соперники).
 export function playBot(seed: string, b: Bot, seasons = B.bots.seasons, lab = false): BotRun {
   resetProbe();
@@ -306,12 +320,15 @@ export function playBot(seed: string, b: Bot, seasons = B.bots.seasons, lab = fa
   const applicable = !b.needsRival || !!rivals(w);
   setup(w, h);
   let calm = 0, aspAt = seasons + 1;
+  const shortByYear: number[] = [];
   for (let n = 0; n < seasons; n++) {
     if (h.random) randomTurn(w, rng);
     else { if (h.idleRng) rng.range(0, 1); turn(w, h, n); }
     if (aspAt > seasons && council(w).every((p) => p.know.aspiration)) aspAt = n + 1;
+    const year = Math.floor(n / SEASON_NAMES.length), short = w.eco.shortages;
     runSeason(w);
+    shortByYear[year] = (shortByYear[year] ?? 0) + (w.eco.shortages - short);
     if (councilSteady(w).ok) calm++;
   }
-  return { w, calm, applicable, seasons, probe: structuredClone(PROBE), aspAt };
+  return { w, calm, applicable, seasons, probe: structuredClone(PROBE), aspAt, shortByYear };
 }

@@ -5,7 +5,7 @@ import type { Axis } from "../../data/types";
 import type { World } from "../../sim/state";
 import { $ } from "../dom";
 
-export const app: { w: World; designer: boolean; tab: "council" | "eco"; render: () => void } = {
+export const app: { w: World; designer: boolean; tab: "council" | "eco" | "world"; render: () => void } = {
   w: undefined as unknown as World,   // партию создаёт start() в main.ts до первой перерисовки
   designer: false,
   tab: "council",

@@ -72,6 +72,8 @@ export function freeYear(zone: Zone, seed = "год"): { free: number; income: R
   const trust = zone === "заодно" ? T.ally : zone === "ладят" ? T.friendly : zone === "терпят" ? (T.friendly + T.refuse) / 2 : T.refuse;
   for (const p of w.people) { p.loyalty = 0; p.aspiration = undefined; p.tenure = Math.min(p.tenure, B.exp.settled); }
   w.eco.autoPay = false;
+  w.world.sim.weather = 1;   // год без событий — и без мира вокруг: погода ровная, состояний нет
+  w.world.sim.active = [];
   const start = { ...w.eco.stock };
   let lack = 0;
   for (let s = 0; s < 4; s++) {
