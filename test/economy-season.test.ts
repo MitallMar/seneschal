@@ -37,7 +37,11 @@ test("хозяйство детерминировано, запасы не ух�
     const a = play(), b = play();
     assert.equal(dump(a), dump(b));
     assert.equal(a.eco.tax.history.length, 4);
-    assert.equal(a.eco.tax.lesson, E.tax.normal, "после трёх лет испытания урок обычный");
+    // урок: в спокойном мире после трёх лет испытания обычный; мир вокруг даёт надбавку или послабление
+    assert.ok(a.eco.tax.lesson >= 0 && Math.abs(a.eco.tax.lesson - E.tax.normal) <= 4, `${seed}: урок ${a.eco.tax.lesson}`);
+    setAt("world.on", 0);
+    assert.equal(play().eco.tax.lesson, E.tax.normal, "после трёх лет испытания урок обычный");
+    resetBalance();
   }
 });
 

@@ -10,6 +10,7 @@ import { renderEconomy, renderYear } from "./view-economy";
 import { renderDesk } from "./view-desk";
 import { renderPeople } from "./view-people";
 import { renderLog, renderStatus } from "./view-log";
+import { renderWorld } from "./view-world";
 import { knobId, sets, active, changedKnobs, renderKnobs, setKnob, switchSet, dumpKnobs, toggleKnobs } from "./emu";
 
 function start() {
@@ -18,10 +19,11 @@ function start() {
   render();
 }
 
-function setTab(next: "council" | "eco") {
+function setTab(next: "council" | "eco" | "world") {
   app.tab = next;
   $("tab-council").hidden = app.tab !== "council";
   $("tab-eco").hidden = app.tab !== "eco";
+  $("tab-world").hidden = app.tab !== "world";
   document.querySelectorAll<HTMLButtonElement>(".tabs button").forEach((b) => b.classList.toggle("on", b.dataset.tab === app.tab));
   syncUrl();
 }
@@ -37,6 +39,7 @@ const seasons = (n: number) => { for (let i = 0; i < n; i++) runSeason(app.w); r
 function render() {
   renderStatus();
   renderDesk();
+  renderWorld();
   renderCouncil();
   renderRelations();
   renderEconomy();
@@ -69,7 +72,7 @@ $("knobs").addEventListener("input", (e) => {
   render();
 });
 $("knobs").addEventListener("change", renderKnobs);
-document.querySelectorAll<HTMLButtonElement>(".tabs button").forEach((b) => b.addEventListener("click", () => setTab(b.dataset.tab as "council" | "eco")));
+document.querySelectorAll<HTMLButtonElement>(".tabs button").forEach((b) => b.addEventListener("click", () => setTab(b.dataset.tab as "council" | "eco" | "world")));
 // После щелчка кнопка не держит фокус: иначе пробел нажал бы её ещё раз.
 document.addEventListener("click", (e) => { if (e.target instanceof HTMLButtonElement) e.target.blur(); });
 
@@ -97,7 +100,7 @@ if (PRESETS.some((p) => p.id === params.get("preset"))) ($("preset") as HTMLSele
 app.designer = params.get("designer") === "1";
 ($("designer") as HTMLInputElement).checked = app.designer;
 start();
-setTab(params.get("tab") === "eco" ? "eco" : "council");
+setTab(params.get("tab") === "eco" ? "eco" : params.get("tab") === "world" ? "world" : "council");
 if (params.get("knobs") === "1") toggleKnobs(true);
 
 // Для автопроверок и консоли: то же, что кнопки, без щелчков.

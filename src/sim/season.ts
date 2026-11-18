@@ -13,12 +13,22 @@ import { scoreOptions } from "./council/decide";
 import { applyEffects, toneOf } from "./council/effects";
 import { runEvent } from "./council/council";
 import { lifeTraits } from "./council/traits";
+import { eventWeight } from "./world/gen";
+import { worldArrive, decreesDue } from "./world/apply";
 
 const eventPool = (w: World) => EVENTS.filter((e) => !e.adventurers || w.labOpen);
 
 // Дело на столе: одно из событий будущего сезона Сенешаль видит заранее.
 export function pickDesk(w: World) {
-  w.desk = { event: w.rng.pick(eventPool(w)).id };
+  w.desk = { event: draw(w, eventPool(w), 1, true)[0].id };
+}
+
+// Какие события придут: по весам меток мира. В спокойном мире веса равны — и выбор идёт прежним путём, той же случайностью.
+function draw(w: World, pool: GameEvent[], n: number, one = false): GameEvent[] {
+  const weights = pool.map((e) => eventWeight(w.world.sim, e));
+  if (weights.every((x) => x === 1)) return one ? [w.rng.pick(pool)] : w.rng.shuffle(pool).slice(0, n);
+  // взвешенный выбор без возврата: у каждого события свой бросок, тяжёлые чаще оказываются впереди
+  return pool.map((e, i) => ({ e, key: Math.pow(w.rng.next(), 1 / weights[i]) })).sort((a, b) => b.key - a.key).slice(0, n).map((x) => x.e);
 }
 
 // Что лежит на столе: событие, советник (держатель первой задетой должности, какая занята) и его мнение — что бы он выбрал сам.
@@ -71,13 +81,14 @@ function runOrdered(w: World, ev: GameEvent, opt: EventOption): LogEntry {
 export function runSeason(w: World) {
   const pool = eventPool(w);
   const desk = deskView(w);
-  const rest = w.rng.shuffle(pool.filter((e) => e !== desk?.ev)).slice(0, B.season.events - (desk ? 1 : 0));
+  const rest = draw(w, pool.filter((e) => e !== desk?.ev), B.season.events - (desk ? 1 : 0));
   if (desk?.order) runOrdered(w, desk.ev, desk.order);
   else if (desk) runEvent(w, desk.ev);
   for (const ev of rest) runEvent(w, ev);
   upkeep(w);
   w.season++;
   w.deedsLeft = B.season.deeds;
+  worldArrive(w);
   rollForecast(w);
   pickDesk(w);
 }
@@ -119,6 +130,7 @@ function upkeep(w: World) {
     if (p.loyalty <= B.loyalty.bitter && w.rng.chance(B.loyalty.leaveChance)) lines.push(`⚠ ${p.name} озлоблен${p.female ? "а" : ""} и подумывает уйти.`);
   }
   economySeason(w, lines);
+  decreesDue(w, lines);
   authoritySeason(w, lines);
   w.log.push({ season: w.season, kind: "season", title: `Итог сезона ${w.season}`, lines: lines.length ? lines : ["Ничего особенного."] });
 }

@@ -7,12 +7,13 @@ import { BALANCE as B } from "../balance";
 import { Rng } from "../rng";
 import { clamp, round1 } from "../util";
 import { STAR_MAX, REL_MAX, relKey, topAxis, postName, holder, fitness } from "../state";
-import type { Rumor, Person, Legacy, World, Economy } from "../state";
+import type { Rumor, Person, Legacy, World, Economy, WorldGame } from "../state";
 import { SIDES, VILLAGES } from "../../data/economy";
 import { initAuthority } from "../authority";
 import { initEconomy } from "../economy/season";
 import { gender, addStar, noAxes } from "./people";
 import { pickDesk } from "../season";
+import { initWorldGame, worldAnnounce } from "../world/apply";
 
 export function newWorld(seed: string, labOpen = false): World {
   const rng = new Rng(seed);
@@ -21,7 +22,7 @@ export function newWorld(seed: string, labOpen = false): World {
     posts: { starosta: null, desyatnik: null, klyuchnik: null, pisar: null, lesnichiy: null },
     head: null, labOpen, season: 1,
     factions: Object.fromEntries(SIDES.map((s) => [s, B.economy.start.trust])) as Record<Side, number>,
-    resources: { poryadok: 0 }, eco: undefined as unknown as Economy, auth: initAuthority(), desk: null,
+    resources: { poryadok: 0 }, eco: undefined as unknown as Economy, auth: initAuthority(), world: undefined as unknown as WorldGame, desk: null,
     authority: B.staff.authorityStart, deedsLeft: B.season.deeds, legacy: [], log: [],
   };
 
@@ -107,6 +108,7 @@ export function newWorld(seed: string, labOpen = false): World {
     if (p.post && !p.trait.hidden && rng.chance(B.know.startTraitChance)) { p.know.trait = true; p.know.traitAsked = true; }
     else p.rumor = makeRumor(w, p);
   }
+  initWorldGame(w);
   initEconomy(w);
   pickDesk(w);
   const legacy = w.legacy.map((l) => {
@@ -120,6 +122,7 @@ export function newWorld(seed: string, labOpen = false): World {
     `Герцог назначил испытание: урок ${w.eco.tax.lesson} мер в год, ${B.economy.tax.trialYears} года подряд. Сборщица приезжает осенью.`,
   ];
   w.log.push({ season: 0, kind: "info", title: `Новая партия, семя «${seed}»`, lines });
+  worldAnnounce(w);
   return w;
 }
 

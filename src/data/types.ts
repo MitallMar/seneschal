@@ -115,6 +115,7 @@ export interface GameEvent {
   posts: PostId[];        // одна или две сферы
   adventurers?: boolean;  // только когда открыт лабиринт
   village?: Village;      // последствие derevni бьёт только по этой деревне; нет — по обеим
+  tags: WorldTag[];       // метки мира: при состоянии мира с такой меткой событие приходит чаще, при глушащем её — реже
   options: EventOption[];
 }
 
@@ -180,4 +181,24 @@ export interface HealthTrait {
   death?: number;       // множитель шанса умереть от тяжёлой болезни или раны
   aging?: number;       // множитель скорости старения (меньше единицы — стареет медленнее)
   effect: string;       // как скажется на службе — пока словами
+}
+
+// ---------- Генератор мира (задача И11а, замысел — docs/design/koncept-2.md, «Генератор событий мира») ----------
+// Метки связывают слои: состояние мира несёт метки, события совета — тоже; жёстких связей «это состояние → это событие» нет.
+export type WorldTag = "voyna" | "golod" | "torg" | "vera" | "les";
+// Три слоя, у каждого свой темп: мир и герцогство (состояния на годы), баронство (погода года, указы), место (отголоски и события совета).
+export type WorldLayer = "mir" | "baronstvo" | "mesto";
+// Сдвиг хозяйства, пока состояние длится: множители потоков (1 — без перемен) и надбавка к уроку подати в мерах (меньше нуля — послабление).
+export interface WorldShift { harvest?: number; price?: number; duty?: number; forest?: number; lesson?: number }
+// Указ: разовое требование Герцога. accepts — чем его можно закрыть (категории способов «чем и с кого»), term — сколько сезонов на это дано.
+export interface DecreeDef { id: string; title: string; text: string; accepts: Category[]; measures: number; term: number }
+// Отголосок: приходит вниз с задержкой после начала состояния. Либо указ (слой баронства), либо местное последствие (слой места).
+export interface EchoDef { delay: [number, number]; text: string; decree?: DecreeDef; effects?: Partial<Record<Effect, number>>; village?: Village }
+// Состояние верхнего слоя: длится seasons сезонов. cost — давление: беда стоит бюджета рассказчика, благо (cost ≤ 0) — нет.
+// tags — события совета с такой меткой приходят чаще; mutes — с такой меткой реже.
+export interface WorldStateDef {
+  id: string; name: string; text: string; end: string;
+  tags: WorldTag[]; mutes?: WorldTag[];
+  seasons: [number, number]; weight: number; cost: number;
+  shift?: WorldShift; echoes?: EchoDef[];
 }

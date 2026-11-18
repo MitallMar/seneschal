@@ -1,5 +1,5 @@
 // Отчёт по ботам: работают ли механики на сотне партий, где нужна балансировка, какие решения пустые (задание — docs/design/boty.md).
-// Запуск: npm run bots -- [--seeds=100] [--seasons=12] [--level=1|2|3|4] [--pair=О3 | --pair=заготовка:pisar] [--lab] [--full] [--save] [--diff]
+// Запуск: npm run bots -- [--seeds=100] [--seasons=12] [--level=1|2|3|4] [--pair=О3 | --pair=заготовка:pisar] [--lab] [--full] [--save] [--diff] [--set=world.on:0]
 //   уровень 4 — перепроверки (boty.md, раздел 11);
 //   --full  — у каждой пары все метрики, а не только разошедшиеся;
 //   --brief — только первые строки и сравнение со снимком (так зовёт npm run balance);
@@ -8,12 +8,17 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { BALANCE } from "../src/sim/balance";
+import { BALANCE, setAt } from "../src/sim/balance";
 import { botsReport, outcomeStats, METRICS, type BotStats, type PairStats, type MetricDef } from "../src/sim/bots-report";
 import { bot } from "../src/sim/bots";
 
 const arg = (name: string, def: string) => process.argv.find((a) => a.startsWith(`--${name}=`))?.split("=")[1] ?? def;
 const has = (name: string) => process.argv.includes(`--${name}`);
+// --set=путь:значение — ручка на время прогона (можно несколько): так считается спокойный мир, --set=world.on:0
+for (const x of process.argv.filter((v) => v.startsWith("--set="))) {
+  const [path, value] = x.slice("--set=".length).split(":");
+  console.log(`Ручка на время прогона: ${path} = ${setAt(path, Number(value))}`);
+}
 const seeds = Number(arg("seeds", String(BALANCE.bots.seeds))), seasons = Number(arg("seasons", String(BALANCE.bots.seasons)));
 const levels = arg("level", "1,2,3,4").split(",").map(Number), onlyPair = arg("pair", "") || undefined;
 const file = resolve(dirname(fileURLToPath(import.meta.url)), "balance.snapshot.json");
@@ -188,6 +193,24 @@ if (!brief && !onlyPair && idle) {
   if (rows.length > 1) {
     const gap = rows[rows.length - 1][1] - rows[0][1];
     console.log(`  от худшего до лучшего: ${f1(gap)} меры — ${(gap / idle.sd.paid).toFixed(2).replace(".", ",")} разброса по семенам`);
+  }
+  // Мир вокруг (И11а): давление за акт, указы и чем закрыты, плохие по погоде годы
+  const W = BALANCE.world, f2 = (v: number) => v.toFixed(2).replace(".", ",");
+  console.log(`\n=== Мир вокруг: давление за акт (${W.on ? "генератор включён" : "спокойный мир"}) ===`);
+  for (const id of ["idle", "master"]) {
+    const s = of(id);
+    if (!s) continue;
+    const x = s.mean, per = (hit: number, n: number) => (n ? f2(hit / n) : "—");
+    console.log(`  ${s.bot.name}: состояний ${f1(x.states)}, из них бед ${f1(x.bads)} · указов ${f2(x.decrees)}: исполнено ${f2(x.decreesDone)} (советом самим ${f2(x.decreesCouncil)}), не исполнено ${f2(x.decreesFailed)}`);
+    console.log(`    мер по указам: людьми ${f2(x.decreeLyudi)}, едой ${f2(x.decreeEda)}, серебром ${f2(x.decreeSerebro)}, товарами ${f2(x.decreeTovary)}`);
+    const good = s.runs.length ? x.closedBad + x.closedGood > 0 || x.badYears > 0 : false, years = BALANCE.bots.seasons / 4;
+    if (good) console.log(`    плохих по погоде лет ${f2(x.badYears)} из ${years}: уроков закрыто на такой год ${per(x.closedBad, x.badYears)} против ${per(x.closedGood, years - x.badYears)} в прочие;`
+      + ` сезонов с недодачей на год ${per(x.shortBad, x.badYears)} против ${per(x.shortGood, years - x.badYears)}`);
+  }
+  if (W.on) {
+    const G = W.goal, bear = idle.mean.closedAll, dec = idle.mean.decrees, mark = (ok: boolean) => (ok ? "в коридоре" : "⚠ мимо");
+    console.log(`  Цель: «Ничего не трогает» закрывает все три урока в ${G.bearMin * 100}–${G.bearMax * 100}% партий — ${pct(bear)}, ${mark(bear >= G.bearMin && bear <= G.bearMax)}.`);
+    console.log(`  Цель: указов за акт ${G.decreesMin}–${G.decreesMax} — ${f2(dec)}, ${mark(dec >= G.decreesMin && dec <= G.decreesMax)}.`);
   }
 }
 

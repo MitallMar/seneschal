@@ -24,6 +24,7 @@ export function calm(seed = "хозяйство"): World {
 export function flat() {
   noHead();
   setAt("economy.flow.scale", 1);   // и скудость земли: базовые потоки — как записаны в ручках
+  setAt("world.on", 0);             // и мир вокруг: погода, состояния герцогства и указы проверяются в test/world.test.ts
   for (const key of ["masteryMin", "masteryMax", "expNovice", "expSettled", "expMaster"]) setAt(`economy.doer.${key}`, 1);
   noHand();
 }

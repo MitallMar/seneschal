@@ -1,7 +1,7 @@
 // Отчёт по ботам (задание — docs/design/boty.md, раздел 7): метрики одной партии, таблица по боту, сравнение пар по семенам попарно.
 // Зовут tools/bots.ts, tools/economy.ts и тесты.
 import { POSTS } from "../data/core";
-import { SIDES } from "../data/economy";
+import { SIDES, PAY } from "../data/economy";
 import { BALANCE as B } from "./balance";
 import { getRel, topAxis, type Outcome } from "./state";
 import { zoneOf, patienceWord } from "./economy/zones";
@@ -9,10 +9,11 @@ import { authorityCap } from "./authority";
 import { BOTS, bot, playBot, type Bot, type BotRun } from "./bots";
 import { PRESETS } from "./presets";
 import { mean } from "./util";
+import { WORLD_STATES } from "../data/world";
 
 // Метрика партии: id, подпись для таблицы, сколько знаков после запятой, доля ли это (печатать процентами).
 // diag — замер, а не исход партии: в вердикт пары не идёт.
-export interface MetricDef { id: string; name: string; digits: number; pct?: boolean; group: "совет" | "хозяйство" | "авторитет" | "замеры"; diag?: boolean }
+export interface MetricDef { id: string; name: string; digits: number; pct?: boolean; group: "совет" | "хозяйство" | "авторитет" | "замеры" | "мир"; diag?: boolean }
 export const METRICS: MetricDef[] = [
   { id: "lead", name: "решений по ведущей склонности", digits: 0, pct: true, group: "совет" },
   { id: "leadOwn", name: "…на своей должности", digits: 0, pct: true, group: "совет" },
@@ -61,6 +62,21 @@ export const METRICS: MetricDef[] = [
   { id: "shortFood", name: "недодано еды за партию", digits: 2, group: "замеры", diag: true },
   { id: "shortSilver", name: "недодано серебра за партию", digits: 2, group: "замеры", diag: true },
   { id: "shortTrust", name: "доверия ушло из-за недодач", digits: 2, group: "замеры", diag: true },
+  { id: "states", name: "состояний мира началось за партию", digits: 1, group: "мир", diag: true },
+  { id: "bads", name: "…из них бед", digits: 1, group: "мир", diag: true },
+  { id: "decrees", name: "указов за партию", digits: 2, group: "мир", diag: true },
+  { id: "decreesDone", name: "…исполнено в срок", digits: 2, group: "мир", diag: true },
+  { id: "decreesCouncil", name: "…из них хотя бы частью советом самим", digits: 2, group: "мир", diag: true },
+  { id: "decreesFailed", name: "…не исполнено", digits: 2, group: "мир", diag: true },
+  { id: "decreeLyudi", name: "мер по указам людьми", digits: 2, group: "мир", diag: true },
+  { id: "decreeEda", name: "мер по указам едой", digits: 2, group: "мир", diag: true },
+  { id: "decreeSerebro", name: "мер по указам серебром", digits: 2, group: "мир", diag: true },
+  { id: "decreeTovary", name: "мер по указам товарами", digits: 2, group: "мир", diag: true },
+  { id: "badYears", name: "плохих по погоде лет", digits: 2, group: "мир", diag: true },
+  { id: "closedBad", name: "уроков закрыто в плохие годы", digits: 2, group: "мир", diag: true },
+  { id: "closedGood", name: "уроков закрыто в прочие годы", digits: 2, group: "мир", diag: true },
+  { id: "shortBad", name: "сезонов с недодачей в плохие годы", digits: 2, group: "мир", diag: true },
+  { id: "shortGood", name: "сезонов с недодачей в прочие годы", digits: 2, group: "мир", diag: true },
 ];
 export type Metrics = Record<string, number>;
 
@@ -80,6 +96,12 @@ export function metricsOf(run: BotRun): Metrics {
   let enemies = 0;
   for (const p of council) for (const q of council) if (p.id < q.id && getRel(w, p.id, q.id) <= B.rel.enemy) enemies++;
   const years = t.history.length;
+  // мир: указы и чем закрыты; плохие по погоде годы — урожай ниже порога «скудный год»
+  const g = w.world, all = [...g.past, ...g.decrees];
+  const byCat = (cat: string) => all.reduce((s, d) => s + PAY.filter((p) => p.what === cat).reduce((x, p) => x + (d.by[p.id] ?? 0), 0), 0);
+  const bad = g.harvests.map((h) => h < B.world.weather.poor);
+  const inYears = (isBad: boolean, f: (y: number) => number) => bad.reduce((s, b, y) => s + (b === isBad ? f(y) : 0), 0);
+  const started = w.log.filter((e) => e.title === "Вести").flatMap((e) => e.lines);
   return {
     lead: share(own + foreign, ownAll + foreignAll), leadOwn: share(own, ownAll), leadForeign: share(foreign, foreignAll),
     leadOwnN: ownAll, leadForeignN: foreignAll, leadOwnHit: own, leadForeignHit: foreign,
@@ -95,6 +117,14 @@ export function metricsOf(run: BotRun): Metrics {
     orderDeaf: run.probe.order.deaf, orderWeak: run.probe.order.weak, autoPaid: run.probe.autoPaid, aspAt: run.aspAt,
     year1: t.history[0]?.closed ? 1 : 0, year2: t.history[1]?.closed ? 1 : 0, year3: t.history[2]?.closed ? 1 : 0,
     shortFood: run.probe.short.food, shortSilver: run.probe.short.silver, shortTrust: run.probe.short.trust,
+    states: WORLD_STATES.reduce((s, d) => s + started.filter((l) => l.startsWith(`${d.name}.`)).length, 0),
+    bads: WORLD_STATES.filter((d) => d.cost > 0).reduce((s, d) => s + started.filter((l) => l.startsWith(`${d.name}.`)).length, 0),
+    decrees: all.length, decreesDone: g.past.filter((d) => d.closed !== "не закрыт").length,
+    decreesCouncil: g.past.filter((d) => d.closed === "закрыт советом").length, decreesFailed: g.past.filter((d) => d.closed === "не закрыт").length,
+    decreeLyudi: byCat("lyudi"), decreeEda: byCat("eda"), decreeSerebro: byCat("serebro"), decreeTovary: byCat("tovary"),
+    badYears: bad.filter(Boolean).length,
+    closedBad: inYears(true, (y) => (t.history[y]?.closed ? 1 : 0)), closedGood: inYears(false, (y) => (t.history[y]?.closed ? 1 : 0)),
+    shortBad: inYears(true, (y) => run.shortByYear[y] ?? 0), shortGood: inYears(false, (y) => run.shortByYear[y] ?? 0),
     support: a.support, spent: -a.staff, earned: a.judge + a.feast + a.order + a.tax + a.complaint, burned: -a.burn, right: a.order,
   };
 }

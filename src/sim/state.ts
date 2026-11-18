@@ -1,6 +1,6 @@
 // Состояние партии и чтение из него: типы World, Person и всего, что в них лежит (хозяйство, авторитет), шкалы и простые вопросы к состоянию.
 // Правил здесь нет: совет, хозяйство и авторитет берут состояние отсюда и не тянут ради него друг друга.
-import type { Axis, Star, PostId, Side, Village, Stock, Category, HandsFrom, CourseId, PayId, Effect, Trait, Mark, AspirationDef } from "../data/types";
+import type { Axis, Star, PostId, Side, Village, Stock, Category, HandsFrom, CourseId, PayId, Effect, Trait, Mark, AspirationDef, WorldLayer } from "../data/types";
 import { AXES, POSTS } from "../data/core";
 import { BALANCE as B } from "./balance";
 import type { Rng } from "./rng";
@@ -87,6 +87,7 @@ export interface World {
   resources: { poryadok: number };         // порядок пока копится числом (шкала строгости — задача И13)
   eco: Economy;                            // хозяйство и подать: запасы, курс, ведомость, урок
   auth: AuthState;                         // авторитет: ведомость, жалобы на столе, пиры
+  world: WorldGame;                        // мир вокруг: состояния верхнего слоя, погода года, указы Герцога
   desk: Desk | null;                       // дело на столе: событие будущего сезона, по которому Сенешаль может отдать приказ
   authority: number;
   deedsLeft: number;
@@ -141,6 +142,38 @@ export interface Economy {
 }
 // Зона стороны по доверию: слово и пороги — economy.ts.
 export type Zone = "заодно" | "ладят" | "терпят" | "отказывают";
+
+// ---------- Мир ----------
+
+// Состояние верхнего слоя, которое сейчас длится: с какого сезона и до какого (не включая), сила относительно обычной.
+export interface WorldActive { id: string; from: number; until: number; strength: number }
+// Отголосок в пути: какой по счёту у своего состояния и в каком сезоне дойдёт.
+export interface WorldEcho { state: string; echo: number; at: number; strength: number }
+// Весть сезона: что случилось в каком слое. state и echo — откуда она; measures — размер указа в мерах.
+export interface WorldNews {
+  season: number; layer: WorldLayer; kind: "start" | "end" | "weather" | "echo" | "decree"; tone: "bad" | "good" | "neutral"; text: string;
+  state?: string; echo?: number; strength?: number; measures?: number;
+}
+// Генератор мира: своя случайность (от семени партии), от совета не зависит — поэтому ленту можно считать и без партии.
+export interface WorldSim {
+  rng: Rng;
+  season: number;            // сезон, который описывает это состояние
+  active: WorldActive[];
+  queue: WorldEcho[];
+  budget: number;            // бюджет давления рассказчика
+  lastBad: number;           // в каком сезоне началась последняя беда
+  decreeFree: number;        // с какого сезона может прийти следующий указ
+  weather: number;           // погода года: множитель урожая
+  news: WorldNews[];         // вести текущего сезона
+}
+// Указ Герцога: счёт в мерах, как урок подати. council — сколько мер закрыл совет сам; closed — чем кончилось.
+export interface Decree {
+  id: number; def: string; state: string; title: string; text: string; accepts: Category[];
+  due: number; paid: number; by: Partial<Record<PayId, number>>; council: number;
+  issued: number; until: number; closed?: "закрыт" | "закрыт советом" | "не закрыт";
+}
+// harvests — множитель урожая каждого прожитого года (погода и состояния мира на осень): по нему отчёты отличают плохие годы.
+export interface WorldGame { sim: WorldSim; decrees: Decree[]; past: Decree[]; nextId: number; harvests: number[] }
 
 // ---------- Авторитет ----------
 

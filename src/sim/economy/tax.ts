@@ -7,6 +7,7 @@ import { STAR_MAX } from "../state";
 import type { World } from "../state";
 import { zoneMult, patienceWord } from "./zones";
 import { taxLeft, payTax } from "./pay";
+import { worldMods } from "../world/gen";
 
 export function lessonOf(year: number): number {
   return year <= B.economy.tax.trialYears ? B.economy.tax.trial : B.economy.tax.normal;
@@ -14,11 +15,14 @@ export function lessonOf(year: number): number {
 export function newTaxYear(w: World): string {
   const t = w.eco.tax;
   t.year++;
-  t.lesson = lessonOf(t.year);
+  // мир вокруг: война даёт надбавку к уроку, свадьба в доме Герцога — послабление
+  const add = worldMods(w.world.sim).lesson;
+  t.lesson = round1(Math.max(0, lessonOf(t.year) + add));
   t.due = round1(t.lesson + t.carried);
   t.paid = 0; t.early = false; t.by = {};
   const trial = t.year <= B.economy.tax.trialYears ? " (испытание)" : "";
-  return `Герцог объявил урок на год${trial}: ${t.lesson} мер${t.carried ? ` и недоимка ${t.carried}` : ""} — к осени ${t.due}.`;
+  const why = add > 0 ? ` (с надбавкой ${add}: в герцогстве неспокойно)` : add < 0 ? ` (с послаблением ${-add})` : "";
+  return `Герцог объявил урок на год${trial}: ${t.lesson} мер${why}${t.carried ? ` и недоимка ${t.carried}` : ""} — к осени ${t.due}.`;
 }
 // Плательщик по умолчанию: остаток урока закрывает серебром из казны, потом зерном из амбара — не ниже нижних черт.
 export function autoPayTax(w: World, lines: string[]): number {
