@@ -6,7 +6,7 @@ import { PRESETS, newPreset } from "../sim/presets";
 import { authorityCap, authoritySupport, authorityWeak, complaintLeft, judge, feast, feastGain, feastCost, FEASTS, type AuthLine, type FeastId } from "../sim/authority";
 import {
   zoneOf, patienceWord, handsNow, fieldHands, forecastFork, ledgerOf, payOptions, payTax, taxLeft, setCourse, setFloor,
-  seasonKind, elderRel, doer, planSeason, type LedgerLine,
+  seasonKind, elderRel, doer, planSeason, handText, type LedgerLine,
 } from "../sim/economy";
 import {
   runSeason, assign, assignCost, setHead, talk, giveOrder, holder, getRel, relWord,
@@ -280,7 +280,7 @@ function renderCourse() {
   const held = c ? (e.courseSeasons >= 1 ? `держится ${e.courseSeasons} сез. — действует сильнее` : "первый сезон") : "";
   const who = c ? [c.pro.length ? `совет чаще решает по: ${c.pro.map((a) => AXIS_NAMES[a]).join(", ")}` : "",
     c.contra.length ? `против: ${c.contra.map((a) => AXIS_NAMES[a]).join(", ")}` : ""].filter(Boolean).join("; ") : "";
-  const doers = POSTS.map((d) => `${d.name}: ${doer(w, d.id).how}`).join(" · ");
+  const doers = POSTS.map((d) => { const x = doer(w, d.id); return `${d.name}: ${x.note}${designer ? ` ×${fmt(x.mult)}${x.hand ? `, ${x.hand}` : ""}` : ""}`; }).join(" · ");
   $("eco-course").innerHTML = `<div class="pay"><select id="course">${options}</select></div>
     <p class="hint" id="course-desc">${c ? `${esc(c.desc)}. ${who}. ${held}${e.shaky ? " · <b>шатание</b>: курс сменили слишком быстро" : ""}` : "Совет решает мелкие дела по своим склонностям."}</p>
     <p class="hint" id="doers">Исполняют: ${doers}</p>
@@ -408,6 +408,18 @@ function opinionLine(p: Person): string {
   return `<div class="opinion" title="${title}">Главный, ${esc(o.head.name)}: «${o.text}».${bias}</div>`;
 }
 
+// Почерк на должности: что склонность человека даёт его сфере и чем за это платят. Виден, когда склонность известна.
+function handLine(p: Person): string {
+  const hands = handText(p);
+  if (!hands.length) return p.post ? `<div class="hand" data-hand="none">Почерк: ровно, без уклона${designer ? "" : " (насколько известно)"}.</div>` : "";
+  const rows = hands.map((x) => {
+    if (!designer && !axisKnown(p, x.axis)) return `<div class="hand unknown" data-hand="unknown">${x.shade ? "Оттенок почерка" : "Почерк"}: склонность ещё не раскрыта.</div>`;
+    const title = x.shade ? "Оттенок почерка" : `Почерк${isStale(p) ? " (засиделся: вдвое сильнее)" : ""}`;
+    return `<div class="hand" data-hand="${x.axis}">${title} — <b style="color:${AXIS_COLOR[x.axis]}">${AXIS_NAMES[x.axis]}</b>: ${esc(x.text)}.</div>`;
+  });
+  return rows.join("");
+}
+
 function renderPeople() {
   $("people").innerHTML = w.people.map((p) => {
     const noOrder = !p.order && orderCost(w) > w.authority ? "disabled" : "";
@@ -433,6 +445,7 @@ function renderPeople() {
           <div class="decisions">Решений: <b>${p.decisions}</b>${match}</div>
         </div>
       </div>
+      ${handLine(p)}
       ${opinionLine(p)}
       <details class="bio"><summary>Биография</summary><ul>${p.bio.map((b) => `<li>${esc(b)}</li>`).join("")}</ul></details>
       <div class="card-actions">
@@ -506,7 +519,7 @@ const SECTION_NAMES: Record<string, string> = {
 };
 const SUB_NAMES: Record<string, string> = {
   start: "старт партии", trust: "доверие сторон", zone: "зоны и потоки", doer: "исполнитель", hands: "руки", flow: "потоки", year: "множители по сезонам",
-  course: "курс", tax: "урок и терпение Герцога", rate: "курсы подати", pay: "способы платить", goal: "цели отчёта", fork: "прогноз",
+  hand: "почерк", course: "курс", tax: "урок и терпение Герцога", rate: "курсы подати", pay: "способы платить", goal: "цели отчёта", fork: "прогноз",
 };
 // Натура и здоровье к совету не подключены: их ручки — в эмуляторе натуры.
 const EMU_KNOBS = KNOBS.filter((q) => q.path.split(".")[0] in SECTION_NAMES);

@@ -1877,7 +1877,8 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
       orderMinBonus: k(0.3, 0, 2, 0.1, "\u041D\u0430\u043A\u0430\u0437: \u043F\u0440\u0438\u0431\u0430\u0432\u043A\u0430 \u043C\u0435\u043D\u044C\u0448\u0435 \u044D\u0442\u043E\u0439 \u043D\u0435 \u0434\u0435\u0439\u0441\u0442\u0432\u0443\u0435\u0442"),
       staleGreedFrom: k(6, 0, 10, 0.5, "\u0417\u0430\u0441\u0438\u0434\u0435\u0432\u0448\u0438\u0439\u0441\u044F \u0442\u044F\u043D\u0435\u0442 \u043A \u0441\u0432\u043E\u0435\u0439 \u043F\u043E\u043B\u044C\u0437\u0435, \u0435\u0441\u043B\u0438 \u0412\u044B\u0433\u043E\u0434\u0430 \u043D\u0435 \u043D\u0438\u0436\u0435 \u044D\u0442\u043E\u0433\u043E"),
       staleGreedBonus: k(1, 0, 4, 0.25, "\u0417\u0430\u0441\u0438\u0434\u0435\u0432\u0448\u0438\u0439\u0441\u044F: \u043F\u0440\u0438\u0431\u0430\u0432\u043A\u0430 \u043A \u0432\u0430\u0440\u0438\u0430\u043D\u0442\u0430\u043C \u043F\u043E \u0412\u044B\u0433\u043E\u0434\u0435"),
-      cautiousRisk: k(1, 0, 4, 0.25, "\u041E\u0441\u0442\u043E\u0440\u043E\u0436\u043D\u044B\u0439: \u0448\u0442\u0440\u0430\u0444 \u0440\u0438\u0441\u043A\u043E\u0432\u0430\u043D\u043D\u043E\u043C\u0443 \u0432\u0430\u0440\u0438\u0430\u043D\u0442\u0443")
+      cautiousRisk: k(1, 0, 4, 0.25, "\u041E\u0441\u0442\u043E\u0440\u043E\u0436\u043D\u044B\u0439: \u0448\u0442\u0440\u0430\u0444 \u0440\u0438\u0441\u043A\u043E\u0432\u0430\u043D\u043D\u043E\u043C\u0443 \u0432\u0430\u0440\u0438\u0430\u043D\u0442\u0443"),
+      kindLean: k(0.15, 0, 1, 0.05, "\u0420\u043E\u0434 \u0432\u0430\u0440\u0438\u0430\u043D\u0442\u0430: \u043D\u0430 \u0435\u0434\u0438\u043D\u0438\u0446\u0443 \u0414\u0435\u0440\u0437\u043E\u0441\u0442\u0438 \u0432\u044B\u0448\u0435 \u0441\u0435\u0440\u0435\u0434\u0438\u043D\u044B \u0441\u043C\u0435\u043B\u044B\u0439 \u0432\u0430\u0440\u0438\u0430\u043D\u0442 \u0432\u0435\u0441\u0438\u0442 \u0431\u043E\u043B\u044C\u0448\u0435, \u043E\u0441\u0442\u043E\u0440\u043E\u0436\u043D\u044B\u0439 \u2014 \u043C\u0435\u043D\u044C\u0448\u0435")
     },
     // опыт на должности, годность и исход дела
     exp: {
@@ -1893,7 +1894,9 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
       skillMax: k(1.2, 1, 2, 0.05, "\u0423\u043C\u0435\u043D\u0438\u0435: \u0432\u0435\u0440\u0445\u043D\u0438\u0439 \u043F\u0440\u0435\u0434\u0435\u043B"),
       riskBase: k(0.3, 0, 1, 0.05, "\u0420\u0438\u0441\u043A\u043E\u0432\u0430\u043D\u043D\u043E\u0435 \u0434\u0435\u043B\u043E: \u0448\u0430\u043D\u0441 \u0443\u0434\u0430\u0447\u0438 \u0431\u0435\u0437 \u0443\u043C\u0435\u043D\u0438\u044F"),
       riskSkill: k(0.55, 0, 1, 0.05, "\u0420\u0438\u0441\u043A\u043E\u0432\u0430\u043D\u043D\u043E\u0435 \u0434\u0435\u043B\u043E: \u043F\u0440\u0438\u0431\u0430\u0432\u043A\u0430 \u0448\u0430\u043D\u0441\u0430 \u043D\u0430 \u0435\u0434\u0438\u043D\u0438\u0446\u0443 \u0443\u043C\u0435\u043D\u0438\u044F"),
-      failBackfire: k(0.5, 0, 1, 0.05, "\u041F\u0440\u043E\u0432\u0430\u043B \u0440\u0438\u0441\u043A\u043E\u0432\u0430\u043D\u043D\u043E\u0433\u043E \u0434\u0435\u043B\u0430: \u043A\u0430\u043A\u0430\u044F \u0434\u043E\u043B\u044F \u043F\u043E\u043B\u044C\u0437\u044B \u043E\u0431\u043E\u0440\u0430\u0447\u0438\u0432\u0430\u0435\u0442\u0441\u044F \u0432\u0440\u0435\u0434\u043E\u043C"),
+      failBackfire: k(0.75, 0, 1.5, 0.05, "\u041F\u0440\u043E\u0432\u0430\u043B \u0441\u043C\u0435\u043B\u043E\u0433\u043E \u0434\u0435\u043B\u0430: \u043A\u0430\u043A\u0430\u044F \u0434\u043E\u043B\u044F \u043F\u043E\u043B\u044C\u0437\u044B \u043E\u0431\u043E\u0440\u0430\u0447\u0438\u0432\u0430\u0435\u0442\u0441\u044F \u0432\u0440\u0435\u0434\u043E\u043C"),
+      boldGain: k(1.5, 1, 3, 0.05, "\u0421\u043C\u0435\u043B\u044B\u0439 \u0432\u0430\u0440\u0438\u0430\u043D\u0442: \u0432\u043E \u0441\u043A\u043E\u043B\u044C\u043A\u043E \u0440\u0430\u0437 \u0431\u043E\u043B\u044C\u0448\u0435 \u0432\u044B\u0438\u0433\u0440\u044B\u0448 \u043F\u0440\u0438 \u0443\u0434\u0430\u0447\u0435"),
+      carefulGain: k(0.6, 0.1, 1, 0.05, "\u041E\u0441\u0442\u043E\u0440\u043E\u0436\u043D\u044B\u0439 \u0432\u0430\u0440\u0438\u0430\u043D\u0442: \u043C\u043D\u043E\u0436\u0438\u0442\u0435\u043B\u044C \u0438 \u0432\u044B\u0438\u0433\u0440\u044B\u0448\u0430, \u0438 \u0446\u0435\u043D\u044B"),
       fitMarkGood: k(2, 0, 5, 0.5, "\u0413\u043E\u0434\u043D\u043E\u0441\u0442\u044C: \u043F\u0440\u0438\u0431\u0430\u0432\u043A\u0430 \u0437\u0430 \u043F\u043E\u0434\u0445\u043E\u0434\u044F\u0449\u0443\u044E \u043C\u0435\u0442\u043A\u0443"),
       fitMarkBad: k(3, 0, 6, 0.5, "\u0413\u043E\u0434\u043D\u043E\u0441\u0442\u044C: \u0432\u044B\u0447\u0435\u0442 \u0437\u0430 \u043C\u0435\u0448\u0430\u044E\u0449\u0443\u044E \u043C\u0435\u0442\u043A\u0443"),
       fitAspiration: k(1, 0, 4, 0.5, "\u0413\u043E\u0434\u043D\u043E\u0441\u0442\u044C: \u043F\u0440\u0438\u0431\u0430\u0432\u043A\u0430, \u0435\u0441\u043B\u0438 \u0447\u0435\u043B\u043E\u0432\u0435\u043A \u0445\u043E\u0447\u0435\u0442 \u044D\u0442\u0443 \u0434\u043E\u043B\u0436\u043D\u043E\u0441\u0442\u044C")
@@ -1923,7 +1926,11 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
       dealRel: k(0.3, 0, 2, 0.1, "\u041B\u0430\u0434\u044F\u0442 \u0438 \u0434\u043E\u0433\u043E\u0432\u043E\u0440\u0438\u043B\u0438\u0441\u044C: \u043F\u0440\u0438\u0431\u0430\u0432\u043A\u0430 \u043A \u043E\u0442\u043D\u043E\u0448\u0435\u043D\u0438\u044F\u043C"),
       compromiseChance: k(0.4, 0, 1, 0.05, "\u0422\u0435\u0440\u043F\u044F\u0442: \u0448\u0430\u043D\u0441 \u043A\u043E\u043C\u043F\u0440\u043E\u043C\u0438\u0441\u0441\u0430"),
       softness: k(0.1, 0, 0.3, 0.01, "\u0422\u0435\u0440\u043F\u044F\u0442: \u043F\u0440\u0438\u0431\u0430\u0432\u043A\u0430 \u0448\u0430\u043D\u0441\u0430 \u043A\u043E\u043C\u043F\u0440\u043E\u043C\u0438\u0441\u0441\u0430 \u0437\u0430 \u0435\u0434\u0438\u043D\u0438\u0446\u0443 \u043C\u044F\u0433\u043A\u043E\u0441\u0442\u0438 \u0447\u0435\u0440\u0442"),
-      compromise: k(0.7, 0.1, 1, 0.05, "\u041A\u043E\u043C\u043F\u0440\u043E\u043C\u0438\u0441\u0441: \u043C\u043D\u043E\u0436\u0438\u0442\u0435\u043B\u044C \u0438\u0441\u0445\u043E\u0434\u0430"),
+      compromise: k(0.6, 0.1, 1, 0.05, "\u041A\u043E\u043C\u043F\u0440\u043E\u043C\u0438\u0441\u0441: \u043C\u043D\u043E\u0436\u0438\u0442\u0435\u043B\u044C \u0438\u0441\u0445\u043E\u0434\u0430"),
+      dealGain: k(1.1, 1, 2, 0.05, "\u0414\u043E\u0433\u043E\u0432\u043E\u0440\u0438\u043B\u0438\u0441\u044C: \u043C\u043D\u043E\u0436\u0438\u0442\u0435\u043B\u044C \u0438\u0441\u0445\u043E\u0434\u0430"),
+      rivalGain: k(0.75, 0.1, 1, 0.05, "\u0421\u043E\u043F\u0435\u0440\u043D\u0438\u043A \u043D\u0430\u0441\u0442\u043E\u044F\u043B \u0438\u043B\u0438 \u0432\u0440\u0430\u0433 \u0441\u043C\u043E\u043B\u0447\u0430\u043B: \u043C\u043D\u043E\u0436\u0438\u0442\u0435\u043B\u044C \u0438\u0441\u0445\u043E\u0434\u0430"),
+      cohesion: k(1.1, 1, 1.5, 0.05, "\u0421\u043B\u0430\u0436\u0435\u043D\u043D\u044B\u0439 \u0441\u043E\u0432\u0435\u0442 (\u0433\u043B\u0430\u0432\u043D\u044B\u0439 \u043F\u0440\u0438\u0437\u043D\u0430\u043D, \u0432\u0440\u0430\u0436\u0434\u044B \u043D\u0435\u0442): \u043C\u043D\u043E\u0436\u0438\u0442\u0435\u043B\u044C \u0434\u0435\u043B \u0434\u0432\u0443\u0445 \u0441\u0444\u0435\u0440"),
+      feud: k(0.9, 0.5, 1, 0.05, "\u041E\u0442\u043A\u0440\u044B\u0442\u0430\u044F \u0432\u0440\u0430\u0436\u0434\u0430 \u0432 \u0441\u043E\u0432\u0435\u0442\u0435: \u043C\u043D\u043E\u0436\u0438\u0442\u0435\u043B\u044C \u0434\u0435\u043B \u0434\u0432\u0443\u0445 \u0441\u0444\u0435\u0440"),
       pushRel: k(-0.7, -3, 0, 0.1, "\u0422\u0435\u0440\u043F\u044F\u0442, \u043E\u0434\u0438\u043D \u043F\u0440\u043E\u0434\u0430\u0432\u0438\u043B: \u043E\u0442\u043D\u043E\u0448\u0435\u043D\u0438\u044F"),
       rivalRel: k(-1, -3, 0, 0.1, "\u0421\u043E\u043F\u0435\u0440\u043D\u0438\u043A\u0438, \u043E\u0434\u0438\u043D \u043D\u0430\u0441\u0442\u043E\u044F\u043B: \u043E\u0442\u043D\u043E\u0448\u0435\u043D\u0438\u044F"),
       complaintLoyalty: k(3, -10, 10, 0.5, "\u0421\u043E\u043F\u0435\u0440\u043D\u0438\u043A\u0438: \u043F\u0440\u043E\u0438\u0433\u0440\u0430\u0432\u0448\u0438\u0439 \u0436\u0430\u043B\u0443\u0435\u0442\u0441\u044F \u043D\u0430\u0432\u0435\u0440\u043D\u044F\u043A\u0430, \u0435\u0441\u043B\u0438 \u0435\u0433\u043E \u043E\u0442\u043D\u043E\u0448\u0435\u043D\u0438\u0435 \u043A \u0421\u0435\u043D\u0435\u0448\u0430\u043B\u044E \u043D\u0438\u0436\u0435 \u044D\u0442\u043E\u0433\u043E"),
@@ -2161,16 +2168,36 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
         noRites: k(0.5, 0, 1, 0.05, "\u0414\u0435\u0440\u0435\u0432\u043D\u044F \u0443 \u043E\u043F\u0443\u0448\u043A\u0438 \xAB\u043E\u0442\u043A\u0430\u0437\u044B\u0432\u0430\u0435\u0442\xBB: \u043E\u0431\u0440\u044F\u0434\u043E\u0432 \u043D\u0435\u0442, \u0434\u0430\u0440\u044B \u043B\u0435\u0441\u0430 \u0443\u043C\u043D\u043E\u0436\u0430\u044E\u0442\u0441\u044F \u043D\u0430 \u044D\u0442\u043E")
       },
       doer: {
-        fire: k(1.2, 1, 2, 0.05, "\u0418\u0441\u043F\u043E\u043B\u043D\u0438\u0442\u0435\u043B\u044C \u0441 \u043E\u0433\u043E\u043D\u044C\u043A\u043E\u043C: \u043C\u043D\u043E\u0436\u0438\u0442\u0435\u043B\u044C \u043F\u043E\u0442\u043E\u043A\u0430"),
+        fire: k(1.15, 1, 2, 0.05, "\u0418\u0441\u043F\u043E\u043B\u043D\u0438\u0442\u0435\u043B\u044C \u0441 \u043E\u0433\u043E\u043D\u044C\u043A\u043E\u043C: \u043C\u043D\u043E\u0436\u0438\u0442\u0435\u043B\u044C \u043F\u043E\u0442\u043E\u043A\u0430"),
         plain: k(1, 0.5, 1.5, 0.05, "\u0418\u0441\u043F\u043E\u043B\u043D\u0438\u0442\u0435\u043B\u044C \xAB\u043A\u0430\u043A \u0432\u0435\u043B\u0435\u043D\u043E\xBB: \u043C\u043D\u043E\u0436\u0438\u0442\u0435\u043B\u044C \u043F\u043E\u0442\u043E\u043A\u0430"),
-        dull: k(0.8, 0, 1, 0.05, "\u0418\u0441\u043F\u043E\u043B\u043D\u0438\u0442\u0435\u043B\u044C \u0431\u0435\u0437 \u043E\u0433\u043E\u043D\u044C\u043A\u0430: \u043C\u043D\u043E\u0436\u0438\u0442\u0435\u043B\u044C \u043F\u043E\u0442\u043E\u043A\u0430"),
+        dull: k(0.85, 0, 1, 0.05, "\u0418\u0441\u043F\u043E\u043B\u043D\u0438\u0442\u0435\u043B\u044C \u0431\u0435\u0437 \u043E\u0433\u043E\u043D\u044C\u043A\u0430: \u043C\u043D\u043E\u0436\u0438\u0442\u0435\u043B\u044C \u043F\u043E\u0442\u043E\u043A\u0430"),
+        // сила потока = мастерство × опыт × настрой (lyudi-i-ishody.md, 2.1)
+        masteryMin: k(0.8, 0.5, 1, 0.05, "\u041C\u0430\u0441\u0442\u0435\u0440\u0441\u0442\u0432\u043E: \u043C\u043D\u043E\u0436\u0438\u0442\u0435\u043B\u044C \u043F\u043E\u0442\u043E\u043A\u0430 \u0443 \u043D\u0435\u0433\u043E\u0434\u043D\u043E\u0433\u043E \u043A \u0434\u043E\u043B\u0436\u043D\u043E\u0441\u0442\u0438"),
+        masteryMax: k(1.2, 1, 1.5, 0.05, "\u041C\u0430\u0441\u0442\u0435\u0440\u0441\u0442\u0432\u043E: \u043C\u043D\u043E\u0436\u0438\u0442\u0435\u043B\u044C \u043F\u043E\u0442\u043E\u043A\u0430 \u0443 \u043F\u0440\u0438\u0440\u043E\u0436\u0434\u0451\u043D\u043D\u043E\u0433\u043E"),
+        masteryFrom: k(4, 0, 6, 0.5, "\u041C\u0430\u0441\u0442\u0435\u0440\u0441\u0442\u0432\u043E: \u0433\u043E\u0434\u043D\u043E\u0441\u0442\u044C, \u0441 \u043A\u043E\u0442\u043E\u0440\u043E\u0439 \u0438 \u043D\u0438\u0436\u0435 \u2014 \xAB\u043D\u0435\u0433\u043E\u0434\u0435\u043D\xBB"),
+        masteryTo: k(10, 5, 12, 0.5, "\u041C\u0430\u0441\u0442\u0435\u0440\u0441\u0442\u0432\u043E: \u0433\u043E\u0434\u043D\u043E\u0441\u0442\u044C, \u0441 \u043A\u043E\u0442\u043E\u0440\u043E\u0439 \u0438 \u0432\u044B\u0448\u0435 \u2014 \xAB\u043F\u0440\u0438\u0440\u043E\u0436\u0434\u0451\u043D\u043D\u044B\u0439\xBB"),
+        expNovice: k(0.85, 0.5, 1, 0.05, "\u041E\u043F\u044B\u0442 \u0432 \u043F\u043E\u0442\u043E\u043A\u0435: \u043D\u043E\u0432\u0438\u0447\u043E\u043A"),
+        expSettled: k(1, 0.5, 1.5, 0.05, "\u041E\u043F\u044B\u0442 \u0432 \u043F\u043E\u0442\u043E\u043A\u0435: \u043E\u0441\u0432\u043E\u0438\u043B\u0441\u044F"),
+        expMaster: k(1.1, 1, 1.5, 0.05, "\u041E\u043F\u044B\u0442 \u0432 \u043F\u043E\u0442\u043E\u043A\u0435: \u043C\u0430\u0441\u0442\u0435\u0440"),
         empty: k(0.5, 0, 1, 0.05, "\u0414\u043E\u043B\u0436\u043D\u043E\u0441\u0442\u044C \u043F\u0443\u0441\u0442\u0430: \u043C\u043D\u043E\u0436\u0438\u0442\u0435\u043B\u044C \u043F\u043E\u0442\u043E\u043A\u0430"),
         fireFrom: k(2, 1, 4, 1, "\u0418\u0441\u043F\u043E\u043B\u043D\u0438\u0442\u0435\u043B\u044C: \u0441 \u043E\u0433\u043E\u043D\u044C\u043A\u043E\u043C, \u0435\u0441\u043B\u0438 \u0434\u043E\u0432\u043E\u0434\u043E\u0432 \xAB\u0437\u0430\xBB \u0431\u043E\u043B\u044C\u0448\u0435, \u0447\u0435\u043C \xAB\u043F\u0440\u043E\u0442\u0438\u0432\xBB, \u043D\u0430 \u0441\u0442\u043E\u043B\u044C\u043A\u043E"),
         dullFrom: k(-1, -4, 0, 1, "\u0418\u0441\u043F\u043E\u043B\u043D\u0438\u0442\u0435\u043B\u044C: \u0431\u0435\u0437 \u043E\u0433\u043E\u043D\u044C\u043A\u0430, \u0435\u0441\u043B\u0438 \u043F\u0435\u0440\u0435\u0432\u0435\u0441 \u0434\u043E\u0432\u043E\u0434\u043E\u0432 \u043D\u0435 \u0432\u044B\u0448\u0435 \u044D\u0442\u043E\u0433\u043E"),
-        staleSpoil: k(2, 1, 5, 0.25, "\u041F\u043E-\u0441\u0432\u043E\u0435\u043C\u0443, \u043A\u043B\u044E\u0447\u043D\u0438\u043A: \u0441\u043A\u043B\u0430\u0434\u044B \u0437\u0430\u043F\u0443\u0449\u0435\u043D\u044B \u2014 \u043F\u043E\u0440\u0447\u0430 \u0435\u0434\u044B \u0443\u043C\u043D\u043E\u0436\u0430\u0435\u0442\u0441\u044F \u043D\u0430 \u044D\u0442\u043E"),
-        staleQuitrent: k(0.8, 0, 1, 0.05, "\u041F\u043E-\u0441\u0432\u043E\u0435\u043C\u0443, \u0442\u0438\u0443\u043D: \u0447\u0430\u0441\u0442\u044C \u043E\u0431\u0440\u043E\u043A\u0430 \u043E\u0441\u0442\u0430\u0432\u0438\u043B \u0434\u0435\u0440\u0435\u0432\u043D\u044F\u043C \u0432 \u0434\u043E\u043B\u0433 \u2014 \u043E\u0431\u0440\u043E\u043A \u0443\u043C\u043D\u043E\u0436\u0430\u0435\u0442\u0441\u044F \u043D\u0430 \u044D\u0442\u043E"),
-        staleQuitrentTrust: k(0.3, 0, 2, 0.05, "\u041F\u043E-\u0441\u0432\u043E\u0435\u043C\u0443, \u0442\u0438\u0443\u043D: \u0437\u0430 \u044D\u0442\u043E \u0434\u043E\u0432\u0435\u0440\u0438\u0435 \u043A\u0430\u0436\u0434\u043E\u0439 \u0434\u0435\u0440\u0435\u0432\u043D\u0438 \u0440\u0430\u0441\u0442\u0451\u0442 \u0437\u0430 \u043E\u0441\u0435\u043D\u044C"),
-        staleKickback: k(0.9, 0, 1, 0.05, "\u041F\u043E-\u0441\u0432\u043E\u0435\u043C\u0443, \u043F\u0438\u0441\u0430\u0440\u044C: \u043E\u0442\u043A\u0430\u0442 \u0441 \u043A\u0443\u043F\u0446\u0430 \u2014 \u0446\u0435\u043D\u0430 \u0442\u043E\u0432\u0430\u0440\u043E\u0432 \u0443\u043C\u043D\u043E\u0436\u0430\u0435\u0442\u0441\u044F \u043D\u0430 \u044D\u0442\u043E")
+        expStale: k(1.15, 1, 1.5, 0.05, "\u041E\u043F\u044B\u0442 \u0432 \u043F\u043E\u0442\u043E\u043A\u0435: \u0437\u0430\u0441\u0438\u0434\u0435\u0432\u0448\u0438\u0439\u0441\u044F (\u043C\u0430\u0441\u0442\u0435\u0440 \u0438 \u0432\u044B\u0448\u0435, \u043D\u043E \u0432\u0435\u0434\u0451\u0442 \u043F\u043E-\u0441\u0432\u043E\u0435\u043C\u0443)")
+      },
+      // почерк: как склонность исполнителя меняет его сферу (src/data/handwriting.ts; lyudi-i-ishody.md, 2.2)
+      hand: {
+        flow: k(0.15, 0, 0.5, 0.01, "\u041F\u043E\u0447\u0435\u0440\u043A: \u0435\u0434\u0438\u043D\u0438\u0446\u0430 \u0440\u044B\u0447\u0430\u0433\u0430 \u043F\u043E\u0442\u043E\u043A\u0430 (\u043E\u0431\u0440\u043E\u043A, \u0443\u0440\u043E\u0436\u0430\u0439, \u043F\u043E\u0448\u043B\u0438\u043D\u044B, \u0446\u0435\u043D\u0430, \u043F\u043E\u0440\u0447\u0430, \u043F\u0440\u043E\u043A\u043E\u0440\u043C), \u0434\u043E\u043B\u044F"),
+        trust: k(0.3, 0, 1, 0.05, "\u041F\u043E\u0447\u0435\u0440\u043A: \u0435\u0434\u0438\u043D\u0438\u0446\u0430 \u0440\u044B\u0447\u0430\u0433\u0430 \u0434\u043E\u0432\u0435\u0440\u0438\u044F \u0441\u0442\u043E\u0440\u043E\u043D\u044B, \u0437\u0430 \u0441\u0435\u0437\u043E\u043D"),
+        order: k(0.3, 0, 1, 0.05, "\u041F\u043E\u0447\u0435\u0440\u043A: \u0435\u0434\u0438\u043D\u0438\u0446\u0430 \u0440\u044B\u0447\u0430\u0433\u0430 \u043F\u043E\u0440\u044F\u0434\u043A\u0430, \u0437\u0430 \u0441\u0435\u0437\u043E\u043D"),
+        hands: k(0.5, 0, 2, 0.1, "\u041F\u043E\u0447\u0435\u0440\u043A: \u0435\u0434\u0438\u043D\u0438\u0446\u0430 \u0440\u044B\u0447\u0430\u0433\u0430 \u0440\u0443\u043A (\u0440\u0430\u0441\u0447\u0438\u0441\u0442\u043A\u0430, \u0440\u0430\u043D\u0435\u043D\u044B\u0435)"),
+        silver: k(0.15, 0, 1, 0.05, "\u041F\u043E\u0447\u0435\u0440\u043A: \u0435\u0434\u0438\u043D\u0438\u0446\u0430 \u0440\u044B\u0447\u0430\u0433\u0430 \u0441\u0435\u0440\u0435\u0431\u0440\u0430 \u0437\u0430 \u0441\u0435\u0437\u043E\u043D (\u0434\u043E\u0440\u043E\u0436\u043D\u044B\u0439 \u0441\u0431\u043E\u0440, \u043F\u0440\u043E\u0446\u0435\u043D\u0442\u044B)"),
+        sell: k(0.5, 0, 1, 0.05, "\u041F\u043E\u0447\u0435\u0440\u043A \u043A\u043B\u044E\u0447\u043D\u0438\u043A\u0430 \u043F\u043E \u0412\u044B\u0433\u043E\u0434\u0435: \u043A\u0430\u043A\u0443\u044E \u0434\u043E\u043B\u044E \u0438\u0437\u043B\u0438\u0448\u043A\u0430 \u0435\u0434\u044B \u043F\u0440\u043E\u0434\u0430\u0451\u0442"),
+        patience: k(0.1, 0, 1, 0.05, "\u041F\u043E\u0447\u0435\u0440\u043A \u043F\u0438\u0441\u0430\u0440\u044F \u043F\u043E \u041E\u0431\u044B\u0447\u0430\u044E: \u0442\u0435\u0440\u043F\u0435\u043D\u0438\u0435 \u0413\u0435\u0440\u0446\u043E\u0433\u0430 \u0437\u0430 \u0441\u0435\u0437\u043E\u043D"),
+        second: k(0.5, 0, 1, 0.05, "\u041F\u043E\u0447\u0435\u0440\u043A: \u0432\u0435\u0441 \u0432\u0442\u043E\u0440\u043E\u0439 \u0441\u0438\u043B\u044C\u043D\u043E\u0439 \u0441\u043A\u043B\u043E\u043D\u043D\u043E\u0441\u0442\u0438 (\u043E\u0442\u0442\u0435\u043D\u043E\u043A)"),
+        nativePlus: k(1.3, 1, 2, 0.05, "\u041F\u043E\u0447\u0435\u0440\u043A, \u0440\u043E\u0434\u043D\u0430\u044F \u0441\u043A\u043B\u043E\u043D\u043D\u043E\u0441\u0442\u044C \u0434\u043E\u043B\u0436\u043D\u043E\u0441\u0442\u0438: \u043F\u043B\u044E\u0441 \u0443\u043C\u043D\u043E\u0436\u0430\u0435\u0442\u0441\u044F \u043D\u0430 \u044D\u0442\u043E"),
+        nativeMinus: k(0.7, 0, 1, 0.05, "\u041F\u043E\u0447\u0435\u0440\u043A, \u0440\u043E\u0434\u043D\u0430\u044F \u0441\u043A\u043B\u043E\u043D\u043D\u043E\u0441\u0442\u044C \u0434\u043E\u043B\u0436\u043D\u043E\u0441\u0442\u0438: \u043C\u0438\u043D\u0443\u0441 \u0443\u043C\u043D\u043E\u0436\u0430\u0435\u0442\u0441\u044F \u043D\u0430 \u044D\u0442\u043E"),
+        foreignMinus: k(1, 1, 2, 0.05, "\u041F\u043E\u0447\u0435\u0440\u043A, \u0447\u0443\u0436\u0430\u044F \u0441\u043A\u043B\u043E\u043D\u043D\u043E\u0441\u0442\u044C: \u043C\u0438\u043D\u0443\u0441 \u0443\u043C\u043D\u043E\u0436\u0430\u0435\u0442\u0441\u044F \u043D\u0430 \u044D\u0442\u043E"),
+        stale: k(2, 1, 3, 0.25, "\u041F\u043E\u0447\u0435\u0440\u043A \u0437\u0430\u0441\u0438\u0434\u0435\u0432\u0448\u0435\u0433\u043E\u0441\u044F: \u0432\u043E \u0441\u043A\u043E\u043B\u044C\u043A\u043E \u0440\u0430\u0437 \u0441\u0438\u043B\u044C\u043D\u0435\u0435")
       },
       hands: {
         brod: k(3, 0, 8, 0.5, "\u0420\u0443\u043A\u0438: \u0434\u0435\u0440\u0435\u0432\u043D\u044F \u0443 \u0431\u0440\u043E\u0434\u0430 \u043F\u0440\u0438 \xAB\u043B\u0430\u0434\u044F\u0442\xBB"),
@@ -2340,12 +2367,12 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
   // src/sim/rng.ts
   var Rng = class {
     constructor(seed) {
-      let h = 1779033703 ^ seed.length;
+      let h2 = 1779033703 ^ seed.length;
       for (let i = 0; i < seed.length; i++) {
-        h = Math.imul(h ^ seed.charCodeAt(i), 3432918353);
-        h = h << 13 | h >>> 19;
+        h2 = Math.imul(h2 ^ seed.charCodeAt(i), 3432918353);
+        h2 = h2 << 13 | h2 >>> 19;
       }
-      this.s = h >>> 0;
+      this.s = h2 >>> 0;
     }
     next() {
       let t = this.s += 1831565813;
@@ -2434,7 +2461,7 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
       posts: ["lesnichiy"],
       village: "opushka",
       options: [
-        { id: "vernut_lesu", text: "\u041E\u0441\u0442\u0430\u0432\u0438\u0442\u044C \u0442\u0443\u0448\u0443 \u043B\u0435\u0441\u0443 \u0438 \u0432\u044B\u043F\u043E\u0440\u043E\u0442\u044C", axes: ["obychai"], effects: { les: 1, derevni: -1 } },
+        { id: "vernut_lesu", text: "\u041E\u0441\u0442\u0430\u0432\u0438\u0442\u044C \u0442\u0443\u0448\u0443 \u043B\u0435\u0441\u0443 \u0438 \u0432\u044B\u043F\u043E\u0440\u043E\u0442\u044C", axes: ["obychai"], effects: { les: 1, derevni: -1 }, careful: true },
         { id: "otpustit", text: "\u041E\u0442\u043F\u0443\u0441\u0442\u0438\u0442\u044C \u0441 \u043C\u044F\u0441\u043E\u043C \u2014 \u0441\u0435\u043C\u044C\u044F \u0433\u043E\u043B\u043E\u0434\u0430\u0435\u0442", axes: ["zabota"], effects: { derevni: 1, les: -2 } },
         { id: "shtraf", text: "\u0412\u0437\u044F\u0442\u044C \u0448\u0442\u0440\u0430\u0444 \u0441\u0435\u0440\u0435\u0431\u0440\u043E\u043C", axes: ["vygoda"], effects: { kazna: 1, les: -1, derevni: -1 } }
       ]
@@ -2446,7 +2473,7 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
       posts: ["pisar"],
       options: [
         { id: "snizit", text: "\u0421\u043D\u0438\u0437\u0438\u0442\u044C \u2014 \u043F\u0443\u0441\u0442\u044C \u0435\u0437\u0434\u044F\u0442", axes: ["derzost", "vygoda"], effects: { kuptsy: 2, kazna: -1 }, risky: true },
-        { id: "derzhat", text: "\u0414\u0435\u0440\u0436\u0430\u0442\u044C \u043F\u0440\u0435\u0436\u043D\u044E\u044E \u2014 \u0442\u0430\u043A \u0437\u0430\u0432\u0435\u0434\u0435\u043D\u043E", axes: ["obychai", "dolg"], effects: { kuptsy: -1, kazna: 1 } },
+        { id: "derzhat", text: "\u0414\u0435\u0440\u0436\u0430\u0442\u044C \u043F\u0440\u0435\u0436\u043D\u044E\u044E \u2014 \u0442\u0430\u043A \u0437\u0430\u0432\u0435\u0434\u0435\u043D\u043E", axes: ["obychai", "dolg"], effects: { kuptsy: -1, kazna: 1 }, careful: true },
         { id: "torgovat", text: "\u0421\u0442\u043E\u0440\u0433\u043E\u0432\u0430\u0442\u044C\u0441\u044F \u043D\u0430 \u0434\u043E\u043B\u044E \u0441 \u0442\u043E\u0432\u0430\u0440\u0430", axes: ["vygoda"], effects: { kuptsy: 1, kazna: 1 }, risky: true }
       ]
     },
@@ -2458,8 +2485,8 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
       village: "opushka",
       options: [
         { id: "nakazat", text: "\u041D\u0430\u043A\u0430\u0437\u0430\u0442\u044C \u0441\u0432\u043E\u0435\u0433\u043E \u043F\u0440\u0438 \u0432\u0441\u0435\u0445", axes: ["dolg"], effects: { derevni: 2, zamok: -1 } },
-        { id: "prikryt", text: "\u041F\u0440\u0438\u043A\u0440\u044B\u0442\u044C \u0441\u0442\u0440\u0430\u0436\u043D\u0438\u043A\u0430", axes: ["derzost"], effects: { zamok: 1, derevni: -2 } },
-        { id: "vyplata", text: "\u041E\u0442\u043A\u0443\u043F\u0438\u0442\u044C\u0441\u044F \u043F\u0435\u0440\u0435\u0434 \u0441\u0435\u043C\u044C\u0451\u0439", axes: ["zabota"], effects: { kazna: -1, derevni: 1 } }
+        { id: "prikryt", text: "\u041F\u0440\u0438\u043A\u0440\u044B\u0442\u044C \u0441\u0442\u0440\u0430\u0436\u043D\u0438\u043A\u0430", axes: ["derzost"], effects: { zamok: 1, derevni: -2 }, risky: true },
+        { id: "vyplata", text: "\u041E\u0442\u043A\u0443\u043F\u0438\u0442\u044C\u0441\u044F \u043F\u0435\u0440\u0435\u0434 \u0441\u0435\u043C\u044C\u0451\u0439", axes: ["zabota"], effects: { kazna: -1, derevni: 1 }, careful: true }
       ]
     },
     {
@@ -2468,9 +2495,9 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
       text: "\u0417\u0430\u043F\u0430\u0434\u043D\u0430\u044F \u0441\u0442\u0435\u043D\u0430 \u0434\u0430\u043B\u0430 \u0442\u0440\u0435\u0449\u0438\u043D\u0443. \u041A\u0430\u043C\u0435\u043D\u044C \u0435\u0441\u0442\u044C, \u0440\u0443\u043A \u043C\u0430\u043B\u043E.",
       posts: ["klyuchnik"],
       options: [
-        { id: "sobrat_lyudey", text: "\u0421\u043D\u044F\u0442\u044C \u043B\u044E\u0434\u0435\u0439 \u0441 \u043F\u043E\u043B\u0435\u0439 \u043D\u0430 \u043D\u0435\u0434\u0435\u043B\u044E", axes: ["dolg", "derzost"], effects: { zamok: 2, derevni: -1, pripasy: -1 } },
+        { id: "sobrat_lyudey", text: "\u0421\u043D\u044F\u0442\u044C \u043B\u044E\u0434\u0435\u0439 \u0441 \u043F\u043E\u043B\u0435\u0439 \u043D\u0430 \u043D\u0435\u0434\u0435\u043B\u044E", axes: ["dolg", "derzost"], effects: { zamok: 2, derevni: -1, pripasy: -1 }, risky: true },
         { id: "nanyat", text: "\u041D\u0430\u043D\u044F\u0442\u044C \u043A\u0430\u043C\u0435\u043D\u0449\u0438\u043A\u043E\u0432 \u0438\u0437 \u0433\u043E\u0440\u043E\u0434\u0430", axes: ["vygoda"], effects: { kazna: -2, zamok: 2 } },
-        { id: "podperet", text: "\u041F\u043E\u0434\u043F\u0435\u0440\u0435\u0442\u044C \u0438 \u0436\u0434\u0430\u0442\u044C \u0437\u0438\u043C\u044B", axes: ["obychai"], effects: { pripasy: 1, poryadok: -1 } }
+        { id: "podperet", text: "\u041F\u043E\u0434\u043F\u0435\u0440\u0435\u0442\u044C \u0438 \u0436\u0434\u0430\u0442\u044C \u0437\u0438\u043C\u044B", axes: ["obychai"], effects: { pripasy: 1, poryadok: -1 }, careful: true }
       ]
     },
     {
@@ -2482,7 +2509,7 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
       options: [
         { id: "obryad", text: "\u041F\u0440\u043E\u0432\u0435\u0441\u0442\u0438 \u0441\u0442\u0430\u0440\u044B\u0439 \u043E\u0431\u0440\u044F\u0434 \u0441 \u0445\u043B\u0435\u0431\u043E\u043C \u0438 \u0441\u043E\u043B\u044C\u044E", axes: ["obychai"], effects: { derevni: 2, pripasy: -1 } },
         { id: "razvedat", text: "\u041F\u043E\u0439\u0442\u0438 \u0432 \u043B\u0435\u0441 \u0438 \u0440\u0430\u0437\u0432\u0435\u0434\u0430\u0442\u044C \u0441\u0430\u043C\u043E\u043C\u0443", axes: ["derzost"], effects: { les: -1, poryadok: 1 }, risky: true },
-        { id: "uspokoit", text: "\u041E\u0431\u044A\u044F\u0432\u0438\u0442\u044C, \u0447\u0442\u043E \u044D\u0442\u043E \u043B\u0438\u0441\u0430, \u0438 \u043D\u0435 \u043F\u0443\u0433\u0430\u0442\u044C \u043B\u044E\u0434\u0435\u0439", axes: ["zabota"], effects: { derevni: 1, les: -1 } }
+        { id: "uspokoit", text: "\u041E\u0431\u044A\u044F\u0432\u0438\u0442\u044C, \u0447\u0442\u043E \u044D\u0442\u043E \u043B\u0438\u0441\u0430, \u0438 \u043D\u0435 \u043F\u0443\u0433\u0430\u0442\u044C \u043B\u044E\u0434\u0435\u0439", axes: ["zabota"], effects: { derevni: 1, les: -1 }, careful: true }
       ]
     },
     {
@@ -2493,7 +2520,7 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
       options: [
         { id: "chestno", text: "\u0414\u0430\u0442\u044C \u0447\u0435\u0441\u0442\u043D\u0443\u044E \u043E\u043F\u0438\u0441\u044C", axes: ["dolg"], effects: { dvor: 2, pripasy: -1 } },
         { id: "priukrasit", text: "\u0417\u0430\u043D\u0438\u0437\u0438\u0442\u044C \u0437\u0430\u043F\u0430\u0441\u044B \u0432 \u043E\u043F\u0438\u0441\u0438", axes: ["vygoda", "derzost"], effects: { pripasy: 1, dvor: -1 }, risky: true },
-        { id: "tyanut", text: "\u0422\u044F\u043D\u0443\u0442\u044C \u0441 \u043E\u0442\u0432\u0435\u0442\u043E\u043C, \u0441\u0441\u044B\u043B\u0430\u044F\u0441\u044C \u043D\u0430 \u043E\u0431\u044B\u0447\u0430\u0439", axes: ["obychai"], effects: { kazna: 1, dvor: -1 } }
+        { id: "tyanut", text: "\u0422\u044F\u043D\u0443\u0442\u044C \u0441 \u043E\u0442\u0432\u0435\u0442\u043E\u043C, \u0441\u0441\u044B\u043B\u0430\u044F\u0441\u044C \u043D\u0430 \u043E\u0431\u044B\u0447\u0430\u0439", axes: ["obychai"], effects: { kazna: 1, dvor: -1 }, careful: true }
       ]
     },
     {
@@ -2505,7 +2532,7 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
       options: [
         { id: "po_kamnyam", text: "\u0420\u0430\u0441\u0441\u0443\u0434\u0438\u0442\u044C \u043F\u043E \u0441\u0442\u0430\u0440\u044B\u043C \u043C\u0435\u0436\u0435\u0432\u044B\u043C \u043A\u0430\u043C\u043D\u044F\u043C, \u043A\u0430\u043A \u0434\u0435\u0434\u044B \u043A\u043B\u0430\u043B\u0438", axes: ["obychai"], effects: { derevni: 1, dvor: -1 } },
         { id: "po_knige", text: "\u041F\u0435\u0440\u0435\u043C\u0435\u0440\u0438\u0442\u044C \u043F\u043E \u043F\u0438\u0441\u0446\u043E\u0432\u043E\u0439 \u043A\u043D\u0438\u0433\u0435", axes: ["dolg"], effects: { dvor: 1, derevni: -1 } },
-        { id: "porovnu", text: "\u041F\u043E\u0434\u0435\u043B\u0438\u0442\u044C \u0441\u043F\u043E\u0440\u043D\u0443\u044E \u043F\u043E\u043B\u043E\u0441\u0443 \u043F\u043E\u0440\u043E\u0432\u043D\u0443", axes: ["zabota"], effects: { derevni: 1, poryadok: -1 } }
+        { id: "porovnu", text: "\u041F\u043E\u0434\u0435\u043B\u0438\u0442\u044C \u0441\u043F\u043E\u0440\u043D\u0443\u044E \u043F\u043E\u043B\u043E\u0441\u0443 \u043F\u043E\u0440\u043E\u0432\u043D\u0443", axes: ["zabota"], effects: { derevni: 1, poryadok: -1 }, careful: true }
       ]
     },
     {
@@ -2516,7 +2543,7 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
       options: [
         { id: "otpustit", text: "\u041E\u0442\u043F\u0443\u0441\u0442\u0438\u0442\u044C \u043B\u044E\u0434\u0435\u0439 \u043D\u0430 \u0441\u0432\u043E\u0439 \u043F\u043E\u043A\u043E\u0441", axes: ["zabota"], effects: { derevni: 2, zamok: -1 } },
         { id: "barshchina", text: "\u0411\u0430\u0440\u0449\u0438\u043D\u0430 \u043F\u0440\u0435\u0436\u0434\u0435 \u0432\u0441\u0435\u0433\u043E", axes: ["dolg"], effects: { pripasy: 2, derevni: -2 } },
-        { id: "kak_zavedeno", text: "\u041A\u0430\u043A \u0437\u0430\u0432\u0435\u0434\u0435\u043D\u043E: \u0434\u0435\u043D\u044C \u0441\u0435\u0431\u0435, \u0434\u0435\u043D\u044C \u0437\u0430\u043C\u043A\u0443", axes: ["obychai"], effects: { derevni: 1, zamok: -1 } }
+        { id: "kak_zavedeno", text: "\u041A\u0430\u043A \u0437\u0430\u0432\u0435\u0434\u0435\u043D\u043E: \u0434\u0435\u043D\u044C \u0441\u0435\u0431\u0435, \u0434\u0435\u043D\u044C \u0437\u0430\u043C\u043A\u0443", axes: ["obychai"], effects: { derevni: 1, zamok: -1 }, careful: true }
       ]
     },
     {
@@ -2527,7 +2554,7 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
       options: [
         { id: "vysech", text: "\u0412\u044B\u0441\u0435\u0447\u044C \u043F\u043E \u0443\u0441\u0442\u0430\u0432\u0443", axes: ["dolg"], effects: { poryadok: 2, zamok: -1 } },
         { id: "na_opushku", text: "\u041F\u043E\u0441\u043B\u0430\u0442\u044C \u0435\u0433\u043E \u043E\u0434\u043D\u043E\u0433\u043E \u0432 \u043D\u043E\u0447\u043D\u043E\u0439 \u0434\u043E\u0437\u043E\u0440 \u043D\u0430 \u043E\u043F\u0443\u0448\u043A\u0443", axes: ["derzost"], effects: { poryadok: 1, les: -1 }, risky: true },
-        { id: "prostit", text: "\u041F\u0440\u043E\u0441\u0442\u0438\u0442\u044C \u0438 \u0434\u0430\u0442\u044C \u0432\u044B\u0441\u043F\u0430\u0442\u044C\u0441\u044F", axes: ["zabota"], effects: { zamok: 1, poryadok: -1 } }
+        { id: "prostit", text: "\u041F\u0440\u043E\u0441\u0442\u0438\u0442\u044C \u0438 \u0434\u0430\u0442\u044C \u0432\u044B\u0441\u043F\u0430\u0442\u044C\u0441\u044F", axes: ["zabota"], effects: { zamok: 1, poryadok: -1 }, careful: true }
       ]
     },
     {
@@ -2537,7 +2564,7 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
       posts: ["desyatnik"],
       options: [
         { id: "udarit", text: "\u0423\u0434\u0430\u0440\u0438\u0442\u044C \u043F\u043E \u0441\u0442\u043E\u044F\u043D\u043A\u0435 \u043D\u043E\u0447\u044C\u044E", axes: ["derzost"], effects: { poryadok: 2, kuptsy: 1, zamok: -1 }, risky: true },
-        { id: "dozory", text: "\u0423\u0441\u0438\u043B\u0438\u0442\u044C \u0434\u043E\u0437\u043E\u0440\u044B \u0443 \u0431\u0440\u043E\u0434\u0430 \u0438 \u0436\u0434\u0430\u0442\u044C", axes: ["dolg"], effects: { poryadok: 1, kuptsy: -1 } },
+        { id: "dozory", text: "\u0423\u0441\u0438\u043B\u0438\u0442\u044C \u0434\u043E\u0437\u043E\u0440\u044B \u0443 \u0431\u0440\u043E\u0434\u0430 \u0438 \u0436\u0434\u0430\u0442\u044C", axes: ["dolg"], effects: { poryadok: 1, kuptsy: -1 }, careful: true },
         { id: "plata", text: "\u041F\u0440\u043E\u0432\u043E\u0436\u0430\u0442\u044C \u043E\u0431\u043E\u0437\u044B \u0437\u0430 \u043F\u043B\u0430\u0442\u0443", axes: ["vygoda"], effects: { kazna: 1, kuptsy: -1 } }
       ]
     },
@@ -2547,7 +2574,7 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
       text: "\u0412 \u0434\u0430\u043B\u044C\u043D\u0435\u043C \u0430\u043C\u0431\u0430\u0440\u0435 \u043A\u0440\u044B\u0441\u044B \u043F\u043E\u043F\u043E\u0440\u0442\u0438\u043B\u0438 \u0437\u0435\u0440\u043D\u043E. \u0421\u043A\u043E\u043B\u044C\u043A\u043E \u2014 \u043F\u043E\u043A\u0430 \u043D\u0438\u043A\u0442\u043E \u043D\u0435 \u0441\u0447\u0438\u0442\u0430\u043B.",
       posts: ["klyuchnik"],
       options: [
-        { id: "perebrat", text: "\u041F\u0435\u0440\u0435\u0431\u0440\u0430\u0442\u044C \u0437\u0435\u0440\u043D\u043E \u0432\u0441\u0435\u0439 \u0447\u0435\u043B\u044F\u0434\u044C\u044E", axes: ["dolg"], effects: { pripasy: 1, zamok: -1 } },
+        { id: "perebrat", text: "\u041F\u0435\u0440\u0435\u0431\u0440\u0430\u0442\u044C \u0437\u0435\u0440\u043D\u043E \u0432\u0441\u0435\u0439 \u0447\u0435\u043B\u044F\u0434\u044C\u044E", axes: ["dolg"], effects: { pripasy: 1, zamok: -1 }, careful: true },
         { id: "sbyt", text: "\u0421\u0431\u044B\u0442\u044C \u043F\u043E\u0434\u043F\u043E\u0440\u0447\u0435\u043D\u043D\u043E\u0435 \u043A\u0443\u043F\u0446\u0430\u043C, \u043F\u043E\u043A\u0430 \u043D\u0435 \u0432\u0438\u0434\u043D\u043E", axes: ["vygoda"], effects: { kazna: 1, kuptsy: -1 }, risky: true },
         { id: "razdat", text: "\u0420\u0430\u0437\u0434\u0430\u0442\u044C \u043F\u043E\u0434\u043F\u043E\u0440\u0447\u0435\u043D\u043D\u043E\u0435 \u0431\u0435\u0434\u043D\u044B\u043C \u0434\u0432\u043E\u0440\u0430\u043C \u043D\u0430 \u043A\u043E\u0440\u043C \u0441\u043A\u043E\u0442\u0443", axes: ["zabota"], effects: { derevni: 1, pripasy: -1 } }
       ]
@@ -2560,7 +2587,7 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
       options: [
         { id: "vydat", text: "\u0412\u044B\u0434\u0430\u0442\u044C \u0432\u0441\u0435\u043C, \u043A\u0442\u043E \u043F\u0440\u043E\u0441\u0438\u0442", axes: ["zabota"], effects: { zamok: 2, pripasy: -1 } },
         { id: "v_schyot", text: "\u0412\u044B\u0434\u0430\u0442\u044C \u0432 \u0441\u0447\u0451\u0442 \u0436\u0430\u043B\u043E\u0432\u0430\u043D\u044C\u044F", axes: ["vygoda"], effects: { kazna: 1, zamok: -1 } },
-        { id: "po_sluzhbe", text: "\u0412\u044B\u0434\u0430\u0442\u044C \u0442\u0435\u043C, \u043A\u0442\u043E \u043D\u0430 \u0441\u043B\u0443\u0436\u0431\u0435 \u043F\u043E\u0434 \u043E\u0442\u043A\u0440\u044B\u0442\u044B\u043C \u043D\u0435\u0431\u043E\u043C", axes: ["dolg"], effects: { poryadok: 1, zamok: -1 } }
+        { id: "po_sluzhbe", text: "\u0412\u044B\u0434\u0430\u0442\u044C \u0442\u0435\u043C, \u043A\u0442\u043E \u043D\u0430 \u0441\u043B\u0443\u0436\u0431\u0435 \u043F\u043E\u0434 \u043E\u0442\u043A\u0440\u044B\u0442\u044B\u043C \u043D\u0435\u0431\u043E\u043C", axes: ["dolg"], effects: { poryadok: 1, zamok: -1 }, careful: true }
       ]
     },
     {
@@ -2570,7 +2597,7 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
       posts: ["pisar"],
       options: [
         { id: "vzyat", text: "\u0412\u0437\u044F\u0442\u044C \u0438 \u043F\u0443\u0441\u0442\u0438\u0442\u044C \u0432 \u0442\u043E\u0440\u0433", axes: ["derzost", "vygoda"], effects: { kazna: 2, dvor: -1 }, risky: true },
-        { id: "otkazat", text: "\u041E\u0442\u043A\u0430\u0437\u0430\u0442\u044C: \u0434\u043E\u043B\u0433\u0438 \u0437\u0430\u043C\u043A\u0443 \u043D\u0435 \u043A \u043B\u0438\u0446\u0443", axes: ["dolg"], effects: { dvor: 1, kuptsy: -1 } },
+        { id: "otkazat", text: "\u041E\u0442\u043A\u0430\u0437\u0430\u0442\u044C: \u0434\u043E\u043B\u0433\u0438 \u0437\u0430\u043C\u043A\u0443 \u043D\u0435 \u043A \u043B\u0438\u0446\u0443", axes: ["dolg"], effects: { dvor: 1, kuptsy: -1 }, careful: true },
         { id: "nemnogo", text: "\u0412\u0437\u044F\u0442\u044C \u043D\u0435\u043C\u043D\u043E\u0433\u043E, \u043F\u043E\u0434 \u0437\u0430\u043F\u0438\u0441\u044C \u0438 \u0437\u0430\u043B\u043E\u0433", axes: ["vygoda"], effects: { kazna: 1, kuptsy: 1, derevni: -1 } }
       ]
     },
@@ -2580,7 +2607,7 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
       text: "\u0412 \u043C\u043E\u0441\u0442\u043E\u0432\u043E\u043C \u0441\u0431\u043E\u0440\u0435 \u043D\u0430\u0448\u043B\u0438\u0441\u044C \u043E\u0431\u0440\u0435\u0437\u0430\u043D\u043D\u044B\u0435 \u043C\u043E\u043D\u0435\u0442\u044B. \u041A\u0442\u043E \u0438\u0445 \u043F\u0440\u0438\u0432\u0451\u0437, \u0438\u0437\u0432\u0435\u0441\u0442\u043D\u043E.",
       posts: ["pisar"],
       options: [
-        { id: "donesti", text: "\u0414\u043E\u043D\u0435\u0441\u0442\u0438 \u043A\u043E \u0434\u0432\u043E\u0440\u0443, \u043A\u0430\u043A \u0432\u0435\u043B\u0438\u0442 \u0437\u0430\u043A\u043E\u043D", axes: ["dolg"], effects: { dvor: 2, kuptsy: -1 } },
+        { id: "donesti", text: "\u0414\u043E\u043D\u0435\u0441\u0442\u0438 \u043A\u043E \u0434\u0432\u043E\u0440\u0443, \u043A\u0430\u043A \u0432\u0435\u043B\u0438\u0442 \u0437\u0430\u043A\u043E\u043D", axes: ["dolg"], effects: { dvor: 2, kuptsy: -1 }, careful: true },
         { id: "sbyt", text: "\u0421\u0431\u044B\u0442\u044C \u0438\u0445 \u043F\u0440\u043E\u0435\u0437\u0436\u0438\u043C, \u043F\u043E\u043A\u0430 \u043D\u0435 \u0445\u0432\u0430\u0442\u0438\u043B\u0438\u0441\u044C", axes: ["derzost"], effects: { kazna: 1, kuptsy: -2 }, risky: true },
         { id: "vzyskat", text: "\u0422\u0438\u0445\u043E \u0432\u0437\u044B\u0441\u043A\u0430\u0442\u044C \u0443\u0431\u044B\u0442\u043E\u043A \u0441 \u0442\u043E\u0433\u043E \u043A\u0443\u043F\u0446\u0430", axes: ["vygoda"], effects: { kazna: 1, dvor: -1 } }
       ]
@@ -2592,7 +2619,7 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
       posts: ["lesnichiy"],
       options: [
         { id: "ne_trogat", text: "\u041D\u0435 \u0442\u0440\u043E\u0433\u0430\u0442\u044C: \u0432\u043E\u043B\u043A \u0431\u0435\u0440\u0451\u0442 \u0441\u0432\u043E\u0451, \u0442\u0430\u043A \u0431\u044B\u043B\u043E \u0432\u0441\u0435\u0433\u0434\u0430", axes: ["obychai"], effects: { les: 1, derevni: -2 } },
-        { id: "pastukhi", text: "\u041F\u043E\u0441\u0442\u0430\u0432\u0438\u0442\u044C \u043D\u043E\u0447\u043D\u044B\u0445 \u0441\u0442\u043E\u0440\u043E\u0436\u0435\u0439 \u0438\u0437 \u0437\u0430\u043C\u043A\u043E\u0432\u044B\u0445", axes: ["zabota"], effects: { derevni: 1, zamok: -1 } },
+        { id: "pastukhi", text: "\u041F\u043E\u0441\u0442\u0430\u0432\u0438\u0442\u044C \u043D\u043E\u0447\u043D\u044B\u0445 \u0441\u0442\u043E\u0440\u043E\u0436\u0435\u0439 \u0438\u0437 \u0437\u0430\u043C\u043A\u043E\u0432\u044B\u0445", axes: ["zabota"], effects: { derevni: 1, zamok: -1 }, careful: true },
         { id: "oblava", text: "\u0423\u0441\u0442\u0440\u043E\u0438\u0442\u044C \u043E\u0431\u043B\u0430\u0432\u0443", axes: ["derzost"], effects: { derevni: 1, les: -2 }, risky: true }
       ]
     },
@@ -2604,8 +2631,8 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
       village: "opushka",
       options: [
         { id: "otvetit", text: "\u041E\u0442\u0432\u0435\u0442\u0438\u0442\u044C \u0445\u043B\u0435\u0431\u043E\u043C, \u043A\u0430\u043A \u043F\u043E\u043B\u043E\u0436\u0435\u043D\u043E", axes: ["obychai"], effects: { les: 1, pripasy: -1 } },
-        { id: "razdat", text: "\u0420\u0430\u0437\u0434\u0430\u0442\u044C \u0434\u0430\u0440 \u0434\u0435\u0440\u0435\u0432\u0435\u043D\u0441\u043A\u0438\u043C, \u043E\u0442\u0432\u0435\u0442 \u043E\u0442\u043B\u043E\u0436\u0438\u0442\u044C", axes: ["zabota"], effects: { derevni: 1, les: -1 } },
-        { id: "prodat", text: "\u041F\u0440\u043E\u0434\u0430\u0442\u044C \u043C\u0451\u0434 \u0432 \u0433\u043E\u0440\u043E\u0434\u0435", axes: ["vygoda"], effects: { kazna: 1, les: -2 } }
+        { id: "razdat", text: "\u0420\u0430\u0437\u0434\u0430\u0442\u044C \u0434\u0430\u0440 \u0434\u0435\u0440\u0435\u0432\u0435\u043D\u0441\u043A\u0438\u043C, \u043E\u0442\u0432\u0435\u0442 \u043E\u0442\u043B\u043E\u0436\u0438\u0442\u044C", axes: ["zabota"], effects: { derevni: 1, les: -1 }, careful: true },
+        { id: "prodat", text: "\u041F\u0440\u043E\u0434\u0430\u0442\u044C \u043C\u0451\u0434 \u0432 \u0433\u043E\u0440\u043E\u0434\u0435", axes: ["vygoda"], effects: { kazna: 1, les: -2 }, risky: true }
       ]
     },
     // --- две сферы ---
@@ -2628,7 +2655,7 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
       options: [
         { id: "rubit", text: "\u0420\u0443\u0431\u0438\u0442\u044C \u2014 \u043F\u043E\u0434\u0430\u0442\u0438 \u0441\u0430\u043C\u0438 \u0441\u0435\u0431\u044F \u043D\u0435 \u0437\u0430\u043F\u043B\u0430\u0442\u044F\u0442", axes: ["vygoda", "derzost"], effects: { kazna: 3, les: -3 } },
         { id: "otkazat", text: "\u041E\u0442\u043A\u0430\u0437\u0430\u0442\u044C \u2014 \u0443 \u043E\u043F\u0443\u0448\u043A\u0438 \u043D\u0435 \u0440\u0443\u0431\u044F\u0442", axes: ["obychai"], effects: { les: 1, kuptsy: -1 } },
-        { id: "malo", text: "\u0421\u0440\u0443\u0431\u0438\u0442\u044C \u043D\u0435\u043C\u043D\u043E\u0433\u043E \u0441\u0443\u0445\u043E\u0441\u0442\u043E\u044F", axes: ["zabota"], effects: { kazna: 1, les: -1 } }
+        { id: "malo", text: "\u0421\u0440\u0443\u0431\u0438\u0442\u044C \u043D\u0435\u043C\u043D\u043E\u0433\u043E \u0441\u0443\u0445\u043E\u0441\u0442\u043E\u044F", axes: ["zabota"], effects: { kazna: 1, les: -1 }, careful: true }
       ]
     },
     {
@@ -2638,8 +2665,8 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
       posts: ["desyatnik", "klyuchnik"],
       options: [
         { id: "dat", text: "\u0412\u044B\u0434\u0430\u0442\u044C \u0438\u0437 \u0437\u0430\u043F\u0430\u0441\u043E\u0432", axes: ["dolg", "derzost"], effects: { pripasy: -2, poryadok: 2 } },
-        { id: "otkazat", text: "\u041E\u0442\u043A\u0430\u0437\u0430\u0442\u044C \u2014 \u0437\u0438\u043C\u0430 \u0434\u043B\u0438\u043D\u043D\u0430\u044F", axes: ["vygoda"], effects: { pripasy: 1, zamok: -1, poryadok: -1 } },
-        { id: "s_dereven", text: "\u0412\u0437\u044F\u0442\u044C \u0441 \u0434\u0435\u0440\u0435\u0432\u0435\u043D\u044C \u0437\u0430 \u043E\u0445\u0440\u0430\u043D\u0443", axes: ["derzost"], effects: { derevni: -2, poryadok: 1 } }
+        { id: "otkazat", text: "\u041E\u0442\u043A\u0430\u0437\u0430\u0442\u044C \u2014 \u0437\u0438\u043C\u0430 \u0434\u043B\u0438\u043D\u043D\u0430\u044F", axes: ["vygoda"], effects: { pripasy: 1, zamok: -1, poryadok: -1 }, careful: true },
+        { id: "s_dereven", text: "\u0412\u0437\u044F\u0442\u044C \u0441 \u0434\u0435\u0440\u0435\u0432\u0435\u043D\u044C \u0437\u0430 \u043E\u0445\u0440\u0430\u043D\u0443", axes: ["derzost"], effects: { derevni: -2, poryadok: 1 }, risky: true }
       ]
     },
     {
@@ -2648,8 +2675,8 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
       text: "\u0412 \u0434\u0435\u0440\u0435\u0432\u043D\u044E \u043F\u0440\u0438\u0448\u043B\u0438 \u0431\u0435\u0433\u043B\u044B\u0435 \u0441 \u0441\u043E\u0441\u0435\u0434\u0441\u043A\u0438\u0445 \u0437\u0435\u043C\u0435\u043B\u044C. \u041F\u0440\u043E\u0441\u044F\u0442\u0441\u044F \u043E\u0441\u0442\u0430\u0442\u044C\u0441\u044F, \u043D\u043E \u0441\u043E\u0441\u0435\u0434 \u0438\u0445 \u0438\u0449\u0435\u0442.",
       posts: ["starosta", "pisar"],
       options: [
-        { id: "prinyat", text: "\u041F\u0440\u0438\u043D\u044F\u0442\u044C \u2014 \u0440\u0443\u043A\u0438 \u043D\u0443\u0436\u043D\u044B", axes: ["zabota", "derzost"], effects: { derevni: 2, dvor: -2 } },
-        { id: "vydat", text: "\u0412\u044B\u0434\u0430\u0442\u044C \u0441\u043E\u0441\u0435\u0434\u0443 \u043F\u043E \u0437\u0430\u043A\u043E\u043D\u0443", axes: ["dolg", "obychai"], effects: { dvor: 2, derevni: -1 } },
+        { id: "prinyat", text: "\u041F\u0440\u0438\u043D\u044F\u0442\u044C \u2014 \u0440\u0443\u043A\u0438 \u043D\u0443\u0436\u043D\u044B", axes: ["zabota", "derzost"], effects: { derevni: 2, dvor: -2 }, risky: true },
+        { id: "vydat", text: "\u0412\u044B\u0434\u0430\u0442\u044C \u0441\u043E\u0441\u0435\u0434\u0443 \u043F\u043E \u0437\u0430\u043A\u043E\u043D\u0443", axes: ["dolg", "obychai"], effects: { dvor: 2, derevni: -1 }, careful: true },
         { id: "prodat_soseda", text: "\u0412\u044B\u0434\u0430\u0442\u044C \u0437\u0430 \u0432\u044B\u043A\u0443\u043F", axes: ["vygoda"], effects: { kazna: 2, derevni: -2 } }
       ]
     },
@@ -2660,8 +2687,8 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
       posts: ["lesnichiy", "desyatnik"],
       options: [
         { id: "zakryt", text: "\u0417\u0430\u043A\u0440\u044B\u0442\u044C \u0438 \u043F\u043E\u0441\u0442\u0430\u0432\u0438\u0442\u044C \u0437\u043D\u0430\u043A\u0438", axes: ["obychai", "zabota"], effects: { les: 2, kuptsy: -2 } },
-        { id: "ne_zakryvat", text: "\u0414\u043E\u0440\u043E\u0433\u0430 \u043D\u0430\u0448\u0430, \u043D\u0435 \u0437\u0430\u043A\u0440\u044B\u0432\u0430\u0442\u044C", axes: ["derzost", "dolg"], effects: { les: -3, kuptsy: 1 } },
-        { id: "za_platu", text: "\u0417\u0430\u043A\u0440\u044B\u0442\u044C, \u043D\u043E \u0432\u0437\u044F\u0442\u044C \u043F\u043B\u0430\u0442\u0443 \u0434\u0438\u0447\u044C\u044E", axes: ["vygoda"], effects: { les: 1, pripasy: 1, kuptsy: -1 } }
+        { id: "ne_zakryvat", text: "\u0414\u043E\u0440\u043E\u0433\u0430 \u043D\u0430\u0448\u0430, \u043D\u0435 \u0437\u0430\u043A\u0440\u044B\u0432\u0430\u0442\u044C", axes: ["derzost", "dolg"], effects: { les: -3, kuptsy: 1 }, risky: true },
+        { id: "za_platu", text: "\u0417\u0430\u043A\u0440\u044B\u0442\u044C, \u043D\u043E \u0432\u0437\u044F\u0442\u044C \u043F\u043B\u0430\u0442\u0443 \u0434\u0438\u0447\u044C\u044E", axes: ["vygoda"], effects: { les: 1, pripasy: 1, kuptsy: -1 }, careful: true }
       ]
     },
     {
@@ -2671,7 +2698,7 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
       posts: ["pisar", "klyuchnik"],
       options: [
         { id: "ustroit", text: "\u0423\u0441\u0442\u0440\u043E\u0438\u0442\u044C \u0441 \u0440\u0430\u0437\u043C\u0430\u0445\u043E\u043C", axes: ["vygoda", "derzost"], effects: { kazna: 2, kuptsy: 2, poryadok: -1, pripasy: -1 }, risky: true },
-        { id: "skromno", text: "\u0421\u043A\u0440\u043E\u043C\u043D\u043E, \u0443 \u0432\u043E\u0440\u043E\u0442", axes: ["dolg"], effects: { kazna: 1, kuptsy: 1 } },
+        { id: "skromno", text: "\u0421\u043A\u0440\u043E\u043C\u043D\u043E, \u0443 \u0432\u043E\u0440\u043E\u0442", axes: ["dolg"], effects: { kazna: 1, kuptsy: 1 }, careful: true },
         { id: "net", text: "\u041D\u0435 \u0443\u0441\u0442\u0440\u0430\u0438\u0432\u0430\u0442\u044C \u2014 \u043D\u0435 \u0434\u043E \u0442\u043E\u0433\u043E", axes: ["zabota"], effects: { kuptsy: -1 } }
       ]
     },
@@ -2682,7 +2709,7 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
       posts: ["starosta", "lesnichiy"],
       village: "opushka",
       options: [
-        { id: "zhech", text: "\u0421\u0436\u0435\u0447\u044C \u0442\u0443\u0448\u0438 \u0438 \u043E\u043A\u0443\u0440\u0438\u0442\u044C \u0434\u0432\u043E\u0440\u044B", axes: ["dolg"], effects: { poryadok: 1, derevni: -1 } },
+        { id: "zhech", text: "\u0421\u0436\u0435\u0447\u044C \u0442\u0443\u0448\u0438 \u0438 \u043E\u043A\u0443\u0440\u0438\u0442\u044C \u0434\u0432\u043E\u0440\u044B", axes: ["dolg"], effects: { poryadok: 1, derevni: -1 }, careful: true },
         { id: "dar_lesu", text: "\u041E\u0442\u043D\u0435\u0441\u0442\u0438 \u0434\u0430\u0440 \u043B\u0435\u0441\u0443", axes: ["obychai"], effects: { les: 1, pripasy: -1 } },
         { id: "kupit", text: "\u041A\u0443\u043F\u0438\u0442\u044C \u0441\u043A\u043E\u0442 \u0432\u0437\u0430\u043C\u0435\u043D \u0432 \u0434\u043E\u043B\u0433", axes: ["zabota"], effects: { derevni: 2, kazna: -2 } }
       ]
@@ -2693,9 +2720,101 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
       text: "\u041F\u043E\u0432\u0430\u0440 \u0438 \u043A\u043E\u043D\u044E\u0445\u0438 \u043D\u0435 \u043F\u043E\u0434\u0435\u043B\u0438\u043B\u0438 \u043A\u0430\u043C\u043E\u0440\u043A\u0443. \u0414\u0435\u043B\u043E \u0434\u043E\u0448\u043B\u043E \u0434\u043E \u043D\u043E\u0436\u0435\u0439.",
       posts: ["klyuchnik", "desyatnik"],
       options: [
-        { id: "vygnat", text: "\u0412\u044B\u0433\u043D\u0430\u0442\u044C \u0437\u0430\u0447\u0438\u043D\u0449\u0438\u043A\u0430", axes: ["dolg", "derzost"], effects: { poryadok: 2, zamok: -1 } },
-        { id: "pomirit", text: "\u041F\u043E\u043C\u0438\u0440\u0438\u0442\u044C \u0438 \u0440\u0430\u0437\u0434\u0435\u043B\u0438\u0442\u044C \u043A\u0430\u043C\u043E\u0440\u043A\u0443", axes: ["zabota"], effects: { zamok: 1 } },
+        { id: "vygnat", text: "\u0412\u044B\u0433\u043D\u0430\u0442\u044C \u0437\u0430\u0447\u0438\u043D\u0449\u0438\u043A\u0430", axes: ["dolg", "derzost"], effects: { poryadok: 2, zamok: -1 }, risky: true },
+        { id: "pomirit", text: "\u041F\u043E\u043C\u0438\u0440\u0438\u0442\u044C \u0438 \u0440\u0430\u0437\u0434\u0435\u043B\u0438\u0442\u044C \u043A\u0430\u043C\u043E\u0440\u043A\u0443", axes: ["zabota"], effects: { zamok: 1 }, careful: true },
         { id: "po_starine", text: "\u0420\u0430\u0441\u0441\u0443\u0434\u0438\u0442\u044C \u043F\u043E \u0441\u0442\u0430\u0440\u0448\u0438\u043D\u0441\u0442\u0432\u0443", axes: ["obychai"], effects: { poryadok: 2, zamok: -1 } }
+      ]
+    },
+    // --- две сферы: вложения и род вариантов (И17) ---
+    {
+      id: "most_u_broda",
+      title: "\u041C\u043E\u0441\u0442 \u0443 \u0431\u0440\u043E\u0434\u0430",
+      text: "\u041D\u0430\u0441\u0442\u0438\u043B \u043C\u043E\u0441\u0442\u0430 \u0443 \u0431\u0440\u043E\u0434\u0430 \u043F\u0440\u043E\u0433\u043D\u0438\u043B: \u0432\u043E\u0437\u044B \u0438\u0434\u0443\u0442 \u0432\u0431\u0440\u043E\u0434, \u043A\u0443\u043F\u0446\u044B \u0432\u043E\u0440\u0447\u0430\u0442.",
+      posts: ["desyatnik", "pisar"],
+      village: "brod",
+      options: [
+        { id: "pochinit", text: "\u041F\u0435\u0440\u0435\u0441\u0442\u0435\u043B\u0438\u0442\u044C \u043C\u043E\u0441\u0442 \u0437\u0430 \u0441\u0447\u0451\u0442 \u043A\u0430\u0437\u043D\u044B", axes: ["dolg", "vygoda"], effects: { kazna: -2 }, later: { seasons: 2, effects: { kuptsy: 2, kazna: 2 }, text: "\u043F\u043E \u043D\u043E\u0432\u043E\u043C\u0443 \u043C\u043E\u0441\u0442\u0443 \u043F\u043E\u0448\u043B\u0438 \u043E\u0431\u043E\u0437\u044B" } },
+        { id: "perevoz", text: "\u041F\u0443\u0441\u0442\u0438\u0442\u044C \u043F\u0435\u0440\u0435\u0432\u043E\u0437 \u0437\u0430 \u043F\u043B\u0430\u0442\u0443, \u043F\u043E\u043A\u0430 \u043C\u043E\u0441\u0442 \u0441\u0442\u043E\u0438\u0442", axes: ["derzost"], effects: { kazna: 1, kuptsy: -1 }, risky: true },
+        { id: "zhdat", text: "\u041F\u043E\u0434\u043F\u0435\u0440\u0435\u0442\u044C \u0438 \u0436\u0434\u0430\u0442\u044C \u043C\u0435\u0436\u0435\u043D\u0438", axes: ["obychai"], effects: { poryadok: -1 }, careful: true }
+      ]
+    },
+    {
+      id: "semena",
+      title: "\u0421\u0435\u043C\u0435\u043D\u043D\u043E\u0435 \u0437\u0435\u0440\u043D\u043E",
+      text: "\u041F\u043E\u0441\u043B\u0435 \u0445\u0443\u0434\u043E\u0433\u043E \u0433\u043E\u0434\u0430 \u0432 \u0434\u0435\u0440\u0435\u0432\u043D\u044F\u0445 \u043D\u0435\u0447\u0435\u043C \u0441\u0435\u044F\u0442\u044C. \u041F\u0440\u043E\u0441\u044F\u0442 \u0437\u0435\u0440\u043D\u0430 \u0438\u0437 \u0437\u0430\u043C\u043A\u043E\u0432\u043E\u0433\u043E \u0430\u043C\u0431\u0430\u0440\u0430.",
+      posts: ["starosta", "klyuchnik"],
+      options: [
+        { id: "dat", text: "\u0414\u0430\u0442\u044C \u0441\u0435\u043C\u0435\u043D\u0430 \u0438\u0437 \u0430\u043C\u0431\u0430\u0440\u0430", axes: ["zabota"], effects: { pripasy: -2 }, later: { seasons: 2, effects: { pripasy: 3, derevni: 1 }, text: "\u0437\u0430\u0441\u0435\u044F\u043D\u043D\u043E\u0435 \u0437\u0430\u043C\u043A\u043E\u0432\u044B\u043C \u0437\u0435\u0440\u043D\u043E\u043C \u043F\u043E\u043B\u0435 \u0434\u0430\u043B\u043E \u0443\u0440\u043E\u0436\u0430\u0439" } },
+        { id: "v_dolg", text: "\u0414\u0430\u0442\u044C \u043F\u043E\u0434 \u0437\u0430\u043F\u0438\u0441\u044C, \u0441 \u0432\u043E\u0437\u0432\u0440\u0430\u0442\u043E\u043C \u0438\u0437 \u0443\u0440\u043E\u0436\u0430\u044F", axes: ["vygoda", "dolg"], effects: { pripasy: -1, derevni: -1 }, later: { seasons: 2, effects: { pripasy: 2 }, text: "\u0434\u0435\u0440\u0435\u0432\u043D\u0438 \u0432\u0435\u0440\u043D\u0443\u043B\u0438 \u0441\u0435\u043C\u0435\u043D\u043D\u043E\u0439 \u0434\u043E\u043B\u0433" } },
+        { id: "otkazat", text: "\u041A\u0430\u0436\u0434\u044B\u0439 \u0434\u0432\u043E\u0440 \u0441\u0435\u0435\u0442 \u0441\u0432\u043E\u0451, \u043A\u0430\u043A \u0437\u0430\u0432\u0435\u0434\u0435\u043D\u043E", axes: ["obychai"], effects: { derevni: -1 }, careful: true }
+      ]
+    },
+    {
+      id: "delyanka",
+      title: "\u0414\u0435\u043B\u044F\u043D\u043A\u0430 \u0443 \u043E\u043F\u0443\u0448\u043A\u0438",
+      text: "\u0414\u0435\u0440\u0435\u0432\u043D\u044F \u0443 \u043E\u043F\u0443\u0448\u043A\u0438 \u043F\u0440\u043E\u0441\u0438\u0442 \u0440\u0430\u0441\u0447\u0438\u0441\u0442\u0438\u0442\u044C \u043D\u043E\u0432\u0443\u044E \u0434\u0435\u043B\u044F\u043D\u043A\u0443 \u043F\u043E\u0434 \u043F\u0430\u0448\u043D\u044E. \u041B\u0435\u0441 \u044D\u0442\u043E \u0437\u0430\u043C\u0435\u0442\u0438\u0442.",
+      posts: ["starosta", "lesnichiy"],
+      village: "opushka",
+      options: [
+        { id: "raschistit", text: "\u0420\u0430\u0441\u0447\u0438\u0441\u0442\u0438\u0442\u044C \u0434\u0435\u043B\u044F\u043D\u043A\u0443 \u0432\u0441\u0435\u043C \u043C\u0438\u0440\u043E\u043C", axes: ["derzost", "dolg"], effects: { les: -2 }, hands: 1, risky: true, later: { seasons: 3, effects: { pripasy: 3 }, text: "\u043D\u043E\u0432\u0430\u044F \u0434\u0435\u043B\u044F\u043D\u043A\u0430 \u0443 \u043E\u043F\u0443\u0448\u043A\u0438 \u0434\u0430\u043B\u0430 \u0445\u043B\u0435\u0431" } },
+        { id: "ugovor", text: "\u041F\u0440\u043E\u0441\u0438\u0442\u044C \u0443 \u043B\u0435\u0441\u0430 \u043C\u0430\u043B\u0443\u044E \u043F\u043E\u043B\u044F\u043D\u0443 \u043F\u043E \u043E\u0431\u0440\u044F\u0434\u0443", axes: ["obychai", "zabota"], effects: { les: 1, pripasy: -1 }, later: { seasons: 2, effects: { pripasy: 2 }, text: "\u043F\u043E\u043B\u044F\u043D\u0430, \u0432\u044B\u043F\u0440\u043E\u0448\u0435\u043D\u043D\u0430\u044F \u0443 \u043B\u0435\u0441\u0430, \u0434\u0430\u043B\u0430 \u0445\u043B\u0435\u0431" } },
+        { id: "ne_trogat", text: "\u041E\u043F\u0443\u0448\u043A\u0443 \u043D\u0435 \u0442\u0440\u043E\u0433\u0430\u0442\u044C", axes: ["obychai"], effects: { les: 1, derevni: -1 }, careful: true }
+      ]
+    },
+    {
+      id: "borti",
+      title: "\u041B\u0435\u0441\u043D\u043E\u0439 \u043C\u0451\u0434",
+      text: "\u0412 \u0441\u0442\u0430\u0440\u043E\u0439 \u0440\u043E\u0449\u0435 \u043D\u0430\u0448\u043B\u0438 \u0434\u0443\u043F\u043B\u0438\u0441\u0442\u044B\u0435 \u043B\u0438\u043F\u044B, \u043F\u043E\u043B\u043D\u044B\u0435 \u043C\u0451\u0434\u0430. \u041C\u043E\u0436\u043D\u043E \u0432\u0437\u044F\u0442\u044C \u0441\u0440\u0430\u0437\u0443, \u043C\u043E\u0436\u043D\u043E \u0437\u0430\u0432\u0435\u0441\u0442\u0438 \u0431\u043E\u0440\u0442\u0438.",
+      posts: ["klyuchnik", "lesnichiy"],
+      options: [
+        { id: "borti", text: "\u041F\u043E\u0441\u0442\u0430\u0432\u0438\u0442\u044C \u0431\u043E\u0440\u0442\u0438 \u043F\u043E \u0443\u0433\u043E\u0432\u043E\u0440\u0443 \u0441 \u043B\u0435\u0441\u043E\u043C", axes: ["zabota", "obychai"], effects: { pripasy: -1 }, later: { seasons: 2, effects: { pripasy: 2, les: 1 }, text: "\u0431\u043E\u0440\u0442\u0438 \u0432 \u0441\u0442\u0430\u0440\u043E\u0439 \u0440\u043E\u0449\u0435 \u0434\u0430\u043B\u0438 \u043C\u0451\u0434" } },
+        { id: "prodat", text: "\u0421\u043E\u0431\u0440\u0430\u0442\u044C \u0434\u0438\u043A\u0438\u0439 \u043C\u0451\u0434 \u0438 \u043F\u0440\u043E\u0434\u0430\u0442\u044C", axes: ["vygoda"], effects: { kazna: 1, les: -1 } },
+        { id: "zapas", text: "\u0421\u043E\u0431\u0440\u0430\u0442\u044C, \u0441\u043A\u043E\u043B\u044C\u043A\u043E \u0435\u0441\u0442\u044C, \u0432 \u0437\u0430\u043C\u043A\u043E\u0432\u044B\u0439 \u043F\u043E\u0433\u0440\u0435\u0431", axes: ["dolg"], effects: { pripasy: 1, les: -1 }, careful: true }
+      ]
+    },
+    {
+      id: "oboz",
+      title: "\u0421\u0432\u043E\u0439 \u043E\u0431\u043E\u0437",
+      text: "\u041A\u0443\u043F\u0446\u044B \u0434\u0430\u0432\u043D\u043E \u043D\u0435 \u0437\u0430\u0435\u0437\u0436\u0430\u043B\u0438, \u0430 \u043D\u0430 \u0441\u043A\u043B\u0430\u0434\u0435 \u043B\u0435\u0436\u0438\u0442 \u0442\u043E\u0432\u0430\u0440. \u041C\u043E\u0436\u043D\u043E \u0441\u043D\u0430\u0440\u044F\u0434\u0438\u0442\u044C \u0441\u0432\u043E\u0439 \u043E\u0431\u043E\u0437 \u0432 \u0433\u043E\u0440\u043E\u0434.",
+      posts: ["pisar", "desyatnik"],
+      options: [
+        { id: "svoy", text: "\u0421\u043D\u0430\u0440\u044F\u0434\u0438\u0442\u044C \u0441\u0432\u043E\u0439 \u043E\u0431\u043E\u0437 \u0441\u043E \u0441\u0442\u0440\u0430\u0436\u0435\u0439", axes: ["derzost", "vygoda"], effects: { kazna: -1, kuptsy: -1 }, hands: 1, risky: true, later: { seasons: 2, effects: { kazna: 3 }, text: "\u0441\u0432\u043E\u0439 \u043E\u0431\u043E\u0437 \u0432\u0435\u0440\u043D\u0443\u043B\u0441\u044F \u0438\u0437 \u0433\u043E\u0440\u043E\u0434\u0430 \u0441 \u0432\u044B\u0440\u0443\u0447\u043A\u043E\u0439" } },
+        { id: "okhrana", text: "\u0414\u0430\u0442\u044C \u043A\u0443\u043F\u0446\u0430\u043C \u043E\u0445\u0440\u0430\u043D\u0443 \u0434\u043E \u0442\u0440\u0430\u043A\u0442\u0430", axes: ["dolg"], effects: { kuptsy: 1, poryadok: 1, zamok: -1 } },
+        { id: "zhdat", text: "\u0416\u0434\u0430\u0442\u044C \u043A\u0443\u043F\u0446\u043E\u0432, \u043A\u0430\u043A \u0432\u0441\u0435\u0433\u0434\u0430", axes: ["obychai"], effects: { poryadok: 1, kuptsy: -1 }, careful: true }
+      ]
+    },
+    {
+      id: "zaseka",
+      title: "\u0417\u0430\u0441\u0435\u043A\u0430",
+      text: "\u0421\u0442\u0430\u0440\u0430\u044F \u0437\u0430\u0441\u0435\u043A\u0430 \u0432\u0434\u043E\u043B\u044C \u043C\u0435\u0436\u0438 \u0441\u0433\u043D\u0438\u043B\u0430. \u0414\u0435\u0441\u044F\u0442\u043D\u0438\u043A \u0445\u043E\u0447\u0435\u0442 \u043D\u043E\u0432\u0443\u044E, \u043B\u0435\u0441\u043D\u0438\u0447\u0438\u0439 \u2014 \u0447\u0442\u043E\u0431\u044B \u0435\u0451 \u0441\u0442\u0430\u0432\u0438\u043B\u0438 \u043F\u043E-\u0441\u0442\u0430\u0440\u043E\u043C\u0443.",
+      posts: ["desyatnik", "lesnichiy"],
+      options: [
+        { id: "stavit", text: "\u041F\u043E\u0441\u0442\u0430\u0432\u0438\u0442\u044C \u0437\u0430\u0441\u0435\u043A\u0443 \u043F\u043E \u0441\u0442\u0430\u0440\u043E\u0439 \u043C\u0435\u0436\u0435", axes: ["dolg", "obychai"], effects: { zamok: -1 }, hands: 1, later: { seasons: 2, effects: { poryadok: 2, les: 1 }, text: "\u043D\u043E\u0432\u0430\u044F \u0437\u0430\u0441\u0435\u043A\u0430 \u0434\u0435\u0440\u0436\u0438\u0442 \u043C\u0435\u0436\u0443" } },
+        { id: "vglub", text: "\u0412\u044B\u0436\u0435\u0447\u044C \u043B\u043E\u0433\u043E\u0432\u0430 \u0432\u0433\u043B\u0443\u0431\u044C \u043B\u0435\u0441\u0430", axes: ["derzost"], effects: { les: -2, poryadok: 2 }, risky: true },
+        { id: "storozha", text: "\u041F\u043E\u0441\u0442\u0430\u0432\u0438\u0442\u044C \u043D\u043E\u0447\u043D\u044B\u0445 \u0441\u0442\u043E\u0440\u043E\u0436\u0435\u0439 \u0443 \u043A\u0440\u0430\u0439\u043D\u0438\u0445 \u0434\u0432\u043E\u0440\u043E\u0432", axes: ["zabota"], effects: { zamok: -1, derevni: 1 }, careful: true }
+      ]
+    },
+    {
+      id: "ambar_u_broda",
+      title: "\u0410\u043C\u0431\u0430\u0440 \u0443 \u0431\u0440\u043E\u0434\u0430",
+      text: "\u0421\u0442\u0430\u0440\u044B\u0439 \u0430\u043C\u0431\u0430\u0440 \u0443 \u0431\u0440\u043E\u0434\u0430 \u0442\u0435\u0447\u0451\u0442. \u0414\u0435\u0440\u0435\u0432\u043D\u044F \u043F\u0440\u043E\u0441\u0438\u0442 \u043D\u043E\u0432\u044B\u0439; \u043A\u043B\u044E\u0447\u043D\u0438\u043A \u043F\u0440\u0435\u0434\u043B\u0430\u0433\u0430\u0435\u0442 \u0441\u0432\u043E\u0437\u0438\u0442\u044C \u0437\u0435\u0440\u043D\u043E \u0432 \u0437\u0430\u043C\u043E\u043A.",
+      posts: ["klyuchnik", "starosta"],
+      village: "brod",
+      options: [
+        { id: "stroit", text: "\u0421\u0440\u0443\u0431\u0438\u0442\u044C \u043D\u043E\u0432\u044B\u0439 \u0430\u043C\u0431\u0430\u0440 \u0443 \u0431\u0440\u043E\u0434\u0430", axes: ["dolg", "vygoda"], effects: { kazna: -2 }, later: { seasons: 3, effects: { pripasy: 2, derevni: 1 }, text: "\u043D\u043E\u0432\u044B\u0439 \u0430\u043C\u0431\u0430\u0440 \u0443 \u0431\u0440\u043E\u0434\u0430 \u0441\u0431\u0435\u0440\u0451\u0433 \u0437\u0435\u0440\u043D\u043E" } },
+        { id: "mirom", text: "\u0427\u0438\u043D\u0438\u0442\u044C \u0441\u0442\u0430\u0440\u044B\u0439 \u0432\u0441\u0435\u043C \u043C\u0438\u0440\u043E\u043C, \u0437\u0430 \u0443\u0433\u043E\u0449\u0435\u043D\u0438\u0435", axes: ["zabota", "obychai"], effects: { derevni: 1, pripasy: -1 }, later: { seasons: 2, effects: { pripasy: 1 }, text: "\u043F\u043E\u0447\u0438\u043D\u0435\u043D\u043D\u044B\u0439 \u0430\u043C\u0431\u0430\u0440 \u0443 \u0431\u0440\u043E\u0434\u0430 \u0441\u0431\u0435\u0440\u0451\u0433 \u0437\u0435\u0440\u043D\u043E" } },
+        { id: "v_zamok", text: "\u0421\u0432\u043E\u0437\u0438\u0442\u044C \u0437\u0435\u0440\u043D\u043E \u0432 \u0437\u0430\u043C\u043E\u043A", axes: ["dolg"], effects: { derevni: -1, pripasy: 1 }, careful: true }
+      ]
+    },
+    {
+      id: "vesy",
+      title: "\u0412\u0435\u0441\u044B \u0438 \u043C\u0435\u0440\u044B",
+      text: "\u041D\u0430 \u0442\u043E\u0440\u0433\u0443 \u0441\u043F\u043E\u0440\u044F\u0442 \u043E \u043C\u0435\u0440\u0435: \u0437\u0430\u043C\u043A\u043E\u0432\u044B\u0435 \u0432\u0435\u0441\u044B \u0441\u0442\u0430\u0440\u044B\u0435, \u0433\u0435\u0440\u0446\u043E\u0433\u0441\u043A\u0430\u044F \u043C\u0435\u0440\u0430 \u0434\u0440\u0443\u0433\u0430\u044F.",
+      posts: ["pisar", "klyuchnik"],
+      options: [
+        { id: "novye", text: "\u0417\u0430\u0432\u0435\u0441\u0442\u0438 \u043D\u043E\u0432\u044B\u0435 \u0432\u0435\u0441\u044B \u043F\u043E \u0433\u0435\u0440\u0446\u043E\u0433\u0441\u043A\u043E\u0439 \u043C\u0435\u0440\u0435", axes: ["dolg"], effects: { kazna: -1 }, later: { seasons: 2, effects: { kuptsy: 1, dvor: 1, kazna: 1 }, text: "\u043F\u043E \u043D\u043E\u0432\u043E\u0439 \u043C\u0435\u0440\u0435 \u0442\u043E\u0440\u0433 \u043F\u043E\u0448\u0451\u043B \u0431\u043E\u0439\u0447\u0435\u0435" } },
+        { id: "svoi", text: "\u041C\u0435\u0440\u0438\u0442\u044C \u0441\u0432\u043E\u0435\u0439 \u043C\u0435\u0440\u043E\u0439 \u2014 \u0432 \u0441\u0432\u043E\u044E \u043F\u043E\u043B\u044C\u0437\u0443", axes: ["vygoda", "derzost"], effects: { kazna: 2, kuptsy: -2 }, risky: true },
+        { id: "starye", text: "\u041E\u0441\u0442\u0430\u0432\u0438\u0442\u044C \u0441\u0442\u0430\u0440\u044B\u0435: \u043A\u0443\u043F\u0446\u044B \u043F\u0440\u0438\u0432\u044B\u043A\u043B\u0438", axes: ["obychai", "zabota"], effects: { kuptsy: 1, kazna: -1 }, careful: true }
       ]
     },
     // --- приключенцы (после открытия лабиринта) ---
@@ -2766,6 +2885,41 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
     { side: "opushka", name: "\u0414\u043E\u0441\u0430\u0434\u0430", female: true, age: 63, trait: "nabozhny" }
   ];
 
+  // src/data/handwriting.ts
+  var h = (post, axis, good, plus, bad, minus) => ({ post, axis, plus, minus, good, bad });
+  var HANDS = [
+    // тиун
+    h("starosta", "zabota", "\u0434\u043E\u0432\u0435\u0440\u0438\u0435 \u0434\u0435\u0440\u0435\u0432\u0435\u043D\u044C \u0440\u0430\u0441\u0442\u0451\u0442, \u043D\u0435\u0434\u043E\u0434\u0430\u0447\u0430 \u0434\u0435\u0440\u0435\u0432\u043D\u044F\u043C \u043C\u044F\u0433\u0447\u0435", [["villages", 1], ["shortSoft", -1]], "\u043E\u0431\u0440\u043E\u043A \u043C\u0435\u043D\u044C\u0448\u0435", [["quitrent", -1]]),
+    h("starosta", "obychai", "\u043E\u0431\u0440\u044F\u0434\u044B \u0434\u0435\u0440\u0436\u0430\u0442\u0441\u044F: \u0434\u0430\u0440\u044B \u043B\u0435\u0441\u0430 \u043F\u043E\u043B\u043D\u0435\u0435, \u043E\u043F\u0443\u0448\u043A\u0430 \u0434\u043E\u0432\u0435\u0440\u044F\u0435\u0442", [["forestFood", 1], ["opushka", 1]], "\u0443\u0440\u043E\u0436\u0430\u0439 \u043D\u0435 \u0440\u0430\u0441\u0442\u0451\u0442", [["harvest", -0.5]]),
+    h("starosta", "dolg", "\u043E\u0431\u0440\u043E\u043A \u0441\u043E\u0431\u0440\u0430\u043D \u0441\u043F\u043E\u043B\u043D\u0430", [["quitrent", 1]], "\u0434\u0435\u0440\u0435\u0432\u043D\u0438 \u0432\u043E\u0440\u0447\u0430\u0442", [["villages", -1]]),
+    h("starosta", "vygoda", "\u043E\u0431\u0440\u043E\u043A \u0441\u0435\u0440\u0435\u0431\u0440\u043E\u043C \u0431\u043E\u043B\u044C\u0448\u0435", [["quitrentSilver", 1]], "\u0434\u043E\u0432\u0435\u0440\u0438\u0435 \u0434\u0435\u0440\u0435\u0432\u0435\u043D\u044C \u043F\u0430\u0434\u0430\u0435\u0442", [["villages", -1]]),
+    h("starosta", "derzost", "\u0440\u0430\u0441\u043F\u0430\u0445\u0438\u0432\u0430\u0435\u0442 \u043D\u043E\u0432\u044B\u0435 \u043F\u043E\u043B\u044F: \u0443\u0440\u043E\u0436\u0430\u0439 \u0431\u043E\u043B\u044C\u0448\u0435", [["harvest", 1]], "\u0440\u0443\u043A\u0438 \u0443\u0445\u043E\u0434\u044F\u0442 \u043D\u0430 \u0440\u0430\u0441\u0447\u0438\u0441\u0442\u043A\u0443", [["hands", -1]]),
+    // десятник
+    h("desyatnik", "dolg", "\u043F\u043E\u0440\u044F\u0434\u043E\u043A \u0440\u0430\u0441\u0442\u0451\u0442", [["order", 1]], "\u0436\u0430\u043B\u043E\u0432\u0430\u043D\u044C\u0435 \u0441\u0442\u0440\u0430\u0436\u0435 \u0434\u043E\u0440\u043E\u0436\u0435", [["salary", 1]]),
+    h("desyatnik", "derzost", "\u043F\u043E\u0448\u043B\u0438\u043D\u044B \u0438 \u043A\u0430\u0440\u0430\u0432\u0430\u043D\u044B \u0431\u043E\u043B\u044C\u0448\u0435", [["duties", 1]], "\u0441\u0442\u044B\u0447\u043A\u0438: \u043F\u043E\u0440\u044F\u0434\u043E\u043A \u043D\u0438\u0436\u0435, \u0431\u044B\u0432\u0430\u044E\u0442 \u0440\u0430\u043D\u0435\u043D\u044B\u0435", [["order", -1], ["hands", -0.5]]),
+    h("desyatnik", "zabota", "\u043B\u044E\u0434\u0438 \u0437\u0430\u043C\u043A\u0430 \u0434\u043E\u0432\u043E\u043B\u044C\u043D\u044B", [["zamok", 1]], "\u043F\u043E\u0440\u044F\u0434\u043E\u043A \u043D\u0438\u0436\u0435", [["order", -1]]),
+    h("desyatnik", "vygoda", "\xAB\u0434\u043E\u0440\u043E\u0436\u043D\u044B\u0439 \u0441\u0431\u043E\u0440\xBB: \u0441\u0435\u0440\u0435\u0431\u0440\u043E \u0432 \u043A\u0430\u0437\u043D\u0443", [["silver", 1]], "\u043A\u0443\u043F\u0446\u044B \u043D\u0435\u0434\u043E\u0432\u043E\u043B\u044C\u043D\u044B, \u043F\u043E\u0440\u044F\u0434\u043E\u043A \u043D\u0438\u0436\u0435", [["kuptsy", -1], ["order", -0.5]]),
+    h("desyatnik", "obychai", "\u0441\u0442\u0430\u0440\u044B\u0435 \u0437\u0430\u0441\u0435\u043A\u0438 \u0438 \u043C\u0435\u0436\u0438: \u043B\u0435\u0441 \u0434\u043E\u0432\u0435\u0440\u044F\u0435\u0442", [["les", 1]], "\u0441\u0442\u0430\u0440\u044B\u0435 \u043B\u044C\u0433\u043E\u0442\u044B: \u043F\u043E\u0448\u043B\u0438\u043D\u044B \u043C\u0435\u043D\u044C\u0448\u0435", [["duties", -1]]),
+    // ключник
+    h("klyuchnik", "dolg", "\u043F\u043E\u0440\u0447\u0430 \u0437\u0430 \u0437\u0438\u043C\u0443 \u043C\u0435\u043D\u044C\u0448\u0435", [["spoil", -1]], "\u0447\u0435\u043B\u044F\u0434\u044C \u0434\u0435\u0440\u0436\u0430\u0442 \u0441\u0442\u0440\u043E\u0433\u043E: \u043B\u044E\u0434\u0438 \u0437\u0430\u043C\u043A\u0430 \u0432\u043E\u0440\u0447\u0430\u0442", [["zamok", -1]]),
+    h("klyuchnik", "vygoda", "\u0438\u0437\u043B\u0438\u0448\u0435\u043A \u0435\u0434\u044B \u043F\u0440\u043E\u0434\u0430\u0451\u0442 \u0441\u0430\u043C: \u0441\u0435\u0440\u0435\u0431\u0440\u043E \u0440\u0430\u0441\u0442\u0451\u0442", [["sellFood", 1]], "\u0437\u0430\u043F\u0430\u0441 \u0442\u043E\u043D\u044C\u0448\u0435: \u043D\u0435\u0434\u043E\u0434\u0430\u0447\u0430 \u0431\u043B\u0438\u0436\u0435", []),
+    h("klyuchnik", "zabota", "\u043F\u0440\u043E\u043A\u043E\u0440\u043C \u0449\u0435\u0434\u0440\u0435\u0435: \u043B\u044E\u0434\u0438 \u0437\u0430\u043C\u043A\u0430 \u0438 \u0434\u0435\u0440\u0435\u0432\u043D\u0438 \u0434\u043E\u0432\u043E\u043B\u044C\u043D\u044B", [["zamok", 1], ["villages", 0.5]], "\u0435\u0434\u044B \u0443\u0445\u043E\u0434\u0438\u0442 \u0431\u043E\u043B\u044C\u0448\u0435", [["upkeep", 1]]),
+    h("klyuchnik", "derzost", "\u043F\u043E\u0447\u0438\u043D\u043A\u0430 \u0438\u0434\u0451\u0442 \u0431\u044B\u0441\u0442\u0440\u043E: \u043B\u044E\u0434\u0438 \u0437\u0430\u043C\u043A\u0430 \u0434\u043E\u0432\u043E\u043B\u044C\u043D\u044B", [["zamok", 1]], "\u043F\u043E\u0440\u0447\u0430 \u0438 \u043D\u0435\u0441\u0447\u0430\u0441\u0442\u044C\u044F \u043D\u0430 \u0441\u0442\u0440\u043E\u0439\u043A\u0435", [["spoil", 1]]),
+    h("klyuchnik", "obychai", "\u0437\u0430\u043F\u0430\u0441 \u0432\u043F\u0440\u043E\u043A \u043F\u043E \u0441\u0442\u0430\u0440\u044B\u043C \u043F\u043E\u0433\u0440\u0435\u0431\u0430\u043C: \u043F\u0440\u043E\u043A\u043E\u0440\u043C \u0438 \u043F\u043E\u0440\u0447\u0430 \u043C\u0435\u043D\u044C\u0448\u0435", [["upkeep", -0.5], ["spoil", -0.5]], "\u043D\u0438\u0447\u0435\u0433\u043E \u043D\u0435 \u043F\u0440\u043E\u0434\u0430\u0451\u0442: \u0442\u043E\u0432\u0430\u0440\u044B \u0438\u0434\u0443\u0442 \u0434\u0435\u0448\u0435\u0432\u043B\u0435", [["price", -1]]),
+    // писарь
+    h("pisar", "vygoda", "\u0446\u0435\u043D\u0430 \u0442\u043E\u0432\u0430\u0440\u043E\u0432 \u0438 \u043F\u043E\u0448\u043B\u0438\u043D\u044B \u0432\u044B\u0448\u0435", [["price", 1], ["duties", 1]], "\u043A\u0443\u043F\u0446\u044B \u0434\u043E\u0432\u0435\u0440\u044F\u044E\u0442 \u043C\u0435\u043D\u044C\u0448\u0435", [["kuptsy", -1]]),
+    h("pisar", "dolg", "\u043A\u043D\u0438\u0433\u0438 \u0447\u0438\u0441\u0442\u044B: \u0434\u0432\u043E\u0440 \u0434\u043E\u0432\u043E\u043B\u0435\u043D", [["dvor", 1]], "\u0442\u043E\u0440\u0433\u043E\u0432\u043B\u044F \u043C\u0435\u0434\u043B\u0435\u043D\u043D\u0435\u0435: \u0446\u0435\u043D\u0430 \u043D\u0438\u0436\u0435", [["price", -1]]),
+    h("pisar", "derzost", "\u0437\u0430\u0451\u043C \u0434\u0435\u0448\u0435\u0432\u043B\u0435 \u0438 \u0431\u043E\u043B\u044C\u0448\u0435", [["loan", 1]], "\u0434\u043E\u043B\u0433\u0438 \u0440\u0430\u0441\u0442\u0443\u0442: \u0441\u0435\u0440\u0435\u0431\u0440\u043E \u0443\u0442\u0435\u043A\u0430\u0435\u0442 \u043D\u0430 \u043F\u0440\u043E\u0446\u0435\u043D\u0442\u044B", [["silver", -1]]),
+    h("pisar", "zabota", "\u0442\u043E\u0440\u0433\u0443\u0435\u0442 \u043C\u044F\u0433\u043A\u043E: \u043A\u0443\u043F\u0446\u044B \u0434\u043E\u0432\u043E\u043B\u044C\u043D\u044B", [["kuptsy", 1]], "\u0446\u0435\u043D\u0430 \u043D\u0438\u0436\u0435", [["price", -1]]),
+    h("pisar", "obychai", "\u0441\u0442\u0430\u0440\u044B\u0435 \u0433\u0440\u0430\u043C\u043E\u0442\u044B: \u0413\u0435\u0440\u0446\u043E\u0433 \u0442\u0435\u0440\u043F\u0435\u043B\u0438\u0432\u0435\u0435", [["patience", 1]], "\u043D\u043E\u0432\u044B\u0445 \u0441\u0434\u0435\u043B\u043E\u043A \u043D\u0435\u0442: \u043F\u043E\u0448\u043B\u0438\u043D\u044B \u043D\u0438\u0436\u0435", [["duties", -1]]),
+    // лесничий
+    h("lesnichiy", "obychai", "\u043B\u0435\u0441 \u0434\u043E\u0432\u0435\u0440\u044F\u0435\u0442, \u0434\u0430\u0440\u044B \u043B\u0435\u0441\u0430 \u0431\u043E\u043B\u044C\u0448\u0435", [["les", 1], ["forestFood", 1]], "\u0431\u0440\u0451\u0432\u0435\u043D \u0438 \u0448\u043A\u0443\u0440 \u043C\u0435\u043D\u044C\u0448\u0435", [["forestGoods", -1]]),
+    h("lesnichiy", "zabota", "\u0434\u0435\u0440\u0435\u0432\u043D\u044F \u0443 \u043E\u043F\u0443\u0448\u043A\u0438 \u0434\u043E\u0432\u043E\u043B\u044C\u043D\u0430", [["opushka", 1]], "\u043B\u0435\u0441 \u0442\u0435\u0440\u043F\u0438\u0442 \u0431\u0440\u0430\u043A\u043E\u043D\u044C\u0435\u0440\u043E\u0432: \u0435\u0433\u043E \u0434\u043E\u0432\u0435\u0440\u0438\u0435 \u043F\u0430\u0434\u0430\u0435\u0442", [["les", -1]]),
+    h("lesnichiy", "dolg", "\u0440\u043E\u0449\u0438 \u0441\u0442\u0435\u0440\u0435\u0436\u0451\u0442 \u0441\u0442\u0440\u043E\u0433\u043E: \u043B\u0435\u0441 \u0434\u043E\u0432\u0435\u0440\u044F\u0435\u0442", [["les", 1]], "\u043E\u043F\u0443\u0448\u043A\u0430 \u043D\u0435\u0434\u043E\u0432\u043E\u043B\u044C\u043D\u0430", [["opushka", -1]]),
+    h("lesnichiy", "vygoda", "\u0442\u043E\u0432\u0430\u0440\u043E\u0432 \u0438\u0437 \u043B\u0435\u0441\u0430 \u0431\u043E\u043B\u044C\u0448\u0435", [["forestGoods", 1]], "\u043B\u0435\u0441 \u0434\u043E\u0432\u0435\u0440\u044F\u0435\u0442 \u043C\u0435\u043D\u044C\u0448\u0435", [["les", -1]]),
+    h("lesnichiy", "derzost", "\u0445\u043E\u0434\u0438\u0442 \u0432\u0433\u043B\u0443\u0431\u044C: \u0442\u043E\u0432\u0430\u0440\u043E\u0432 \u0431\u043E\u043B\u044C\u0448\u0435", [["forestGoods", 1]], "\u0442\u0432\u0430\u0440\u0438 \u0438 \u0440\u0430\u043D\u0435\u043D\u044B\u0435", [["hands", -0.5], ["les", -0.5]])
+  ];
+
   // src/sim/economy.ts
   var clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   var r1 = (v) => Math.round(v * 10) / 10;
@@ -2811,7 +2965,8 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
       cur: [],
       shortages: 0,
       fc: { eda: 0, tovary: 0, serebro: 0 },
-      zoneWas: {}
+      zoneWas: {},
+      pending: []
     };
     for (const s of SIDES) eco.zoneWas[s] = zoneWord(w.factions[s]);
     w.eco = eco;
@@ -3611,9 +3766,9 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
     for (const id of family?.hereditary ?? []) if (rng.chance(BALANCE.health.inheritChance)) traits.push(id);
     return { krepost, traits, family: family?.id, vices: vices.filter((id) => NATURA_HEALTH[id]), off: 0, state: "ok", log: [] };
   }
-  function healthMods(h) {
+  function healthMods(h2) {
     const m2 = { krepost: 0, risk: 1, winter: 1, death: 1, aging: 1 };
-    const all = [...h.traits.map(healthTrait), ...h.vices.map((id) => NATURA_HEALTH[id])];
+    const all = [...h2.traits.map(healthTrait), ...h2.vices.map((id) => NATURA_HEALTH[id])];
     for (const t of all) {
       m2.krepost += t.krepost ?? 0;
       m2.risk *= t.risk ?? 1;
@@ -3623,102 +3778,102 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
     }
     return m2;
   }
-  function krepostNow(h, age) {
-    const m2 = healthMods(h);
+  function krepostNow(h2, age) {
+    const m2 = healthMods(h2);
     const aged = Math.max(0, age - BALANCE.health.oldFrom) / BALANCE.health.agingStep * m2.aging;
-    return round13(clamp4(h.krepost + m2.krepost - aged, 0, KREPOST_MAX));
+    return round13(clamp4(h2.krepost + m2.krepost - aged, 0, KREPOST_MAX));
   }
-  function illChance(h, age, season) {
-    const m2 = healthMods(h);
-    const weak = Math.max(0, 1 + (BALANCE.health.krepostMean - krepostNow(h, age)) * BALANCE.health.krepostRisk);
+  function illChance(h2, age, season) {
+    const m2 = healthMods(h2);
+    const weak = Math.max(0, 1 + (BALANCE.health.krepostMean - krepostNow(h2, age)) * BALANCE.health.krepostRisk);
     const winter = season % SEASONS_IN_YEAR === WINTER ? BALANCE.health.winterMult * m2.winter : 1;
     return clamp4(BALANCE.health.illBase * m2.risk * weak * winter, 0, 1);
   }
-  function ageDeathChance(h, age) {
+  function ageDeathChance(h2, age) {
     const span = Math.max(1, BALANCE.health.lifeMax - BALANCE.health.elderFrom);
-    const x = Math.max(0, age - BALANCE.health.elderFrom) / span * healthMods(h).aging;
+    const x = Math.max(0, age - BALANCE.health.elderFrom) / span * healthMods(h2).aging;
     return clamp4(x * x * BALANCE.health.ageDeathMax, 0, 1);
   }
-  function gain(rng, h, cause, ev, onlyBad = false) {
-    const t = pickByWeight(rng, HEALTH_TRAITS.filter((x) => x.origin === "gained" && x.cause === cause && !h.traits.includes(x.id) && !(onlyBad && x.good)));
+  function gain(rng, h2, cause, ev, onlyBad = false) {
+    const t = pickByWeight(rng, HEALTH_TRAITS.filter((x) => x.origin === "gained" && x.cause === cause && !h2.traits.includes(x.id) && !(onlyBad && x.good)));
     if (!t) return;
-    h.traits.push(t.id);
+    h2.traits.push(t.id);
     ev("trait", `\u041E\u0441\u0442\u0430\u043B\u043E\u0441\u044C: \xAB${t.name}\xBB \u2014 ${t.desc.charAt(0).toLowerCase()}${t.desc.slice(1)}.`, t.id);
   }
-  function die(h, cause, ev, text) {
-    h.state = "dead";
-    h.cause = cause;
-    h.off = 0;
+  function die(h2, cause, ev, text) {
+    h2.state = "dead";
+    h2.cause = cause;
+    h2.off = 0;
     ev("dead", text);
   }
-  function seasonCheck(rng, h, age, season) {
+  function seasonCheck(rng, h2, age, season) {
     const out = [];
-    if (h.state !== "ok") return out;
+    if (h2.state !== "ok") return out;
     const ev = (kind, text, trait) => {
       const e = { season, age: Math.floor(age), kind, text, trait };
       out.push(e);
-      h.log.push(e);
+      h2.log.push(e);
     };
-    const m2 = healthMods(h);
-    const weak = Math.max(0, 1 + (BALANCE.health.krepostMean - krepostNow(h, age)) * BALANCE.health.krepostDeath);
-    if (rng.chance(ageDeathChance(h, age))) {
-      die(h, "\u0441\u0442\u0430\u0440\u043E\u0441\u0442\u044C", ev, "\u0423\u043C\u0435\u0440 \u043E\u0442 \u0441\u0442\u0430\u0440\u043E\u0441\u0442\u0438.");
+    const m2 = healthMods(h2);
+    const weak = Math.max(0, 1 + (BALANCE.health.krepostMean - krepostNow(h2, age)) * BALANCE.health.krepostDeath);
+    if (rng.chance(ageDeathChance(h2, age))) {
+      die(h2, "\u0441\u0442\u0430\u0440\u043E\u0441\u0442\u044C", ev, "\u0423\u043C\u0435\u0440 \u043E\u0442 \u0441\u0442\u0430\u0440\u043E\u0441\u0442\u0438.");
       return out;
     }
-    if (age >= BALANCE.health.oldFrom && rng.chance(BALANCE.health.ageTraitChance * m2.aging)) gain(rng, h, "age", ev);
-    if (h.off > 0) {
-      h.off--;
+    if (age >= BALANCE.health.oldFrom && rng.chance(BALANCE.health.ageTraitChance * m2.aging)) gain(rng, h2, "age", ev);
+    if (h2.off > 0) {
+      h2.off--;
       return out;
     }
     if (rng.chance(BALANCE.health.woundChance)) {
       if (rng.chance(clamp4(BALANCE.health.woundDeath * m2.death * weak, 0, 1))) {
-        die(h, "\u0440\u0430\u043D\u0430", ev, "\u0422\u044F\u0436\u0435\u043B\u043E \u0440\u0430\u043D\u0435\u043D \u0438 \u043D\u0435 \u0432\u044B\u0436\u0438\u043B.");
+        die(h2, "\u0440\u0430\u043D\u0430", ev, "\u0422\u044F\u0436\u0435\u043B\u043E \u0440\u0430\u043D\u0435\u043D \u0438 \u043D\u0435 \u0432\u044B\u0436\u0438\u043B.");
         return out;
       }
-      h.off = rng.int(BALANCE.health.hardOffMin, Math.max(BALANCE.health.hardOffMin, BALANCE.health.hardOffMax));
-      ev("wound", `\u0420\u0430\u043D\u0435\u043D \u0438\u043B\u0438 \u043D\u0430\u0434\u043E\u0440\u0432\u0430\u043B\u0441\u044F: \u0432 \u043F\u043E\u0441\u0442\u0435\u043B\u0438 ${h.off} \u0441\u0435\u0437.`);
-      if (rng.chance(BALANCE.health.woundChronic)) gain(rng, h, "wound", ev);
-    } else if (rng.chance(illChance(h, age, season))) {
+      h2.off = rng.int(BALANCE.health.hardOffMin, Math.max(BALANCE.health.hardOffMin, BALANCE.health.hardOffMax));
+      ev("wound", `\u0420\u0430\u043D\u0435\u043D \u0438\u043B\u0438 \u043D\u0430\u0434\u043E\u0440\u0432\u0430\u043B\u0441\u044F: \u0432 \u043F\u043E\u0441\u0442\u0435\u043B\u0438 ${h2.off} \u0441\u0435\u0437.`);
+      if (rng.chance(BALANCE.health.woundChronic)) gain(rng, h2, "wound", ev);
+    } else if (rng.chance(illChance(h2, age, season))) {
       if (rng.chance(BALANCE.health.hardShare)) {
         if (rng.chance(clamp4(BALANCE.health.hardDeath * m2.death * weak, 0, 1))) {
-          die(h, "\u0431\u043E\u043B\u0435\u0437\u043D\u044C", ev, "\u0422\u044F\u0436\u0435\u043B\u043E \u0437\u0430\u0431\u043E\u043B\u0435\u043B \u0438 \u0443\u043C\u0435\u0440.");
+          die(h2, "\u0431\u043E\u043B\u0435\u0437\u043D\u044C", ev, "\u0422\u044F\u0436\u0435\u043B\u043E \u0437\u0430\u0431\u043E\u043B\u0435\u043B \u0438 \u0443\u043C\u0435\u0440.");
           return out;
         }
-        h.off = rng.int(BALANCE.health.hardOffMin, Math.max(BALANCE.health.hardOffMin, BALANCE.health.hardOffMax));
-        ev("hard", `\u0422\u044F\u0436\u0435\u043B\u043E \u0431\u043E\u043B\u0435\u043D: \u0432 \u043F\u043E\u0441\u0442\u0435\u043B\u0438 ${h.off} \u0441\u0435\u0437.`);
-        if (rng.chance(BALANCE.health.illChronic)) gain(rng, h, "illness", ev, true);
+        h2.off = rng.int(BALANCE.health.hardOffMin, Math.max(BALANCE.health.hardOffMin, BALANCE.health.hardOffMax));
+        ev("hard", `\u0422\u044F\u0436\u0435\u043B\u043E \u0431\u043E\u043B\u0435\u043D: \u0432 \u043F\u043E\u0441\u0442\u0435\u043B\u0438 ${h2.off} \u0441\u0435\u0437.`);
+        if (rng.chance(BALANCE.health.illChronic)) gain(rng, h2, "illness", ev, true);
       } else {
-        h.off = 1;
+        h2.off = 1;
         ev("ill", "\u0421\u043B\u0451\u0433 \u043D\u0430 \u0441\u0435\u0437\u043E\u043D.");
-        if (rng.chance(BALANCE.health.lightStrong) && !h.traits.includes("perebolel")) {
-          h.traits.push("perebolel");
+        if (rng.chance(BALANCE.health.lightStrong) && !h2.traits.includes("perebolel")) {
+          h2.traits.push("perebolel");
           ev("trait", "\u041E\u0441\u0442\u0430\u043B\u043E\u0441\u044C: \xAB\u041F\u0435\u0440\u0435\u0431\u043E\u043B\u0435\u043B \u0438 \u043E\u043A\u0440\u0435\u043F\xBB.", "perebolel");
         }
       }
     }
-    if (krepostNow(h, age) <= BALANCE.health.incapAt) {
-      h.state = "out";
-      h.cause = "\u0437\u0434\u043E\u0440\u043E\u0432\u044C\u0435";
+    if (krepostNow(h2, age) <= BALANCE.health.incapAt) {
+      h2.state = "out";
+      h2.cause = "\u0437\u0434\u043E\u0440\u043E\u0432\u044C\u0435";
       ev("out", "\u0417\u0434\u043E\u0440\u043E\u0432\u044C\u0435 \u043D\u0435 \u0434\u0430\u0451\u0442 \u0441\u043B\u0443\u0436\u0438\u0442\u044C: \u0432\u044B\u0431\u044B\u043B \u0441\u043E \u0441\u043B\u0443\u0436\u0431\u044B.");
     }
     return out;
   }
-  function liveThrough(rng, h, age, seasons, track2) {
+  function liveThrough(rng, h2, age, seasons, track2) {
     const r = { offSeasons: 0, lived: 0 };
-    for (let s = 0; s < seasons && h.state !== "dead"; s++) {
-      const wasOk = h.state === "ok";
-      seasonCheck(rng, h, age + s / SEASONS_IN_YEAR, s);
+    for (let s = 0; s < seasons && h2.state !== "dead"; s++) {
+      const wasOk = h2.state === "ok";
+      seasonCheck(rng, h2, age + s / SEASONS_IN_YEAR, s);
       if (wasOk) {
         r.lived++;
-        if (h.off > 0) r.offSeasons++;
+        if (h2.off > 0) r.offSeasons++;
       }
-      if (wasOk && h.state !== "ok") r.removedAt = s;
-      if (h.state === "dead" && r.deadAt === void 0) r.deadAt = s;
-      if (h.state === "out" && rng.chance(ageDeathChance(h, age + s / SEASONS_IN_YEAR))) {
-        h.state = "dead";
+      if (wasOk && h2.state !== "ok") r.removedAt = s;
+      if (h2.state === "dead" && r.deadAt === void 0) r.deadAt = s;
+      if (h2.state === "out" && rng.chance(ageDeathChance(h2, age + s / SEASONS_IN_YEAR))) {
+        h2.state = "dead";
         r.deadAt = s;
       }
-      track2?.push(h.state === "dead" ? "dead" : h.state === "out" ? "out" : h.off > 0 ? "bed" : "ok");
+      track2?.push(h2.state === "dead" ? "dead" : h2.state === "out" ? "out" : h2.off > 0 ? "bed" : "ok");
     }
     return r;
   }
@@ -3729,7 +3884,7 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
     return a.length ? a[Math.floor(a.length / 2)] : 0;
   };
   var round32 = (v) => Math.round(v * 1e3) / 1e3;
-  var isBad = (h) => h.traits.some((id) => !healthTrait(id).good && healthTrait(id).origin !== "gained");
+  var isBad = (h2) => h2.traits.some((id) => !healthTrait(id).good && healthTrait(id).origin !== "gained");
   function healthCohort(people2, seed) {
     const rng = new Rng(seed);
     const out = [];
@@ -3744,7 +3899,7 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
     const years = BALANCE.health.years, seasons = years * SEASONS_IN_YEAR;
     const cohort = healthCohort(people2, seed);
     const badBorn = cohort.filter((c) => isBad(c.h)).length / Math.max(1, people2);
-    const hered = (h) => h.traits.some((id) => healthTrait(id).origin === "hereditary");
+    const hered = (h2) => h2.traits.some((id) => healthTrait(id).origin === "hereditary");
     const kin = cohort.filter((c) => cohort.some((o) => o !== c && o.family === c.family && hered(o.h)));
     const kinShare = { withKin: round32(kin.filter((c) => hered(c.h)).length / Math.max(1, kin.length)), base: round32(cohort.filter((c) => hered(c.h)).length / Math.max(1, people2)) };
     const rng = new Rng(`${seed}-\u043F\u0430\u0440\u0442\u0438\u044F`);
@@ -3763,9 +3918,9 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
     const adult = BALANCE.natura.adultAge, maxSeasons = (BALANCE.health.lifeMax + 60 - adult) * SEASONS_IN_YEAR;
     const lives = Array.from({ length: people2 }, (_, i) => {
       const fam = makeFamily(lifeRng, `\u0440\u043E\u0434-${i}`);
-      const h = birthHealth(lifeRng, fam);
-      const bad = isBad(h);
-      const l = liveThrough(lifeRng, h, adult, maxSeasons);
+      const h2 = birthHealth(lifeRng, fam);
+      const bad = isBad(h2);
+      const l = liveThrough(lifeRng, h2, adult, maxSeasons);
       return { age: adult + (l.deadAt ?? maxSeasons) / SEASONS_IN_YEAR, bad };
     });
     const ages = lives.map((l) => l.age);
@@ -3998,20 +4153,20 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
   var strip = (states) => `<div class="strip">${states.map((x, i) => `<i class="${x}${i % SEASONS_IN_YEAR === WINTER ? " winter" : ""}" title="\u0433\u043E\u0434 ${Math.floor(i / SEASONS_IN_YEAR) + 1}"></i>`).join("")}</div>`;
   var STRIP_LEGEND = `<div class="legend"><span><span class="sw" style="background:#cfe3c8"></span>\u0441\u043B\u0443\u0436\u0438\u0442</span><span><span class="sw" style="background:#e2b04a"></span>\u0432 \u043F\u043E\u0441\u0442\u0435\u043B\u0438</span>
   <span><span class="sw" style="background:#9a9a9a"></span>\u0432\u044B\u0431\u044B\u043B \u0441\u043E \u0441\u043B\u0443\u0436\u0431\u044B</span><span><span class="sw" style="background:#24211c"></span>\u0443\u043C\u0435\u0440</span></div>`;
-  function liveStory(h, age, seed) {
+  function liveStory(h2, age, seed) {
     const states = [];
-    liveThrough(new Rng(seed), h, age, BALANCE.health.years * SEASONS_IN_YEAR, states);
+    liveThrough(new Rng(seed), h2, age, BALANCE.health.years * SEASONS_IN_YEAR, states);
     return states;
   }
   function renderHealthPerson(seed) {
     if (!shown) return;
     const rng = new Rng(`${seed}-\u0437\u0434\u043E\u0440\u043E\u0432\u044C\u0435`);
-    const h = birthHealth(rng, makeFamily(rng, "\u0441\u0435\u043C\u044C\u044F"), shown.traits.map((t) => t.id));
-    const before = [...h.traits], k0 = krepostNow(h, shown.age);
-    const states = liveStory(h, shown.age, `${seed}-\u0433\u043E\u0434\u044B`);
-    const vices = h.vices.length ? ` \xB7 \u0441\u043A\u0430\u0437\u044B\u0432\u0430\u044E\u0442\u0441\u044F \u0447\u0435\u0440\u0442\u044B \u043D\u0430\u0442\u0443\u0440\u044B: ${h.vices.map((id) => esc(bagTrait(id).name)).join(", ")}` : "";
-    const log = h.log.length ? h.log.map((e) => `<div>${e.age} \u043B\u0435\u0442, \u0433\u043E\u0434 ${Math.floor(e.season / SEASONS_IN_YEAR) + 1}: ${esc(e.text)}</div>`).join("") : `<div class="muted">\u0417\u0430 \u044D\u0442\u0438 \u0433\u043E\u0434\u044B \u043D\u0438\u0447\u0435\u0433\u043E \u043D\u0435 \u0441\u043B\u0443\u0447\u0438\u043B\u043E\u0441\u044C.</div>`;
-    $("health-person").innerHTML = `<p><b>${esc(shown.nature.name)}</b>, ${shown.age} \u043B\u0435\u0442 \xB7 \u043A\u0440\u0435\u043F\u043E\u0441\u0442\u044C \u043F\u0440\u0438 \u0440\u043E\u0436\u0434\u0435\u043D\u0438\u0438 ${f1(h.krepost)}, \u0441\u0435\u0439\u0447\u0430\u0441 ${f1(k0)}, \u0447\u0435\u0440\u0435\u0437 ${BALANCE.health.years} \u043B\u0435\u0442 ${f1(krepostNow(h, shown.age + BALANCE.health.years))}
+    const h2 = birthHealth(rng, makeFamily(rng, "\u0441\u0435\u043C\u044C\u044F"), shown.traits.map((t) => t.id));
+    const before = [...h2.traits], k0 = krepostNow(h2, shown.age);
+    const states = liveStory(h2, shown.age, `${seed}-\u0433\u043E\u0434\u044B`);
+    const vices = h2.vices.length ? ` \xB7 \u0441\u043A\u0430\u0437\u044B\u0432\u0430\u044E\u0442\u0441\u044F \u0447\u0435\u0440\u0442\u044B \u043D\u0430\u0442\u0443\u0440\u044B: ${h2.vices.map((id) => esc(bagTrait(id).name)).join(", ")}` : "";
+    const log = h2.log.length ? h2.log.map((e) => `<div>${e.age} \u043B\u0435\u0442, \u0433\u043E\u0434 ${Math.floor(e.season / SEASONS_IN_YEAR) + 1}: ${esc(e.text)}</div>`).join("") : `<div class="muted">\u0417\u0430 \u044D\u0442\u0438 \u0433\u043E\u0434\u044B \u043D\u0438\u0447\u0435\u0433\u043E \u043D\u0435 \u0441\u043B\u0443\u0447\u0438\u043B\u043E\u0441\u044C.</div>`;
+    $("health-person").innerHTML = `<p><b>${esc(shown.nature.name)}</b>, ${shown.age} \u043B\u0435\u0442 \xB7 \u043A\u0440\u0435\u043F\u043E\u0441\u0442\u044C \u043F\u0440\u0438 \u0440\u043E\u0436\u0434\u0435\u043D\u0438\u0438 ${f1(h2.krepost)}, \u0441\u0435\u0439\u0447\u0430\u0441 ${f1(k0)}, \u0447\u0435\u0440\u0435\u0437 ${BALANCE.health.years} \u043B\u0435\u0442 ${f1(krepostNow(h2, shown.age + BALANCE.health.years))}
     \xB7 \u0441 \u0440\u043E\u0436\u0434\u0435\u043D\u0438\u044F: ${before.length ? before.map(healthTag).join("") : "\u0437\u0434\u043E\u0440\u043E\u0432"}${vices}</p>${STRIP_LEGEND}${strip(states)}${log}`;
   }
   function svgCurve(curve) {
@@ -4054,12 +4209,12 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
     let family = makeFamily(rng, "1");
     $("health-party").innerHTML = `${STRIP_LEGEND}<table><tr><th>\u0421\u0435\u043C\u044C\u044F</th><th>\u041D\u0430\u0442\u0443\u0440\u0430</th><th>\u0412\u043E\u0437\u0440\u0430\u0441\u0442</th><th>\u041A\u0440\u0435\u043F\u043E\u0441\u0442\u044C</th><th>\u0417\u0434\u043E\u0440\u043E\u0432\u044C\u0435 \u0441 \u0440\u043E\u0436\u0434\u0435\u043D\u0438\u044F</th><th>\u0414\u0432\u0430\u0434\u0446\u0430\u0442\u044C \u043B\u0435\u0442</th><th>\u041D\u0430\u0436\u0438\u0442\u043E \u0438 \u0447\u0435\u043C \u043A\u043E\u043D\u0447\u0438\u043B\u043E\u0441\u044C</th></tr>${party.map((p, i) => {
       if (i % BALANCE.health.familySize === 0) family = makeFamily(rng, String(i / BALANCE.health.familySize + 1));
-      const h = birthHealth(rng, family, p.traits.map((t) => t.id)), before = [...h.traits];
-      const states = liveStory(h, p.age, `${val("seed")}-\u043F\u0430\u0440\u0442\u0438\u044F-${i}`);
-      const end = h.state === "dead" ? `\u0443\u043C\u0435\u0440 (${h.cause})` : h.state === "out" ? "\u0432\u044B\u0431\u044B\u043B \u0441\u043E \u0441\u043B\u0443\u0436\u0431\u044B" : "\u0441\u043B\u0443\u0436\u0438\u0442";
+      const h2 = birthHealth(rng, family, p.traits.map((t) => t.id)), before = [...h2.traits];
+      const states = liveStory(h2, p.age, `${val("seed")}-\u043F\u0430\u0440\u0442\u0438\u044F-${i}`);
+      const end = h2.state === "dead" ? `\u0443\u043C\u0435\u0440 (${h2.cause})` : h2.state === "out" ? "\u0432\u044B\u0431\u044B\u043B \u0441\u043E \u0441\u043B\u0443\u0436\u0431\u044B" : "\u0441\u043B\u0443\u0436\u0438\u0442";
       const fam = `${family.id}${family.hereditary.length ? ` \xB7 \u0432 \u0440\u043E\u0434\u0443: ${family.hereditary.map(healthTag).join("")}` : ""}`;
-      return `<tr><td>${fam}</td><td><b>${esc(p.nature.name)}</b></td><td class="c">${p.age}</td><td class="c">${f1(h.krepost)}</td><td>${before.map(healthTag).join("") || "\u0437\u0434\u043E\u0440\u043E\u0432"}</td>
-      <td style="min-width:260px">${strip(states)}</td><td>${h.traits.filter((id) => !before.includes(id)).map(healthTag).join("")} ${end}</td></tr>`;
+      return `<tr><td>${fam}</td><td><b>${esc(p.nature.name)}</b></td><td class="c">${p.age}</td><td class="c">${f1(h2.krepost)}</td><td>${before.map(healthTag).join("") || "\u0437\u0434\u043E\u0440\u043E\u0432"}</td>
+      <td style="min-width:260px">${strip(states)}</td><td>${h2.traits.filter((id) => !before.includes(id)).map(healthTag).join("")} ${end}</td></tr>`;
     }).join("")}</table>`;
     const mod = (t) => [
       t.krepost ? `\u043A\u0440\u0435\u043F\u043E\u0441\u0442\u044C ${t.krepost > 0 ? "+" : ""}${String(t.krepost).replace(".", ",")}` : "",

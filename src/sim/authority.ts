@@ -70,6 +70,12 @@ export function councilSteady(w: World): { ok: boolean; why: string } {
   return { ok: true, why: "главный признан, вражды нет" };
 }
 
+// В совете есть открытая вражда: хотя бы одна пара — враги.
+export function councilFeud(w: World): boolean {
+  const council = w.people.filter((p) => p.post);
+  return council.some((a) => council.some((b) => a.id < b.id && getRel(w, a.id, b.id) <= B.rel.enemy));
+}
+
 // Опора сезона по состоянию на сейчас: стороны, совет, терпение Герцога. В минус уходит только при терпении «на исходе».
 export function authoritySupport(w: World): { lines: AuthLine[]; total: number } {
   const A = B.authority, lines: AuthLine[] = [];

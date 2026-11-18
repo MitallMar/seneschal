@@ -1,8 +1,10 @@
 // Хозяйство и подать (задача И12, замысел — docs/design/hozyaystvo.md). Без интерфейса: работает в браузере и в Node.
 // Сезон совета (sim.ts) зовёт отсюда economySeason; экран и боты — setCourse, setFloor, payTax и функции «что видно».
 // Порядок как шкала строгости, кризисы сторон и падение — задачи И13 и И14: здесь их нет.
-import type { Axis, Star, Side, Village, Stock, Category, HandsFrom, CourseId, CourseDef, PayId, PayDef, PostId, Trait } from "../data/types";
+import type { Axis, Star, Side, Village, Stock, Category, HandsFrom, CourseId, CourseDef, PayId, PayDef, PostId, Trait, Effect, GameEvent, Later } from "../data/types";
 import { AXES, OPPOSED, TRAITS } from "../data/core";
+import { HANDS, LEVERS, type Hand, type Lever } from "../data/handwriting";
+import { POSTS, AXIS_NAMES } from "../data/core";
 import { SIDES, VILLAGES, SIDE_NAMES, CATEGORY_NAMES, COURSES, ELDERS, PAY, HANDS_FROM, STOCKS, SEASON_NAMES } from "../data/economy";
 import { BALANCE as B } from "./balance";
 import { addAuthority } from "./authority";
@@ -25,6 +27,9 @@ export interface Tax {
   patience: number;             // терпение Герцога, 0..10
   history: TaxYear[];
 }
+// Вложение: последствия, которые придут в сезоне due. village — если событие было про одну деревню.
+export interface Pending { due: number; effects: Partial<Record<Effect, number>>; text: string; village?: Village }
+
 export interface Economy {
   stock: Record<Stock, number>;
   floor: { eda: number; serebro: number };  // нижние черты: совет ниже сам не тратит
@@ -43,6 +48,7 @@ export interface Economy {
   cur: LedgerLine[];                        // строки текущего сезона: события совета и плата подати до его конца
   shortages: number;                        // в скольких сезонах за партию срабатывала недодача
   fc: Record<Stock, number>;                // куда ошибся счетовод в прогнозе этого сезона, −1..1
+  pending: Pending[];                       // вложения совета: отдача придёт позже
   zoneWas: Partial<Record<Side, Zone>>;     // зоны сторон на конец прошлого сезона: смена зоны идёт в летопись
 }
 
@@ -102,7 +108,7 @@ export function initEconomy(w: World): Economy {
     floor: { eda: S.floorEda, serebro: S.floorSerebro }, feedFirst: "zamok",
     course: null, courseSeasons: 0, shaky: false, sown: 1, recruits: [], dutyCutUntil: 0, debts: [], autoPay: true,
     tax: { year: 0, lesson: 0, carried: 0, due: 0, paid: 0, early: false, by: {}, patience: S.patience, history: [] },
-    elders, last: null, cur: [], shortages: 0, fc: { eda: 0, tovary: 0, serebro: 0 }, zoneWas: {},
+    elders, last: null, cur: [], shortages: 0, fc: { eda: 0, tovary: 0, serebro: 0 }, zoneWas: {}, pending: [],
   };
   for (const s of SIDES) eco.zoneWas[s] = zoneWord(w.factions[s]);
   w.eco = eco;
@@ -113,8 +119,22 @@ export function initEconomy(w: World): Economy {
 
 // ---------- Исполнитель и курс ----------
 
-export type How = "с огоньком" | "как велено" | "без огонька" | "по-своему" | "должность пуста";
-export interface Doer { p?: Person; mult: number; how: How }
+export type How = "с огоньком" | "как велено" | "без огонька" | "должность пуста";
+// mult — сила потока: мастерство × опыт × настрой; how — настрой; note — из чего сложилась сила, словами для ведомости.
+// stale — засиделся: опыт мастерский и выше, почерк вдвое сильнее, курс его не зажигает.
+export interface Doer { p?: Person; mult: number; how: How; note: string; mastery: number; exp: number; mood: number; stale?: boolean; hand: string }
+// Мастерство: годность к должности, переведённая в множитель потока.
+export function mastery(p: Person, post: PostId): { mult: number; word: "негоден" | "годен" | "прирождённый" } {
+  const D = B.economy.doer, t = clamp((fitness(p, post) - D.masteryFrom) / Math.max(1, D.masteryTo - D.masteryFrom), 0, 1);
+  const mult = r2(D.masteryMin + (D.masteryMax - D.masteryMin) * t);
+  const third = (D.masteryMax - D.masteryMin) / 3;
+  return { mult, word: mult < D.masteryMin + third ? "негоден" : mult > D.masteryMax - third ? "прирождённый" : "годен" };
+}
+function expOf(p: Person): { mult: number; word: string } {
+  const D = B.economy.doer;
+  if (isStale(p)) return { mult: D.expStale, word: "засиделся" };
+  return p.exp >= B.exp.master ? { mult: D.expMaster, word: "мастер" } : p.exp >= B.exp.settled ? { mult: D.expSettled, word: "освоился" } : { mult: D.expNovice, word: "новичок" };
+}
 export const courseDef = (w: World): CourseDef | undefined => COURSES.find((c) => c.id === w.eco.course);
 // Сила курса: доля, на которую он сдвигает потоки; со второго сезона подряд — сильнее.
 export function courseStrength(w: World, id: CourseId): number {
@@ -124,22 +144,52 @@ export function courseStrength(w: World, id: CourseId): number {
 // Как держатель должности исполняет своё: доводы «за» — доверяет Сенешалю, должность желанная, курс по душе; «против» — недоволен, курс не по душе.
 export function doer(w: World, post: PostId): Doer {
   const D = B.economy.doer, p = holder(w, post);
-  if (!p) return { mult: D.empty, how: "должность пуста" };
-  if (isStale(p)) return { p, mult: D.plain, how: "по-своему" };
+  if (!p) return { mult: D.empty, how: "должность пуста", note: "должность пуста", mastery: 1, exp: 1, mood: D.empty, hand: "" };
+  const m = mastery(p, post), x = expOf(p), mine = handsOf(p, post).map((q) => AXIS_NAMES[q.hand.axis]);
+  // почерк в ведомость не идёт: он выдал бы склонности, которых Сенешаль ещё не знает
+  const hand = mine.length ? `почерк${isStale(p) ? " вдвое сильнее" : ""} — ${mine.join(", с оттенком: ")}` : "";
+  const stale = isStale(p);
+  const made = (how: How, mood: number): Doer => ({ p, mult: r2(m.mult * x.mult * mood), how, note: `${m.word}, ${x.word}, ${how}`, mastery: m.mult, exp: x.mult, mood, stale, hand });
   let score = 0;
   if (p.loyalty >= B.loyalty.trusts) score++;
   if (p.loyalty <= B.loyalty.unhappy) score--;
   if (p.aspiration?.post === post) score++;
   const c = courseDef(w), top = topAxis(p.star);
-  if (c?.pro.includes(top)) score++;
+  if (c?.pro.includes(top) && !stale) score++;   // засидевшегося курс не зажигает: он ведёт дело по-своему
   if (c?.contra.includes(top)) score -= w.eco.shaky ? 2 : 1;
-  if (score >= D.fireFrom) return { p, mult: D.fire, how: "с огоньком" };
-  if (score <= D.dullFrom) return { p, mult: D.dull, how: "без огонька" };
-  return { p, mult: D.plain, how: "как велено" };
+  if (score >= D.fireFrom) return made("с огоньком", D.fire);
+  if (score <= D.dullFrom) return made("без огонька", D.dull);
+  return made("как велено", D.plain);
 }
+// ---------- Почерк: склонности исполнителя меняют его сферу ----------
+
+// Почерк человека на должности: ведущая склонность, если она сильная, — в полную силу; вторая, если тоже сильная, — оттенком.
+export function handsOf(p: Person, post: PostId): { hand: Hand; weight: number }[] {
+  const strong = AXES.filter((a) => p.star[a] >= B.know.strong).sort((a, b) => p.star[b] - p.star[a]).slice(0, 2);
+  const stale = isStale(p) ? B.economy.hand.stale : 1;   // засидевшийся ведёт сферу по-своему: и плюс, и минус почерка вдвое сильнее
+  return strong.map((axis, i) => ({ hand: HANDS.find((x) => x.post === post && x.axis === axis)!, weight: (i ? B.economy.hand.second : 1) * stale }));
+}
+// Все рычаги хозяйства от почерков совета: сумма по должностям. Родная склонность — плюс сильнее минуса, чужая — минус не слабее плюса.
+export function levers(w: World): Record<Lever, number> {
+  const H = B.economy.hand, out = Object.fromEntries(LEVERS.map((l) => [l, 0])) as Record<Lever, number>;
+  for (const d of POSTS) {
+    const p = holder(w, d.id);
+    if (!p) continue;
+    for (const { hand, weight } of handsOf(p, d.id)) {
+      const native = d.native.includes(hand.axis);
+      for (const [lever, v] of hand.plus) out[lever] += v * weight * (native ? H.nativePlus : 1);
+      for (const [lever, v] of hand.minus) out[lever] += v * weight * (native ? H.nativeMinus : H.foreignMinus);
+    }
+  }
+  return out;
+}
+// Почерк словами — для карточки человека: что его склонность даёт сфере и чем за это платят.
+export function handText(p: Person): { axis: Axis; text: string; shade: boolean }[] {
+  if (!p.post) return [];
+  return handsOf(p, p.post).map(({ hand }, i) => ({ axis: hand.axis, shade: i > 0, text: `${hand.good}; ${hand.bad}` }));
+}
+
 const whoOf = (d: Doer, post: PostId) => (d.p ? `${postName(post).toLowerCase()} ${d.p.name}` : `${postName(post).toLowerCase()}: должность пуста`);
-// Засидевшийся с высокой Выгодой ведёт дело в свою пользу (тот же порог, что в решениях совета).
-const selfish = (d: Doer) => d.how === "по-своему" && !!d.p && d.p.star.vygoda >= B.decide.staleGreedFrom;
 
 // Прибавка к весу варианта события: по склонностям курса совет решает мелкие дела чаще.
 export function courseLean(w: World, axes: Axis[]): number {
@@ -175,7 +225,9 @@ export function handsNow(w: World): Record<HandsFrom, number> {
 }
 // Куда идут руки в этот сезон: поле берёт своё первым (зимой стоит), курс «Строимся» снимает руки с поля.
 export function fieldHands(w: World): { total: number; field: number; free: number; build: number } {
-  const h = handsNow(w), total = r1(HANDS_FROM.reduce((s, f) => s + h[f], 0));
+  // почерк: расчистка новых полей и раненые в стычках отнимают руки
+  const lost = Math.min(0, levers(w).hands) * B.economy.hand.hands;
+  const h = handsNow(w), total = r1(Math.max(0, HANDS_FROM.reduce((s, f) => s + h[f], 0) + lost));
   if (seasonKind(w.season) === WINTER) return { total, field: 0, free: total, build: 0 };
   const build = w.eco.course === "stroimsya" ? Math.min(total, B.economy.course.buildHands) : 0;
   const field = r1(Math.min(B.economy.hands.field, total - build));
@@ -206,14 +258,15 @@ export function planSeason(w: World): Plan {
   };
   const tiun = doer(w, "starosta"), pisar = doer(w, "pisar"), les = doer(w, "lesnichiy"), klyuch = doer(w, "klyuchnik");
   const hands = fieldHands(w), fieldShare = clamp(hands.field / E.hands.field, 0, 1);
+  // почерки совета: множитель потока по рычагу (не ниже нуля)
+  const L = levers(w), by = (lever: Lever) => Math.max(0, 1 + L[lever] * E.hand.flow);
   const sown = kind === SPRING ? fieldShare : e.sown;
 
   // товары, что лежали на складе, уходят купцам
-  const cut = selfish(pisar) ? E.doer.staleKickback : 1;
   const seasonPrice = [E.year.priceSpring, E.year.priceSummer, E.year.priceAutumn, E.year.priceWinter][kind];
-  const price = F.price * seasonPrice * zoneMult(w, "kuptsy") * pisar.mult * (1 + courseStrength(w, "torguem")) * cut;
+  const price = F.price * seasonPrice * zoneMult(w, "kuptsy") * pisar.mult * (1 + courseStrength(w, "torguem")) * by("price");
   if (stock.tovary > 0) {
-    const sold = stock.tovary, how = cut < 1 ? "по-своему: взял откат с купца" : pisar.how;
+    const sold = stock.tovary, how = pisar.note;
     if (price > 0) {
       add("tovary", -sold, "продано купцам", { side: "kuptsy", who: whoOf(pisar, "pisar"), how });
       add("serebro", sold * price, `за товары, ${r2(price)} за воз`, { side: "kuptsy", who: whoOf(pisar, "pisar"), how });
@@ -222,56 +275,63 @@ export function planSeason(w: World): Plan {
   // пошлины
   const seasonDuty = [E.year.dutySpring, E.year.dutySummer, E.year.dutyAutumn, E.year.dutyWinter][kind];
   const levy = w.season < e.dutyCutUntil ? E.pay.levyDuty : 1;
-  const duties = F.duties * seasonDuty * zoneMult(w, "kuptsy") * pisar.mult * (1 + courseStrength(w, "dorogi")) * levy;
+  const duties = F.duties * seasonDuty * zoneMult(w, "kuptsy") * pisar.mult * (1 + courseStrength(w, "dorogi")) * levy * by("duties");
   const dutyText = `пошлины${levy < 1 ? " (ниже после особого сбора)" : ""}`;
-  if (duties > 0) add("serebro", duties, dutyText, { side: "kuptsy", who: whoOf(pisar, "pisar"), how: pisar.how });
+  if (duties > 0) add("serebro", duties, dutyText, { side: "kuptsy", who: whoOf(pisar, "pisar"), how: pisar.note });
   else lines.push({ cat: "serebro", v: 0, text: "пошлин нет: купцы отказывают", side: "kuptsy" });
   // лес
   const zl = zoneMult(w, "les");
   if (e.course === "les") lines.push({ cat: "tovary", v: 0, text: "брёвен нет: бережём лес", side: "les" });
-  else if (zl > 0) add("tovary", F.forestGoods * zl * les.mult, "шкуры, мёд, брёвна из леса", { side: "les", who: whoOf(les, "lesnichiy"), how: les.how });
+  else if (zl > 0) add("tovary", F.forestGoods * zl * les.mult * by("forestGoods"), "шкуры, мёд, брёвна из леса", { side: "les", who: whoOf(les, "lesnichiy"), how: les.note });
   if (kind === SUMMER && zl > 0) {
     const rites = zoneOf(w, "opushka") === "отказывают" ? E.zone.noRites : 1;
-    const gifts = F.forestFood * zl * les.mult * (1 + courseStrength(w, "les")) * rites;
-    add("eda", gifts, `дары леса${rites < 1 ? " (обрядов нет: деревня у опушки отказывает)" : ""}`, { side: "les", who: whoOf(les, "lesnichiy"), how: les.how });
+    const gifts = F.forestFood * zl * les.mult * (1 + courseStrength(w, "les")) * rites * by("forestFood");
+    add("eda", gifts, `дары леса${rites < 1 ? " (обрядов нет: деревня у опушки отказывает)" : ""}`, { side: "les", who: whoOf(les, "lesnichiy"), how: les.note });
   }
   // осень: урожай и оброк
   let harvest = 0;
   if (kind === AUTUMN) {
-    const quit = (1 + courseStrength(w, "kopim") - courseStrength(w, "polegche")) * (tiun.how === "по-своему" ? E.doer.staleQuitrent : 1);
-    const how = tiun.how === "по-своему" ? "по-своему: часть оброка оставил деревням в долг" : tiun.how;
+    const quit = 1 + courseStrength(w, "kopim") - courseStrength(w, "polegche"), how = tiun.note;
     for (const v of VILLAGES) {
       const z = zoneMult(w, v), who = whoOf(tiun, "starosta"), share = v === "brod" ? F.brodShare : 1 - F.brodShare;
       if (z <= 0) { lines.push({ cat: "eda", v: 0, text: "ни урожая, ни оброка: деревня отказывает", side: v }); continue; }
-      const crop = (F.harvest / VILLAGES.length) * z * tiun.mult * sown * fieldShare;
+      const crop = (F.harvest / VILLAGES.length) * z * tiun.mult * sown * fieldShare * by("harvest");
       harvest += crop;
       const field = sown < 1 || fieldShare < 1 ? ` (посеяно ${Math.round(sown * 100)}%, сжато ${Math.round(fieldShare * 100)}%)` : "";
-      add("eda", crop, `урожай${field}`, { side: v, who, how: tiun.how });
-      add("serebro", F.quitrentSilver * share * z * tiun.mult * quit, "оброк серебром", { side: v, who, how });
-      add("tovary", F.quitrentGoods * share * z * tiun.mult * quit, "оброк товарами", { side: v, who, how });
+      add("eda", crop, `урожай${field}`, { side: v, who, how: tiun.note });
+      add("serebro", F.quitrentSilver * share * z * tiun.mult * quit * by("quitrent") * by("quitrentSilver"), "оброк серебром", { side: v, who, how });
+      add("tovary", F.quitrentGoods * share * z * tiun.mult * quit * by("quitrent"), "оброк товарами", { side: v, who, how });
     }
   }
   // расходы: долги, жалованье, прокорм
   const debt = e.debts.filter((d) => d.due <= w.season).reduce((s, d) => s + d.sum, 0);
   if (debt > 0) spend("serebro", debt, "возврат займа с лихвой", "kuptsy");
-  spend("serebro", F.salary * (1 + courseStrength(w, "dorogi")), "жалованье страже и челяди", "zamok");
-  const upkeep = kind === WINTER ? F.upkeepWinter : F.upkeep;
+  // почерк: «дорожный сбор» десятника и проценты по долгам писаря
+  const purse = L.silver * E.hand.silver;
+  if (purse > 0) add("serebro", purse, "дорожный сбор", { side: "kuptsy" });
+  if (purse < 0) add("serebro", -Math.min(stock.serebro, -purse), "проценты по старым долгам");
+  spend("serebro", F.salary * (1 + courseStrength(w, "dorogi")) * by("salary"), "жалованье страже и челяди", "zamok");
+  const upkeep = (kind === WINTER ? F.upkeepWinter : F.upkeep) * by("upkeep");
   const feed: [Side, number, string][] = [["zamok", upkeep * F.castleShare, "прокорм замка"]];
   for (const v of VILLAGES) feed.push([v, (upkeep * (1 - F.castleShare)) / VILLAGES.length, "прокорм работников на барщине"]);
   if (e.feedFirst === "derevni") feed.push(feed.shift()!);
   for (const [side, v, text] of feed) spend("eda", v, text, side);
   if (zoneOf(w, "les") === "отказывают") spend("eda", E.zone.lesHarm, "потравы и твари из леса", "les");
   if (kind === WINTER && stock.eda > 0) {
-    const sloppy = klyuch.how === "по-своему" ? E.doer.staleSpoil : 1;
-    const spoil = stock.eda * F.spoil * sloppy * (1 - courseStrength(w, "stroimsya")) / klyuch.mult;
-    const how = sloppy > 1 ? "по-своему: склады запущены" : klyuch.how;
-    add("eda", -Math.min(stock.eda, spoil), "испорчено за зиму", { who: whoOf(klyuch, "klyuchnik"), how });
+    const spoil = stock.eda * F.spoil * (1 - courseStrength(w, "stroimsya")) * by("spoil") / klyuch.mult;
+    add("eda", -Math.min(stock.eda, spoil), "испорчено за зиму", { who: whoOf(klyuch, "klyuchnik"), how: klyuch.note });
   }
   // курс «Торгуем»: излишек еды сверх нижней черты тоже уходит купцам
   const spare = stock.eda - e.floor.eda - F.upkeepWinter;
   if (e.course === "torguem" && spare > 0 && zoneMult(w, "kuptsy") > 0) {
-    add("eda", -spare, "излишек продан купцам", { side: "kuptsy", who: whoOf(pisar, "pisar"), how: pisar.how });
-    add("serebro", spare * F.foodPrice * zoneMult(w, "kuptsy") * pisar.mult, "за излишек еды", { side: "kuptsy", who: whoOf(pisar, "pisar"), how: pisar.how });
+    add("eda", -spare, "излишек продан купцам", { side: "kuptsy", who: whoOf(pisar, "pisar"), how: pisar.note });
+    add("serebro", spare * F.foodPrice * zoneMult(w, "kuptsy") * pisar.mult, "за излишек еды", { side: "kuptsy", who: whoOf(pisar, "pisar"), how: pisar.note });
+  }
+  // почерк ключника по Выгоде: часть излишка еды сверх черты и зимнего прокорма продаёт сам
+  const extra = (stock.eda - e.floor.eda - F.upkeepWinter) * clamp(L.sellFood * E.hand.sell, 0, 1);
+  if (extra > 0 && zoneMult(w, "kuptsy") > 0) {
+    add("eda", -extra, "излишек продан ключником", { side: "kuptsy", who: whoOf(klyuch, "klyuchnik"), how: klyuch.note });
+    add("serebro", extra * F.foodPrice * zoneMult(w, "kuptsy"), "за излишек еды", { side: "kuptsy", who: whoOf(klyuch, "klyuchnik"), how: klyuch.note });
   }
   return { lines, short, stock, sown, harvest: r2(harvest) };
 }
@@ -292,6 +352,34 @@ export function belowFloor(w: World, cat: "eda" | "serebro", v: number): boolean
   return v < 0 && r2(w.eco.stock[cat] + v) < w.eco.floor[cat];
 }
 
+// ---------- Вложения совета ----------
+
+// Вариант события занял руки людей замка на этот сезон.
+export function takeHands(w: World, hands: number): void {
+  w.eco.recruits.push({ from: "zamok", hands, until: w.season + 1 });
+  w.eco.cur.push({ cat: "lyudi", v: -hands, text: "руки заняты делом совета", side: "zamok" });
+}
+// Вложение: отдача (с тем же множителем умения и исхода, что у самого дела) придёт через later.seasons сезонов.
+export function invest(w: World, ev: GameEvent, later: Later, k: number, lines: string[]): void {
+  const effects = Object.fromEntries(Object.entries(later.effects).map(([key, v]) => [key, r1(v * k)])) as Pending["effects"];
+  w.eco.pending.push({ due: w.season + later.seasons, effects, text: `${later.text} (дело «${ev.title}»)`, village: ev.village });
+  lines.push(`Вложение: отдача через ${later.seasons} сез. — ${later.text}.`);
+}
+// Отдача вложений, срок которых подошёл: запасы — строкой в ведомость, доверие и порядок — сразу.
+function settle(w: World, lines: string[]): void {
+  const due = w.eco.pending.filter((x) => x.due <= w.season);
+  w.eco.pending = w.eco.pending.filter((x) => x.due > w.season);
+  for (const x of due) {
+    for (const [key, v] of Object.entries(x.effects) as [Effect, number][]) {
+      if (key === "poryadok") w.resources.poryadok = r1(w.resources.poryadok + v);
+      else if (key === "kazna" || key === "pripasy") addLine(w, { cat: key === "kazna" ? "serebro" : "eda", v, text: `отдача вложения: ${x.text}` });
+      else if (key === "derevni") for (const v2 of x.village ? [x.village] : VILLAGES) addTrust(w, v2, v * B.economy.trust.event);
+      else addTrust(w, key, v * B.economy.trust.event);
+    }
+    lines.push(`🌱 Вложение дало отдачу: ${x.text}.`);
+  }
+}
+
 // ---------- Подать ----------
 
 export function lessonOf(year: number): number {
@@ -308,6 +396,9 @@ function newTaxYear(w: World): string {
 }
 export const taxLeft = (w: World): number => r1(Math.max(0, w.eco.tax.due - w.eco.tax.paid));
 
+// Почерк писаря по Дерзости: заём больше и лихва меньше во столько раз.
+const loanEase = (w: World): number => Math.max(1, 1 + levers(w).loan * B.economy.hand.flow * 2);
+
 export interface PayOption { def: PayDef; rate: number; max: number; blocked?: string }
 // Чем и с кого можно закрыть остаток урока прямо сейчас: курс (единиц за меру) и предел в мерах.
 export function payOptions(w: World): PayOption[] {
@@ -319,7 +410,7 @@ export function payOptions(w: World): PayOption[] {
     if (def.id === "serebro" || def.id === "eda" || def.id === "tovary") max = e.stock[def.what as Stock] / rate;
     else if (def.id === "sbor_kuptsy") max = E.pay.levyCap - used(def.id);
     else if (def.id === "zaem") {
-      max = E.pay.loanCap - e.debts.reduce((s, d) => s + d.sum, 0) / (1 + E.pay.loanInterest);
+      max = E.pay.loanCap * loanEase(w) - e.debts.reduce((s, d) => s + d.sum, 0) / (1 + E.pay.loanInterest);
       if (zoneMult(w, "kuptsy") < E.zone.friendly) blocked = "в долг дают только тем, с кем ладят";
     } else if (def.id === "sverh_brod" || def.id === "sverh_opushka") max = E.pay.extraCap - used(def.id);
     else if (def.id === "volnye") { rate = E.rate.volnye; max = E.pay.vagrantCap - used(def.id); }
@@ -344,8 +435,9 @@ export function payTax(w: World, id: PayId, measures: number, lines?: string[]):
     e.dutyCutUntil = w.season + SEASON_NAMES.length;
     addLine(w, { cat: "serebro", v: 0, text: `особый сбор с купцов — ${toTax}`, side: "kuptsy" });
   } else if (id === "zaem") {
-    e.debts.push({ due: w.season + E.pay.loanTerm, sum: r2(units * (1 + E.pay.loanInterest)) });
-    addLine(w, { cat: "serebro", v: 0, text: `заём у купцов — ${toTax}; вернуть ${r2(units * (1 + E.pay.loanInterest))}`, side: "kuptsy" });
+    const back = r2(units * (1 + E.pay.loanInterest / loanEase(w)));
+    e.debts.push({ due: w.season + E.pay.loanTerm, sum: back });
+    addLine(w, { cat: "serebro", v: 0, text: `заём у купцов — ${toTax}; вернуть ${back}`, side: "kuptsy" });
   } else if (id === "sverh_brod" || id === "sverh_opushka") {
     addTrust(w, def.side!, -E.pay.extraTrust * m);
     addLine(w, { cat: "eda", v: 0, text: `зерно сверх оброка — ${toTax}`, side: def.side });
@@ -425,6 +517,7 @@ export function elderSaw(w: World, tiun: Person, axes: Axis[]): void {
 export function economySeason(w: World, lines: string[]): void {
   const E = B.economy, e = w.eco, kind = seasonKind(w.season);
   const before = e.last ? { ...e.last.after } : { eda: E.start.eda, tovary: E.start.tovary, serebro: E.start.serebro };
+  settle(w, lines);
   const hands = fieldHands(w), plan = planSeason(w);
   e.stock = plan.stock;
   e.sown = plan.sown;
@@ -435,9 +528,12 @@ export function economySeason(w: World, lines: string[]): void {
   // недодача: сторона обижена
   if (plan.short.length) e.shortages++;
   if (plan.short.length) PROBE.short.seasons++;
+  const L = levers(w), H = E.hand;
   for (const s of plan.short) {
     PROBE.short[s.cat === "eda" ? "food" : "silver"] += s.v;
-    PROBE.short.trust += -addTrust(w, s.side, -E.trust.short * s.v);
+    // почерк тиуна по Заботе: недодача деревням мягче
+    const soft = s.side === "brod" || s.side === "opushka" ? Math.max(0, 1 + L.shortSoft * H.flow * 2) : 1;
+    PROBE.short.trust += -addTrust(w, s.side, -E.trust.short * s.v * soft);
     let note = `⚠ Недодача: ${s.what} — не хватило ${s.v} (${CATEGORY_NAMES[s.cat].toLowerCase()}). ${SIDE_NAMES[s.side]}: доверие падает.`;
     if (s.cat === "serebro" && s.side === "zamok") {
       w.resources.poryadok = r1(w.resources.poryadok - E.trust.shortOrder * s.v);
@@ -459,9 +555,13 @@ export function economySeason(w: World, lines: string[]): void {
   if (e.course === "torguem") addTrust(w, "kuptsy", ct);
   if (e.course === "stroimsya") { addTrust(w, "zamok", ct); for (const v of VILLAGES) addTrust(w, v, -ct); }
   if (e.course === "dorogi") w.resources.poryadok = r1(w.resources.poryadok + E.course.order);
+  // почерки совета двигают доверие сторон, порядок и терпение Герцога
+  for (const v of VILLAGES) addTrust(w, v, (L.villages + (v === "opushka" ? L.opushka : 0)) * H.trust);
+  for (const side of ["zamok", "kuptsy", "les", "dvor"] as const) addTrust(w, side, L[side] * H.trust);
+  w.resources.poryadok = r1(w.resources.poryadok + L.order * H.order);
+  e.tax.patience = r2(clamp(e.tax.patience + L.patience * H.patience, 0, STAR_MAX));
   const tiun = holder(w, "starosta");
   if (tiun) for (const el of e.elders) addTrust(w, el.side, el.rel[tiun.id] * E.trust.elder);
-  if (kind === AUTUMN && tiun && isStale(tiun)) for (const v of VILLAGES) addTrust(w, v, E.doer.staleQuitrentTrust);
   for (const s of SIDES) {
     w.factions[s] = r1(w.factions[s] * E.trust.fade);
     const now = zoneOf(w, s);

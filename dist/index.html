@@ -255,6 +255,8 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
 .knob-def { font-size: 11px; color: var(--muted); width: 84px; }
 .zone { white-space: nowrap; }
 .knob-sub { margin: 8px 0 2px; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.hand { font-size: 12px; margin-top: 4px; line-height: 1.35; }
+.hand.unknown, .hand[data-hand="none"] { color: var(--muted); }
 </style>
 </head>
 <body>
@@ -534,7 +536,8 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
       orderMinBonus: k(0.3, 0, 2, 0.1, "\u041D\u0430\u043A\u0430\u0437: \u043F\u0440\u0438\u0431\u0430\u0432\u043A\u0430 \u043C\u0435\u043D\u044C\u0448\u0435 \u044D\u0442\u043E\u0439 \u043D\u0435 \u0434\u0435\u0439\u0441\u0442\u0432\u0443\u0435\u0442"),
       staleGreedFrom: k(6, 0, 10, 0.5, "\u0417\u0430\u0441\u0438\u0434\u0435\u0432\u0448\u0438\u0439\u0441\u044F \u0442\u044F\u043D\u0435\u0442 \u043A \u0441\u0432\u043E\u0435\u0439 \u043F\u043E\u043B\u044C\u0437\u0435, \u0435\u0441\u043B\u0438 \u0412\u044B\u0433\u043E\u0434\u0430 \u043D\u0435 \u043D\u0438\u0436\u0435 \u044D\u0442\u043E\u0433\u043E"),
       staleGreedBonus: k(1, 0, 4, 0.25, "\u0417\u0430\u0441\u0438\u0434\u0435\u0432\u0448\u0438\u0439\u0441\u044F: \u043F\u0440\u0438\u0431\u0430\u0432\u043A\u0430 \u043A \u0432\u0430\u0440\u0438\u0430\u043D\u0442\u0430\u043C \u043F\u043E \u0412\u044B\u0433\u043E\u0434\u0435"),
-      cautiousRisk: k(1, 0, 4, 0.25, "\u041E\u0441\u0442\u043E\u0440\u043E\u0436\u043D\u044B\u0439: \u0448\u0442\u0440\u0430\u0444 \u0440\u0438\u0441\u043A\u043E\u0432\u0430\u043D\u043D\u043E\u043C\u0443 \u0432\u0430\u0440\u0438\u0430\u043D\u0442\u0443")
+      cautiousRisk: k(1, 0, 4, 0.25, "\u041E\u0441\u0442\u043E\u0440\u043E\u0436\u043D\u044B\u0439: \u0448\u0442\u0440\u0430\u0444 \u0440\u0438\u0441\u043A\u043E\u0432\u0430\u043D\u043D\u043E\u043C\u0443 \u0432\u0430\u0440\u0438\u0430\u043D\u0442\u0443"),
+      kindLean: k(0.15, 0, 1, 0.05, "\u0420\u043E\u0434 \u0432\u0430\u0440\u0438\u0430\u043D\u0442\u0430: \u043D\u0430 \u0435\u0434\u0438\u043D\u0438\u0446\u0443 \u0414\u0435\u0440\u0437\u043E\u0441\u0442\u0438 \u0432\u044B\u0448\u0435 \u0441\u0435\u0440\u0435\u0434\u0438\u043D\u044B \u0441\u043C\u0435\u043B\u044B\u0439 \u0432\u0430\u0440\u0438\u0430\u043D\u0442 \u0432\u0435\u0441\u0438\u0442 \u0431\u043E\u043B\u044C\u0448\u0435, \u043E\u0441\u0442\u043E\u0440\u043E\u0436\u043D\u044B\u0439 \u2014 \u043C\u0435\u043D\u044C\u0448\u0435")
     },
     // опыт на должности, годность и исход дела
     exp: {
@@ -550,7 +553,9 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
       skillMax: k(1.2, 1, 2, 0.05, "\u0423\u043C\u0435\u043D\u0438\u0435: \u0432\u0435\u0440\u0445\u043D\u0438\u0439 \u043F\u0440\u0435\u0434\u0435\u043B"),
       riskBase: k(0.3, 0, 1, 0.05, "\u0420\u0438\u0441\u043A\u043E\u0432\u0430\u043D\u043D\u043E\u0435 \u0434\u0435\u043B\u043E: \u0448\u0430\u043D\u0441 \u0443\u0434\u0430\u0447\u0438 \u0431\u0435\u0437 \u0443\u043C\u0435\u043D\u0438\u044F"),
       riskSkill: k(0.55, 0, 1, 0.05, "\u0420\u0438\u0441\u043A\u043E\u0432\u0430\u043D\u043D\u043E\u0435 \u0434\u0435\u043B\u043E: \u043F\u0440\u0438\u0431\u0430\u0432\u043A\u0430 \u0448\u0430\u043D\u0441\u0430 \u043D\u0430 \u0435\u0434\u0438\u043D\u0438\u0446\u0443 \u0443\u043C\u0435\u043D\u0438\u044F"),
-      failBackfire: k(0.5, 0, 1, 0.05, "\u041F\u0440\u043E\u0432\u0430\u043B \u0440\u0438\u0441\u043A\u043E\u0432\u0430\u043D\u043D\u043E\u0433\u043E \u0434\u0435\u043B\u0430: \u043A\u0430\u043A\u0430\u044F \u0434\u043E\u043B\u044F \u043F\u043E\u043B\u044C\u0437\u044B \u043E\u0431\u043E\u0440\u0430\u0447\u0438\u0432\u0430\u0435\u0442\u0441\u044F \u0432\u0440\u0435\u0434\u043E\u043C"),
+      failBackfire: k(0.75, 0, 1.5, 0.05, "\u041F\u0440\u043E\u0432\u0430\u043B \u0441\u043C\u0435\u043B\u043E\u0433\u043E \u0434\u0435\u043B\u0430: \u043A\u0430\u043A\u0430\u044F \u0434\u043E\u043B\u044F \u043F\u043E\u043B\u044C\u0437\u044B \u043E\u0431\u043E\u0440\u0430\u0447\u0438\u0432\u0430\u0435\u0442\u0441\u044F \u0432\u0440\u0435\u0434\u043E\u043C"),
+      boldGain: k(1.5, 1, 3, 0.05, "\u0421\u043C\u0435\u043B\u044B\u0439 \u0432\u0430\u0440\u0438\u0430\u043D\u0442: \u0432\u043E \u0441\u043A\u043E\u043B\u044C\u043A\u043E \u0440\u0430\u0437 \u0431\u043E\u043B\u044C\u0448\u0435 \u0432\u044B\u0438\u0433\u0440\u044B\u0448 \u043F\u0440\u0438 \u0443\u0434\u0430\u0447\u0435"),
+      carefulGain: k(0.6, 0.1, 1, 0.05, "\u041E\u0441\u0442\u043E\u0440\u043E\u0436\u043D\u044B\u0439 \u0432\u0430\u0440\u0438\u0430\u043D\u0442: \u043C\u043D\u043E\u0436\u0438\u0442\u0435\u043B\u044C \u0438 \u0432\u044B\u0438\u0433\u0440\u044B\u0448\u0430, \u0438 \u0446\u0435\u043D\u044B"),
       fitMarkGood: k(2, 0, 5, 0.5, "\u0413\u043E\u0434\u043D\u043E\u0441\u0442\u044C: \u043F\u0440\u0438\u0431\u0430\u0432\u043A\u0430 \u0437\u0430 \u043F\u043E\u0434\u0445\u043E\u0434\u044F\u0449\u0443\u044E \u043C\u0435\u0442\u043A\u0443"),
       fitMarkBad: k(3, 0, 6, 0.5, "\u0413\u043E\u0434\u043D\u043E\u0441\u0442\u044C: \u0432\u044B\u0447\u0435\u0442 \u0437\u0430 \u043C\u0435\u0448\u0430\u044E\u0449\u0443\u044E \u043C\u0435\u0442\u043A\u0443"),
       fitAspiration: k(1, 0, 4, 0.5, "\u0413\u043E\u0434\u043D\u043E\u0441\u0442\u044C: \u043F\u0440\u0438\u0431\u0430\u0432\u043A\u0430, \u0435\u0441\u043B\u0438 \u0447\u0435\u043B\u043E\u0432\u0435\u043A \u0445\u043E\u0447\u0435\u0442 \u044D\u0442\u0443 \u0434\u043E\u043B\u0436\u043D\u043E\u0441\u0442\u044C")
@@ -580,7 +585,11 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
       dealRel: k(0.3, 0, 2, 0.1, "\u041B\u0430\u0434\u044F\u0442 \u0438 \u0434\u043E\u0433\u043E\u0432\u043E\u0440\u0438\u043B\u0438\u0441\u044C: \u043F\u0440\u0438\u0431\u0430\u0432\u043A\u0430 \u043A \u043E\u0442\u043D\u043E\u0448\u0435\u043D\u0438\u044F\u043C"),
       compromiseChance: k(0.4, 0, 1, 0.05, "\u0422\u0435\u0440\u043F\u044F\u0442: \u0448\u0430\u043D\u0441 \u043A\u043E\u043C\u043F\u0440\u043E\u043C\u0438\u0441\u0441\u0430"),
       softness: k(0.1, 0, 0.3, 0.01, "\u0422\u0435\u0440\u043F\u044F\u0442: \u043F\u0440\u0438\u0431\u0430\u0432\u043A\u0430 \u0448\u0430\u043D\u0441\u0430 \u043A\u043E\u043C\u043F\u0440\u043E\u043C\u0438\u0441\u0441\u0430 \u0437\u0430 \u0435\u0434\u0438\u043D\u0438\u0446\u0443 \u043C\u044F\u0433\u043A\u043E\u0441\u0442\u0438 \u0447\u0435\u0440\u0442"),
-      compromise: k(0.7, 0.1, 1, 0.05, "\u041A\u043E\u043C\u043F\u0440\u043E\u043C\u0438\u0441\u0441: \u043C\u043D\u043E\u0436\u0438\u0442\u0435\u043B\u044C \u0438\u0441\u0445\u043E\u0434\u0430"),
+      compromise: k(0.6, 0.1, 1, 0.05, "\u041A\u043E\u043C\u043F\u0440\u043E\u043C\u0438\u0441\u0441: \u043C\u043D\u043E\u0436\u0438\u0442\u0435\u043B\u044C \u0438\u0441\u0445\u043E\u0434\u0430"),
+      dealGain: k(1.1, 1, 2, 0.05, "\u0414\u043E\u0433\u043E\u0432\u043E\u0440\u0438\u043B\u0438\u0441\u044C: \u043C\u043D\u043E\u0436\u0438\u0442\u0435\u043B\u044C \u0438\u0441\u0445\u043E\u0434\u0430"),
+      rivalGain: k(0.75, 0.1, 1, 0.05, "\u0421\u043E\u043F\u0435\u0440\u043D\u0438\u043A \u043D\u0430\u0441\u0442\u043E\u044F\u043B \u0438\u043B\u0438 \u0432\u0440\u0430\u0433 \u0441\u043C\u043E\u043B\u0447\u0430\u043B: \u043C\u043D\u043E\u0436\u0438\u0442\u0435\u043B\u044C \u0438\u0441\u0445\u043E\u0434\u0430"),
+      cohesion: k(1.1, 1, 1.5, 0.05, "\u0421\u043B\u0430\u0436\u0435\u043D\u043D\u044B\u0439 \u0441\u043E\u0432\u0435\u0442 (\u0433\u043B\u0430\u0432\u043D\u044B\u0439 \u043F\u0440\u0438\u0437\u043D\u0430\u043D, \u0432\u0440\u0430\u0436\u0434\u044B \u043D\u0435\u0442): \u043C\u043D\u043E\u0436\u0438\u0442\u0435\u043B\u044C \u0434\u0435\u043B \u0434\u0432\u0443\u0445 \u0441\u0444\u0435\u0440"),
+      feud: k(0.9, 0.5, 1, 0.05, "\u041E\u0442\u043A\u0440\u044B\u0442\u0430\u044F \u0432\u0440\u0430\u0436\u0434\u0430 \u0432 \u0441\u043E\u0432\u0435\u0442\u0435: \u043C\u043D\u043E\u0436\u0438\u0442\u0435\u043B\u044C \u0434\u0435\u043B \u0434\u0432\u0443\u0445 \u0441\u0444\u0435\u0440"),
       pushRel: k(-0.7, -3, 0, 0.1, "\u0422\u0435\u0440\u043F\u044F\u0442, \u043E\u0434\u0438\u043D \u043F\u0440\u043E\u0434\u0430\u0432\u0438\u043B: \u043E\u0442\u043D\u043E\u0448\u0435\u043D\u0438\u044F"),
       rivalRel: k(-1, -3, 0, 0.1, "\u0421\u043E\u043F\u0435\u0440\u043D\u0438\u043A\u0438, \u043E\u0434\u0438\u043D \u043D\u0430\u0441\u0442\u043E\u044F\u043B: \u043E\u0442\u043D\u043E\u0448\u0435\u043D\u0438\u044F"),
       complaintLoyalty: k(3, -10, 10, 0.5, "\u0421\u043E\u043F\u0435\u0440\u043D\u0438\u043A\u0438: \u043F\u0440\u043E\u0438\u0433\u0440\u0430\u0432\u0448\u0438\u0439 \u0436\u0430\u043B\u0443\u0435\u0442\u0441\u044F \u043D\u0430\u0432\u0435\u0440\u043D\u044F\u043A\u0430, \u0435\u0441\u043B\u0438 \u0435\u0433\u043E \u043E\u0442\u043D\u043E\u0448\u0435\u043D\u0438\u0435 \u043A \u0421\u0435\u043D\u0435\u0448\u0430\u043B\u044E \u043D\u0438\u0436\u0435 \u044D\u0442\u043E\u0433\u043E"),
@@ -818,16 +827,36 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
         noRites: k(0.5, 0, 1, 0.05, "\u0414\u0435\u0440\u0435\u0432\u043D\u044F \u0443 \u043E\u043F\u0443\u0448\u043A\u0438 \xAB\u043E\u0442\u043A\u0430\u0437\u044B\u0432\u0430\u0435\u0442\xBB: \u043E\u0431\u0440\u044F\u0434\u043E\u0432 \u043D\u0435\u0442, \u0434\u0430\u0440\u044B \u043B\u0435\u0441\u0430 \u0443\u043C\u043D\u043E\u0436\u0430\u044E\u0442\u0441\u044F \u043D\u0430 \u044D\u0442\u043E")
       },
       doer: {
-        fire: k(1.2, 1, 2, 0.05, "\u0418\u0441\u043F\u043E\u043B\u043D\u0438\u0442\u0435\u043B\u044C \u0441 \u043E\u0433\u043E\u043D\u044C\u043A\u043E\u043C: \u043C\u043D\u043E\u0436\u0438\u0442\u0435\u043B\u044C \u043F\u043E\u0442\u043E\u043A\u0430"),
+        fire: k(1.15, 1, 2, 0.05, "\u0418\u0441\u043F\u043E\u043B\u043D\u0438\u0442\u0435\u043B\u044C \u0441 \u043E\u0433\u043E\u043D\u044C\u043A\u043E\u043C: \u043C\u043D\u043E\u0436\u0438\u0442\u0435\u043B\u044C \u043F\u043E\u0442\u043E\u043A\u0430"),
         plain: k(1, 0.5, 1.5, 0.05, "\u0418\u0441\u043F\u043E\u043B\u043D\u0438\u0442\u0435\u043B\u044C \xAB\u043A\u0430\u043A \u0432\u0435\u043B\u0435\u043D\u043E\xBB: \u043C\u043D\u043E\u0436\u0438\u0442\u0435\u043B\u044C \u043F\u043E\u0442\u043E\u043A\u0430"),
-        dull: k(0.8, 0, 1, 0.05, "\u0418\u0441\u043F\u043E\u043B\u043D\u0438\u0442\u0435\u043B\u044C \u0431\u0435\u0437 \u043E\u0433\u043E\u043D\u044C\u043A\u0430: \u043C\u043D\u043E\u0436\u0438\u0442\u0435\u043B\u044C \u043F\u043E\u0442\u043E\u043A\u0430"),
+        dull: k(0.85, 0, 1, 0.05, "\u0418\u0441\u043F\u043E\u043B\u043D\u0438\u0442\u0435\u043B\u044C \u0431\u0435\u0437 \u043E\u0433\u043E\u043D\u044C\u043A\u0430: \u043C\u043D\u043E\u0436\u0438\u0442\u0435\u043B\u044C \u043F\u043E\u0442\u043E\u043A\u0430"),
+        // сила потока = мастерство × опыт × настрой (lyudi-i-ishody.md, 2.1)
+        masteryMin: k(0.8, 0.5, 1, 0.05, "\u041C\u0430\u0441\u0442\u0435\u0440\u0441\u0442\u0432\u043E: \u043C\u043D\u043E\u0436\u0438\u0442\u0435\u043B\u044C \u043F\u043E\u0442\u043E\u043A\u0430 \u0443 \u043D\u0435\u0433\u043E\u0434\u043D\u043E\u0433\u043E \u043A \u0434\u043E\u043B\u0436\u043D\u043E\u0441\u0442\u0438"),
+        masteryMax: k(1.2, 1, 1.5, 0.05, "\u041C\u0430\u0441\u0442\u0435\u0440\u0441\u0442\u0432\u043E: \u043C\u043D\u043E\u0436\u0438\u0442\u0435\u043B\u044C \u043F\u043E\u0442\u043E\u043A\u0430 \u0443 \u043F\u0440\u0438\u0440\u043E\u0436\u0434\u0451\u043D\u043D\u043E\u0433\u043E"),
+        masteryFrom: k(4, 0, 6, 0.5, "\u041C\u0430\u0441\u0442\u0435\u0440\u0441\u0442\u0432\u043E: \u0433\u043E\u0434\u043D\u043E\u0441\u0442\u044C, \u0441 \u043A\u043E\u0442\u043E\u0440\u043E\u0439 \u0438 \u043D\u0438\u0436\u0435 \u2014 \xAB\u043D\u0435\u0433\u043E\u0434\u0435\u043D\xBB"),
+        masteryTo: k(10, 5, 12, 0.5, "\u041C\u0430\u0441\u0442\u0435\u0440\u0441\u0442\u0432\u043E: \u0433\u043E\u0434\u043D\u043E\u0441\u0442\u044C, \u0441 \u043A\u043E\u0442\u043E\u0440\u043E\u0439 \u0438 \u0432\u044B\u0448\u0435 \u2014 \xAB\u043F\u0440\u0438\u0440\u043E\u0436\u0434\u0451\u043D\u043D\u044B\u0439\xBB"),
+        expNovice: k(0.85, 0.5, 1, 0.05, "\u041E\u043F\u044B\u0442 \u0432 \u043F\u043E\u0442\u043E\u043A\u0435: \u043D\u043E\u0432\u0438\u0447\u043E\u043A"),
+        expSettled: k(1, 0.5, 1.5, 0.05, "\u041E\u043F\u044B\u0442 \u0432 \u043F\u043E\u0442\u043E\u043A\u0435: \u043E\u0441\u0432\u043E\u0438\u043B\u0441\u044F"),
+        expMaster: k(1.1, 1, 1.5, 0.05, "\u041E\u043F\u044B\u0442 \u0432 \u043F\u043E\u0442\u043E\u043A\u0435: \u043C\u0430\u0441\u0442\u0435\u0440"),
         empty: k(0.5, 0, 1, 0.05, "\u0414\u043E\u043B\u0436\u043D\u043E\u0441\u0442\u044C \u043F\u0443\u0441\u0442\u0430: \u043C\u043D\u043E\u0436\u0438\u0442\u0435\u043B\u044C \u043F\u043E\u0442\u043E\u043A\u0430"),
         fireFrom: k(2, 1, 4, 1, "\u0418\u0441\u043F\u043E\u043B\u043D\u0438\u0442\u0435\u043B\u044C: \u0441 \u043E\u0433\u043E\u043D\u044C\u043A\u043E\u043C, \u0435\u0441\u043B\u0438 \u0434\u043E\u0432\u043E\u0434\u043E\u0432 \xAB\u0437\u0430\xBB \u0431\u043E\u043B\u044C\u0448\u0435, \u0447\u0435\u043C \xAB\u043F\u0440\u043E\u0442\u0438\u0432\xBB, \u043D\u0430 \u0441\u0442\u043E\u043B\u044C\u043A\u043E"),
         dullFrom: k(-1, -4, 0, 1, "\u0418\u0441\u043F\u043E\u043B\u043D\u0438\u0442\u0435\u043B\u044C: \u0431\u0435\u0437 \u043E\u0433\u043E\u043D\u044C\u043A\u0430, \u0435\u0441\u043B\u0438 \u043F\u0435\u0440\u0435\u0432\u0435\u0441 \u0434\u043E\u0432\u043E\u0434\u043E\u0432 \u043D\u0435 \u0432\u044B\u0448\u0435 \u044D\u0442\u043E\u0433\u043E"),
-        staleSpoil: k(2, 1, 5, 0.25, "\u041F\u043E-\u0441\u0432\u043E\u0435\u043C\u0443, \u043A\u043B\u044E\u0447\u043D\u0438\u043A: \u0441\u043A\u043B\u0430\u0434\u044B \u0437\u0430\u043F\u0443\u0449\u0435\u043D\u044B \u2014 \u043F\u043E\u0440\u0447\u0430 \u0435\u0434\u044B \u0443\u043C\u043D\u043E\u0436\u0430\u0435\u0442\u0441\u044F \u043D\u0430 \u044D\u0442\u043E"),
-        staleQuitrent: k(0.8, 0, 1, 0.05, "\u041F\u043E-\u0441\u0432\u043E\u0435\u043C\u0443, \u0442\u0438\u0443\u043D: \u0447\u0430\u0441\u0442\u044C \u043E\u0431\u0440\u043E\u043A\u0430 \u043E\u0441\u0442\u0430\u0432\u0438\u043B \u0434\u0435\u0440\u0435\u0432\u043D\u044F\u043C \u0432 \u0434\u043E\u043B\u0433 \u2014 \u043E\u0431\u0440\u043E\u043A \u0443\u043C\u043D\u043E\u0436\u0430\u0435\u0442\u0441\u044F \u043D\u0430 \u044D\u0442\u043E"),
-        staleQuitrentTrust: k(0.3, 0, 2, 0.05, "\u041F\u043E-\u0441\u0432\u043E\u0435\u043C\u0443, \u0442\u0438\u0443\u043D: \u0437\u0430 \u044D\u0442\u043E \u0434\u043E\u0432\u0435\u0440\u0438\u0435 \u043A\u0430\u0436\u0434\u043E\u0439 \u0434\u0435\u0440\u0435\u0432\u043D\u0438 \u0440\u0430\u0441\u0442\u0451\u0442 \u0437\u0430 \u043E\u0441\u0435\u043D\u044C"),
-        staleKickback: k(0.9, 0, 1, 0.05, "\u041F\u043E-\u0441\u0432\u043E\u0435\u043C\u0443, \u043F\u0438\u0441\u0430\u0440\u044C: \u043E\u0442\u043A\u0430\u0442 \u0441 \u043A\u0443\u043F\u0446\u0430 \u2014 \u0446\u0435\u043D\u0430 \u0442\u043E\u0432\u0430\u0440\u043E\u0432 \u0443\u043C\u043D\u043E\u0436\u0430\u0435\u0442\u0441\u044F \u043D\u0430 \u044D\u0442\u043E")
+        expStale: k(1.15, 1, 1.5, 0.05, "\u041E\u043F\u044B\u0442 \u0432 \u043F\u043E\u0442\u043E\u043A\u0435: \u0437\u0430\u0441\u0438\u0434\u0435\u0432\u0448\u0438\u0439\u0441\u044F (\u043C\u0430\u0441\u0442\u0435\u0440 \u0438 \u0432\u044B\u0448\u0435, \u043D\u043E \u0432\u0435\u0434\u0451\u0442 \u043F\u043E-\u0441\u0432\u043E\u0435\u043C\u0443)")
+      },
+      // почерк: как склонность исполнителя меняет его сферу (src/data/handwriting.ts; lyudi-i-ishody.md, 2.2)
+      hand: {
+        flow: k(0.15, 0, 0.5, 0.01, "\u041F\u043E\u0447\u0435\u0440\u043A: \u0435\u0434\u0438\u043D\u0438\u0446\u0430 \u0440\u044B\u0447\u0430\u0433\u0430 \u043F\u043E\u0442\u043E\u043A\u0430 (\u043E\u0431\u0440\u043E\u043A, \u0443\u0440\u043E\u0436\u0430\u0439, \u043F\u043E\u0448\u043B\u0438\u043D\u044B, \u0446\u0435\u043D\u0430, \u043F\u043E\u0440\u0447\u0430, \u043F\u0440\u043E\u043A\u043E\u0440\u043C), \u0434\u043E\u043B\u044F"),
+        trust: k(0.3, 0, 1, 0.05, "\u041F\u043E\u0447\u0435\u0440\u043A: \u0435\u0434\u0438\u043D\u0438\u0446\u0430 \u0440\u044B\u0447\u0430\u0433\u0430 \u0434\u043E\u0432\u0435\u0440\u0438\u044F \u0441\u0442\u043E\u0440\u043E\u043D\u044B, \u0437\u0430 \u0441\u0435\u0437\u043E\u043D"),
+        order: k(0.3, 0, 1, 0.05, "\u041F\u043E\u0447\u0435\u0440\u043A: \u0435\u0434\u0438\u043D\u0438\u0446\u0430 \u0440\u044B\u0447\u0430\u0433\u0430 \u043F\u043E\u0440\u044F\u0434\u043A\u0430, \u0437\u0430 \u0441\u0435\u0437\u043E\u043D"),
+        hands: k(0.5, 0, 2, 0.1, "\u041F\u043E\u0447\u0435\u0440\u043A: \u0435\u0434\u0438\u043D\u0438\u0446\u0430 \u0440\u044B\u0447\u0430\u0433\u0430 \u0440\u0443\u043A (\u0440\u0430\u0441\u0447\u0438\u0441\u0442\u043A\u0430, \u0440\u0430\u043D\u0435\u043D\u044B\u0435)"),
+        silver: k(0.15, 0, 1, 0.05, "\u041F\u043E\u0447\u0435\u0440\u043A: \u0435\u0434\u0438\u043D\u0438\u0446\u0430 \u0440\u044B\u0447\u0430\u0433\u0430 \u0441\u0435\u0440\u0435\u0431\u0440\u0430 \u0437\u0430 \u0441\u0435\u0437\u043E\u043D (\u0434\u043E\u0440\u043E\u0436\u043D\u044B\u0439 \u0441\u0431\u043E\u0440, \u043F\u0440\u043E\u0446\u0435\u043D\u0442\u044B)"),
+        sell: k(0.5, 0, 1, 0.05, "\u041F\u043E\u0447\u0435\u0440\u043A \u043A\u043B\u044E\u0447\u043D\u0438\u043A\u0430 \u043F\u043E \u0412\u044B\u0433\u043E\u0434\u0435: \u043A\u0430\u043A\u0443\u044E \u0434\u043E\u043B\u044E \u0438\u0437\u043B\u0438\u0448\u043A\u0430 \u0435\u0434\u044B \u043F\u0440\u043E\u0434\u0430\u0451\u0442"),
+        patience: k(0.1, 0, 1, 0.05, "\u041F\u043E\u0447\u0435\u0440\u043A \u043F\u0438\u0441\u0430\u0440\u044F \u043F\u043E \u041E\u0431\u044B\u0447\u0430\u044E: \u0442\u0435\u0440\u043F\u0435\u043D\u0438\u0435 \u0413\u0435\u0440\u0446\u043E\u0433\u0430 \u0437\u0430 \u0441\u0435\u0437\u043E\u043D"),
+        second: k(0.5, 0, 1, 0.05, "\u041F\u043E\u0447\u0435\u0440\u043A: \u0432\u0435\u0441 \u0432\u0442\u043E\u0440\u043E\u0439 \u0441\u0438\u043B\u044C\u043D\u043E\u0439 \u0441\u043A\u043B\u043E\u043D\u043D\u043E\u0441\u0442\u0438 (\u043E\u0442\u0442\u0435\u043D\u043E\u043A)"),
+        nativePlus: k(1.3, 1, 2, 0.05, "\u041F\u043E\u0447\u0435\u0440\u043A, \u0440\u043E\u0434\u043D\u0430\u044F \u0441\u043A\u043B\u043E\u043D\u043D\u043E\u0441\u0442\u044C \u0434\u043E\u043B\u0436\u043D\u043E\u0441\u0442\u0438: \u043F\u043B\u044E\u0441 \u0443\u043C\u043D\u043E\u0436\u0430\u0435\u0442\u0441\u044F \u043D\u0430 \u044D\u0442\u043E"),
+        nativeMinus: k(0.7, 0, 1, 0.05, "\u041F\u043E\u0447\u0435\u0440\u043A, \u0440\u043E\u0434\u043D\u0430\u044F \u0441\u043A\u043B\u043E\u043D\u043D\u043E\u0441\u0442\u044C \u0434\u043E\u043B\u0436\u043D\u043E\u0441\u0442\u0438: \u043C\u0438\u043D\u0443\u0441 \u0443\u043C\u043D\u043E\u0436\u0430\u0435\u0442\u0441\u044F \u043D\u0430 \u044D\u0442\u043E"),
+        foreignMinus: k(1, 1, 2, 0.05, "\u041F\u043E\u0447\u0435\u0440\u043A, \u0447\u0443\u0436\u0430\u044F \u0441\u043A\u043B\u043E\u043D\u043D\u043E\u0441\u0442\u044C: \u043C\u0438\u043D\u0443\u0441 \u0443\u043C\u043D\u043E\u0436\u0430\u0435\u0442\u0441\u044F \u043D\u0430 \u044D\u0442\u043E"),
+        stale: k(2, 1, 3, 0.25, "\u041F\u043E\u0447\u0435\u0440\u043A \u0437\u0430\u0441\u0438\u0434\u0435\u0432\u0448\u0435\u0433\u043E\u0441\u044F: \u0432\u043E \u0441\u043A\u043E\u043B\u044C\u043A\u043E \u0440\u0430\u0437 \u0441\u0438\u043B\u044C\u043D\u0435\u0435")
       },
       hands: {
         brod: k(3, 0, 8, 0.5, "\u0420\u0443\u043A\u0438: \u0434\u0435\u0440\u0435\u0432\u043D\u044F \u0443 \u0431\u0440\u043E\u0434\u0430 \u043F\u0440\u0438 \xAB\u043B\u0430\u0434\u044F\u0442\xBB"),
@@ -1085,7 +1114,7 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
       posts: ["lesnichiy"],
       village: "opushka",
       options: [
-        { id: "vernut_lesu", text: "\u041E\u0441\u0442\u0430\u0432\u0438\u0442\u044C \u0442\u0443\u0448\u0443 \u043B\u0435\u0441\u0443 \u0438 \u0432\u044B\u043F\u043E\u0440\u043E\u0442\u044C", axes: ["obychai"], effects: { les: 1, derevni: -1 } },
+        { id: "vernut_lesu", text: "\u041E\u0441\u0442\u0430\u0432\u0438\u0442\u044C \u0442\u0443\u0448\u0443 \u043B\u0435\u0441\u0443 \u0438 \u0432\u044B\u043F\u043E\u0440\u043E\u0442\u044C", axes: ["obychai"], effects: { les: 1, derevni: -1 }, careful: true },
         { id: "otpustit", text: "\u041E\u0442\u043F\u0443\u0441\u0442\u0438\u0442\u044C \u0441 \u043C\u044F\u0441\u043E\u043C \u2014 \u0441\u0435\u043C\u044C\u044F \u0433\u043E\u043B\u043E\u0434\u0430\u0435\u0442", axes: ["zabota"], effects: { derevni: 1, les: -2 } },
         { id: "shtraf", text: "\u0412\u0437\u044F\u0442\u044C \u0448\u0442\u0440\u0430\u0444 \u0441\u0435\u0440\u0435\u0431\u0440\u043E\u043C", axes: ["vygoda"], effects: { kazna: 1, les: -1, derevni: -1 } }
       ]
@@ -1097,7 +1126,7 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
       posts: ["pisar"],
       options: [
         { id: "snizit", text: "\u0421\u043D\u0438\u0437\u0438\u0442\u044C \u2014 \u043F\u0443\u0441\u0442\u044C \u0435\u0437\u0434\u044F\u0442", axes: ["derzost", "vygoda"], effects: { kuptsy: 2, kazna: -1 }, risky: true },
-        { id: "derzhat", text: "\u0414\u0435\u0440\u0436\u0430\u0442\u044C \u043F\u0440\u0435\u0436\u043D\u044E\u044E \u2014 \u0442\u0430\u043A \u0437\u0430\u0432\u0435\u0434\u0435\u043D\u043E", axes: ["obychai", "dolg"], effects: { kuptsy: -1, kazna: 1 } },
+        { id: "derzhat", text: "\u0414\u0435\u0440\u0436\u0430\u0442\u044C \u043F\u0440\u0435\u0436\u043D\u044E\u044E \u2014 \u0442\u0430\u043A \u0437\u0430\u0432\u0435\u0434\u0435\u043D\u043E", axes: ["obychai", "dolg"], effects: { kuptsy: -1, kazna: 1 }, careful: true },
         { id: "torgovat", text: "\u0421\u0442\u043E\u0440\u0433\u043E\u0432\u0430\u0442\u044C\u0441\u044F \u043D\u0430 \u0434\u043E\u043B\u044E \u0441 \u0442\u043E\u0432\u0430\u0440\u0430", axes: ["vygoda"], effects: { kuptsy: 1, kazna: 1 }, risky: true }
       ]
     },
@@ -1109,8 +1138,8 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
       village: "opushka",
       options: [
         { id: "nakazat", text: "\u041D\u0430\u043A\u0430\u0437\u0430\u0442\u044C \u0441\u0432\u043E\u0435\u0433\u043E \u043F\u0440\u0438 \u0432\u0441\u0435\u0445", axes: ["dolg"], effects: { derevni: 2, zamok: -1 } },
-        { id: "prikryt", text: "\u041F\u0440\u0438\u043A\u0440\u044B\u0442\u044C \u0441\u0442\u0440\u0430\u0436\u043D\u0438\u043A\u0430", axes: ["derzost"], effects: { zamok: 1, derevni: -2 } },
-        { id: "vyplata", text: "\u041E\u0442\u043A\u0443\u043F\u0438\u0442\u044C\u0441\u044F \u043F\u0435\u0440\u0435\u0434 \u0441\u0435\u043C\u044C\u0451\u0439", axes: ["zabota"], effects: { kazna: -1, derevni: 1 } }
+        { id: "prikryt", text: "\u041F\u0440\u0438\u043A\u0440\u044B\u0442\u044C \u0441\u0442\u0440\u0430\u0436\u043D\u0438\u043A\u0430", axes: ["derzost"], effects: { zamok: 1, derevni: -2 }, risky: true },
+        { id: "vyplata", text: "\u041E\u0442\u043A\u0443\u043F\u0438\u0442\u044C\u0441\u044F \u043F\u0435\u0440\u0435\u0434 \u0441\u0435\u043C\u044C\u0451\u0439", axes: ["zabota"], effects: { kazna: -1, derevni: 1 }, careful: true }
       ]
     },
     {
@@ -1119,9 +1148,9 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
       text: "\u0417\u0430\u043F\u0430\u0434\u043D\u0430\u044F \u0441\u0442\u0435\u043D\u0430 \u0434\u0430\u043B\u0430 \u0442\u0440\u0435\u0449\u0438\u043D\u0443. \u041A\u0430\u043C\u0435\u043D\u044C \u0435\u0441\u0442\u044C, \u0440\u0443\u043A \u043C\u0430\u043B\u043E.",
       posts: ["klyuchnik"],
       options: [
-        { id: "sobrat_lyudey", text: "\u0421\u043D\u044F\u0442\u044C \u043B\u044E\u0434\u0435\u0439 \u0441 \u043F\u043E\u043B\u0435\u0439 \u043D\u0430 \u043D\u0435\u0434\u0435\u043B\u044E", axes: ["dolg", "derzost"], effects: { zamok: 2, derevni: -1, pripasy: -1 } },
+        { id: "sobrat_lyudey", text: "\u0421\u043D\u044F\u0442\u044C \u043B\u044E\u0434\u0435\u0439 \u0441 \u043F\u043E\u043B\u0435\u0439 \u043D\u0430 \u043D\u0435\u0434\u0435\u043B\u044E", axes: ["dolg", "derzost"], effects: { zamok: 2, derevni: -1, pripasy: -1 }, risky: true },
         { id: "nanyat", text: "\u041D\u0430\u043D\u044F\u0442\u044C \u043A\u0430\u043C\u0435\u043D\u0449\u0438\u043A\u043E\u0432 \u0438\u0437 \u0433\u043E\u0440\u043E\u0434\u0430", axes: ["vygoda"], effects: { kazna: -2, zamok: 2 } },
-        { id: "podperet", text: "\u041F\u043E\u0434\u043F\u0435\u0440\u0435\u0442\u044C \u0438 \u0436\u0434\u0430\u0442\u044C \u0437\u0438\u043C\u044B", axes: ["obychai"], effects: { pripasy: 1, poryadok: -1 } }
+        { id: "podperet", text: "\u041F\u043E\u0434\u043F\u0435\u0440\u0435\u0442\u044C \u0438 \u0436\u0434\u0430\u0442\u044C \u0437\u0438\u043C\u044B", axes: ["obychai"], effects: { pripasy: 1, poryadok: -1 }, careful: true }
       ]
     },
     {
@@ -1133,7 +1162,7 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
       options: [
         { id: "obryad", text: "\u041F\u0440\u043E\u0432\u0435\u0441\u0442\u0438 \u0441\u0442\u0430\u0440\u044B\u0439 \u043E\u0431\u0440\u044F\u0434 \u0441 \u0445\u043B\u0435\u0431\u043E\u043C \u0438 \u0441\u043E\u043B\u044C\u044E", axes: ["obychai"], effects: { derevni: 2, pripasy: -1 } },
         { id: "razvedat", text: "\u041F\u043E\u0439\u0442\u0438 \u0432 \u043B\u0435\u0441 \u0438 \u0440\u0430\u0437\u0432\u0435\u0434\u0430\u0442\u044C \u0441\u0430\u043C\u043E\u043C\u0443", axes: ["derzost"], effects: { les: -1, poryadok: 1 }, risky: true },
-        { id: "uspokoit", text: "\u041E\u0431\u044A\u044F\u0432\u0438\u0442\u044C, \u0447\u0442\u043E \u044D\u0442\u043E \u043B\u0438\u0441\u0430, \u0438 \u043D\u0435 \u043F\u0443\u0433\u0430\u0442\u044C \u043B\u044E\u0434\u0435\u0439", axes: ["zabota"], effects: { derevni: 1, les: -1 } }
+        { id: "uspokoit", text: "\u041E\u0431\u044A\u044F\u0432\u0438\u0442\u044C, \u0447\u0442\u043E \u044D\u0442\u043E \u043B\u0438\u0441\u0430, \u0438 \u043D\u0435 \u043F\u0443\u0433\u0430\u0442\u044C \u043B\u044E\u0434\u0435\u0439", axes: ["zabota"], effects: { derevni: 1, les: -1 }, careful: true }
       ]
     },
     {
@@ -1144,7 +1173,7 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
       options: [
         { id: "chestno", text: "\u0414\u0430\u0442\u044C \u0447\u0435\u0441\u0442\u043D\u0443\u044E \u043E\u043F\u0438\u0441\u044C", axes: ["dolg"], effects: { dvor: 2, pripasy: -1 } },
         { id: "priukrasit", text: "\u0417\u0430\u043D\u0438\u0437\u0438\u0442\u044C \u0437\u0430\u043F\u0430\u0441\u044B \u0432 \u043E\u043F\u0438\u0441\u0438", axes: ["vygoda", "derzost"], effects: { pripasy: 1, dvor: -1 }, risky: true },
-        { id: "tyanut", text: "\u0422\u044F\u043D\u0443\u0442\u044C \u0441 \u043E\u0442\u0432\u0435\u0442\u043E\u043C, \u0441\u0441\u044B\u043B\u0430\u044F\u0441\u044C \u043D\u0430 \u043E\u0431\u044B\u0447\u0430\u0439", axes: ["obychai"], effects: { kazna: 1, dvor: -1 } }
+        { id: "tyanut", text: "\u0422\u044F\u043D\u0443\u0442\u044C \u0441 \u043E\u0442\u0432\u0435\u0442\u043E\u043C, \u0441\u0441\u044B\u043B\u0430\u044F\u0441\u044C \u043D\u0430 \u043E\u0431\u044B\u0447\u0430\u0439", axes: ["obychai"], effects: { kazna: 1, dvor: -1 }, careful: true }
       ]
     },
     {
@@ -1156,7 +1185,7 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
       options: [
         { id: "po_kamnyam", text: "\u0420\u0430\u0441\u0441\u0443\u0434\u0438\u0442\u044C \u043F\u043E \u0441\u0442\u0430\u0440\u044B\u043C \u043C\u0435\u0436\u0435\u0432\u044B\u043C \u043A\u0430\u043C\u043D\u044F\u043C, \u043A\u0430\u043A \u0434\u0435\u0434\u044B \u043A\u043B\u0430\u043B\u0438", axes: ["obychai"], effects: { derevni: 1, dvor: -1 } },
         { id: "po_knige", text: "\u041F\u0435\u0440\u0435\u043C\u0435\u0440\u0438\u0442\u044C \u043F\u043E \u043F\u0438\u0441\u0446\u043E\u0432\u043E\u0439 \u043A\u043D\u0438\u0433\u0435", axes: ["dolg"], effects: { dvor: 1, derevni: -1 } },
-        { id: "porovnu", text: "\u041F\u043E\u0434\u0435\u043B\u0438\u0442\u044C \u0441\u043F\u043E\u0440\u043D\u0443\u044E \u043F\u043E\u043B\u043E\u0441\u0443 \u043F\u043E\u0440\u043E\u0432\u043D\u0443", axes: ["zabota"], effects: { derevni: 1, poryadok: -1 } }
+        { id: "porovnu", text: "\u041F\u043E\u0434\u0435\u043B\u0438\u0442\u044C \u0441\u043F\u043E\u0440\u043D\u0443\u044E \u043F\u043E\u043B\u043E\u0441\u0443 \u043F\u043E\u0440\u043E\u0432\u043D\u0443", axes: ["zabota"], effects: { derevni: 1, poryadok: -1 }, careful: true }
       ]
     },
     {
@@ -1167,7 +1196,7 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
       options: [
         { id: "otpustit", text: "\u041E\u0442\u043F\u0443\u0441\u0442\u0438\u0442\u044C \u043B\u044E\u0434\u0435\u0439 \u043D\u0430 \u0441\u0432\u043E\u0439 \u043F\u043E\u043A\u043E\u0441", axes: ["zabota"], effects: { derevni: 2, zamok: -1 } },
         { id: "barshchina", text: "\u0411\u0430\u0440\u0449\u0438\u043D\u0430 \u043F\u0440\u0435\u0436\u0434\u0435 \u0432\u0441\u0435\u0433\u043E", axes: ["dolg"], effects: { pripasy: 2, derevni: -2 } },
-        { id: "kak_zavedeno", text: "\u041A\u0430\u043A \u0437\u0430\u0432\u0435\u0434\u0435\u043D\u043E: \u0434\u0435\u043D\u044C \u0441\u0435\u0431\u0435, \u0434\u0435\u043D\u044C \u0437\u0430\u043C\u043A\u0443", axes: ["obychai"], effects: { derevni: 1, zamok: -1 } }
+        { id: "kak_zavedeno", text: "\u041A\u0430\u043A \u0437\u0430\u0432\u0435\u0434\u0435\u043D\u043E: \u0434\u0435\u043D\u044C \u0441\u0435\u0431\u0435, \u0434\u0435\u043D\u044C \u0437\u0430\u043C\u043A\u0443", axes: ["obychai"], effects: { derevni: 1, zamok: -1 }, careful: true }
       ]
     },
     {
@@ -1178,7 +1207,7 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
       options: [
         { id: "vysech", text: "\u0412\u044B\u0441\u0435\u0447\u044C \u043F\u043E \u0443\u0441\u0442\u0430\u0432\u0443", axes: ["dolg"], effects: { poryadok: 2, zamok: -1 } },
         { id: "na_opushku", text: "\u041F\u043E\u0441\u043B\u0430\u0442\u044C \u0435\u0433\u043E \u043E\u0434\u043D\u043E\u0433\u043E \u0432 \u043D\u043E\u0447\u043D\u043E\u0439 \u0434\u043E\u0437\u043E\u0440 \u043D\u0430 \u043E\u043F\u0443\u0448\u043A\u0443", axes: ["derzost"], effects: { poryadok: 1, les: -1 }, risky: true },
-        { id: "prostit", text: "\u041F\u0440\u043E\u0441\u0442\u0438\u0442\u044C \u0438 \u0434\u0430\u0442\u044C \u0432\u044B\u0441\u043F\u0430\u0442\u044C\u0441\u044F", axes: ["zabota"], effects: { zamok: 1, poryadok: -1 } }
+        { id: "prostit", text: "\u041F\u0440\u043E\u0441\u0442\u0438\u0442\u044C \u0438 \u0434\u0430\u0442\u044C \u0432\u044B\u0441\u043F\u0430\u0442\u044C\u0441\u044F", axes: ["zabota"], effects: { zamok: 1, poryadok: -1 }, careful: true }
       ]
     },
     {
@@ -1188,7 +1217,7 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
       posts: ["desyatnik"],
       options: [
         { id: "udarit", text: "\u0423\u0434\u0430\u0440\u0438\u0442\u044C \u043F\u043E \u0441\u0442\u043E\u044F\u043D\u043A\u0435 \u043D\u043E\u0447\u044C\u044E", axes: ["derzost"], effects: { poryadok: 2, kuptsy: 1, zamok: -1 }, risky: true },
-        { id: "dozory", text: "\u0423\u0441\u0438\u043B\u0438\u0442\u044C \u0434\u043E\u0437\u043E\u0440\u044B \u0443 \u0431\u0440\u043E\u0434\u0430 \u0438 \u0436\u0434\u0430\u0442\u044C", axes: ["dolg"], effects: { poryadok: 1, kuptsy: -1 } },
+        { id: "dozory", text: "\u0423\u0441\u0438\u043B\u0438\u0442\u044C \u0434\u043E\u0437\u043E\u0440\u044B \u0443 \u0431\u0440\u043E\u0434\u0430 \u0438 \u0436\u0434\u0430\u0442\u044C", axes: ["dolg"], effects: { poryadok: 1, kuptsy: -1 }, careful: true },
         { id: "plata", text: "\u041F\u0440\u043E\u0432\u043E\u0436\u0430\u0442\u044C \u043E\u0431\u043E\u0437\u044B \u0437\u0430 \u043F\u043B\u0430\u0442\u0443", axes: ["vygoda"], effects: { kazna: 1, kuptsy: -1 } }
       ]
     },
@@ -1198,7 +1227,7 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
       text: "\u0412 \u0434\u0430\u043B\u044C\u043D\u0435\u043C \u0430\u043C\u0431\u0430\u0440\u0435 \u043A\u0440\u044B\u0441\u044B \u043F\u043E\u043F\u043E\u0440\u0442\u0438\u043B\u0438 \u0437\u0435\u0440\u043D\u043E. \u0421\u043A\u043E\u043B\u044C\u043A\u043E \u2014 \u043F\u043E\u043A\u0430 \u043D\u0438\u043A\u0442\u043E \u043D\u0435 \u0441\u0447\u0438\u0442\u0430\u043B.",
       posts: ["klyuchnik"],
       options: [
-        { id: "perebrat", text: "\u041F\u0435\u0440\u0435\u0431\u0440\u0430\u0442\u044C \u0437\u0435\u0440\u043D\u043E \u0432\u0441\u0435\u0439 \u0447\u0435\u043B\u044F\u0434\u044C\u044E", axes: ["dolg"], effects: { pripasy: 1, zamok: -1 } },
+        { id: "perebrat", text: "\u041F\u0435\u0440\u0435\u0431\u0440\u0430\u0442\u044C \u0437\u0435\u0440\u043D\u043E \u0432\u0441\u0435\u0439 \u0447\u0435\u043B\u044F\u0434\u044C\u044E", axes: ["dolg"], effects: { pripasy: 1, zamok: -1 }, careful: true },
         { id: "sbyt", text: "\u0421\u0431\u044B\u0442\u044C \u043F\u043E\u0434\u043F\u043E\u0440\u0447\u0435\u043D\u043D\u043E\u0435 \u043A\u0443\u043F\u0446\u0430\u043C, \u043F\u043E\u043A\u0430 \u043D\u0435 \u0432\u0438\u0434\u043D\u043E", axes: ["vygoda"], effects: { kazna: 1, kuptsy: -1 }, risky: true },
         { id: "razdat", text: "\u0420\u0430\u0437\u0434\u0430\u0442\u044C \u043F\u043E\u0434\u043F\u043E\u0440\u0447\u0435\u043D\u043D\u043E\u0435 \u0431\u0435\u0434\u043D\u044B\u043C \u0434\u0432\u043E\u0440\u0430\u043C \u043D\u0430 \u043A\u043E\u0440\u043C \u0441\u043A\u043E\u0442\u0443", axes: ["zabota"], effects: { derevni: 1, pripasy: -1 } }
       ]
@@ -1211,7 +1240,7 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
       options: [
         { id: "vydat", text: "\u0412\u044B\u0434\u0430\u0442\u044C \u0432\u0441\u0435\u043C, \u043A\u0442\u043E \u043F\u0440\u043E\u0441\u0438\u0442", axes: ["zabota"], effects: { zamok: 2, pripasy: -1 } },
         { id: "v_schyot", text: "\u0412\u044B\u0434\u0430\u0442\u044C \u0432 \u0441\u0447\u0451\u0442 \u0436\u0430\u043B\u043E\u0432\u0430\u043D\u044C\u044F", axes: ["vygoda"], effects: { kazna: 1, zamok: -1 } },
-        { id: "po_sluzhbe", text: "\u0412\u044B\u0434\u0430\u0442\u044C \u0442\u0435\u043C, \u043A\u0442\u043E \u043D\u0430 \u0441\u043B\u0443\u0436\u0431\u0435 \u043F\u043E\u0434 \u043E\u0442\u043A\u0440\u044B\u0442\u044B\u043C \u043D\u0435\u0431\u043E\u043C", axes: ["dolg"], effects: { poryadok: 1, zamok: -1 } }
+        { id: "po_sluzhbe", text: "\u0412\u044B\u0434\u0430\u0442\u044C \u0442\u0435\u043C, \u043A\u0442\u043E \u043D\u0430 \u0441\u043B\u0443\u0436\u0431\u0435 \u043F\u043E\u0434 \u043E\u0442\u043A\u0440\u044B\u0442\u044B\u043C \u043D\u0435\u0431\u043E\u043C", axes: ["dolg"], effects: { poryadok: 1, zamok: -1 }, careful: true }
       ]
     },
     {
@@ -1221,7 +1250,7 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
       posts: ["pisar"],
       options: [
         { id: "vzyat", text: "\u0412\u0437\u044F\u0442\u044C \u0438 \u043F\u0443\u0441\u0442\u0438\u0442\u044C \u0432 \u0442\u043E\u0440\u0433", axes: ["derzost", "vygoda"], effects: { kazna: 2, dvor: -1 }, risky: true },
-        { id: "otkazat", text: "\u041E\u0442\u043A\u0430\u0437\u0430\u0442\u044C: \u0434\u043E\u043B\u0433\u0438 \u0437\u0430\u043C\u043A\u0443 \u043D\u0435 \u043A \u043B\u0438\u0446\u0443", axes: ["dolg"], effects: { dvor: 1, kuptsy: -1 } },
+        { id: "otkazat", text: "\u041E\u0442\u043A\u0430\u0437\u0430\u0442\u044C: \u0434\u043E\u043B\u0433\u0438 \u0437\u0430\u043C\u043A\u0443 \u043D\u0435 \u043A \u043B\u0438\u0446\u0443", axes: ["dolg"], effects: { dvor: 1, kuptsy: -1 }, careful: true },
         { id: "nemnogo", text: "\u0412\u0437\u044F\u0442\u044C \u043D\u0435\u043C\u043D\u043E\u0433\u043E, \u043F\u043E\u0434 \u0437\u0430\u043F\u0438\u0441\u044C \u0438 \u0437\u0430\u043B\u043E\u0433", axes: ["vygoda"], effects: { kazna: 1, kuptsy: 1, derevni: -1 } }
       ]
     },
@@ -1231,7 +1260,7 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
       text: "\u0412 \u043C\u043E\u0441\u0442\u043E\u0432\u043E\u043C \u0441\u0431\u043E\u0440\u0435 \u043D\u0430\u0448\u043B\u0438\u0441\u044C \u043E\u0431\u0440\u0435\u0437\u0430\u043D\u043D\u044B\u0435 \u043C\u043E\u043D\u0435\u0442\u044B. \u041A\u0442\u043E \u0438\u0445 \u043F\u0440\u0438\u0432\u0451\u0437, \u0438\u0437\u0432\u0435\u0441\u0442\u043D\u043E.",
       posts: ["pisar"],
       options: [
-        { id: "donesti", text: "\u0414\u043E\u043D\u0435\u0441\u0442\u0438 \u043A\u043E \u0434\u0432\u043E\u0440\u0443, \u043A\u0430\u043A \u0432\u0435\u043B\u0438\u0442 \u0437\u0430\u043A\u043E\u043D", axes: ["dolg"], effects: { dvor: 2, kuptsy: -1 } },
+        { id: "donesti", text: "\u0414\u043E\u043D\u0435\u0441\u0442\u0438 \u043A\u043E \u0434\u0432\u043E\u0440\u0443, \u043A\u0430\u043A \u0432\u0435\u043B\u0438\u0442 \u0437\u0430\u043A\u043E\u043D", axes: ["dolg"], effects: { dvor: 2, kuptsy: -1 }, careful: true },
         { id: "sbyt", text: "\u0421\u0431\u044B\u0442\u044C \u0438\u0445 \u043F\u0440\u043E\u0435\u0437\u0436\u0438\u043C, \u043F\u043E\u043A\u0430 \u043D\u0435 \u0445\u0432\u0430\u0442\u0438\u043B\u0438\u0441\u044C", axes: ["derzost"], effects: { kazna: 1, kuptsy: -2 }, risky: true },
         { id: "vzyskat", text: "\u0422\u0438\u0445\u043E \u0432\u0437\u044B\u0441\u043A\u0430\u0442\u044C \u0443\u0431\u044B\u0442\u043E\u043A \u0441 \u0442\u043E\u0433\u043E \u043A\u0443\u043F\u0446\u0430", axes: ["vygoda"], effects: { kazna: 1, dvor: -1 } }
       ]
@@ -1243,7 +1272,7 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
       posts: ["lesnichiy"],
       options: [
         { id: "ne_trogat", text: "\u041D\u0435 \u0442\u0440\u043E\u0433\u0430\u0442\u044C: \u0432\u043E\u043B\u043A \u0431\u0435\u0440\u0451\u0442 \u0441\u0432\u043E\u0451, \u0442\u0430\u043A \u0431\u044B\u043B\u043E \u0432\u0441\u0435\u0433\u0434\u0430", axes: ["obychai"], effects: { les: 1, derevni: -2 } },
-        { id: "pastukhi", text: "\u041F\u043E\u0441\u0442\u0430\u0432\u0438\u0442\u044C \u043D\u043E\u0447\u043D\u044B\u0445 \u0441\u0442\u043E\u0440\u043E\u0436\u0435\u0439 \u0438\u0437 \u0437\u0430\u043C\u043A\u043E\u0432\u044B\u0445", axes: ["zabota"], effects: { derevni: 1, zamok: -1 } },
+        { id: "pastukhi", text: "\u041F\u043E\u0441\u0442\u0430\u0432\u0438\u0442\u044C \u043D\u043E\u0447\u043D\u044B\u0445 \u0441\u0442\u043E\u0440\u043E\u0436\u0435\u0439 \u0438\u0437 \u0437\u0430\u043C\u043A\u043E\u0432\u044B\u0445", axes: ["zabota"], effects: { derevni: 1, zamok: -1 }, careful: true },
         { id: "oblava", text: "\u0423\u0441\u0442\u0440\u043E\u0438\u0442\u044C \u043E\u0431\u043B\u0430\u0432\u0443", axes: ["derzost"], effects: { derevni: 1, les: -2 }, risky: true }
       ]
     },
@@ -1255,8 +1284,8 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
       village: "opushka",
       options: [
         { id: "otvetit", text: "\u041E\u0442\u0432\u0435\u0442\u0438\u0442\u044C \u0445\u043B\u0435\u0431\u043E\u043C, \u043A\u0430\u043A \u043F\u043E\u043B\u043E\u0436\u0435\u043D\u043E", axes: ["obychai"], effects: { les: 1, pripasy: -1 } },
-        { id: "razdat", text: "\u0420\u0430\u0437\u0434\u0430\u0442\u044C \u0434\u0430\u0440 \u0434\u0435\u0440\u0435\u0432\u0435\u043D\u0441\u043A\u0438\u043C, \u043E\u0442\u0432\u0435\u0442 \u043E\u0442\u043B\u043E\u0436\u0438\u0442\u044C", axes: ["zabota"], effects: { derevni: 1, les: -1 } },
-        { id: "prodat", text: "\u041F\u0440\u043E\u0434\u0430\u0442\u044C \u043C\u0451\u0434 \u0432 \u0433\u043E\u0440\u043E\u0434\u0435", axes: ["vygoda"], effects: { kazna: 1, les: -2 } }
+        { id: "razdat", text: "\u0420\u0430\u0437\u0434\u0430\u0442\u044C \u0434\u0430\u0440 \u0434\u0435\u0440\u0435\u0432\u0435\u043D\u0441\u043A\u0438\u043C, \u043E\u0442\u0432\u0435\u0442 \u043E\u0442\u043B\u043E\u0436\u0438\u0442\u044C", axes: ["zabota"], effects: { derevni: 1, les: -1 }, careful: true },
+        { id: "prodat", text: "\u041F\u0440\u043E\u0434\u0430\u0442\u044C \u043C\u0451\u0434 \u0432 \u0433\u043E\u0440\u043E\u0434\u0435", axes: ["vygoda"], effects: { kazna: 1, les: -2 }, risky: true }
       ]
     },
     // --- две сферы ---
@@ -1279,7 +1308,7 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
       options: [
         { id: "rubit", text: "\u0420\u0443\u0431\u0438\u0442\u044C \u2014 \u043F\u043E\u0434\u0430\u0442\u0438 \u0441\u0430\u043C\u0438 \u0441\u0435\u0431\u044F \u043D\u0435 \u0437\u0430\u043F\u043B\u0430\u0442\u044F\u0442", axes: ["vygoda", "derzost"], effects: { kazna: 3, les: -3 } },
         { id: "otkazat", text: "\u041E\u0442\u043A\u0430\u0437\u0430\u0442\u044C \u2014 \u0443 \u043E\u043F\u0443\u0448\u043A\u0438 \u043D\u0435 \u0440\u0443\u0431\u044F\u0442", axes: ["obychai"], effects: { les: 1, kuptsy: -1 } },
-        { id: "malo", text: "\u0421\u0440\u0443\u0431\u0438\u0442\u044C \u043D\u0435\u043C\u043D\u043E\u0433\u043E \u0441\u0443\u0445\u043E\u0441\u0442\u043E\u044F", axes: ["zabota"], effects: { kazna: 1, les: -1 } }
+        { id: "malo", text: "\u0421\u0440\u0443\u0431\u0438\u0442\u044C \u043D\u0435\u043C\u043D\u043E\u0433\u043E \u0441\u0443\u0445\u043E\u0441\u0442\u043E\u044F", axes: ["zabota"], effects: { kazna: 1, les: -1 }, careful: true }
       ]
     },
     {
@@ -1289,8 +1318,8 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
       posts: ["desyatnik", "klyuchnik"],
       options: [
         { id: "dat", text: "\u0412\u044B\u0434\u0430\u0442\u044C \u0438\u0437 \u0437\u0430\u043F\u0430\u0441\u043E\u0432", axes: ["dolg", "derzost"], effects: { pripasy: -2, poryadok: 2 } },
-        { id: "otkazat", text: "\u041E\u0442\u043A\u0430\u0437\u0430\u0442\u044C \u2014 \u0437\u0438\u043C\u0430 \u0434\u043B\u0438\u043D\u043D\u0430\u044F", axes: ["vygoda"], effects: { pripasy: 1, zamok: -1, poryadok: -1 } },
-        { id: "s_dereven", text: "\u0412\u0437\u044F\u0442\u044C \u0441 \u0434\u0435\u0440\u0435\u0432\u0435\u043D\u044C \u0437\u0430 \u043E\u0445\u0440\u0430\u043D\u0443", axes: ["derzost"], effects: { derevni: -2, poryadok: 1 } }
+        { id: "otkazat", text: "\u041E\u0442\u043A\u0430\u0437\u0430\u0442\u044C \u2014 \u0437\u0438\u043C\u0430 \u0434\u043B\u0438\u043D\u043D\u0430\u044F", axes: ["vygoda"], effects: { pripasy: 1, zamok: -1, poryadok: -1 }, careful: true },
+        { id: "s_dereven", text: "\u0412\u0437\u044F\u0442\u044C \u0441 \u0434\u0435\u0440\u0435\u0432\u0435\u043D\u044C \u0437\u0430 \u043E\u0445\u0440\u0430\u043D\u0443", axes: ["derzost"], effects: { derevni: -2, poryadok: 1 }, risky: true }
       ]
     },
     {
@@ -1299,8 +1328,8 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
       text: "\u0412 \u0434\u0435\u0440\u0435\u0432\u043D\u044E \u043F\u0440\u0438\u0448\u043B\u0438 \u0431\u0435\u0433\u043B\u044B\u0435 \u0441 \u0441\u043E\u0441\u0435\u0434\u0441\u043A\u0438\u0445 \u0437\u0435\u043C\u0435\u043B\u044C. \u041F\u0440\u043E\u0441\u044F\u0442\u0441\u044F \u043E\u0441\u0442\u0430\u0442\u044C\u0441\u044F, \u043D\u043E \u0441\u043E\u0441\u0435\u0434 \u0438\u0445 \u0438\u0449\u0435\u0442.",
       posts: ["starosta", "pisar"],
       options: [
-        { id: "prinyat", text: "\u041F\u0440\u0438\u043D\u044F\u0442\u044C \u2014 \u0440\u0443\u043A\u0438 \u043D\u0443\u0436\u043D\u044B", axes: ["zabota", "derzost"], effects: { derevni: 2, dvor: -2 } },
-        { id: "vydat", text: "\u0412\u044B\u0434\u0430\u0442\u044C \u0441\u043E\u0441\u0435\u0434\u0443 \u043F\u043E \u0437\u0430\u043A\u043E\u043D\u0443", axes: ["dolg", "obychai"], effects: { dvor: 2, derevni: -1 } },
+        { id: "prinyat", text: "\u041F\u0440\u0438\u043D\u044F\u0442\u044C \u2014 \u0440\u0443\u043A\u0438 \u043D\u0443\u0436\u043D\u044B", axes: ["zabota", "derzost"], effects: { derevni: 2, dvor: -2 }, risky: true },
+        { id: "vydat", text: "\u0412\u044B\u0434\u0430\u0442\u044C \u0441\u043E\u0441\u0435\u0434\u0443 \u043F\u043E \u0437\u0430\u043A\u043E\u043D\u0443", axes: ["dolg", "obychai"], effects: { dvor: 2, derevni: -1 }, careful: true },
         { id: "prodat_soseda", text: "\u0412\u044B\u0434\u0430\u0442\u044C \u0437\u0430 \u0432\u044B\u043A\u0443\u043F", axes: ["vygoda"], effects: { kazna: 2, derevni: -2 } }
       ]
     },
@@ -1311,8 +1340,8 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
       posts: ["lesnichiy", "desyatnik"],
       options: [
         { id: "zakryt", text: "\u0417\u0430\u043A\u0440\u044B\u0442\u044C \u0438 \u043F\u043E\u0441\u0442\u0430\u0432\u0438\u0442\u044C \u0437\u043D\u0430\u043A\u0438", axes: ["obychai", "zabota"], effects: { les: 2, kuptsy: -2 } },
-        { id: "ne_zakryvat", text: "\u0414\u043E\u0440\u043E\u0433\u0430 \u043D\u0430\u0448\u0430, \u043D\u0435 \u0437\u0430\u043A\u0440\u044B\u0432\u0430\u0442\u044C", axes: ["derzost", "dolg"], effects: { les: -3, kuptsy: 1 } },
-        { id: "za_platu", text: "\u0417\u0430\u043A\u0440\u044B\u0442\u044C, \u043D\u043E \u0432\u0437\u044F\u0442\u044C \u043F\u043B\u0430\u0442\u0443 \u0434\u0438\u0447\u044C\u044E", axes: ["vygoda"], effects: { les: 1, pripasy: 1, kuptsy: -1 } }
+        { id: "ne_zakryvat", text: "\u0414\u043E\u0440\u043E\u0433\u0430 \u043D\u0430\u0448\u0430, \u043D\u0435 \u0437\u0430\u043A\u0440\u044B\u0432\u0430\u0442\u044C", axes: ["derzost", "dolg"], effects: { les: -3, kuptsy: 1 }, risky: true },
+        { id: "za_platu", text: "\u0417\u0430\u043A\u0440\u044B\u0442\u044C, \u043D\u043E \u0432\u0437\u044F\u0442\u044C \u043F\u043B\u0430\u0442\u0443 \u0434\u0438\u0447\u044C\u044E", axes: ["vygoda"], effects: { les: 1, pripasy: 1, kuptsy: -1 }, careful: true }
       ]
     },
     {
@@ -1322,7 +1351,7 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
       posts: ["pisar", "klyuchnik"],
       options: [
         { id: "ustroit", text: "\u0423\u0441\u0442\u0440\u043E\u0438\u0442\u044C \u0441 \u0440\u0430\u0437\u043C\u0430\u0445\u043E\u043C", axes: ["vygoda", "derzost"], effects: { kazna: 2, kuptsy: 2, poryadok: -1, pripasy: -1 }, risky: true },
-        { id: "skromno", text: "\u0421\u043A\u0440\u043E\u043C\u043D\u043E, \u0443 \u0432\u043E\u0440\u043E\u0442", axes: ["dolg"], effects: { kazna: 1, kuptsy: 1 } },
+        { id: "skromno", text: "\u0421\u043A\u0440\u043E\u043C\u043D\u043E, \u0443 \u0432\u043E\u0440\u043E\u0442", axes: ["dolg"], effects: { kazna: 1, kuptsy: 1 }, careful: true },
         { id: "net", text: "\u041D\u0435 \u0443\u0441\u0442\u0440\u0430\u0438\u0432\u0430\u0442\u044C \u2014 \u043D\u0435 \u0434\u043E \u0442\u043E\u0433\u043E", axes: ["zabota"], effects: { kuptsy: -1 } }
       ]
     },
@@ -1333,7 +1362,7 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
       posts: ["starosta", "lesnichiy"],
       village: "opushka",
       options: [
-        { id: "zhech", text: "\u0421\u0436\u0435\u0447\u044C \u0442\u0443\u0448\u0438 \u0438 \u043E\u043A\u0443\u0440\u0438\u0442\u044C \u0434\u0432\u043E\u0440\u044B", axes: ["dolg"], effects: { poryadok: 1, derevni: -1 } },
+        { id: "zhech", text: "\u0421\u0436\u0435\u0447\u044C \u0442\u0443\u0448\u0438 \u0438 \u043E\u043A\u0443\u0440\u0438\u0442\u044C \u0434\u0432\u043E\u0440\u044B", axes: ["dolg"], effects: { poryadok: 1, derevni: -1 }, careful: true },
         { id: "dar_lesu", text: "\u041E\u0442\u043D\u0435\u0441\u0442\u0438 \u0434\u0430\u0440 \u043B\u0435\u0441\u0443", axes: ["obychai"], effects: { les: 1, pripasy: -1 } },
         { id: "kupit", text: "\u041A\u0443\u043F\u0438\u0442\u044C \u0441\u043A\u043E\u0442 \u0432\u0437\u0430\u043C\u0435\u043D \u0432 \u0434\u043E\u043B\u0433", axes: ["zabota"], effects: { derevni: 2, kazna: -2 } }
       ]
@@ -1344,9 +1373,101 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
       text: "\u041F\u043E\u0432\u0430\u0440 \u0438 \u043A\u043E\u043D\u044E\u0445\u0438 \u043D\u0435 \u043F\u043E\u0434\u0435\u043B\u0438\u043B\u0438 \u043A\u0430\u043C\u043E\u0440\u043A\u0443. \u0414\u0435\u043B\u043E \u0434\u043E\u0448\u043B\u043E \u0434\u043E \u043D\u043E\u0436\u0435\u0439.",
       posts: ["klyuchnik", "desyatnik"],
       options: [
-        { id: "vygnat", text: "\u0412\u044B\u0433\u043D\u0430\u0442\u044C \u0437\u0430\u0447\u0438\u043D\u0449\u0438\u043A\u0430", axes: ["dolg", "derzost"], effects: { poryadok: 2, zamok: -1 } },
-        { id: "pomirit", text: "\u041F\u043E\u043C\u0438\u0440\u0438\u0442\u044C \u0438 \u0440\u0430\u0437\u0434\u0435\u043B\u0438\u0442\u044C \u043A\u0430\u043C\u043E\u0440\u043A\u0443", axes: ["zabota"], effects: { zamok: 1 } },
+        { id: "vygnat", text: "\u0412\u044B\u0433\u043D\u0430\u0442\u044C \u0437\u0430\u0447\u0438\u043D\u0449\u0438\u043A\u0430", axes: ["dolg", "derzost"], effects: { poryadok: 2, zamok: -1 }, risky: true },
+        { id: "pomirit", text: "\u041F\u043E\u043C\u0438\u0440\u0438\u0442\u044C \u0438 \u0440\u0430\u0437\u0434\u0435\u043B\u0438\u0442\u044C \u043A\u0430\u043C\u043E\u0440\u043A\u0443", axes: ["zabota"], effects: { zamok: 1 }, careful: true },
         { id: "po_starine", text: "\u0420\u0430\u0441\u0441\u0443\u0434\u0438\u0442\u044C \u043F\u043E \u0441\u0442\u0430\u0440\u0448\u0438\u043D\u0441\u0442\u0432\u0443", axes: ["obychai"], effects: { poryadok: 2, zamok: -1 } }
+      ]
+    },
+    // --- две сферы: вложения и род вариантов (И17) ---
+    {
+      id: "most_u_broda",
+      title: "\u041C\u043E\u0441\u0442 \u0443 \u0431\u0440\u043E\u0434\u0430",
+      text: "\u041D\u0430\u0441\u0442\u0438\u043B \u043C\u043E\u0441\u0442\u0430 \u0443 \u0431\u0440\u043E\u0434\u0430 \u043F\u0440\u043E\u0433\u043D\u0438\u043B: \u0432\u043E\u0437\u044B \u0438\u0434\u0443\u0442 \u0432\u0431\u0440\u043E\u0434, \u043A\u0443\u043F\u0446\u044B \u0432\u043E\u0440\u0447\u0430\u0442.",
+      posts: ["desyatnik", "pisar"],
+      village: "brod",
+      options: [
+        { id: "pochinit", text: "\u041F\u0435\u0440\u0435\u0441\u0442\u0435\u043B\u0438\u0442\u044C \u043C\u043E\u0441\u0442 \u0437\u0430 \u0441\u0447\u0451\u0442 \u043A\u0430\u0437\u043D\u044B", axes: ["dolg", "vygoda"], effects: { kazna: -2 }, later: { seasons: 2, effects: { kuptsy: 2, kazna: 2 }, text: "\u043F\u043E \u043D\u043E\u0432\u043E\u043C\u0443 \u043C\u043E\u0441\u0442\u0443 \u043F\u043E\u0448\u043B\u0438 \u043E\u0431\u043E\u0437\u044B" } },
+        { id: "perevoz", text: "\u041F\u0443\u0441\u0442\u0438\u0442\u044C \u043F\u0435\u0440\u0435\u0432\u043E\u0437 \u0437\u0430 \u043F\u043B\u0430\u0442\u0443, \u043F\u043E\u043A\u0430 \u043C\u043E\u0441\u0442 \u0441\u0442\u043E\u0438\u0442", axes: ["derzost"], effects: { kazna: 1, kuptsy: -1 }, risky: true },
+        { id: "zhdat", text: "\u041F\u043E\u0434\u043F\u0435\u0440\u0435\u0442\u044C \u0438 \u0436\u0434\u0430\u0442\u044C \u043C\u0435\u0436\u0435\u043D\u0438", axes: ["obychai"], effects: { poryadok: -1 }, careful: true }
+      ]
+    },
+    {
+      id: "semena",
+      title: "\u0421\u0435\u043C\u0435\u043D\u043D\u043E\u0435 \u0437\u0435\u0440\u043D\u043E",
+      text: "\u041F\u043E\u0441\u043B\u0435 \u0445\u0443\u0434\u043E\u0433\u043E \u0433\u043E\u0434\u0430 \u0432 \u0434\u0435\u0440\u0435\u0432\u043D\u044F\u0445 \u043D\u0435\u0447\u0435\u043C \u0441\u0435\u044F\u0442\u044C. \u041F\u0440\u043E\u0441\u044F\u0442 \u0437\u0435\u0440\u043D\u0430 \u0438\u0437 \u0437\u0430\u043C\u043A\u043E\u0432\u043E\u0433\u043E \u0430\u043C\u0431\u0430\u0440\u0430.",
+      posts: ["starosta", "klyuchnik"],
+      options: [
+        { id: "dat", text: "\u0414\u0430\u0442\u044C \u0441\u0435\u043C\u0435\u043D\u0430 \u0438\u0437 \u0430\u043C\u0431\u0430\u0440\u0430", axes: ["zabota"], effects: { pripasy: -2 }, later: { seasons: 2, effects: { pripasy: 3, derevni: 1 }, text: "\u0437\u0430\u0441\u0435\u044F\u043D\u043D\u043E\u0435 \u0437\u0430\u043C\u043A\u043E\u0432\u044B\u043C \u0437\u0435\u0440\u043D\u043E\u043C \u043F\u043E\u043B\u0435 \u0434\u0430\u043B\u043E \u0443\u0440\u043E\u0436\u0430\u0439" } },
+        { id: "v_dolg", text: "\u0414\u0430\u0442\u044C \u043F\u043E\u0434 \u0437\u0430\u043F\u0438\u0441\u044C, \u0441 \u0432\u043E\u0437\u0432\u0440\u0430\u0442\u043E\u043C \u0438\u0437 \u0443\u0440\u043E\u0436\u0430\u044F", axes: ["vygoda", "dolg"], effects: { pripasy: -1, derevni: -1 }, later: { seasons: 2, effects: { pripasy: 2 }, text: "\u0434\u0435\u0440\u0435\u0432\u043D\u0438 \u0432\u0435\u0440\u043D\u0443\u043B\u0438 \u0441\u0435\u043C\u0435\u043D\u043D\u043E\u0439 \u0434\u043E\u043B\u0433" } },
+        { id: "otkazat", text: "\u041A\u0430\u0436\u0434\u044B\u0439 \u0434\u0432\u043E\u0440 \u0441\u0435\u0435\u0442 \u0441\u0432\u043E\u0451, \u043A\u0430\u043A \u0437\u0430\u0432\u0435\u0434\u0435\u043D\u043E", axes: ["obychai"], effects: { derevni: -1 }, careful: true }
+      ]
+    },
+    {
+      id: "delyanka",
+      title: "\u0414\u0435\u043B\u044F\u043D\u043A\u0430 \u0443 \u043E\u043F\u0443\u0448\u043A\u0438",
+      text: "\u0414\u0435\u0440\u0435\u0432\u043D\u044F \u0443 \u043E\u043F\u0443\u0448\u043A\u0438 \u043F\u0440\u043E\u0441\u0438\u0442 \u0440\u0430\u0441\u0447\u0438\u0441\u0442\u0438\u0442\u044C \u043D\u043E\u0432\u0443\u044E \u0434\u0435\u043B\u044F\u043D\u043A\u0443 \u043F\u043E\u0434 \u043F\u0430\u0448\u043D\u044E. \u041B\u0435\u0441 \u044D\u0442\u043E \u0437\u0430\u043C\u0435\u0442\u0438\u0442.",
+      posts: ["starosta", "lesnichiy"],
+      village: "opushka",
+      options: [
+        { id: "raschistit", text: "\u0420\u0430\u0441\u0447\u0438\u0441\u0442\u0438\u0442\u044C \u0434\u0435\u043B\u044F\u043D\u043A\u0443 \u0432\u0441\u0435\u043C \u043C\u0438\u0440\u043E\u043C", axes: ["derzost", "dolg"], effects: { les: -2 }, hands: 1, risky: true, later: { seasons: 3, effects: { pripasy: 3 }, text: "\u043D\u043E\u0432\u0430\u044F \u0434\u0435\u043B\u044F\u043D\u043A\u0430 \u0443 \u043E\u043F\u0443\u0448\u043A\u0438 \u0434\u0430\u043B\u0430 \u0445\u043B\u0435\u0431" } },
+        { id: "ugovor", text: "\u041F\u0440\u043E\u0441\u0438\u0442\u044C \u0443 \u043B\u0435\u0441\u0430 \u043C\u0430\u043B\u0443\u044E \u043F\u043E\u043B\u044F\u043D\u0443 \u043F\u043E \u043E\u0431\u0440\u044F\u0434\u0443", axes: ["obychai", "zabota"], effects: { les: 1, pripasy: -1 }, later: { seasons: 2, effects: { pripasy: 2 }, text: "\u043F\u043E\u043B\u044F\u043D\u0430, \u0432\u044B\u043F\u0440\u043E\u0448\u0435\u043D\u043D\u0430\u044F \u0443 \u043B\u0435\u0441\u0430, \u0434\u0430\u043B\u0430 \u0445\u043B\u0435\u0431" } },
+        { id: "ne_trogat", text: "\u041E\u043F\u0443\u0448\u043A\u0443 \u043D\u0435 \u0442\u0440\u043E\u0433\u0430\u0442\u044C", axes: ["obychai"], effects: { les: 1, derevni: -1 }, careful: true }
+      ]
+    },
+    {
+      id: "borti",
+      title: "\u041B\u0435\u0441\u043D\u043E\u0439 \u043C\u0451\u0434",
+      text: "\u0412 \u0441\u0442\u0430\u0440\u043E\u0439 \u0440\u043E\u0449\u0435 \u043D\u0430\u0448\u043B\u0438 \u0434\u0443\u043F\u043B\u0438\u0441\u0442\u044B\u0435 \u043B\u0438\u043F\u044B, \u043F\u043E\u043B\u043D\u044B\u0435 \u043C\u0451\u0434\u0430. \u041C\u043E\u0436\u043D\u043E \u0432\u0437\u044F\u0442\u044C \u0441\u0440\u0430\u0437\u0443, \u043C\u043E\u0436\u043D\u043E \u0437\u0430\u0432\u0435\u0441\u0442\u0438 \u0431\u043E\u0440\u0442\u0438.",
+      posts: ["klyuchnik", "lesnichiy"],
+      options: [
+        { id: "borti", text: "\u041F\u043E\u0441\u0442\u0430\u0432\u0438\u0442\u044C \u0431\u043E\u0440\u0442\u0438 \u043F\u043E \u0443\u0433\u043E\u0432\u043E\u0440\u0443 \u0441 \u043B\u0435\u0441\u043E\u043C", axes: ["zabota", "obychai"], effects: { pripasy: -1 }, later: { seasons: 2, effects: { pripasy: 2, les: 1 }, text: "\u0431\u043E\u0440\u0442\u0438 \u0432 \u0441\u0442\u0430\u0440\u043E\u0439 \u0440\u043E\u0449\u0435 \u0434\u0430\u043B\u0438 \u043C\u0451\u0434" } },
+        { id: "prodat", text: "\u0421\u043E\u0431\u0440\u0430\u0442\u044C \u0434\u0438\u043A\u0438\u0439 \u043C\u0451\u0434 \u0438 \u043F\u0440\u043E\u0434\u0430\u0442\u044C", axes: ["vygoda"], effects: { kazna: 1, les: -1 } },
+        { id: "zapas", text: "\u0421\u043E\u0431\u0440\u0430\u0442\u044C, \u0441\u043A\u043E\u043B\u044C\u043A\u043E \u0435\u0441\u0442\u044C, \u0432 \u0437\u0430\u043C\u043A\u043E\u0432\u044B\u0439 \u043F\u043E\u0433\u0440\u0435\u0431", axes: ["dolg"], effects: { pripasy: 1, les: -1 }, careful: true }
+      ]
+    },
+    {
+      id: "oboz",
+      title: "\u0421\u0432\u043E\u0439 \u043E\u0431\u043E\u0437",
+      text: "\u041A\u0443\u043F\u0446\u044B \u0434\u0430\u0432\u043D\u043E \u043D\u0435 \u0437\u0430\u0435\u0437\u0436\u0430\u043B\u0438, \u0430 \u043D\u0430 \u0441\u043A\u043B\u0430\u0434\u0435 \u043B\u0435\u0436\u0438\u0442 \u0442\u043E\u0432\u0430\u0440. \u041C\u043E\u0436\u043D\u043E \u0441\u043D\u0430\u0440\u044F\u0434\u0438\u0442\u044C \u0441\u0432\u043E\u0439 \u043E\u0431\u043E\u0437 \u0432 \u0433\u043E\u0440\u043E\u0434.",
+      posts: ["pisar", "desyatnik"],
+      options: [
+        { id: "svoy", text: "\u0421\u043D\u0430\u0440\u044F\u0434\u0438\u0442\u044C \u0441\u0432\u043E\u0439 \u043E\u0431\u043E\u0437 \u0441\u043E \u0441\u0442\u0440\u0430\u0436\u0435\u0439", axes: ["derzost", "vygoda"], effects: { kazna: -1, kuptsy: -1 }, hands: 1, risky: true, later: { seasons: 2, effects: { kazna: 3 }, text: "\u0441\u0432\u043E\u0439 \u043E\u0431\u043E\u0437 \u0432\u0435\u0440\u043D\u0443\u043B\u0441\u044F \u0438\u0437 \u0433\u043E\u0440\u043E\u0434\u0430 \u0441 \u0432\u044B\u0440\u0443\u0447\u043A\u043E\u0439" } },
+        { id: "okhrana", text: "\u0414\u0430\u0442\u044C \u043A\u0443\u043F\u0446\u0430\u043C \u043E\u0445\u0440\u0430\u043D\u0443 \u0434\u043E \u0442\u0440\u0430\u043A\u0442\u0430", axes: ["dolg"], effects: { kuptsy: 1, poryadok: 1, zamok: -1 } },
+        { id: "zhdat", text: "\u0416\u0434\u0430\u0442\u044C \u043A\u0443\u043F\u0446\u043E\u0432, \u043A\u0430\u043A \u0432\u0441\u0435\u0433\u0434\u0430", axes: ["obychai"], effects: { poryadok: 1, kuptsy: -1 }, careful: true }
+      ]
+    },
+    {
+      id: "zaseka",
+      title: "\u0417\u0430\u0441\u0435\u043A\u0430",
+      text: "\u0421\u0442\u0430\u0440\u0430\u044F \u0437\u0430\u0441\u0435\u043A\u0430 \u0432\u0434\u043E\u043B\u044C \u043C\u0435\u0436\u0438 \u0441\u0433\u043D\u0438\u043B\u0430. \u0414\u0435\u0441\u044F\u0442\u043D\u0438\u043A \u0445\u043E\u0447\u0435\u0442 \u043D\u043E\u0432\u0443\u044E, \u043B\u0435\u0441\u043D\u0438\u0447\u0438\u0439 \u2014 \u0447\u0442\u043E\u0431\u044B \u0435\u0451 \u0441\u0442\u0430\u0432\u0438\u043B\u0438 \u043F\u043E-\u0441\u0442\u0430\u0440\u043E\u043C\u0443.",
+      posts: ["desyatnik", "lesnichiy"],
+      options: [
+        { id: "stavit", text: "\u041F\u043E\u0441\u0442\u0430\u0432\u0438\u0442\u044C \u0437\u0430\u0441\u0435\u043A\u0443 \u043F\u043E \u0441\u0442\u0430\u0440\u043E\u0439 \u043C\u0435\u0436\u0435", axes: ["dolg", "obychai"], effects: { zamok: -1 }, hands: 1, later: { seasons: 2, effects: { poryadok: 2, les: 1 }, text: "\u043D\u043E\u0432\u0430\u044F \u0437\u0430\u0441\u0435\u043A\u0430 \u0434\u0435\u0440\u0436\u0438\u0442 \u043C\u0435\u0436\u0443" } },
+        { id: "vglub", text: "\u0412\u044B\u0436\u0435\u0447\u044C \u043B\u043E\u0433\u043E\u0432\u0430 \u0432\u0433\u043B\u0443\u0431\u044C \u043B\u0435\u0441\u0430", axes: ["derzost"], effects: { les: -2, poryadok: 2 }, risky: true },
+        { id: "storozha", text: "\u041F\u043E\u0441\u0442\u0430\u0432\u0438\u0442\u044C \u043D\u043E\u0447\u043D\u044B\u0445 \u0441\u0442\u043E\u0440\u043E\u0436\u0435\u0439 \u0443 \u043A\u0440\u0430\u0439\u043D\u0438\u0445 \u0434\u0432\u043E\u0440\u043E\u0432", axes: ["zabota"], effects: { zamok: -1, derevni: 1 }, careful: true }
+      ]
+    },
+    {
+      id: "ambar_u_broda",
+      title: "\u0410\u043C\u0431\u0430\u0440 \u0443 \u0431\u0440\u043E\u0434\u0430",
+      text: "\u0421\u0442\u0430\u0440\u044B\u0439 \u0430\u043C\u0431\u0430\u0440 \u0443 \u0431\u0440\u043E\u0434\u0430 \u0442\u0435\u0447\u0451\u0442. \u0414\u0435\u0440\u0435\u0432\u043D\u044F \u043F\u0440\u043E\u0441\u0438\u0442 \u043D\u043E\u0432\u044B\u0439; \u043A\u043B\u044E\u0447\u043D\u0438\u043A \u043F\u0440\u0435\u0434\u043B\u0430\u0433\u0430\u0435\u0442 \u0441\u0432\u043E\u0437\u0438\u0442\u044C \u0437\u0435\u0440\u043D\u043E \u0432 \u0437\u0430\u043C\u043E\u043A.",
+      posts: ["klyuchnik", "starosta"],
+      village: "brod",
+      options: [
+        { id: "stroit", text: "\u0421\u0440\u0443\u0431\u0438\u0442\u044C \u043D\u043E\u0432\u044B\u0439 \u0430\u043C\u0431\u0430\u0440 \u0443 \u0431\u0440\u043E\u0434\u0430", axes: ["dolg", "vygoda"], effects: { kazna: -2 }, later: { seasons: 3, effects: { pripasy: 2, derevni: 1 }, text: "\u043D\u043E\u0432\u044B\u0439 \u0430\u043C\u0431\u0430\u0440 \u0443 \u0431\u0440\u043E\u0434\u0430 \u0441\u0431\u0435\u0440\u0451\u0433 \u0437\u0435\u0440\u043D\u043E" } },
+        { id: "mirom", text: "\u0427\u0438\u043D\u0438\u0442\u044C \u0441\u0442\u0430\u0440\u044B\u0439 \u0432\u0441\u0435\u043C \u043C\u0438\u0440\u043E\u043C, \u0437\u0430 \u0443\u0433\u043E\u0449\u0435\u043D\u0438\u0435", axes: ["zabota", "obychai"], effects: { derevni: 1, pripasy: -1 }, later: { seasons: 2, effects: { pripasy: 1 }, text: "\u043F\u043E\u0447\u0438\u043D\u0435\u043D\u043D\u044B\u0439 \u0430\u043C\u0431\u0430\u0440 \u0443 \u0431\u0440\u043E\u0434\u0430 \u0441\u0431\u0435\u0440\u0451\u0433 \u0437\u0435\u0440\u043D\u043E" } },
+        { id: "v_zamok", text: "\u0421\u0432\u043E\u0437\u0438\u0442\u044C \u0437\u0435\u0440\u043D\u043E \u0432 \u0437\u0430\u043C\u043E\u043A", axes: ["dolg"], effects: { derevni: -1, pripasy: 1 }, careful: true }
+      ]
+    },
+    {
+      id: "vesy",
+      title: "\u0412\u0435\u0441\u044B \u0438 \u043C\u0435\u0440\u044B",
+      text: "\u041D\u0430 \u0442\u043E\u0440\u0433\u0443 \u0441\u043F\u043E\u0440\u044F\u0442 \u043E \u043C\u0435\u0440\u0435: \u0437\u0430\u043C\u043A\u043E\u0432\u044B\u0435 \u0432\u0435\u0441\u044B \u0441\u0442\u0430\u0440\u044B\u0435, \u0433\u0435\u0440\u0446\u043E\u0433\u0441\u043A\u0430\u044F \u043C\u0435\u0440\u0430 \u0434\u0440\u0443\u0433\u0430\u044F.",
+      posts: ["pisar", "klyuchnik"],
+      options: [
+        { id: "novye", text: "\u0417\u0430\u0432\u0435\u0441\u0442\u0438 \u043D\u043E\u0432\u044B\u0435 \u0432\u0435\u0441\u044B \u043F\u043E \u0433\u0435\u0440\u0446\u043E\u0433\u0441\u043A\u043E\u0439 \u043C\u0435\u0440\u0435", axes: ["dolg"], effects: { kazna: -1 }, later: { seasons: 2, effects: { kuptsy: 1, dvor: 1, kazna: 1 }, text: "\u043F\u043E \u043D\u043E\u0432\u043E\u0439 \u043C\u0435\u0440\u0435 \u0442\u043E\u0440\u0433 \u043F\u043E\u0448\u0451\u043B \u0431\u043E\u0439\u0447\u0435\u0435" } },
+        { id: "svoi", text: "\u041C\u0435\u0440\u0438\u0442\u044C \u0441\u0432\u043E\u0435\u0439 \u043C\u0435\u0440\u043E\u0439 \u2014 \u0432 \u0441\u0432\u043E\u044E \u043F\u043E\u043B\u044C\u0437\u0443", axes: ["vygoda", "derzost"], effects: { kazna: 2, kuptsy: -2 }, risky: true },
+        { id: "starye", text: "\u041E\u0441\u0442\u0430\u0432\u0438\u0442\u044C \u0441\u0442\u0430\u0440\u044B\u0435: \u043A\u0443\u043F\u0446\u044B \u043F\u0440\u0438\u0432\u044B\u043A\u043B\u0438", axes: ["obychai", "zabota"], effects: { kuptsy: 1, kazna: -1 }, careful: true }
       ]
     },
     // --- приключенцы (после открытия лабиринта) ---
@@ -1404,12 +1525,12 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
   // src/sim/rng.ts
   var Rng = class {
     constructor(seed) {
-      let h = 1779033703 ^ seed.length;
+      let h2 = 1779033703 ^ seed.length;
       for (let i = 0; i < seed.length; i++) {
-        h = Math.imul(h ^ seed.charCodeAt(i), 3432918353);
-        h = h << 13 | h >>> 19;
+        h2 = Math.imul(h2 ^ seed.charCodeAt(i), 3432918353);
+        h2 = h2 << 13 | h2 >>> 19;
       }
-      this.s = h >>> 0;
+      this.s = h2 >>> 0;
     }
     next() {
       let t = this.s += 1831565813;
@@ -1451,6 +1572,66 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
     short: { seasons: 0, food: 0, silver: 0, trust: 0, order: 0 }
   });
   var PROBE = blank();
+
+  // src/data/handwriting.ts
+  var LEVERS = [
+    "quitrent",
+    "quitrentSilver",
+    "harvest",
+    "hands",
+    "forestFood",
+    "forestGoods",
+    "duties",
+    "salary",
+    "spoil",
+    "upkeep",
+    "price",
+    "shortSoft",
+    "villages",
+    "opushka",
+    "zamok",
+    "kuptsy",
+    "les",
+    "dvor",
+    "order",
+    "silver",
+    "sellFood",
+    "loan",
+    "patience"
+  ];
+  var h = (post, axis, good, plus, bad, minus) => ({ post, axis, plus, minus, good, bad });
+  var HANDS = [
+    // тиун
+    h("starosta", "zabota", "\u0434\u043E\u0432\u0435\u0440\u0438\u0435 \u0434\u0435\u0440\u0435\u0432\u0435\u043D\u044C \u0440\u0430\u0441\u0442\u0451\u0442, \u043D\u0435\u0434\u043E\u0434\u0430\u0447\u0430 \u0434\u0435\u0440\u0435\u0432\u043D\u044F\u043C \u043C\u044F\u0433\u0447\u0435", [["villages", 1], ["shortSoft", -1]], "\u043E\u0431\u0440\u043E\u043A \u043C\u0435\u043D\u044C\u0448\u0435", [["quitrent", -1]]),
+    h("starosta", "obychai", "\u043E\u0431\u0440\u044F\u0434\u044B \u0434\u0435\u0440\u0436\u0430\u0442\u0441\u044F: \u0434\u0430\u0440\u044B \u043B\u0435\u0441\u0430 \u043F\u043E\u043B\u043D\u0435\u0435, \u043E\u043F\u0443\u0448\u043A\u0430 \u0434\u043E\u0432\u0435\u0440\u044F\u0435\u0442", [["forestFood", 1], ["opushka", 1]], "\u0443\u0440\u043E\u0436\u0430\u0439 \u043D\u0435 \u0440\u0430\u0441\u0442\u0451\u0442", [["harvest", -0.5]]),
+    h("starosta", "dolg", "\u043E\u0431\u0440\u043E\u043A \u0441\u043E\u0431\u0440\u0430\u043D \u0441\u043F\u043E\u043B\u043D\u0430", [["quitrent", 1]], "\u0434\u0435\u0440\u0435\u0432\u043D\u0438 \u0432\u043E\u0440\u0447\u0430\u0442", [["villages", -1]]),
+    h("starosta", "vygoda", "\u043E\u0431\u0440\u043E\u043A \u0441\u0435\u0440\u0435\u0431\u0440\u043E\u043C \u0431\u043E\u043B\u044C\u0448\u0435", [["quitrentSilver", 1]], "\u0434\u043E\u0432\u0435\u0440\u0438\u0435 \u0434\u0435\u0440\u0435\u0432\u0435\u043D\u044C \u043F\u0430\u0434\u0430\u0435\u0442", [["villages", -1]]),
+    h("starosta", "derzost", "\u0440\u0430\u0441\u043F\u0430\u0445\u0438\u0432\u0430\u0435\u0442 \u043D\u043E\u0432\u044B\u0435 \u043F\u043E\u043B\u044F: \u0443\u0440\u043E\u0436\u0430\u0439 \u0431\u043E\u043B\u044C\u0448\u0435", [["harvest", 1]], "\u0440\u0443\u043A\u0438 \u0443\u0445\u043E\u0434\u044F\u0442 \u043D\u0430 \u0440\u0430\u0441\u0447\u0438\u0441\u0442\u043A\u0443", [["hands", -1]]),
+    // десятник
+    h("desyatnik", "dolg", "\u043F\u043E\u0440\u044F\u0434\u043E\u043A \u0440\u0430\u0441\u0442\u0451\u0442", [["order", 1]], "\u0436\u0430\u043B\u043E\u0432\u0430\u043D\u044C\u0435 \u0441\u0442\u0440\u0430\u0436\u0435 \u0434\u043E\u0440\u043E\u0436\u0435", [["salary", 1]]),
+    h("desyatnik", "derzost", "\u043F\u043E\u0448\u043B\u0438\u043D\u044B \u0438 \u043A\u0430\u0440\u0430\u0432\u0430\u043D\u044B \u0431\u043E\u043B\u044C\u0448\u0435", [["duties", 1]], "\u0441\u0442\u044B\u0447\u043A\u0438: \u043F\u043E\u0440\u044F\u0434\u043E\u043A \u043D\u0438\u0436\u0435, \u0431\u044B\u0432\u0430\u044E\u0442 \u0440\u0430\u043D\u0435\u043D\u044B\u0435", [["order", -1], ["hands", -0.5]]),
+    h("desyatnik", "zabota", "\u043B\u044E\u0434\u0438 \u0437\u0430\u043C\u043A\u0430 \u0434\u043E\u0432\u043E\u043B\u044C\u043D\u044B", [["zamok", 1]], "\u043F\u043E\u0440\u044F\u0434\u043E\u043A \u043D\u0438\u0436\u0435", [["order", -1]]),
+    h("desyatnik", "vygoda", "\xAB\u0434\u043E\u0440\u043E\u0436\u043D\u044B\u0439 \u0441\u0431\u043E\u0440\xBB: \u0441\u0435\u0440\u0435\u0431\u0440\u043E \u0432 \u043A\u0430\u0437\u043D\u0443", [["silver", 1]], "\u043A\u0443\u043F\u0446\u044B \u043D\u0435\u0434\u043E\u0432\u043E\u043B\u044C\u043D\u044B, \u043F\u043E\u0440\u044F\u0434\u043E\u043A \u043D\u0438\u0436\u0435", [["kuptsy", -1], ["order", -0.5]]),
+    h("desyatnik", "obychai", "\u0441\u0442\u0430\u0440\u044B\u0435 \u0437\u0430\u0441\u0435\u043A\u0438 \u0438 \u043C\u0435\u0436\u0438: \u043B\u0435\u0441 \u0434\u043E\u0432\u0435\u0440\u044F\u0435\u0442", [["les", 1]], "\u0441\u0442\u0430\u0440\u044B\u0435 \u043B\u044C\u0433\u043E\u0442\u044B: \u043F\u043E\u0448\u043B\u0438\u043D\u044B \u043C\u0435\u043D\u044C\u0448\u0435", [["duties", -1]]),
+    // ключник
+    h("klyuchnik", "dolg", "\u043F\u043E\u0440\u0447\u0430 \u0437\u0430 \u0437\u0438\u043C\u0443 \u043C\u0435\u043D\u044C\u0448\u0435", [["spoil", -1]], "\u0447\u0435\u043B\u044F\u0434\u044C \u0434\u0435\u0440\u0436\u0430\u0442 \u0441\u0442\u0440\u043E\u0433\u043E: \u043B\u044E\u0434\u0438 \u0437\u0430\u043C\u043A\u0430 \u0432\u043E\u0440\u0447\u0430\u0442", [["zamok", -1]]),
+    h("klyuchnik", "vygoda", "\u0438\u0437\u043B\u0438\u0448\u0435\u043A \u0435\u0434\u044B \u043F\u0440\u043E\u0434\u0430\u0451\u0442 \u0441\u0430\u043C: \u0441\u0435\u0440\u0435\u0431\u0440\u043E \u0440\u0430\u0441\u0442\u0451\u0442", [["sellFood", 1]], "\u0437\u0430\u043F\u0430\u0441 \u0442\u043E\u043D\u044C\u0448\u0435: \u043D\u0435\u0434\u043E\u0434\u0430\u0447\u0430 \u0431\u043B\u0438\u0436\u0435", []),
+    h("klyuchnik", "zabota", "\u043F\u0440\u043E\u043A\u043E\u0440\u043C \u0449\u0435\u0434\u0440\u0435\u0435: \u043B\u044E\u0434\u0438 \u0437\u0430\u043C\u043A\u0430 \u0438 \u0434\u0435\u0440\u0435\u0432\u043D\u0438 \u0434\u043E\u0432\u043E\u043B\u044C\u043D\u044B", [["zamok", 1], ["villages", 0.5]], "\u0435\u0434\u044B \u0443\u0445\u043E\u0434\u0438\u0442 \u0431\u043E\u043B\u044C\u0448\u0435", [["upkeep", 1]]),
+    h("klyuchnik", "derzost", "\u043F\u043E\u0447\u0438\u043D\u043A\u0430 \u0438\u0434\u0451\u0442 \u0431\u044B\u0441\u0442\u0440\u043E: \u043B\u044E\u0434\u0438 \u0437\u0430\u043C\u043A\u0430 \u0434\u043E\u0432\u043E\u043B\u044C\u043D\u044B", [["zamok", 1]], "\u043F\u043E\u0440\u0447\u0430 \u0438 \u043D\u0435\u0441\u0447\u0430\u0441\u0442\u044C\u044F \u043D\u0430 \u0441\u0442\u0440\u043E\u0439\u043A\u0435", [["spoil", 1]]),
+    h("klyuchnik", "obychai", "\u0437\u0430\u043F\u0430\u0441 \u0432\u043F\u0440\u043E\u043A \u043F\u043E \u0441\u0442\u0430\u0440\u044B\u043C \u043F\u043E\u0433\u0440\u0435\u0431\u0430\u043C: \u043F\u0440\u043E\u043A\u043E\u0440\u043C \u0438 \u043F\u043E\u0440\u0447\u0430 \u043C\u0435\u043D\u044C\u0448\u0435", [["upkeep", -0.5], ["spoil", -0.5]], "\u043D\u0438\u0447\u0435\u0433\u043E \u043D\u0435 \u043F\u0440\u043E\u0434\u0430\u0451\u0442: \u0442\u043E\u0432\u0430\u0440\u044B \u0438\u0434\u0443\u0442 \u0434\u0435\u0448\u0435\u0432\u043B\u0435", [["price", -1]]),
+    // писарь
+    h("pisar", "vygoda", "\u0446\u0435\u043D\u0430 \u0442\u043E\u0432\u0430\u0440\u043E\u0432 \u0438 \u043F\u043E\u0448\u043B\u0438\u043D\u044B \u0432\u044B\u0448\u0435", [["price", 1], ["duties", 1]], "\u043A\u0443\u043F\u0446\u044B \u0434\u043E\u0432\u0435\u0440\u044F\u044E\u0442 \u043C\u0435\u043D\u044C\u0448\u0435", [["kuptsy", -1]]),
+    h("pisar", "dolg", "\u043A\u043D\u0438\u0433\u0438 \u0447\u0438\u0441\u0442\u044B: \u0434\u0432\u043E\u0440 \u0434\u043E\u0432\u043E\u043B\u0435\u043D", [["dvor", 1]], "\u0442\u043E\u0440\u0433\u043E\u0432\u043B\u044F \u043C\u0435\u0434\u043B\u0435\u043D\u043D\u0435\u0435: \u0446\u0435\u043D\u0430 \u043D\u0438\u0436\u0435", [["price", -1]]),
+    h("pisar", "derzost", "\u0437\u0430\u0451\u043C \u0434\u0435\u0448\u0435\u0432\u043B\u0435 \u0438 \u0431\u043E\u043B\u044C\u0448\u0435", [["loan", 1]], "\u0434\u043E\u043B\u0433\u0438 \u0440\u0430\u0441\u0442\u0443\u0442: \u0441\u0435\u0440\u0435\u0431\u0440\u043E \u0443\u0442\u0435\u043A\u0430\u0435\u0442 \u043D\u0430 \u043F\u0440\u043E\u0446\u0435\u043D\u0442\u044B", [["silver", -1]]),
+    h("pisar", "zabota", "\u0442\u043E\u0440\u0433\u0443\u0435\u0442 \u043C\u044F\u0433\u043A\u043E: \u043A\u0443\u043F\u0446\u044B \u0434\u043E\u0432\u043E\u043B\u044C\u043D\u044B", [["kuptsy", 1]], "\u0446\u0435\u043D\u0430 \u043D\u0438\u0436\u0435", [["price", -1]]),
+    h("pisar", "obychai", "\u0441\u0442\u0430\u0440\u044B\u0435 \u0433\u0440\u0430\u043C\u043E\u0442\u044B: \u0413\u0435\u0440\u0446\u043E\u0433 \u0442\u0435\u0440\u043F\u0435\u043B\u0438\u0432\u0435\u0435", [["patience", 1]], "\u043D\u043E\u0432\u044B\u0445 \u0441\u0434\u0435\u043B\u043E\u043A \u043D\u0435\u0442: \u043F\u043E\u0448\u043B\u0438\u043D\u044B \u043D\u0438\u0436\u0435", [["duties", -1]]),
+    // лесничий
+    h("lesnichiy", "obychai", "\u043B\u0435\u0441 \u0434\u043E\u0432\u0435\u0440\u044F\u0435\u0442, \u0434\u0430\u0440\u044B \u043B\u0435\u0441\u0430 \u0431\u043E\u043B\u044C\u0448\u0435", [["les", 1], ["forestFood", 1]], "\u0431\u0440\u0451\u0432\u0435\u043D \u0438 \u0448\u043A\u0443\u0440 \u043C\u0435\u043D\u044C\u0448\u0435", [["forestGoods", -1]]),
+    h("lesnichiy", "zabota", "\u0434\u0435\u0440\u0435\u0432\u043D\u044F \u0443 \u043E\u043F\u0443\u0448\u043A\u0438 \u0434\u043E\u0432\u043E\u043B\u044C\u043D\u0430", [["opushka", 1]], "\u043B\u0435\u0441 \u0442\u0435\u0440\u043F\u0438\u0442 \u0431\u0440\u0430\u043A\u043E\u043D\u044C\u0435\u0440\u043E\u0432: \u0435\u0433\u043E \u0434\u043E\u0432\u0435\u0440\u0438\u0435 \u043F\u0430\u0434\u0430\u0435\u0442", [["les", -1]]),
+    h("lesnichiy", "dolg", "\u0440\u043E\u0449\u0438 \u0441\u0442\u0435\u0440\u0435\u0436\u0451\u0442 \u0441\u0442\u0440\u043E\u0433\u043E: \u043B\u0435\u0441 \u0434\u043E\u0432\u0435\u0440\u044F\u0435\u0442", [["les", 1]], "\u043E\u043F\u0443\u0448\u043A\u0430 \u043D\u0435\u0434\u043E\u0432\u043E\u043B\u044C\u043D\u0430", [["opushka", -1]]),
+    h("lesnichiy", "vygoda", "\u0442\u043E\u0432\u0430\u0440\u043E\u0432 \u0438\u0437 \u043B\u0435\u0441\u0430 \u0431\u043E\u043B\u044C\u0448\u0435", [["forestGoods", 1]], "\u043B\u0435\u0441 \u0434\u043E\u0432\u0435\u0440\u044F\u0435\u0442 \u043C\u0435\u043D\u044C\u0448\u0435", [["les", -1]]),
+    h("lesnichiy", "derzost", "\u0445\u043E\u0434\u0438\u0442 \u0432\u0433\u043B\u0443\u0431\u044C: \u0442\u043E\u0432\u0430\u0440\u043E\u0432 \u0431\u043E\u043B\u044C\u0448\u0435", [["forestGoods", 1]], "\u0442\u0432\u0430\u0440\u0438 \u0438 \u0440\u0430\u043D\u0435\u043D\u044B\u0435", [["hands", -0.5], ["les", -0.5]])
+  ];
 
   // src/sim/economy.ts
   var clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -1517,13 +1698,25 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
       cur: [],
       shortages: 0,
       fc: { eda: 0, tovary: 0, serebro: 0 },
-      zoneWas: {}
+      zoneWas: {},
+      pending: []
     };
     for (const s of SIDES) eco.zoneWas[s] = zoneWord(w2.factions[s]);
     w2.eco = eco;
     newTaxYear(w2);
     rollForecast(w2);
     return eco;
+  }
+  function mastery(p, post) {
+    const D = BALANCE.economy.doer, t = clamp((fitness(p, post) - D.masteryFrom) / Math.max(1, D.masteryTo - D.masteryFrom), 0, 1);
+    const mult = r2(D.masteryMin + (D.masteryMax - D.masteryMin) * t);
+    const third = (D.masteryMax - D.masteryMin) / 3;
+    return { mult, word: mult < D.masteryMin + third ? "\u043D\u0435\u0433\u043E\u0434\u0435\u043D" : mult > D.masteryMax - third ? "\u043F\u0440\u0438\u0440\u043E\u0436\u0434\u0451\u043D\u043D\u044B\u0439" : "\u0433\u043E\u0434\u0435\u043D" };
+  }
+  function expOf(p) {
+    const D = BALANCE.economy.doer;
+    if (isStale(p)) return { mult: D.expStale, word: "\u0437\u0430\u0441\u0438\u0434\u0435\u043B\u0441\u044F" };
+    return p.exp >= BALANCE.exp.master ? { mult: D.expMaster, word: "\u043C\u0430\u0441\u0442\u0435\u0440" } : p.exp >= BALANCE.exp.settled ? { mult: D.expSettled, word: "\u043E\u0441\u0432\u043E\u0438\u043B\u0441\u044F" } : { mult: D.expNovice, word: "\u043D\u043E\u0432\u0438\u0447\u043E\u043A" };
   }
   var courseDef = (w2) => COURSES.find((c) => c.id === w2.eco.course);
   function courseStrength(w2, id) {
@@ -1532,21 +1725,45 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
   }
   function doer(w2, post) {
     const D = BALANCE.economy.doer, p = holder(w2, post);
-    if (!p) return { mult: D.empty, how: "\u0434\u043E\u043B\u0436\u043D\u043E\u0441\u0442\u044C \u043F\u0443\u0441\u0442\u0430" };
-    if (isStale(p)) return { p, mult: D.plain, how: "\u043F\u043E-\u0441\u0432\u043E\u0435\u043C\u0443" };
+    if (!p) return { mult: D.empty, how: "\u0434\u043E\u043B\u0436\u043D\u043E\u0441\u0442\u044C \u043F\u0443\u0441\u0442\u0430", note: "\u0434\u043E\u043B\u0436\u043D\u043E\u0441\u0442\u044C \u043F\u0443\u0441\u0442\u0430", mastery: 1, exp: 1, mood: D.empty, hand: "" };
+    const m = mastery(p, post), x = expOf(p), mine = handsOf(p, post).map((q) => AXIS_NAMES[q.hand.axis]);
+    const hand = mine.length ? `\u043F\u043E\u0447\u0435\u0440\u043A${isStale(p) ? " \u0432\u0434\u0432\u043E\u0435 \u0441\u0438\u043B\u044C\u043D\u0435\u0435" : ""} \u2014 ${mine.join(", \u0441 \u043E\u0442\u0442\u0435\u043D\u043A\u043E\u043C: ")}` : "";
+    const stale2 = isStale(p);
+    const made = (how, mood) => ({ p, mult: r2(m.mult * x.mult * mood), how, note: `${m.word}, ${x.word}, ${how}`, mastery: m.mult, exp: x.mult, mood, stale: stale2, hand });
     let score = 0;
     if (p.loyalty >= BALANCE.loyalty.trusts) score++;
     if (p.loyalty <= BALANCE.loyalty.unhappy) score--;
     if (p.aspiration?.post === post) score++;
     const c = courseDef(w2), top = topAxis(p.star);
-    if (c?.pro.includes(top)) score++;
+    if (c?.pro.includes(top) && !stale2) score++;
     if (c?.contra.includes(top)) score -= w2.eco.shaky ? 2 : 1;
-    if (score >= D.fireFrom) return { p, mult: D.fire, how: "\u0441 \u043E\u0433\u043E\u043D\u044C\u043A\u043E\u043C" };
-    if (score <= D.dullFrom) return { p, mult: D.dull, how: "\u0431\u0435\u0437 \u043E\u0433\u043E\u043D\u044C\u043A\u0430" };
-    return { p, mult: D.plain, how: "\u043A\u0430\u043A \u0432\u0435\u043B\u0435\u043D\u043E" };
+    if (score >= D.fireFrom) return made("\u0441 \u043E\u0433\u043E\u043D\u044C\u043A\u043E\u043C", D.fire);
+    if (score <= D.dullFrom) return made("\u0431\u0435\u0437 \u043E\u0433\u043E\u043D\u044C\u043A\u0430", D.dull);
+    return made("\u043A\u0430\u043A \u0432\u0435\u043B\u0435\u043D\u043E", D.plain);
+  }
+  function handsOf(p, post) {
+    const strong = AXES.filter((a) => p.star[a] >= BALANCE.know.strong).sort((a, b) => p.star[b] - p.star[a]).slice(0, 2);
+    const stale2 = isStale(p) ? BALANCE.economy.hand.stale : 1;
+    return strong.map((axis, i) => ({ hand: HANDS.find((x) => x.post === post && x.axis === axis), weight: (i ? BALANCE.economy.hand.second : 1) * stale2 }));
+  }
+  function levers(w2) {
+    const H = BALANCE.economy.hand, out = Object.fromEntries(LEVERS.map((l) => [l, 0]));
+    for (const d of POSTS) {
+      const p = holder(w2, d.id);
+      if (!p) continue;
+      for (const { hand, weight } of handsOf(p, d.id)) {
+        const native = d.native.includes(hand.axis);
+        for (const [lever, v] of hand.plus) out[lever] += v * weight * (native ? H.nativePlus : 1);
+        for (const [lever, v] of hand.minus) out[lever] += v * weight * (native ? H.nativeMinus : H.foreignMinus);
+      }
+    }
+    return out;
+  }
+  function handText(p) {
+    if (!p.post) return [];
+    return handsOf(p, p.post).map(({ hand }, i) => ({ axis: hand.axis, shade: i > 0, text: `${hand.good}; ${hand.bad}` }));
   }
   var whoOf = (d, post) => d.p ? `${postName(post).toLowerCase()} ${d.p.name}` : `${postName(post).toLowerCase()}: \u0434\u043E\u043B\u0436\u043D\u043E\u0441\u0442\u044C \u043F\u0443\u0441\u0442\u0430`;
-  var selfish = (d) => d.how === "\u043F\u043E-\u0441\u0432\u043E\u0435\u043C\u0443" && !!d.p && d.p.star.vygoda >= BALANCE.decide.staleGreedFrom;
   function courseLean(w2, axes) {
     const c = courseDef(w2);
     if (!c || !c.pro.length) return 0;
@@ -1576,7 +1793,8 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
     return out;
   }
   function fieldHands(w2) {
-    const h = handsNow(w2), total = r1(HANDS_FROM.reduce((s, f) => s + h[f], 0));
+    const lost = Math.min(0, levers(w2).hands) * BALANCE.economy.hand.hands;
+    const h2 = handsNow(w2), total = r1(Math.max(0, HANDS_FROM.reduce((s, f) => s + h2[f], 0) + lost));
     if (seasonKind(w2.season) === WINTER) return { total, field: 0, free: total, build: 0 };
     const build = w2.eco.course === "stroimsya" ? Math.min(total, BALANCE.economy.course.buildHands) : 0;
     const field = r1(Math.min(BALANCE.economy.hands.field, total - build));
@@ -1585,25 +1803,25 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
   function planSeason(w2) {
     const E = BALANCE.economy, F = E.flow, e = w2.eco, kind = seasonKind(w2.season);
     const stock = { ...e.stock }, lines = [], short = [];
-    const add = (cat, v, text, extra = {}) => {
+    const add = (cat, v, text, extra2 = {}) => {
       const val = r2(v);
       stock[cat] = r2(stock[cat] + val);
-      lines.push({ cat, v: val, text, ...extra });
+      lines.push({ cat, v: val, text, ...extra2 });
     };
-    const spend = (cat, v, text, side, extra = {}) => {
+    const spend = (cat, v, text, side, extra2 = {}) => {
       const need = r2(v), got = Math.min(need, stock[cat]);
       if (need <= 0) return;
-      if (got > 0) add(cat, -got, text, { side, ...extra });
+      if (got > 0) add(cat, -got, text, { side, ...extra2 });
       if (need - got > 0) short.push({ side, cat, v: r2(need - got), what: text });
     };
     const tiun = doer(w2, "starosta"), pisar = doer(w2, "pisar"), les = doer(w2, "lesnichiy"), klyuch = doer(w2, "klyuchnik");
     const hands = fieldHands(w2), fieldShare = clamp(hands.field / E.hands.field, 0, 1);
+    const L = levers(w2), by = (lever) => Math.max(0, 1 + L[lever] * E.hand.flow);
     const sown = kind === SPRING ? fieldShare : e.sown;
-    const cut = selfish(pisar) ? E.doer.staleKickback : 1;
     const seasonPrice = [E.year.priceSpring, E.year.priceSummer, E.year.priceAutumn, E.year.priceWinter][kind];
-    const price = F.price * seasonPrice * zoneMult(w2, "kuptsy") * pisar.mult * (1 + courseStrength(w2, "torguem")) * cut;
+    const price = F.price * seasonPrice * zoneMult(w2, "kuptsy") * pisar.mult * (1 + courseStrength(w2, "torguem")) * by("price");
     if (stock.tovary > 0) {
-      const sold = stock.tovary, how = cut < 1 ? "\u043F\u043E-\u0441\u0432\u043E\u0435\u043C\u0443: \u0432\u0437\u044F\u043B \u043E\u0442\u043A\u0430\u0442 \u0441 \u043A\u0443\u043F\u0446\u0430" : pisar.how;
+      const sold = stock.tovary, how = pisar.note;
       if (price > 0) {
         add("tovary", -sold, "\u043F\u0440\u043E\u0434\u0430\u043D\u043E \u043A\u0443\u043F\u0446\u0430\u043C", { side: "kuptsy", who: whoOf(pisar, "pisar"), how });
         add("serebro", sold * price, `\u0437\u0430 \u0442\u043E\u0432\u0430\u0440\u044B, ${r2(price)} \u0437\u0430 \u0432\u043E\u0437`, { side: "kuptsy", who: whoOf(pisar, "pisar"), how });
@@ -1611,55 +1829,60 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
     }
     const seasonDuty = [E.year.dutySpring, E.year.dutySummer, E.year.dutyAutumn, E.year.dutyWinter][kind];
     const levy = w2.season < e.dutyCutUntil ? E.pay.levyDuty : 1;
-    const duties = F.duties * seasonDuty * zoneMult(w2, "kuptsy") * pisar.mult * (1 + courseStrength(w2, "dorogi")) * levy;
+    const duties = F.duties * seasonDuty * zoneMult(w2, "kuptsy") * pisar.mult * (1 + courseStrength(w2, "dorogi")) * levy * by("duties");
     const dutyText = `\u043F\u043E\u0448\u043B\u0438\u043D\u044B${levy < 1 ? " (\u043D\u0438\u0436\u0435 \u043F\u043E\u0441\u043B\u0435 \u043E\u0441\u043E\u0431\u043E\u0433\u043E \u0441\u0431\u043E\u0440\u0430)" : ""}`;
-    if (duties > 0) add("serebro", duties, dutyText, { side: "kuptsy", who: whoOf(pisar, "pisar"), how: pisar.how });
+    if (duties > 0) add("serebro", duties, dutyText, { side: "kuptsy", who: whoOf(pisar, "pisar"), how: pisar.note });
     else lines.push({ cat: "serebro", v: 0, text: "\u043F\u043E\u0448\u043B\u0438\u043D \u043D\u0435\u0442: \u043A\u0443\u043F\u0446\u044B \u043E\u0442\u043A\u0430\u0437\u044B\u0432\u0430\u044E\u0442", side: "kuptsy" });
     const zl = zoneMult(w2, "les");
     if (e.course === "les") lines.push({ cat: "tovary", v: 0, text: "\u0431\u0440\u0451\u0432\u0435\u043D \u043D\u0435\u0442: \u0431\u0435\u0440\u0435\u0436\u0451\u043C \u043B\u0435\u0441", side: "les" });
-    else if (zl > 0) add("tovary", F.forestGoods * zl * les.mult, "\u0448\u043A\u0443\u0440\u044B, \u043C\u0451\u0434, \u0431\u0440\u0451\u0432\u043D\u0430 \u0438\u0437 \u043B\u0435\u0441\u0430", { side: "les", who: whoOf(les, "lesnichiy"), how: les.how });
+    else if (zl > 0) add("tovary", F.forestGoods * zl * les.mult * by("forestGoods"), "\u0448\u043A\u0443\u0440\u044B, \u043C\u0451\u0434, \u0431\u0440\u0451\u0432\u043D\u0430 \u0438\u0437 \u043B\u0435\u0441\u0430", { side: "les", who: whoOf(les, "lesnichiy"), how: les.note });
     if (kind === SUMMER && zl > 0) {
       const rites = zoneOf(w2, "opushka") === "\u043E\u0442\u043A\u0430\u0437\u044B\u0432\u0430\u044E\u0442" ? E.zone.noRites : 1;
-      const gifts = F.forestFood * zl * les.mult * (1 + courseStrength(w2, "les")) * rites;
-      add("eda", gifts, `\u0434\u0430\u0440\u044B \u043B\u0435\u0441\u0430${rites < 1 ? " (\u043E\u0431\u0440\u044F\u0434\u043E\u0432 \u043D\u0435\u0442: \u0434\u0435\u0440\u0435\u0432\u043D\u044F \u0443 \u043E\u043F\u0443\u0448\u043A\u0438 \u043E\u0442\u043A\u0430\u0437\u044B\u0432\u0430\u0435\u0442)" : ""}`, { side: "les", who: whoOf(les, "lesnichiy"), how: les.how });
+      const gifts = F.forestFood * zl * les.mult * (1 + courseStrength(w2, "les")) * rites * by("forestFood");
+      add("eda", gifts, `\u0434\u0430\u0440\u044B \u043B\u0435\u0441\u0430${rites < 1 ? " (\u043E\u0431\u0440\u044F\u0434\u043E\u0432 \u043D\u0435\u0442: \u0434\u0435\u0440\u0435\u0432\u043D\u044F \u0443 \u043E\u043F\u0443\u0448\u043A\u0438 \u043E\u0442\u043A\u0430\u0437\u044B\u0432\u0430\u0435\u0442)" : ""}`, { side: "les", who: whoOf(les, "lesnichiy"), how: les.note });
     }
     let harvest = 0;
     if (kind === AUTUMN) {
-      const quit = (1 + courseStrength(w2, "kopim") - courseStrength(w2, "polegche")) * (tiun.how === "\u043F\u043E-\u0441\u0432\u043E\u0435\u043C\u0443" ? E.doer.staleQuitrent : 1);
-      const how = tiun.how === "\u043F\u043E-\u0441\u0432\u043E\u0435\u043C\u0443" ? "\u043F\u043E-\u0441\u0432\u043E\u0435\u043C\u0443: \u0447\u0430\u0441\u0442\u044C \u043E\u0431\u0440\u043E\u043A\u0430 \u043E\u0441\u0442\u0430\u0432\u0438\u043B \u0434\u0435\u0440\u0435\u0432\u043D\u044F\u043C \u0432 \u0434\u043E\u043B\u0433" : tiun.how;
+      const quit = 1 + courseStrength(w2, "kopim") - courseStrength(w2, "polegche"), how = tiun.note;
       for (const v of VILLAGES) {
         const z = zoneMult(w2, v), who = whoOf(tiun, "starosta"), share = v === "brod" ? F.brodShare : 1 - F.brodShare;
         if (z <= 0) {
           lines.push({ cat: "eda", v: 0, text: "\u043D\u0438 \u0443\u0440\u043E\u0436\u0430\u044F, \u043D\u0438 \u043E\u0431\u0440\u043E\u043A\u0430: \u0434\u0435\u0440\u0435\u0432\u043D\u044F \u043E\u0442\u043A\u0430\u0437\u044B\u0432\u0430\u0435\u0442", side: v });
           continue;
         }
-        const crop = F.harvest / VILLAGES.length * z * tiun.mult * sown * fieldShare;
+        const crop = F.harvest / VILLAGES.length * z * tiun.mult * sown * fieldShare * by("harvest");
         harvest += crop;
         const field = sown < 1 || fieldShare < 1 ? ` (\u043F\u043E\u0441\u0435\u044F\u043D\u043E ${Math.round(sown * 100)}%, \u0441\u0436\u0430\u0442\u043E ${Math.round(fieldShare * 100)}%)` : "";
-        add("eda", crop, `\u0443\u0440\u043E\u0436\u0430\u0439${field}`, { side: v, who, how: tiun.how });
-        add("serebro", F.quitrentSilver * share * z * tiun.mult * quit, "\u043E\u0431\u0440\u043E\u043A \u0441\u0435\u0440\u0435\u0431\u0440\u043E\u043C", { side: v, who, how });
-        add("tovary", F.quitrentGoods * share * z * tiun.mult * quit, "\u043E\u0431\u0440\u043E\u043A \u0442\u043E\u0432\u0430\u0440\u0430\u043C\u0438", { side: v, who, how });
+        add("eda", crop, `\u0443\u0440\u043E\u0436\u0430\u0439${field}`, { side: v, who, how: tiun.note });
+        add("serebro", F.quitrentSilver * share * z * tiun.mult * quit * by("quitrent") * by("quitrentSilver"), "\u043E\u0431\u0440\u043E\u043A \u0441\u0435\u0440\u0435\u0431\u0440\u043E\u043C", { side: v, who, how });
+        add("tovary", F.quitrentGoods * share * z * tiun.mult * quit * by("quitrent"), "\u043E\u0431\u0440\u043E\u043A \u0442\u043E\u0432\u0430\u0440\u0430\u043C\u0438", { side: v, who, how });
       }
     }
     const debt = e.debts.filter((d) => d.due <= w2.season).reduce((s, d) => s + d.sum, 0);
     if (debt > 0) spend("serebro", debt, "\u0432\u043E\u0437\u0432\u0440\u0430\u0442 \u0437\u0430\u0439\u043C\u0430 \u0441 \u043B\u0438\u0445\u0432\u043E\u0439", "kuptsy");
-    spend("serebro", F.salary * (1 + courseStrength(w2, "dorogi")), "\u0436\u0430\u043B\u043E\u0432\u0430\u043D\u044C\u0435 \u0441\u0442\u0440\u0430\u0436\u0435 \u0438 \u0447\u0435\u043B\u044F\u0434\u0438", "zamok");
-    const upkeep2 = kind === WINTER ? F.upkeepWinter : F.upkeep;
+    const purse = L.silver * E.hand.silver;
+    if (purse > 0) add("serebro", purse, "\u0434\u043E\u0440\u043E\u0436\u043D\u044B\u0439 \u0441\u0431\u043E\u0440", { side: "kuptsy" });
+    if (purse < 0) add("serebro", -Math.min(stock.serebro, -purse), "\u043F\u0440\u043E\u0446\u0435\u043D\u0442\u044B \u043F\u043E \u0441\u0442\u0430\u0440\u044B\u043C \u0434\u043E\u043B\u0433\u0430\u043C");
+    spend("serebro", F.salary * (1 + courseStrength(w2, "dorogi")) * by("salary"), "\u0436\u0430\u043B\u043E\u0432\u0430\u043D\u044C\u0435 \u0441\u0442\u0440\u0430\u0436\u0435 \u0438 \u0447\u0435\u043B\u044F\u0434\u0438", "zamok");
+    const upkeep2 = (kind === WINTER ? F.upkeepWinter : F.upkeep) * by("upkeep");
     const feed = [["zamok", upkeep2 * F.castleShare, "\u043F\u0440\u043E\u043A\u043E\u0440\u043C \u0437\u0430\u043C\u043A\u0430"]];
     for (const v of VILLAGES) feed.push([v, upkeep2 * (1 - F.castleShare) / VILLAGES.length, "\u043F\u0440\u043E\u043A\u043E\u0440\u043C \u0440\u0430\u0431\u043E\u0442\u043D\u0438\u043A\u043E\u0432 \u043D\u0430 \u0431\u0430\u0440\u0449\u0438\u043D\u0435"]);
     if (e.feedFirst === "derevni") feed.push(feed.shift());
     for (const [side, v, text] of feed) spend("eda", v, text, side);
     if (zoneOf(w2, "les") === "\u043E\u0442\u043A\u0430\u0437\u044B\u0432\u0430\u044E\u0442") spend("eda", E.zone.lesHarm, "\u043F\u043E\u0442\u0440\u0430\u0432\u044B \u0438 \u0442\u0432\u0430\u0440\u0438 \u0438\u0437 \u043B\u0435\u0441\u0430", "les");
     if (kind === WINTER && stock.eda > 0) {
-      const sloppy = klyuch.how === "\u043F\u043E-\u0441\u0432\u043E\u0435\u043C\u0443" ? E.doer.staleSpoil : 1;
-      const spoil = stock.eda * F.spoil * sloppy * (1 - courseStrength(w2, "stroimsya")) / klyuch.mult;
-      const how = sloppy > 1 ? "\u043F\u043E-\u0441\u0432\u043E\u0435\u043C\u0443: \u0441\u043A\u043B\u0430\u0434\u044B \u0437\u0430\u043F\u0443\u0449\u0435\u043D\u044B" : klyuch.how;
-      add("eda", -Math.min(stock.eda, spoil), "\u0438\u0441\u043F\u043E\u0440\u0447\u0435\u043D\u043E \u0437\u0430 \u0437\u0438\u043C\u0443", { who: whoOf(klyuch, "klyuchnik"), how });
+      const spoil = stock.eda * F.spoil * (1 - courseStrength(w2, "stroimsya")) * by("spoil") / klyuch.mult;
+      add("eda", -Math.min(stock.eda, spoil), "\u0438\u0441\u043F\u043E\u0440\u0447\u0435\u043D\u043E \u0437\u0430 \u0437\u0438\u043C\u0443", { who: whoOf(klyuch, "klyuchnik"), how: klyuch.note });
     }
     const spare = stock.eda - e.floor.eda - F.upkeepWinter;
     if (e.course === "torguem" && spare > 0 && zoneMult(w2, "kuptsy") > 0) {
-      add("eda", -spare, "\u0438\u0437\u043B\u0438\u0448\u0435\u043A \u043F\u0440\u043E\u0434\u0430\u043D \u043A\u0443\u043F\u0446\u0430\u043C", { side: "kuptsy", who: whoOf(pisar, "pisar"), how: pisar.how });
-      add("serebro", spare * F.foodPrice * zoneMult(w2, "kuptsy") * pisar.mult, "\u0437\u0430 \u0438\u0437\u043B\u0438\u0448\u0435\u043A \u0435\u0434\u044B", { side: "kuptsy", who: whoOf(pisar, "pisar"), how: pisar.how });
+      add("eda", -spare, "\u0438\u0437\u043B\u0438\u0448\u0435\u043A \u043F\u0440\u043E\u0434\u0430\u043D \u043A\u0443\u043F\u0446\u0430\u043C", { side: "kuptsy", who: whoOf(pisar, "pisar"), how: pisar.note });
+      add("serebro", spare * F.foodPrice * zoneMult(w2, "kuptsy") * pisar.mult, "\u0437\u0430 \u0438\u0437\u043B\u0438\u0448\u0435\u043A \u0435\u0434\u044B", { side: "kuptsy", who: whoOf(pisar, "pisar"), how: pisar.note });
+    }
+    const extra = (stock.eda - e.floor.eda - F.upkeepWinter) * clamp(L.sellFood * E.hand.sell, 0, 1);
+    if (extra > 0 && zoneMult(w2, "kuptsy") > 0) {
+      add("eda", -extra, "\u0438\u0437\u043B\u0438\u0448\u0435\u043A \u043F\u0440\u043E\u0434\u0430\u043D \u043A\u043B\u044E\u0447\u043D\u0438\u043A\u043E\u043C", { side: "kuptsy", who: whoOf(klyuch, "klyuchnik"), how: klyuch.note });
+      add("serebro", extra * F.foodPrice * zoneMult(w2, "kuptsy"), "\u0437\u0430 \u0438\u0437\u043B\u0438\u0448\u0435\u043A \u0435\u0434\u044B", { side: "kuptsy", who: whoOf(klyuch, "klyuchnik"), how: klyuch.note });
     }
     return { lines, short, stock, sown, harvest: r2(harvest) };
   }
@@ -1677,6 +1900,28 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
   function belowFloor(w2, cat, v) {
     return v < 0 && r2(w2.eco.stock[cat] + v) < w2.eco.floor[cat];
   }
+  function takeHands(w2, hands) {
+    w2.eco.recruits.push({ from: "zamok", hands, until: w2.season + 1 });
+    w2.eco.cur.push({ cat: "lyudi", v: -hands, text: "\u0440\u0443\u043A\u0438 \u0437\u0430\u043D\u044F\u0442\u044B \u0434\u0435\u043B\u043E\u043C \u0441\u043E\u0432\u0435\u0442\u0430", side: "zamok" });
+  }
+  function invest(w2, ev, later, k2, lines) {
+    const effects = Object.fromEntries(Object.entries(later.effects).map(([key, v]) => [key, r1(v * k2)]));
+    w2.eco.pending.push({ due: w2.season + later.seasons, effects, text: `${later.text} (\u0434\u0435\u043B\u043E \xAB${ev.title}\xBB)`, village: ev.village });
+    lines.push(`\u0412\u043B\u043E\u0436\u0435\u043D\u0438\u0435: \u043E\u0442\u0434\u0430\u0447\u0430 \u0447\u0435\u0440\u0435\u0437 ${later.seasons} \u0441\u0435\u0437. \u2014 ${later.text}.`);
+  }
+  function settle(w2, lines) {
+    const due = w2.eco.pending.filter((x) => x.due <= w2.season);
+    w2.eco.pending = w2.eco.pending.filter((x) => x.due > w2.season);
+    for (const x of due) {
+      for (const [key, v] of Object.entries(x.effects)) {
+        if (key === "poryadok") w2.resources.poryadok = r1(w2.resources.poryadok + v);
+        else if (key === "kazna" || key === "pripasy") addLine(w2, { cat: key === "kazna" ? "serebro" : "eda", v, text: `\u043E\u0442\u0434\u0430\u0447\u0430 \u0432\u043B\u043E\u0436\u0435\u043D\u0438\u044F: ${x.text}` });
+        else if (key === "derevni") for (const v2 of x.village ? [x.village] : VILLAGES) addTrust(w2, v2, v * BALANCE.economy.trust.event);
+        else addTrust(w2, key, v * BALANCE.economy.trust.event);
+      }
+      lines.push(`\u{1F331} \u0412\u043B\u043E\u0436\u0435\u043D\u0438\u0435 \u0434\u0430\u043B\u043E \u043E\u0442\u0434\u0430\u0447\u0443: ${x.text}.`);
+    }
+  }
   function lessonOf(year) {
     return year <= BALANCE.economy.tax.trialYears ? BALANCE.economy.tax.trial : BALANCE.economy.tax.normal;
   }
@@ -1692,6 +1937,7 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
     return `\u0413\u0435\u0440\u0446\u043E\u0433 \u043E\u0431\u044A\u044F\u0432\u0438\u043B \u0443\u0440\u043E\u043A \u043D\u0430 \u0433\u043E\u0434${trial}: ${t.lesson} \u043C\u0435\u0440${t.carried ? ` \u0438 \u043D\u0435\u0434\u043E\u0438\u043C\u043A\u0430 ${t.carried}` : ""} \u2014 \u043A \u043E\u0441\u0435\u043D\u0438 ${t.due}.`;
   }
   var taxLeft = (w2) => r1(Math.max(0, w2.eco.tax.due - w2.eco.tax.paid));
+  var loanEase = (w2) => Math.max(1, 1 + levers(w2).loan * BALANCE.economy.hand.flow * 2);
   function payOptions(w2) {
     const E = BALANCE.economy, e = w2.eco, left = taxLeft(w2), hands = handsNow(w2);
     const used = (id) => e.tax.by[id] ?? 0;
@@ -1701,7 +1947,7 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
       if (def.id === "serebro" || def.id === "eda" || def.id === "tovary") max = e.stock[def.what] / rate;
       else if (def.id === "sbor_kuptsy") max = E.pay.levyCap - used(def.id);
       else if (def.id === "zaem") {
-        max = E.pay.loanCap - e.debts.reduce((s, d) => s + d.sum, 0) / (1 + E.pay.loanInterest);
+        max = E.pay.loanCap * loanEase(w2) - e.debts.reduce((s, d) => s + d.sum, 0) / (1 + E.pay.loanInterest);
         if (zoneMult(w2, "kuptsy") < E.zone.friendly) blocked = "\u0432 \u0434\u043E\u043B\u0433 \u0434\u0430\u044E\u0442 \u0442\u043E\u043B\u044C\u043A\u043E \u0442\u0435\u043C, \u0441 \u043A\u0435\u043C \u043B\u0430\u0434\u044F\u0442";
       } else if (def.id === "sverh_brod" || def.id === "sverh_opushka") max = E.pay.extraCap - used(def.id);
       else if (def.id === "volnye") {
@@ -1726,8 +1972,9 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
       e.dutyCutUntil = w2.season + SEASON_NAMES.length;
       addLine(w2, { cat: "serebro", v: 0, text: `\u043E\u0441\u043E\u0431\u044B\u0439 \u0441\u0431\u043E\u0440 \u0441 \u043A\u0443\u043F\u0446\u043E\u0432 \u2014 ${toTax}`, side: "kuptsy" });
     } else if (id === "zaem") {
-      e.debts.push({ due: w2.season + E.pay.loanTerm, sum: r2(units * (1 + E.pay.loanInterest)) });
-      addLine(w2, { cat: "serebro", v: 0, text: `\u0437\u0430\u0451\u043C \u0443 \u043A\u0443\u043F\u0446\u043E\u0432 \u2014 ${toTax}; \u0432\u0435\u0440\u043D\u0443\u0442\u044C ${r2(units * (1 + E.pay.loanInterest))}`, side: "kuptsy" });
+      const back = r2(units * (1 + E.pay.loanInterest / loanEase(w2)));
+      e.debts.push({ due: w2.season + E.pay.loanTerm, sum: back });
+      addLine(w2, { cat: "serebro", v: 0, text: `\u0437\u0430\u0451\u043C \u0443 \u043A\u0443\u043F\u0446\u043E\u0432 \u2014 ${toTax}; \u0432\u0435\u0440\u043D\u0443\u0442\u044C ${back}`, side: "kuptsy" });
     } else if (id === "sverh_brod" || id === "sverh_opushka") {
       addTrust(w2, def.side, -E.pay.extraTrust * m);
       addLine(w2, { cat: "eda", v: 0, text: `\u0437\u0435\u0440\u043D\u043E \u0441\u0432\u0435\u0440\u0445 \u043E\u0431\u0440\u043E\u043A\u0430 \u2014 ${toTax}`, side: def.side });
@@ -1797,6 +2044,7 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
   function economySeason(w2, lines) {
     const E = BALANCE.economy, e = w2.eco, kind = seasonKind(w2.season);
     const before = e.last ? { ...e.last.after } : { eda: E.start.eda, tovary: E.start.tovary, serebro: E.start.serebro };
+    settle(w2, lines);
     const hands = fieldHands(w2), plan = planSeason(w2);
     e.stock = plan.stock;
     e.sown = plan.sown;
@@ -1806,9 +2054,11 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
     if (kind === AUTUMN) lines.push(`\u0416\u0430\u0442\u0432\u0430: \u0432 \u0430\u043C\u0431\u0430\u0440 \u043B\u0435\u0433\u043B\u043E ${plan.harvest} \u0435\u0434\u044B.`);
     if (plan.short.length) e.shortages++;
     if (plan.short.length) PROBE.short.seasons++;
+    const L = levers(w2), H = E.hand;
     for (const s of plan.short) {
       PROBE.short[s.cat === "eda" ? "food" : "silver"] += s.v;
-      PROBE.short.trust += -addTrust(w2, s.side, -E.trust.short * s.v);
+      const soft = s.side === "brod" || s.side === "opushka" ? Math.max(0, 1 + L.shortSoft * H.flow * 2) : 1;
+      PROBE.short.trust += -addTrust(w2, s.side, -E.trust.short * s.v * soft);
       let note = `\u26A0 \u041D\u0435\u0434\u043E\u0434\u0430\u0447\u0430: ${s.what} \u2014 \u043D\u0435 \u0445\u0432\u0430\u0442\u0438\u043B\u043E ${s.v} (${CATEGORY_NAMES[s.cat].toLowerCase()}). ${SIDE_NAMES[s.side]}: \u0434\u043E\u0432\u0435\u0440\u0438\u0435 \u043F\u0430\u0434\u0430\u0435\u0442.`;
       if (s.cat === "serebro" && s.side === "zamok") {
         w2.resources.poryadok = r1(w2.resources.poryadok - E.trust.shortOrder * s.v);
@@ -1835,9 +2085,12 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
       for (const v of VILLAGES) addTrust(w2, v, -ct);
     }
     if (e.course === "dorogi") w2.resources.poryadok = r1(w2.resources.poryadok + E.course.order);
+    for (const v of VILLAGES) addTrust(w2, v, (L.villages + (v === "opushka" ? L.opushka : 0)) * H.trust);
+    for (const side of ["zamok", "kuptsy", "les", "dvor"]) addTrust(w2, side, L[side] * H.trust);
+    w2.resources.poryadok = r1(w2.resources.poryadok + L.order * H.order);
+    e.tax.patience = r2(clamp(e.tax.patience + L.patience * H.patience, 0, STAR_MAX));
     const tiun = holder(w2, "starosta");
     if (tiun) for (const el of e.elders) addTrust(w2, el.side, el.rel[tiun.id] * E.trust.elder);
-    if (kind === AUTUMN && tiun && isStale(tiun)) for (const v of VILLAGES) addTrust(w2, v, E.doer.staleQuitrentTrust);
     for (const s of SIDES) {
       w2.factions[s] = r1(w2.factions[s] * E.trust.fade);
       const now = zoneOf(w2, s);
@@ -1910,6 +2163,10 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
     if (against) return { ok: false, why: `\u0433\u043B\u0430\u0432\u043D\u043E\u0433\u043E \u043D\u0435 \u043F\u0440\u0438\u0437\u043D\u0430\u0451\u0442 ${against.name}` };
     for (const a of council3) for (const b of council3) if (a.id < b.id && getRel(w2, a.id, b.id) <= BALANCE.rel.enemy) return { ok: false, why: `${a.name} \u0438 ${b.name} \u2014 \u0432\u0440\u0430\u0433\u0438` };
     return { ok: true, why: "\u0433\u043B\u0430\u0432\u043D\u044B\u0439 \u043F\u0440\u0438\u0437\u043D\u0430\u043D, \u0432\u0440\u0430\u0436\u0434\u044B \u043D\u0435\u0442" };
+  }
+  function councilFeud(w2) {
+    const council3 = w2.people.filter((p) => p.post);
+    return council3.some((a) => council3.some((b) => a.id < b.id && getRel(w2, a.id, b.id) <= BALANCE.rel.enemy));
   }
   function authoritySupport(w2) {
     const A = BALANCE.authority, lines = [];
@@ -2380,6 +2637,9 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
         parts.push("\u0432 \u0441\u0432\u043E\u044E \u043F\u043E\u043B\u044C\u0437\u0443");
       }
       if (opt.risky && p.trait.id === "ostorozhny") base -= BALANCE.decide.cautiousRisk;
+      const dash = (p.star.derzost - BALANCE.star.center) * BALANCE.decide.kindLean;
+      if (opt.risky) base += dash;
+      if (opt.careful) base -= dash;
       const lean = activeTraits(p).reduce((sum, t) => sum + opt.axes.reduce((x, a) => x + (t.lean?.[a] ?? 0), 0) / opt.axes.length, 0);
       if (lean) {
         base += lean;
@@ -2426,14 +2686,16 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
   function applyEffects(w2, ev, opt, mult, doer2, lines) {
     let k2 = mult;
     if (doer2) k2 *= competence(doer2);
+    if (opt.careful) k2 *= BALANCE.exp.carefulGain;
     let failed = false;
     if (opt.risky && doer2) {
       const pSuccess = BALANCE.exp.riskBase + BALANCE.exp.riskSkill * competence(doer2);
       if (!w2.rng.chance(pSuccess)) failed = true;
     }
+    const gain = opt.risky && !failed ? BALANCE.exp.boldGain : 1;
     const out = {};
     for (const [key, v] of Object.entries(opt.effects)) {
-      let val = v * k2;
+      let val = v * k2 * (v > 0 ? gain : 1);
       if (failed && val > 0) val = -val * BALANCE.exp.failBackfire;
       val = round1(val);
       out[key] = val;
@@ -2448,6 +2710,9 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
       } else if (key === "derevni") for (const v2 of ev.village ? [ev.village] : VILLAGES) addTrust(w2, v2, val * BALANCE.economy.trust.event);
       else addTrust(w2, key, val * BALANCE.economy.trust.event);
     }
+    if (opt.hands) takeHands(w2, opt.hands);
+    if (opt.later && !failed) invest(w2, ev, opt.later, k2 * gain, lines);
+    if (opt.later && failed) lines.push("\u0412\u043B\u043E\u0436\u0435\u043D\u0438\u0435 \u043F\u0440\u043E\u043F\u0430\u043B\u043E: \u043E\u0442\u0434\u0430\u0447\u0438 \u043D\u0435 \u0431\u0443\u0434\u0435\u0442.");
     if (failed) lines.push(`\u0420\u0438\u0441\u043A\u043E\u0432\u0430\u043D\u043D\u043E\u0435 \u0434\u0435\u043B\u043E \u043F\u0440\u043E\u0432\u0430\u043B\u0438\u043B\u043E\u0441\u044C \u2014 \u043D\u0435 \u0445\u0432\u0430\u0442\u0438\u043B\u043E \u043E\u043F\u044B\u0442\u0430 (${doer2 ? expWord(doer2) : "?"}).`);
     return out;
   }
@@ -2519,6 +2784,8 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
     return entry;
   }
   function council(w2, ev, a, b, lines) {
+    const co = councilFeud(w2) ? BALANCE.council.feud : councilSteady(w2).ok ? BALANCE.council.cohesion : 1;
+    if (co !== 1) lines.push(co > 1 ? "\u0421\u043E\u0432\u0435\u0442 \u0441\u043B\u0430\u0436\u0435\u043D: \u0434\u0435\u043B\u043E \u0434\u0432\u0443\u0445 \u0441\u0444\u0435\u0440 \u0441\u043F\u043E\u0440\u0438\u0442\u0441\u044F." : "\u0412 \u0441\u043E\u0432\u0435\u0442\u0435 \u0432\u0440\u0430\u0436\u0434\u0430: \u0434\u0435\u043B\u043E \u0434\u0432\u0443\u0445 \u0441\u0444\u0435\u0440 \u0438\u0434\u0451\u0442 \u0445\u0443\u0436\u0435.");
     const da = decide(w2, a, ev), db = decide(w2, b, ev);
     const r = getRel(w2, a.id, b.id);
     const word = relWord(r);
@@ -2532,7 +2799,7 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
       recordChoice(w2, b, db.opt, lines);
       addRel(w2, a.id, b.id, BALANCE.council.agreeRel);
       const doer2 = a.exp >= b.exp ? a : b;
-      return applyEffects(w2, ev, da.opt, mult, doer2, lines);
+      return applyEffects(w2, ev, da.opt, mult * co, doer2, lines);
     }
     const head = w2.head != null ? w2.people[w2.head] : void 0;
     if (head && head.id !== a.id && head.id !== b.id) {
@@ -2545,7 +2812,7 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
         lines.push(`\u0421\u043F\u043E\u0440\u0438\u043B\u0438 (${word}). \u0420\u0430\u0441\u0441\u0443\u0434\u0438\u043B \u0433\u043B\u0430\u0432\u043D\u044B\u0439, ${head.name}: \u0434\u0435\u043B\u0430\u0442\u044C \u043A\u0430\u043A \u0445\u043E\u0447\u0435\u0442 ${win2.name}.`);
         addRel(w2, head.id, lose2.id, BALANCE.council.headJudgeRel);
         recordChoice(w2, win2, opt, lines);
-        return applyEffects(w2, ev, opt, 1, win2, lines);
+        return applyEffects(w2, ev, opt, co, head.post ? head : win2, lines);
       }
       lines.push(`\u0413\u043B\u0430\u0432\u043D\u043E\u0433\u043E, ${head.name}, \u043D\u0435 \u043F\u0440\u0438\u0437\u043D\u0430\u043B\u0438 \u2014 \u0443 \u043D\u0435\u0433\u043E \u0441 \u043A\u0435\u043C-\u0442\u043E \u0438\u0437 \u043D\u0438\u0445 \u043F\u043B\u043E\u0445\u0438\u0435 \u043E\u0442\u043D\u043E\u0448\u0435\u043D\u0438\u044F.`);
     }
@@ -2563,14 +2830,14 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
       recordChoice(w2, a, opt, lines);
       recordChoice(w2, b, opt, lines);
       addRel(w2, a.id, b.id, BALANCE.council.dealRel);
-      return applyEffects(w2, ev, opt, 1, win, lines);
+      return applyEffects(w2, ev, opt, BALANCE.council.dealGain * co, win, lines);
     }
     if (r > BALANCE.rel.rival) {
       if (w2.rng.chance(BALANCE.council.compromiseChance + soft * BALANCE.council.softness)) {
         outcome = "compromise";
         lines.push(`\u041E\u043D\u0438 ${word} \u0434\u0440\u0443\u0433 \u0434\u0440\u0443\u0433\u0430 \u2014 \u0441\u0434\u0435\u043B\u0430\u043B\u0438 \u043D\u0430\u043F\u043E\u043B\u043E\u0432\u0438\u043D\u0443, \u043A\u0430\u043A \u0445\u043E\u0442\u0435\u043B ${win.name}, \u043D\u043E \u0432\u043F\u043E\u043B\u0441\u0438\u043B\u044B.`);
         recordChoice(w2, win, wd.opt, lines);
-        return applyEffects(w2, ev, wd.opt, BALANCE.council.compromise, win, lines);
+        return applyEffects(w2, ev, wd.opt, BALANCE.council.compromise * co, win, lines);
       }
       outcome = "push";
       lines.push(`\u041E\u043D\u0438 ${word} \u0434\u0440\u0443\u0433 \u0434\u0440\u0443\u0433\u0430. ${win.name} \u043F\u0440\u043E\u0434\u0430\u0432\u0438\u043B${win.female ? "\u0430" : ""} \u0441\u0432\u043E\u0451; ${lose.name} \u0437\u0430\u0442\u0430\u0438\u043B${lose.female ? "\u0430" : ""} \u043E\u0431\u0438\u0434\u0443.`);
@@ -2578,7 +2845,7 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
       const around = bypass(w2, ev, win, lose, ld.opt, lines);
       if (around) return around;
       recordChoice(w2, win, wd.opt, lines);
-      return applyEffects(w2, ev, wd.opt, 1, win, lines);
+      return applyEffects(w2, ev, wd.opt, co, win, lines);
     }
     if (r > BALANCE.rel.enemy) {
       outcome = "rival";
@@ -2591,7 +2858,7 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
         lines.push(`\u{1F4DC} \u0416\u0430\u043B\u043E\u0431\u0430: ${lose.name} \u0436\u0434\u0451\u0442 \u0421\u0435\u043D\u0435\u0448\u0430\u043B\u044F \u0441 \u0436\u0430\u043B\u043E\u0431\u043E\u0439 \u043D\u0430 ${win.name}.`);
         addComplaint(w2, lose.id, win.id);
       }
-      return applyEffects(w2, ev, wd.opt, 1, win, lines);
+      return applyEffects(w2, ev, wd.opt, BALANCE.council.rivalGain * co, win, lines);
     }
     if (w2.rng.chance(BALANCE.council.sabotageChance)) {
       outcome = "sabotage";
@@ -2600,7 +2867,7 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
       reveal(w2, lose, "sabotage", lines);
       gainTrait(w2, win, "zlopamyatny_k", lines, lose.id);
       recordChoice(w2, win, wd.opt, lines);
-      const eff = applyEffects(w2, ev, wd.opt, BALANCE.council.sabotage, win, lines);
+      const eff = applyEffects(w2, ev, wd.opt, BALANCE.council.sabotage * co, win, lines);
       w2.resources.poryadok = round1(w2.resources.poryadok - BALANCE.council.sabotageOrder);
       eff.poryadok = round1((eff.poryadok ?? 0) - BALANCE.council.sabotageOrder);
       lines.push(`\u{1F4DC} \u0416\u0430\u043B\u043E\u0431\u044B \u0441 \u043E\u0431\u0435\u0438\u0445 \u0441\u0442\u043E\u0440\u043E\u043D \u0436\u0434\u0443\u0442 \u0421\u0435\u043D\u0435\u0448\u0430\u043B\u044F.`);
@@ -2612,7 +2879,7 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
     lines.push(`\u041E\u043D\u0438 \u0432\u0440\u0430\u0433\u0438, \u043D\u043E ${lose.name} \u043D\u0430 \u044D\u0442\u043E\u0442 \u0440\u0430\u0437 \u0441\u043C\u043E\u043B\u0447\u0430\u043B${lose.female ? "\u0430" : ""}. ${win.name} \u0441\u0434\u0435\u043B\u0430\u043B${win.female ? "\u0430" : ""} \u043F\u043E-\u0441\u0432\u043E\u0435\u043C\u0443.`);
     addRel(w2, a.id, b.id, BALANCE.council.silentRel);
     recordChoice(w2, win, wd.opt, lines);
-    return applyEffects(w2, ev, wd.opt, 1, win, lines);
+    return applyEffects(w2, ev, wd.opt, BALANCE.council.rivalGain * co, win, lines);
   }
   function forecast(p) {
     const known = AXES.filter((a) => axisKnown(p, a));
@@ -2704,8 +2971,8 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
         else if (p.post) p.loyalty += BALANCE.loyalty.wrongPost * (1 + mod(p, "ambition") * BALANCE.loyalty.ambition) * (isStale(p) ? BALANCE.loyalty.staleWrong : 1);
         else if (w2.posts[asp] != null) {
           p.loyalty += BALANCE.loyalty.blocked;
-          const h = holder(w2, asp);
-          if (isStale(h)) addRel(w2, p.id, h.id, BALANCE.loyalty.blockedStaleRel);
+          const h2 = holder(w2, asp);
+          if (isStale(h2)) addRel(w2, p.id, h2.id, BALANCE.loyalty.blockedStaleRel);
         }
       }
       p.loyalty = round1(clamp2(p.loyalty, -REL_MAX, REL_MAX));
@@ -2960,12 +3227,12 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
   }
   function renderCouncil() {
     const html = POSTS.map((def) => {
-      const h = holder(w, def.id);
-      const freeCost = h ? assignCost(w, h, null).cost : 0;
+      const h2 = holder(w, def.id);
+      const freeCost = h2 ? assignCost(w, h2, null).cost : 0;
       const empty = freeCost > w.authority ? `<option value="" disabled>\u2014 \u043F\u0443\u0441\u0442\u043E \u2014 \xB7 \u2212${freeCost} \u0430\u0432\u0442., \u043D\u0435 \u0445\u0432\u0430\u0442\u0430\u0435\u0442</option>` : `<option value="">\u2014 \u043F\u0443\u0441\u0442\u043E \u2014</option>`;
       const opts = [empty].concat(
         w.people.map((p) => {
-          const sel = h?.id === p.id ? "selected" : "";
+          const sel = h2?.id === p.id ? "selected" : "";
           const marks = [];
           let off = "";
           if (p.aspiration?.post === def.id && (p.know.aspiration || designer)) marks.push("\u0445\u043E\u0447\u0435\u0442 \u0441\u044E\u0434\u0430");
@@ -2981,13 +3248,13 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
         })
       ).join("");
       const badges = [];
-      if (h) {
-        badges.push(`<span class="badge">${expWord(h)} \xB7 ${h.tenure} \u0441\u0435\u0437.</span>`);
-        if (isStale(h)) badges.push(`<span class="badge stale">\u0437\u0430\u0441\u0438\u0434\u0435\u043B\u0441\u044F</span>`);
-        if (w.head === h.id) badges.push(`<span class="badge head">\u0433\u043B\u0430\u0432\u043D\u044B\u0439</span>`);
+      if (h2) {
+        badges.push(`<span class="badge">${expWord(h2)} \xB7 ${h2.tenure} \u0441\u0435\u0437.</span>`);
+        if (isStale(h2)) badges.push(`<span class="badge stale">\u0437\u0430\u0441\u0438\u0434\u0435\u043B\u0441\u044F</span>`);
+        if (w.head === h2.id) badges.push(`<span class="badge head">\u0433\u043B\u0430\u0432\u043D\u044B\u0439</span>`);
       }
-      const headBtn = h && w.head !== h.id ? `<button data-head="${h.id}" style="padding:2px 8px;font-size:12px">\u0441\u0434\u0435\u043B\u0430\u0442\u044C \u0433\u043B\u0430\u0432\u043D\u044B\u043C</button>` : "";
-      const fc = h ? `<div class="forecast">${esc(h.name)}: ${forecast(h)}${designer ? ` \xB7 \u0432\u0435\u0434\u0443\u0449\u0430\u044F \u043E\u0441\u044C: ${AXIS_NAMES[topAxis(h.star)]}` : ""}</div>` : "";
+      const headBtn = h2 && w.head !== h2.id ? `<button data-head="${h2.id}" style="padding:2px 8px;font-size:12px">\u0441\u0434\u0435\u043B\u0430\u0442\u044C \u0433\u043B\u0430\u0432\u043D\u044B\u043C</button>` : "";
+      const fc = h2 ? `<div class="forecast">${esc(h2.name)}: ${forecast(h2)}${designer ? ` \xB7 \u0432\u0435\u0434\u0443\u0449\u0430\u044F \u043E\u0441\u044C: ${AXIS_NAMES[topAxis(h2.star)]}` : ""}</div>` : "";
       return `<div class="post">
       <div class="post-head"><span class="post-name">${def.name}</span><span class="post-sphere">${def.sphere}</span></div>
       <div class="post-row"><select data-post="${def.id}">${opts}</select>${headBtn}</div>
@@ -2999,8 +3266,8 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
       (s) => s.addEventListener("change", () => {
         const post = s.dataset.post;
         if (s.value === "") {
-          const h = holder(w, post);
-          if (h) assign(w, h.id, null);
+          const h2 = holder(w, post);
+          if (h2) assign(w, h2.id, null);
         } else assign(w, Number(s.value), post);
         render();
       })
@@ -3057,9 +3324,9 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
       const fill = Math.min(100, v / BAR_MAX[cat] * 100);
       let note, mark = "";
       if (cat === "lyudi") {
-        const h = handsNow(w);
+        const h2 = handsNow(w);
         note = seasonKind(w.season) === 3 ? `\u0437\u0438\u043C\u0430: \u043F\u043E\u043B\u0435 \u0441\u0442\u043E\u0438\u0442, \u0441\u0432\u043E\u0431\u043E\u0434\u043D\u043E ${fmt(hands.free)}` : `\u0432 \u043F\u043E\u043B\u0435 ${fmt(hands.field)} \u0438\u0437 ${fmt(BALANCE.economy.hands.field)}${hands.build ? `, \u0441\u0442\u0440\u043E\u0439\u043A\u0430 ${fmt(hands.build)}` : ""}`;
-        note += ` \xB7 \u0431\u0440\u043E\u0434 ${fmt(h.brod)}, \u043E\u043F\u0443\u0448\u043A\u0430 ${fmt(h.opushka)}, \u0437\u0430\u043C\u043E\u043A ${fmt(h.zamok)}`;
+        note += ` \xB7 \u0431\u0440\u043E\u0434 ${fmt(h2.brod)}, \u043E\u043F\u0443\u0448\u043A\u0430 ${fmt(h2.opushka)}, \u0437\u0430\u043C\u043E\u043A ${fmt(h2.zamok)}`;
       } else {
         const f = forks.find((x) => x.cat === cat);
         const who = f.counter ? `\u0441\u0447\u0438\u0442\u0430\u0435\u0442 ${f.counter.name}` : "\u0441\u0447\u0438\u0442\u0430\u0442\u044C \u043D\u0435\u043A\u043E\u043C\u0443";
@@ -3080,7 +3347,7 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
     const cells = [];
     for (let y = from; y < from + 3; y++) {
       for (let k2 = 0; k2 < 4; k2++) {
-        const n = y * 4 + k2 + 1, past = t.history.find((h) => h.year === y + 1);
+        const n = y * 4 + k2 + 1, past = t.history.find((h2) => h2.year === y + 1);
         const cls = ["cell", n === w.season ? "now" : n < w.season ? "past" : ""];
         let mark = "";
         if (k2 === 0) mark = y + 1 === t.year ? `\u0443\u0440\u043E\u043A ${fmt(t.due)}` : past ? `\u0443\u0440\u043E\u043A ${fmt(past.due)}` : "\u0443\u0440\u043E\u043A";
@@ -3137,7 +3404,10 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
       c.pro.length ? `\u0441\u043E\u0432\u0435\u0442 \u0447\u0430\u0449\u0435 \u0440\u0435\u0448\u0430\u0435\u0442 \u043F\u043E: ${c.pro.map((a) => AXIS_NAMES[a]).join(", ")}` : "",
       c.contra.length ? `\u043F\u0440\u043E\u0442\u0438\u0432: ${c.contra.map((a) => AXIS_NAMES[a]).join(", ")}` : ""
     ].filter(Boolean).join("; ") : "";
-    const doers = POSTS.map((d) => `${d.name}: ${doer(w, d.id).how}`).join(" \xB7 ");
+    const doers = POSTS.map((d) => {
+      const x = doer(w, d.id);
+      return `${d.name}: ${x.note}${designer ? ` \xD7${fmt(x.mult)}${x.hand ? `, ${x.hand}` : ""}` : ""}`;
+    }).join(" \xB7 ");
     $("eco-course").innerHTML = `<div class="pay"><select id="course">${options}</select></div>
     <p class="hint" id="course-desc">${c ? `${esc(c.desc)}. ${who}. ${held}${e.shaky ? " \xB7 <b>\u0448\u0430\u0442\u0430\u043D\u0438\u0435</b>: \u043A\u0443\u0440\u0441 \u0441\u043C\u0435\u043D\u0438\u043B\u0438 \u0441\u043B\u0438\u0448\u043A\u043E\u043C \u0431\u044B\u0441\u0442\u0440\u043E" : ""}` : "\u0421\u043E\u0432\u0435\u0442 \u0440\u0435\u0448\u0430\u0435\u0442 \u043C\u0435\u043B\u043A\u0438\u0435 \u0434\u0435\u043B\u0430 \u043F\u043E \u0441\u0432\u043E\u0438\u043C \u0441\u043A\u043B\u043E\u043D\u043D\u043E\u0441\u0442\u044F\u043C."}</p>
     <p class="hint" id="doers">\u0418\u0441\u043F\u043E\u043B\u043D\u044F\u044E\u0442: ${doers}</p>
@@ -3263,6 +3533,16 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
     const title = "\u041C\u043D\u0435\u043D\u0438\u0435 \u0433\u043B\u0430\u0432\u043D\u043E\u0433\u043E \u2014 \u043F\u043E\u0434\u0441\u043A\u0430\u0437\u043A\u0430 \u0441 \u043F\u0440\u0438\u0441\u0442\u0440\u0430\u0441\u0442\u0438\u0435\u043C: \u0434\u0440\u0443\u0433\u0430 \u043F\u043E\u0445\u0432\u0430\u043B\u0438\u0442, \u0441\u043E\u043F\u0435\u0440\u043D\u0438\u043A\u0430 \u043E\u0447\u0435\u0440\u043D\u0438\u0442";
     return `<div class="opinion" title="${title}">\u0413\u043B\u0430\u0432\u043D\u044B\u0439, ${esc(o.head.name)}: \xAB${o.text}\xBB.${bias}</div>`;
   }
+  function handLine(p) {
+    const hands = handText(p);
+    if (!hands.length) return p.post ? `<div class="hand" data-hand="none">\u041F\u043E\u0447\u0435\u0440\u043A: \u0440\u043E\u0432\u043D\u043E, \u0431\u0435\u0437 \u0443\u043A\u043B\u043E\u043D\u0430${designer ? "" : " (\u043D\u0430\u0441\u043A\u043E\u043B\u044C\u043A\u043E \u0438\u0437\u0432\u0435\u0441\u0442\u043D\u043E)"}.</div>` : "";
+    const rows = hands.map((x) => {
+      if (!designer && !axisKnown(p, x.axis)) return `<div class="hand unknown" data-hand="unknown">${x.shade ? "\u041E\u0442\u0442\u0435\u043D\u043E\u043A \u043F\u043E\u0447\u0435\u0440\u043A\u0430" : "\u041F\u043E\u0447\u0435\u0440\u043A"}: \u0441\u043A\u043B\u043E\u043D\u043D\u043E\u0441\u0442\u044C \u0435\u0449\u0451 \u043D\u0435 \u0440\u0430\u0441\u043A\u0440\u044B\u0442\u0430.</div>`;
+      const title = x.shade ? "\u041E\u0442\u0442\u0435\u043D\u043E\u043A \u043F\u043E\u0447\u0435\u0440\u043A\u0430" : `\u041F\u043E\u0447\u0435\u0440\u043A${isStale(p) ? " (\u0437\u0430\u0441\u0438\u0434\u0435\u043B\u0441\u044F: \u0432\u0434\u0432\u043E\u0435 \u0441\u0438\u043B\u044C\u043D\u0435\u0435)" : ""}`;
+      return `<div class="hand" data-hand="${x.axis}">${title} \u2014 <b style="color:${AXIS_COLOR[x.axis]}">${AXIS_NAMES[x.axis]}</b>: ${esc(x.text)}.</div>`;
+    });
+    return rows.join("");
+  }
   function renderPeople() {
     $("people").innerHTML = w.people.map((p) => {
       const noOrder = !p.order && orderCost(w) > w.authority ? "disabled" : "";
@@ -3287,6 +3567,7 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
           <div class="decisions">\u0420\u0435\u0448\u0435\u043D\u0438\u0439: <b>${p.decisions}</b>${match}</div>
         </div>
       </div>
+      ${handLine(p)}
       ${opinionLine(p)}
       <details class="bio"><summary>\u0411\u0438\u043E\u0433\u0440\u0430\u0444\u0438\u044F</summary><ul>${p.bio.map((b) => `<li>${esc(b)}</li>`).join("")}</ul></details>
       <div class="card-actions">
@@ -3374,6 +3655,7 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
     hands: "\u0440\u0443\u043A\u0438",
     flow: "\u043F\u043E\u0442\u043E\u043A\u0438",
     year: "\u043C\u043D\u043E\u0436\u0438\u0442\u0435\u043B\u0438 \u043F\u043E \u0441\u0435\u0437\u043E\u043D\u0430\u043C",
+    hand: "\u043F\u043E\u0447\u0435\u0440\u043A",
     course: "\u043A\u0443\u0440\u0441",
     tax: "\u0443\u0440\u043E\u043A \u0438 \u0442\u0435\u0440\u043F\u0435\u043D\u0438\u0435 \u0413\u0435\u0440\u0446\u043E\u0433\u0430",
     rate: "\u043A\u0443\u0440\u0441\u044B \u043F\u043E\u0434\u0430\u0442\u0438",
