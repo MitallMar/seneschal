@@ -1,5 +1,6 @@
 // Отчёт по ботам: работают ли механики на сотне партий, где нужна балансировка, какие решения пустые (задание — docs/design/boty.md).
-// Запуск: npm run bots -- [--seeds=100] [--seasons=12] [--level=1|2|3] [--pair=О3] [--lab] [--full] [--save] [--diff]
+// Запуск: npm run bots -- [--seeds=100] [--seasons=12] [--level=1|2|3|4] [--pair=О3 | --pair=заготовка:pisar] [--lab] [--full] [--save] [--diff]
+//   уровень 4 — перепроверки (boty.md, раздел 11);
 //   --full  — у каждой пары все метрики, а не только разошедшиеся;
 //   --brief — только первые строки и сравнение со снимком (так зовёт npm run balance);
 //   --save  — записать средние по ботам в tools/balance.snapshot.json (коммитится вместе с правкой balance.ts);
@@ -8,12 +9,13 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { BALANCE } from "../src/sim/balance";
-import { botsReport, METRICS, type BotStats, type PairStats, type MetricDef } from "../src/sim/bots-report";
+import { botsReport, outcomeStats, METRICS, type BotStats, type PairStats, type MetricDef } from "../src/sim/bots-report";
+import { bot } from "../src/sim/bots";
 
 const arg = (name: string, def: string) => process.argv.find((a) => a.startsWith(`--${name}=`))?.split("=")[1] ?? def;
 const has = (name: string) => process.argv.includes(`--${name}`);
 const seeds = Number(arg("seeds", String(BALANCE.bots.seeds))), seasons = Number(arg("seasons", String(BALANCE.bots.seasons)));
-const levels = arg("level", "1,2,3").split(",").map(Number), onlyPair = arg("pair", "") || undefined;
+const levels = arg("level", "1,2,3,4").split(",").map(Number), onlyPair = arg("pair", "") || undefined;
 const file = resolve(dirname(fileURLToPath(import.meta.url)), "balance.snapshot.json");
 const brief = has("brief"), full = has("full");
 
@@ -21,33 +23,35 @@ const num = (v: number, def: MetricDef) => (def.pct ? `${(v * 100).toFixed(0)}%`
 const signed = (v: number, def: MetricDef) => `${v > 0 ? "+" : ""}${def.pct ? `${(v * 100).toFixed(0)} п.` : v.toFixed(Math.max(1, def.digits)).replace(".", ",")}`;
 const def = (id: string) => METRICS.find((m) => m.id === id)!;
 
-const r = botsReport(seeds, seasons, has("lab"), onlyPair ? [1, 2, 3] : levels, onlyPair);
+const r = botsReport(seeds, seasons, has("lab"), onlyPair ? [1, 2, 3, 4] : levels, onlyPair);
 const of = (id: string) => r.stats.find((s) => s.bot.id === id);
 const pair = (id: string) => r.pairs.find((p) => p.variant.id === id);
 
 function verdictLine(p: PairStats): string {
   const word = p.verdict === "пустое" ? "РЕШЕНИЕ ПУСТОЕ" : p.verdict === "слабо" ? "расходится слабо" : "расходится";
   const n = p.n < r.seeds ? ` (сыграна на ${p.n} семенах из ${r.seeds})` : "";
-  return `${p.variant.id.padEnd(4)} ${p.variant.name} — ${word}${n}`;
+  const vs = p.variant.base !== p.base.id ? ` [против ${p.base.id}]` : "";
+  return `${p.variant.id.padEnd(4)} ${p.variant.name}${vs} — ${word}${n}`;
 }
 function printPair(p: PairStats) {
   console.log(`  ${verdictLine(p)}`);
   if (p.variant.asks) console.log(`       проверяет: ${p.variant.asks}`);
-  const rows = full ? p.diffs : p.top.slice(0, 7);
+  // сначала исходы партии, потом само действие и замеры
+  const rows = full ? p.diffs : [...p.top.filter((d) => !d.own).slice(0, 7), ...p.top.filter((d) => d.own).slice(0, 3)];
   for (const d of rows) {
-    const m = def(d.id), luck = d.own ? " (само действие, в вердикт не идёт)" : d.luck > 2 * Math.abs(d.diff) ? " (удача сильнее: разброс по семенам вдвое больше)" : "";
+    const m = def(d.id), luck = d.own ? " (само действие или замер, в вердикт не идёт)" : d.luck > 2 * Math.abs(d.diff) ? " (удача сильнее: разброс по семенам вдвое больше)" : "";
     if (!full && /^[+-]?0(,0+)?( п\.)?$/.test(signed(d.diff, m).replace("+", ""))) continue;
     console.log(`       ${m.name}: ${signed(d.diff, m)} ±${signed(2 * d.se, m).replace("+", "")}${luck}`);
   }
 }
 function printBot(s: BotStats, ids: string[]) {
   console.log(`  ${s.bot.name}:`);
-  for (const group of ["совет", "хозяйство", "авторитет"] as const) {
+  for (const group of ["совет", "хозяйство", "авторитет", "замеры"] as const) {
     const cells = METRICS.filter((m) => m.group === group && ids.includes(m.id)).map((m) => `${m.name} ${num(s.mean[m.id], m)}`);
     if (cells.length) console.log(`    ${group}: ${cells.join(" · ")}`);
   }
 }
-const ALL = METRICS.map((m) => m.id);
+const ALL = METRICS.filter((m) => !m.diag).map((m) => m.id);
 const KEY = ["leadOwn", "leadForeign", "disputes", "hostile", "complaints", "calm", "closed", "closedAll", "shortages", "patience", "refuse", "authority", "atCap", "spent", "burned"];
 
 console.log(`Боты: ${r.seeds} семян × ${r.seasons} сезонов, лабиринт ${r.lab ? "открыт" : "закрыт"}. Пары сравниваются по семенам попарно.`);
@@ -55,6 +59,7 @@ console.log(`Пара «пустая», если ни одна метрика н
 
 // первые строки: решает ли, на кого оставил, и сколько даёт игра руками
 const level2 = r.pairs.filter((p) => p.variant.level === 2);
+if (onlyPair) { console.log(""); for (const p of [...r.pairs, ...r.presets]) printPair(p); }
 if (level2.length) {
   const live = level2.filter((p) => p.verdict === "расходится").length;
   const head = live === 0 ? "выбор, на кого оставить совет, пока НИЧЕГО НЕ РЕШАЕТ" : `на кого оставил — решает: расходятся ${live} пар из ${level2.length}`;
@@ -71,7 +76,7 @@ if (idle) {
   console.log(`Характер на чужой должности: ${(m.leadForeign * 100).toFixed(1)}% ±${(200 * se).toFixed(1)} (${n} решений); на своей ${(m.leadOwn * 100).toFixed(1)}%. Порог отчёта осей — ${BALANCE.report.leadForeign * 100}%.`);
 }
 
-if (!brief) {
+if (!brief && !onlyPair) {
   if (levels.includes(1) && idle) {
     console.log("\n=== Уровень 1. Совет сам ===");
     printBot(idle, ALL);
@@ -88,7 +93,7 @@ if (!brief) {
     console.log("\n=== Уровень 3. Хозяин ===");
     printBot(of("master")!, ALL);
     console.log("\n  Пары к базе «Хозяин»:");
-    for (const p of r.pairs.filter((q) => q.variant.level === 3 && q.variant.id !== "master")) printPair(p);
+    for (const p of r.pairs.filter((q) => q.variant.level === 3 && q.variant.id !== "master" && q.base.id === "master")) printPair(p);
     if (of("random")) { console.log("\n  Вне пар:"); printBot(of("random")!, KEY); }
     console.log("\n  Авторитет: копится ли сам, когда его тратят");
     for (const id of ["idle", "master", "Х4", "Х6", "Х9"]) {
@@ -98,6 +103,60 @@ if (!brief) {
       console.log(`    ${s.bot.id.padEnd(7)} к концу ${num(m.authority, a)} · у потолка ${(m.atCap * 100).toFixed(0)}% · слабое слово ${(m.weak * 100).toFixed(0)}% · опора +${m.support.toFixed(1)} · потрачено ${m.spent.toFixed(1)} · добыто ${signed(m.earned, a)} · сгорело ${m.burned.toFixed(1)}`);
     }
   }
+}
+
+if (!brief && !onlyPair && levels.includes(4) && of("Х6б")) {
+  const m = (id: string) => of(id)!.mean, f1 = (v: number) => v.toFixed(1).replace(".", ","), f2 = (v: number) => v.toFixed(2).replace(".", ",");
+  console.log("\n=== Уровень 4. Перепроверки (boty.md, раздел 11) ===");
+  console.log("\n  11.1. Наказ: сколько раз за партию он был применим и чем кончилось");
+  for (const id of ["О5", "О5б", "О5в", "О5г", "Х6", "Х6б", "Х6в"]) {
+    const x = m(id), share = (v: number) => (x.orderFit ? `${((v / x.orderFit) * 100).toFixed(0)}%` : "—");
+    console.log(`    ${id.padEnd(4)} применим ${f1(x.orderFit)} · поменял выбор ${f2(x.orderWorked)} (${share(x.orderWorked)}) · и так выбрал бы ${share(x.orderAlready)}`
+      + ` · не услышан ${share(x.orderDeaf)} · прибавки не хватило ${share(x.orderWeak)} · потрачено ${f1(x.spent)}`);
+  }
+  for (const id of ["О5б", "О5в", "О5г", "Х6б", "Х6в"]) printPair(pair(id)!);
+
+  console.log("\n  11.2. Знание о людях: стремления через разговор");
+  for (const id of ["master", "Х2", "Х2б", "Х2в"]) {
+    const runs = of(id)!.runs.map((x) => x.aspAt).sort((a, b) => a - b), p90 = runs[Math.ceil(runs.length * 0.9) - 1];
+    const never = runs.filter((v) => v > r.seasons).length;
+    console.log(`    ${id.padEnd(6)} стремления совета известны к сезону: в среднем ${f1(m(id).aspAt)}, у 90% партий — к ${p90 > r.seasons ? "концу не узнал" : p90}; не узнал за партию — ${never} из ${r.seeds}`);
+  }
+  for (const p of r.pairs.filter((q) => ["Х2б", "Х2в"].includes(q.variant.id))) printPair(p);
+
+  console.log("\n  11.3. Заготовка «Наследство прежних баронов»: три должности из пяти не по годности");
+  for (const id of ["Н1", "Н3", "Н10"]) printPair(pair(id)!);
+
+  console.log("\n  11.4. Исходы дел совета: что остаётся в запасах и доверии сторон (на одно дело)");
+  const NAMES: Record<string, string> = {
+    alone: "решил один", agree: "сошлись", deal: "договорились", judge: "рассудил главный", compromise: "компромисс", push: "продавил",
+    rival: "соперник настоял", sabotage: "саботаж", silent: "враг смолчал", ordered: "по приказу", empty: "должности пусты",
+  };
+  for (const [title, b] of [["обычная партия", bot("idle")], ["заготовка «Враги в совете»", { ...bot("idle"), preset: "vragi" }]] as const) {
+    console.log(`    ${title}:`);
+    for (const row of outcomeStats(b, seeds, seasons)) {
+      console.log(`      ${NAMES[row.outcome].padEnd(18)} ${f1(row.perParty).padStart(5)} за партию · размах ${f2(row.size)} · запасы ${f2(row.stock)} · доверие ${f2(row.trust)}`
+        + ` · порядок ${f2(row.order)} · не тронуло запасов и доверия ${(row.none * 100).toFixed(0)}%`);
+    }
+  }
+
+  console.log("\n  11.5. Подать нынешним урожаем: сколько вносит автоплата совета после жатвы");
+  for (const id of ["idle", "master", "Х12", "Х17", "Х17б"]) {
+    const x = m(id);
+    console.log(`    ${id.padEnd(6)} внесено ${f1(x.paid)} мер, из них автоплатой после жатвы ${f1(x.autoPaid)} (${x.paid ? ((x.autoPaid / x.paid) * 100).toFixed(0) : 0}%) · уроков закрыто ${f2(x.closed)} · все уроки ${(x.closedAll * 100).toFixed(0)}%`);
+  }
+  for (const id of ["Х17", "Х17б"]) printPair(pair(id)!);
+
+  console.log("\n  11.6. Пиры");
+  for (const id of ["Х9б", "Х9в"]) printPair(pair(id)!);
+
+  console.log("\n  11.7. Нижние черты и цена недодачи");
+  for (const id of ["Х16", "master", "Х16б"]) {
+    const x = m(id), per = (v: number) => (x.shortages ? f2(v / x.shortages) : "—");
+    console.log(`    ${id.padEnd(6)} сезонов с недодачей ${f2(x.shortages)} · на один такой сезон: еды недодано ${per(x.shortFood)}, серебра ${per(x.shortSilver)}, доверия ушло ${per(x.shortTrust)}`
+      + ` · уроков закрыто ${f2(x.closed)} · все уроки ${(x.closedAll * 100).toFixed(0)}% · терпение Герцога ${f1(x.patience)}`);
+  }
+  printPair(pair("Х16б")!);
 }
 
 const flat = (): Record<string, number> => {

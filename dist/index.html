@@ -1444,6 +1444,14 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
     }
   };
 
+  // src/sim/probe.ts
+  var blank = () => ({
+    order: { fit: 0, worked: 0, already: 0, deaf: 0, weak: 0 },
+    autoPaid: 0,
+    short: { seasons: 0, food: 0, silver: 0, trust: 0, order: 0 }
+  });
+  var PROBE = blank();
+
   // src/sim/economy.ts
   var clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   var r1 = (v) => Math.round(v * 10) / 10;
@@ -1758,7 +1766,9 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
     const T = BALANCE.economy.tax, t = w2.eco.tax, left = taxLeft(w2);
     if (left > 0 && w2.eco.autoPay) {
       const sub = [];
-      if (autoPayTax(w2, sub)) lines.push(`\u0421\u043E\u0432\u0435\u0442 \u0441\u0430\u043C \u0437\u0430\u043A\u0440\u044B\u0432\u0430\u0435\u0442 \u0443\u0440\u043E\u043A, \u043D\u0435 \u0442\u0440\u043E\u0433\u0430\u044F \u043D\u0438\u0436\u043D\u0438\u0445 \u0447\u0435\u0440\u0442. ${sub.filter((x) => !x.startsWith("\u041E\u0441\u0442\u0430\u043B\u043E\u0441\u044C") && !x.startsWith("\u0423\u0440\u043E\u043A")).join(" ")}`);
+      const auto = autoPayTax(w2, sub);
+      PROBE.autoPaid += auto;
+      if (auto) lines.push(`\u0421\u043E\u0432\u0435\u0442 \u0441\u0430\u043C \u0437\u0430\u043A\u0440\u044B\u0432\u0430\u0435\u0442 \u0443\u0440\u043E\u043A, \u043D\u0435 \u0442\u0440\u043E\u0433\u0430\u044F \u043D\u0438\u0436\u043D\u0438\u0445 \u0447\u0435\u0440\u0442. ${sub.filter((x) => !x.startsWith("\u041E\u0441\u0442\u0430\u043B\u043E\u0441\u044C") && !x.startsWith("\u0423\u0440\u043E\u043A")).join(" ")}`);
     }
     const rest = taxLeft(w2), closed = rest <= 0;
     if (closed) {
@@ -1795,11 +1805,14 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
     if (kind === SPRING && plan.sown < 1) lines.push(`\u041F\u043E\u0441\u0435\u0432\u043D\u0430\u044F: \u0440\u0443\u043A \u0432 \u043F\u043E\u043B\u0435 \u0445\u0432\u0430\u0442\u0438\u043B\u043E \u043D\u0430 ${Math.round(plan.sown * 100)}% \u043F\u043E\u043B\u044F \u2014 \u0443\u0440\u043E\u0436\u0430\u0439 \u043E\u0441\u0435\u043D\u044C\u044E \u0431\u0443\u0434\u0435\u0442 \u043C\u0435\u043D\u044C\u0448\u0435.`);
     if (kind === AUTUMN) lines.push(`\u0416\u0430\u0442\u0432\u0430: \u0432 \u0430\u043C\u0431\u0430\u0440 \u043B\u0435\u0433\u043B\u043E ${plan.harvest} \u0435\u0434\u044B.`);
     if (plan.short.length) e.shortages++;
+    if (plan.short.length) PROBE.short.seasons++;
     for (const s of plan.short) {
-      addTrust(w2, s.side, -E.trust.short * s.v);
+      PROBE.short[s.cat === "eda" ? "food" : "silver"] += s.v;
+      PROBE.short.trust += -addTrust(w2, s.side, -E.trust.short * s.v);
       let note = `\u26A0 \u041D\u0435\u0434\u043E\u0434\u0430\u0447\u0430: ${s.what} \u2014 \u043D\u0435 \u0445\u0432\u0430\u0442\u0438\u043B\u043E ${s.v} (${CATEGORY_NAMES[s.cat].toLowerCase()}). ${SIDE_NAMES[s.side]}: \u0434\u043E\u0432\u0435\u0440\u0438\u0435 \u043F\u0430\u0434\u0430\u0435\u0442.`;
       if (s.cat === "serebro" && s.side === "zamok") {
         w2.resources.poryadok = r1(w2.resources.poryadok - E.trust.shortOrder * s.v);
+        PROBE.short.order += E.trust.shortOrder * s.v;
         note += " \u0421\u0442\u0440\u0430\u0436\u0430 \u0440\u0430\u0441\u0445\u043E\u0434\u0438\u0442\u0441\u044F \u2014 \u043F\u043E\u0440\u044F\u0434\u043A\u0430 \u043C\u0435\u043D\u044C\u0448\u0435.";
       }
       if (s.side === "kuptsy") {
@@ -2351,11 +2364,14 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
       const parts = [];
       const lead = opt.axes.reduce((b, a) => p.star[a] > p.star[b] ? a : b, opt.axes[0]);
       parts.push(`\u043F\u043E ${AXIS_DAT[lead]}`);
+      let bonus = 0;
+      const heard = !!p.order && opt.axes.includes(p.order);
       if (p.order && opt.axes.includes(p.order)) {
         const obey = Math.max(0, p.loyalty + BALANCE.decide.orderObeyBase + mod(p, "obedience") - (stale2 ? BALANCE.decide.orderStalePenalty : 0));
-        const bonus = obey * BALANCE.decide.orderWeight;
-        if (bonus > BALANCE.decide.orderMinBonus) {
-          base += bonus;
+        const add = obey * BALANCE.decide.orderWeight;
+        if (add > BALANCE.decide.orderMinBonus) {
+          base += add;
+          bonus = add;
           parts.push("\u043F\u043E \u043D\u0430\u043A\u0430\u0437\u0443");
         }
       }
@@ -2375,16 +2391,26 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
         parts.push("\u043F\u043E \u043A\u0443\u0440\u0441\u0443");
       }
       const noise = noisy ? w2.rng.gauss() * Math.max(0, BALANCE.decide.noise + mod(p, "random")) : 0;
-      return { opt, score: base + noise, base, why: parts.join(", ") };
+      return { opt, score: base + noise, base, why: parts.join(", "), bonus, heard };
     });
   }
   var trace = [];
   var outcome = "alone";
   var bypassed = false;
+  function probeOrder(scored, best) {
+    if (!scored.some((s) => s.heard)) return;
+    const o = PROBE.order, plain = scored.reduce((a, b) => b.score - b.bonus > a.score - a.bonus ? b : a);
+    o.fit++;
+    if (plain.heard) o.already++;
+    else if (best.heard) o.worked++;
+    else if (!scored.some((s) => s.bonus > 0)) o.deaf++;
+    else o.weak++;
+  }
   function decide(w2, p, ev) {
     const scored = scoreOptions(w2, p, ev, true, true);
     const best = scored.reduce((a, b) => b.score > a.score ? b : a);
     const expected = scored.reduce((a, b) => b.base > a.base ? b : a);
+    probeOrder(scored, best);
     const row = (s) => `${s.opt.id === best.opt.id ? "\u2192 " : ""}\xAB${s.opt.text}\xBB ${round1(s.score)} (\u0431\u0435\u0437 \u0441\u043B\u0443\u0447\u0430\u044F ${round1(s.base)}; ${s.why})`;
     trace.push(`${p.name}: ${scored.map(row).join(" \xB7 ")}`);
     if (scored.length < ev.options.length) trace.push(`${p.name}: \u043F\u043E\u0434 \u043D\u0438\u0436\u043D\u0435\u0439 \u0447\u0435\u0440\u0442\u043E\u0439, \u043D\u0435 \u0440\u0430\u0441\u0441\u043C\u0430\u0442\u0440\u0438\u0432\u0430\u043B${p.female ? "\u0430" : ""} \u2014 ${ev.options.length - scored.length}`);
@@ -2828,6 +2854,19 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
       t.carried = Math.round(t.lesson * (1 + BALANCE.economy.tax.arrears) / 2);
       t.due = t.lesson + t.carried;
       t.patience = Math.max(0, BALANCE.economy.tax.displeased - 1);
+    } },
+    { id: "nasledstvo", name: "\u041D\u0430\u0441\u043B\u0435\u0434\u0441\u0442\u0432\u043E \u043F\u0440\u0435\u0436\u043D\u0438\u0445 \u0431\u0430\u0440\u043E\u043D\u043E\u0432", desc: "\u0441\u043E\u0432\u0435\u0442 \u0441\u043E\u0431\u0438\u0440\u0430\u043B\u0438 \u043F\u043E \u0440\u043E\u0434\u0441\u0442\u0432\u0443 \u0438 \u043C\u0438\u043B\u043E\u0441\u0442\u0438: \u043D\u0430 \u0442\u0440\u0451\u0445 \u0434\u043E\u043B\u0436\u043D\u043E\u0441\u0442\u044F\u0445 \u0438\u0437 \u043F\u044F\u0442\u0438 \u2014 \u043B\u044E\u0434\u0438 \u043D\u0435 \u043F\u043E \u0433\u043E\u0434\u043D\u043E\u0441\u0442\u0438", apply: (w2) => {
+      for (const d of w2.rng.shuffle(POSTS).slice(0, Math.ceil(POSTS.length / 2))) {
+        const free = w2.people.filter((p) => !p.post);
+        const next = free.reduce((a, b) => fitness(b, d.id) < fitness(a, d.id) ? b : a);
+        const tenure = w2.rng.int(BALANCE.staff.startTenureMin, BALANCE.staff.startTenureMax);
+        vacate(w2, d.id);
+        w2.posts[d.id] = next.id;
+        next.post = d.id;
+        next.tenure = tenure;
+        next.exp = Math.min(tenure, BALANCE.exp.master);
+      }
+      w2.head ?? (w2.head = council2(w2).reduce((a, b) => b.loyalty > a.loyalty ? b : a).id);
     } }
   ];
   function newPreset(seed, presetId, labOpen = false) {

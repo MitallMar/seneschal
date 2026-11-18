@@ -601,7 +601,7 @@ async def s_emu(br, errs):
 
     # заготовки
     presets = await pg.evaluate("()=>[...document.querySelectorAll('#preset option')].map(o=>o.value)")
-    ok('заготовок девять и «без заготовки»', len(presets) == 10 and presets[0] == '', presets)
+    ok('заготовок десять и «без заготовки»', len(presets) == 11 and presets[0] == '', presets)
     await pg.select_option('#preset', 'pusto')
     council = await pg.evaluate(COUNCIL)
     ok('заготовка «Пустая должность»: ключника нет, партия начата заново', council[2]['holder'] == '' and (await status(pg))['season'] == 'весна, год 1' and 'Заготовка: Пустая должность' in await pg.evaluate(LOG), council[2])

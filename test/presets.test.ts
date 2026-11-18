@@ -2,7 +2,7 @@
 import { test, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import { BALANCE, resetBalance } from "../src/sim/balance";
-import { newWorld, runSeason, runEvent, holder, getRel, isStale } from "../src/sim/sim";
+import { newWorld, runSeason, runEvent, holder, getRel, isStale, fitness } from "../src/sim/sim";
 import { EVENTS } from "../src/data/events";
 import { PRESETS, newPreset } from "../src/sim/presets";
 import { zoneOf, patienceWord, taxLeft, doer, planSeason } from "../src/sim/economy";
@@ -12,8 +12,8 @@ import { dump } from "./_world";
 afterEach(() => resetBalance());
 const make = (id: string) => newPreset("заготовка", id);
 
-test("заготовки: девять ситуаций, id не повторяются, каждая детерминирована и играется двенадцать сезонов", () => {
-  assert.equal(PRESETS.length, 9);
+test("заготовки: десять ситуаций, id не повторяются, каждая детерминирована и играется двенадцать сезонов", () => {
+  assert.equal(PRESETS.length, 10);
   assert.equal(new Set(PRESETS.map((p) => p.id)).size, PRESETS.length);
   for (const p of PRESETS) {
     const a = make(p.id), b = make(p.id);
@@ -69,4 +69,16 @@ test("веса вариантов: у решения в летописи зап�
   w.eco.floor.eda = 99;
   const cut = runEvent(w, EVENTS.find((e) => e.id === "svadba")!);
   assert.ok(cut.weights!.some((l) => l.includes("под нижней чертой")), cut.weights!.join(" | "));
+});
+
+test("заготовка «Наследство прежних баронов»: три должности из пяти у людей не по годности, детерминирована", () => {
+  for (const seed of ["наследство", "лес", "x"]) {
+    const plain = newWorld(seed), w = newPreset(seed, "nasledstvo");
+    assert.equal(dump(w), dump(newPreset(seed, "nasledstvo")), seed);
+    const changed = (["starosta", "desyatnik", "klyuchnik", "pisar", "lesnichiy"] as const).filter((post) => holder(w, post)!.id !== holder(plain, post)!.id);
+    assert.equal(changed.length, 3, `${seed}: сменились три должности`);
+    assert.equal(w.people.filter((p) => p.post).length, 5, "пустых должностей нет");
+    for (const post of changed) assert.ok(fitness(holder(w, post)!, post) < fitness(holder(plain, post)!, post), `${seed}, ${post}: новый держатель годен меньше`);
+    assert.ok(w.head != null && w.people[w.head].post, "главный — из совета");
+  }
 });

@@ -2,9 +2,11 @@
 import { test, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import { BALANCE, resetBalance } from "../src/sim/balance";
-import { newWorld, runSeason, holder, isStale, getRel, relWord } from "../src/sim/sim";
+import { newWorld, runSeason, runEvent, holder, isStale, getRel, relWord } from "../src/sim/sim";
 import { BOTS, bot, playBot, rivals, type Bot } from "../src/sim/bots";
-import { METRICS, metricsOf, botStats, pairStats, botsReport } from "../src/sim/bots-report";
+import { METRICS, metricsOf, botStats, pairStats, botsReport, outcomeStats } from "../src/sim/bots-report";
+import { PROBE, resetProbe } from "../src/sim/probe";
+import { EVENTS } from "../src/data/events";
 import { PRESETS } from "../src/sim/presets";
 import { dump } from "./_world";
 
@@ -13,8 +15,8 @@ const world = (seed: string, id: string, seasons = 12) => playBot(seed, bot(id),
 
 test("боты: три уровня, пары О1–О6 и Х1–Х16 к своим базам, id не повторяются", () => {
   assert.equal(new Set(BOTS.map((b) => b.id)).size, BOTS.length);
-  assert.deepEqual(BOTS.filter((b) => b.base === "left").map((b) => b.id), ["О1", "О2", "О3", "О4", "О5", "О6"]);
-  assert.deepEqual(BOTS.filter((b) => b.base === "master").map((b) => b.id), Array.from({ length: 16 }, (_, i) => `Х${i + 1}`));
+  assert.deepEqual(BOTS.filter((b) => b.base === "left" && b.level === 2).map((b) => b.id), ["О1", "О2", "О3", "О4", "О5", "О6"]);
+  assert.deepEqual(BOTS.filter((b) => b.base === "master" && b.level === 3).map((b) => b.id), Array.from({ length: 16 }, (_, i) => `Х${i + 1}`));
   assert.equal(bot("master").base, "idle");
   for (const b of BOTS.filter((q) => q.base)) assert.ok(b.asks, `${b.id}: написано, что проверяет`);
   assert.throws(() => bot("нет такого"), /Нет бота/);
@@ -122,7 +124,82 @@ test("отчёт целиком: уровни, пары, заготовки; п�
   assert.ok(r.presets.every((p) => p.base.id === "idle"));
   const o3 = r.pairs.find((p) => p.variant.id === "О3")!;
   assert.ok(o3.n > 0 && o3.n <= 12);
-  const one = botsReport(8, 12, false, [1, 2, 3], "Х9");
+  const one = botsReport(8, 12, false, [1, 2, 3, 4], "Х9");
   assert.deepEqual(one.pairs.map((p) => p.variant.id), ["master", "Х9"]);
   assert.equal(BALANCE.bots.seeds, 100, "сто семян по умолчанию");
+});
+
+// ---------- перепроверки (boty.md, раздел 11) ----------
+
+test("зонд ничего не меняет: партия с наказами совпадает до числа, сколько бы раз его ни читали и ни сбрасывали", () => {
+  const a = playBot("зонд", bot("О5в"));
+  resetProbe();
+  const b = playBot("зонд", bot("О5в"));
+  assert.equal(dump(a.w), dump(b.w));
+  assert.deepEqual(a.probe, b.probe, "зонд считает одно и то же");
+  assert.ok(a.probe.order.fit > 0);
+  const o = a.probe.order;
+  assert.equal(o.worked + o.already + o.deaf + o.weak, o.fit, "каждый применимый наказ кончился одним из четырёх исходов");
+  assert.deepEqual(playBot("зонд", bot("idle")).probe.order, { fit: 0, worked: 0, already: 0, deaf: 0, weak: 0 }, "без наказа зонд наказа молчит");
+});
+
+test("наказ сработал: послушному наказ меняет выбор, обиженному — не слышен", () => {
+  const count = (loyalty: number) => {
+    resetProbe();
+    for (let i = 0; i < 40; i++) {
+      const w = newWorld(`наказ-${i}`);
+      w.eco.floor = { eda: 0, serebro: 0 };
+      const p = holder(w, "klyuchnik")!;
+      p.star = { dolg: 6, vygoda: 5, zabota: 5, derzost: 5, obychai: 5 };
+      p.loyalty = loyalty; p.tenure = 5; p.order = "zabota";
+      runEvent(w, EVENTS.find((e) => e.id === "svadba")!);
+    }
+    return { ...PROBE.order };
+  };
+  const loyal = count(10), bitter = count(-10);
+  assert.equal(loyal.fit, 40);
+  assert.ok(loyal.worked > 20, `послушный: поменял выбор ${loyal.worked} раз из 40`);
+  assert.equal(bitter.worked, 0);
+  assert.ok(bitter.deaf > 20, `обиженный: не услышал ${bitter.deaf} раз из 40`);
+});
+
+test("новые привычки делают заявленное: наказы, стремления через разговор, плата без автоплаты, пиры, двойные черты", () => {
+  const run = (id: string, seed = "перепроверка") => playBot(seed, bot(id));
+  const orders = (id: string) => run(id, "перепроверка").w.people.filter((p) => p.order).map((p) => p.order);
+  assert.equal(orders("О5в").length, 5, "наказ каждому в совете");
+  assert.ok(orders("О5в").every((a) => a === "zabota"), "против курса «Копим» — Забота");
+  const weak = playBot("перепроверка", bot("О5б"), 1).w, head = weak.people[weak.head!];
+  assert.equal(head.startStar[head.order!], Math.min(...Object.values(head.startStar)), "наказ по слабейшей склонности главного");
+  const g = playBot("перепроверка", bot("О5г"), 1).w;
+  assert.deepEqual([g.eco.course, g.people[g.head!].order], [null, "vygoda"]);
+  // стремления: Х2б ставит на желанную должность только тех, чьё стремление открыто
+  assert.ok(run("Х2в").aspAt < run("Х2б").aspAt, "выспрашивать стремления первыми — быстрее");
+  assert.ok(run("Х2б").aspAt <= 12 && run("Х10").aspAt === 13, "кто не говорит, стремлений не узнаёт");
+  // подать
+  assert.equal(run("Х17").probe.autoPaid, 0);
+  assert.equal(run("Х17б").probe.autoPaid, 0);
+  assert.ok(run("idle").probe.autoPaid > 0);
+  const paidInSpring = playBot("перепроверка", bot("Х17б"), 1).w.eco.tax.paid, none = playBot("перепроверка", bot("Х17"), 1).w.eco.tax.paid;
+  assert.ok(paidInSpring > 0 && none === 0, "Х17б платит уже весной, Х17 ждёт осени");
+  // пиры
+  const feasts = (id: string) => [1, 2, 3, 4, 5, 6].flatMap((i) => run(id, `пир-${i}`).w.auth.feasts);
+  assert.ok(feasts("Х9в").length > 0 && feasts("Х9в").every((s) => s % 4 === 0), "Х9в пирует только зимой");
+  assert.ok(feasts("Х9б").length < feasts("Х9").length, "Х9б пирует реже");
+  assert.deepEqual(run("Х16б").w.eco.floor, { eda: BALANCE.economy.start.floorEda * 2, serebro: BALANCE.economy.start.floorSerebro * 2 });
+  assert.equal(run("Н1").w.log.filter((e) => e.title.startsWith("Заготовка: Наследство")).length, 1);
+});
+
+test("отчёт перепроверок: пары уровня 4, вторая база у Х2б, замеры в вердикт не идут, исходы дел считаются", () => {
+  const r = botsReport(10, 12, false, [4]);
+  const ids = r.pairs.map((p) => `${p.variant.id}↔${p.base.id}`);
+  for (const want of ["О5б↔left", "О5г↔О6", "Х6в↔master", "Х2б↔master", "Х2б↔Х2", "Х17↔master", "Х9в↔master", "Х16б↔master", "Н1↔Н0", "Н3↔Н1", "Н10↔Н1"]) assert.ok(ids.includes(want), want);
+  const mandate = r.pairs.find((p) => p.variant.id === "Х6в")!;
+  assert.ok(mandate.diffs.find((d) => d.id === "orderFit")!.own, "замер наказа в вердикт не идёт");
+  assert.ok(METRICS.filter((m) => m.diag).length >= 8);
+  const one = botsReport(6, 12, false, [1, 2, 3, 4], "заготовка:pisar");
+  assert.deepEqual(one.presets.map((p) => p.variant.id), ["заготовка:pisar"]);
+  const rows = outcomeStats(bot("idle"), 10);
+  const alone = rows.find((x) => x.outcome === "alone")!;
+  assert.ok(alone.perParty > 10 && alone.size > 0 && alone.none < 1);
+  assert.ok(rows.some((x) => x.outcome === "agree"));
 });
