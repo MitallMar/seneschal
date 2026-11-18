@@ -4,6 +4,7 @@ import type { CourseId, PayId, Side, Stock } from "../data/types";
 import { SIDES, STOCKS, PAY } from "../data/economy";
 import { BALANCE as B } from "./balance";
 import { newWorld, runSeason, type World } from "./sim";
+import { authorityCap, type AuthKind } from "./authority";
 import { economySeason, payOptions, payTax, taxLeft, seasonKind, setCourse, zoneOf, patienceWord, type Zone } from "./economy";
 
 // Плательщик — привычка платить подать. Простые, для отчёта; привычки игрока целиком — боты (задача И3).
@@ -29,8 +30,10 @@ export interface EconomyMetrics {
   zones: Record<Side, Record<Zone, number>>; // доля партий по зонам сторон к концу
   stock: Record<Stock, number>;           // запасы к концу, в среднем
   carried: number;                        // недоимка, перенесённая за конец, в среднем
+  authority: { mean: number; min: number; max: number; atCap: number; low: number; by: Record<AuthKind, number> }; // авторитет к концу
 }
 
+const KINDS: AuthKind[] = ["support", "tax", "judge", "complaint", "feast", "order", "staff", "burn"];
 const r2 = (v: number) => Math.round(v * 100) / 100;
 const mean = (xs: number[]) => (xs.length ? xs.reduce((s, v) => s + v, 0) / xs.length : 0);
 
@@ -76,6 +79,11 @@ export function economyMetrics(seeds: number, seasons: number, payer: Payer = PA
     zones: Object.fromEntries(SIDES.map((s) => [s, Object.fromEntries(zoneNames.map((z) => [z, share((w) => zoneOf(w, s) === z)]))])) as EconomyMetrics["zones"],
     stock: Object.fromEntries(STOCKS.map((c) => [c, r2(mean(worlds.map((w) => w.eco.stock[c])))])) as Record<Stock, number>,
     carried: r2(mean(worlds.map((w) => w.eco.tax.carried))),
+    authority: {
+      mean: r2(mean(worlds.map((w) => w.authority))), min: Math.min(...worlds.map((w) => w.authority)), max: Math.max(...worlds.map((w) => w.authority)),
+      atCap: share((w) => w.authority >= authorityCap()), low: share((w) => w.authority <= B.staff.authorityStart / 2),
+      by: Object.fromEntries(KINDS.map((k) => [k, r2(mean(worlds.map((w) => w.auth.totals[k])))])) as Record<AuthKind, number>,
+    },
   };
 }
 

@@ -9,6 +9,7 @@ import { PAY, SIDES, SIDE_NAMES, CATEGORY_NAMES, STOCKS } from "../src/data/econ
 import { BALANCE } from "../src/sim/balance";
 import { economyMetrics, economyNotes, freeYear, PAYERS, type EconomyMetrics } from "../src/sim/economy-report";
 import type { Zone } from "../src/sim/economy";
+import { AUTH_KIND_NAMES, type AuthKind } from "../src/sim/authority";
 
 const arg = (name: string, def: string) => process.argv.find((a) => a.startsWith(`--${name}=`))?.split("=")[1] ?? def;
 const seeds = Number(arg("seeds", "20")), seasons = Number(arg("seasons", "12"));
@@ -25,6 +26,9 @@ for (const { p, m } of all) {
   console.log(`  чем и с кого, мер за партию: ${by || "ничем"}`);
   console.log(`  недодача: в среднем ${m.shortages} сезона из ${m.seasons}, хотя бы раз — в ${pct(m.shortParties)} партий; недоимка на конец ${m.carried} мер`);
   console.log(`  терпение Герцога к концу: ${Object.entries(m.patience).filter(([, v]) => v).map(([z, v]) => `${z} ${pct(v)}`).join(" · ")}`);
+  const au = m.authority, from = Object.entries(au.by).filter(([, v]) => v).map(([k, v]) => `${AUTH_KIND_NAMES[k as AuthKind]} ${v > 0 ? "+" : ""}${v}`).join(" · ");
+  console.log(`  авторитет к концу (старт ${BALANCE.staff.authorityStart}, потолок ${BALANCE.authority.cap}): в среднем ${au.mean}, от ${au.min} до ${au.max}; у потолка — ${pct(au.atCap)}, не выше половины старта — ${pct(au.low)}`);
+  console.log(`    откуда за партию: ${from}`);
   console.log(`  запасы к концу: ${STOCKS.map((c) => `${CATEGORY_NAMES[c].toLowerCase()} ${m.stock[c]}`).join(" · ")}`);
   console.log(`  зоны сторон к концу: ${SIDES.map((s) => `${SIDE_NAMES[s]} — ${Object.entries(m.zones[s]).filter(([, v]) => v).map(([z, v]) => `${z} ${pct(v)}`).join(", ")}`).join("; ")}\n`);
 }
@@ -47,6 +51,7 @@ const flat = (list: { p: { id: string }; m: EconomyMetrics }[]): Record<string, 
     out[`${p.id}: все годы закрыты`] = m.closedAll;
     m.closedByYear.forEach((v, y) => { out[`${p.id}: год ${y + 1} закрыт`] = v; });
     out[`${p.id}: недодач на партию`] = m.shortages;
+    out[`${p.id}: авторитет к концу`] = m.authority.mean;
     out[`${p.id}: внесено от назначенного`] = m.paidShare;
     for (const c of STOCKS) out[`${p.id}: ${CATEGORY_NAMES[c].toLowerCase()} к концу`] = m.stock[c];
   }

@@ -5,6 +5,7 @@ import type { Axis, Star, Side, Village, Stock, Category, HandsFrom, CourseId, C
 import { AXES, OPPOSED, TRAITS } from "../data/core";
 import { SIDES, VILLAGES, SIDE_NAMES, CATEGORY_NAMES, COURSES, ELDERS, PAY, HANDS_FROM, STOCKS, SEASON_NAMES } from "../data/economy";
 import { BALANCE as B } from "./balance";
+import { addAuthority } from "./authority";
 import { holder, fitness, isStale, topAxis, postName, STAR_MAX, REL_MAX, type World, type Person } from "./sim";
 
 // Строка ведомости: что пришло или ушло, от какой стороны, кто отвечал и как исполнял. hidden — строку спрятал тот, кто ведёт счёт.
@@ -393,8 +394,10 @@ function collect(w: World, lines: string[]): void {
     t.carried = 0;
     t.patience = r2(clamp(t.patience + (t.early ? T.early : T.onTime), 0, STAR_MAX));
     lines.push(`📜 Сборщица податей приняла урок${t.early ? " — внесён досрочно" : ""}: ${t.paid} мер из ${t.due}. Герцог ${patienceWord(t.patience)}.`);
+    addAuthority(w, t.early ? B.authority.taxEarly : B.authority.taxOnTime, t.early ? "подать закрыта досрочно" : "подать закрыта в срок", "tax");
   } else {
     t.carried = r1(rest * (1 + T.arrears));
+    addAuthority(w, -B.authority.taxArrears, "недоимка: слово Герцогу не сдержано", "tax");
     const loss = T.arrearsPatience * Math.max(0, 1 + T.dvor * (1 - zoneMult(w, "dvor")));
     t.patience = r2(clamp(t.patience - loss, 0, STAR_MAX));
     lines.push(`📜 Сборщица податей уехала с недобором: внесено ${t.paid} мер из ${t.due}. Недоимка ${rest} с надбавкой — ${t.carried} — ляжет на следующий год.`);

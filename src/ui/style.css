@@ -193,3 +193,17 @@ details.bio ul { margin: 4px 0 0; padding-left: 18px; line-height: 1.4; }
 .zone-заодно { background: #dbe8d3; } .zone-ладят { background: #ecf1df; } .zone-терпят { background: #f3e1cf; } .zone-отказывают { background: #ecc9bf; }
 .elder { font-size: 12px; color: var(--muted); margin-top: 3px; }
 .pat-благоволит { color: var(--good); } .pat-недоволен { color: var(--mixed); } .pat-на-исходе { color: var(--bad); }
+
+/* Стол Сенешаля */
+#desk-panel h3 { margin: 10px 0 4px; font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: normal; border-top: 1px solid var(--line); padding-top: 8px; }
+.auth-ledger { font-size: 12px; margin-top: 4px; }
+.auth-ledger p { margin: 2px 0; color: var(--muted); }
+.desk-text { margin: 0 0 4px; font-size: 14px; }
+.desk-advice { margin: 0 0 6px; font-size: 13px; font-style: italic; color: var(--muted); }
+.desk-opts { display: flex; flex-direction: column; gap: 4px; }
+.desk-opts button { text-align: left; font-size: 13px; padding: 4px 8px; }
+.ordered { margin: 6px 0 0; font-size: 13px; color: var(--accent); }
+.complaint { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 13px; padding: 2px 0; }
+.complaint button { padding: 2px 8px; font-size: 12px; }
+#desk-panel .hint { margin: 4px 0 0; }
+.badge.agreed { color: var(--good); border-color: var(--good); }
