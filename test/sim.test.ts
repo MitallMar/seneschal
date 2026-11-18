@@ -5,7 +5,7 @@ import { AXES, ASPIRATIONS, POSTS } from "../src/data/core";
 import { EVENTS } from "../src/data/events";
 import { BALANCE, resetBalance, setAt } from "../src/sim/balance";
 import {
-  newWorld, runSeason, runEvent, assign, assignCost, talk, giveOrder, holder, getRel, setRel, fitness, isStale, expWord,
+  newWorld, runSeason, runEvent, assign, assignCost, talk, giveOrder, holder, getRel, setRel, fitness, isStale, expWord, patronOf, patronText,
   relWord, loyaltyWord, type Person, type World,
 } from "../src/sim/sim";
 import { dump, fix, pair } from "./_world";
@@ -97,6 +97,54 @@ test("наследство прежних баронов: одна-две дол
   }
   assert.deepEqual([...seen].sort(), [1, 2], "бывает и одна, и две");
   assert.deepEqual([...hows].sort(), ["по милости", "по родству", "по старшинству"]);
+});
+
+test("покровитель: снять посаженного прежним бароном — обижен покровитель; по уговору мягче; обычного снять — никого не задевает", () => {
+  const kinds = new Set<string>();
+  for (let i = 0; i < 40; i++) {
+    const seed = `покровитель-${i}`;
+    for (const agreed of [false, true]) {
+      const w = newWorld(seed), l = w.legacy[0], p = holder(w, l.post)!;
+      assert.equal(patronOf(w, p), l);
+      assert.ok((l.side != null) !== (l.person != null), "покровитель — сторона или человек");
+      assert.ok(p.bio[p.bio.length - 1].includes(patronText(w, l)) && w.log[0].lines.some((x) => x.includes(patronText(w, l))), "покровитель виден в биографии и летописи");
+      const trust = { ...w.factions }, loyalty = w.people.map((x) => x.loyalty);
+      w.authority = 30; p.agreed = agreed;
+      assert.ok(assign(w, p.id, null));
+      const soft = agreed ? BALANCE.staff.patronAgreed : 1;
+      if (l.side) {
+        assert.equal(Math.round((trust[l.side] - w.factions[l.side]) * 10) / 10, BALANCE.staff.patronTrust * soft, `${seed}: доверие стороны-покровителя`);
+        assert.equal(l.side, { "по родству": l.side === "brod" ? "brod" : "opushka", "по старшинству": "zamok", "по милости": "dvor" }[l.how]);
+      } else {
+        assert.equal(l.how, "по родству");
+        assert.ok(l.person !== p.id);
+        assert.equal(Math.round((loyalty[l.person!] - w.people[l.person!].loyalty) * 10) / 10, BALANCE.staff.patronLoyalty * soft, `${seed}: отношение покровителя`);
+      }
+      assert.ok(w.log[w.log.length - 1].lines.some((x) => x.includes(`За ${p.name} стоял`)));
+      assert.ok(!w.legacy.includes(l) && !patronOf(w, p), "запись о наследстве ушла вместе с должностью");
+      kinds.add(l.side ? "сторона" : "человек");
+    }
+    // обычный держатель: ни доверие сторон, ни чужое отношение к Сенешалю не меняются
+    const w = newWorld(seed), plainPost = POSTS.find((d) => !w.legacy.some((l) => l.post === d.id))!.id, q = holder(w, plainPost)!;
+    const trust = { ...w.factions }, loyalty = w.people.map((x) => x.loyalty);
+    w.authority = 30;
+    assert.ok(assign(w, q.id, null));
+    assert.deepEqual(w.factions, trust, `${seed}: стороны не задеты`);
+    assert.ok(w.people.every((x) => x.id === q.id || x.loyalty === loyalty[x.id]), `${seed}: люди не задеты`);
+    assert.ok(!w.log[w.log.length - 1].lines.some((x) => x.includes("стоял")));
+  }
+  assert.deepEqual([...kinds].sort(), ["сторона", "человек"]);
+});
+
+test("покровитель: посаженного сменили другим человеком — покровитель обижен так же", () => {
+  const w = newWorld("покровитель-смена"), l = w.legacy[0], p = holder(w, l.post)!, other = w.people.find((x) => !x.post && x.id !== l.person)!;
+  const before = l.side ? w.factions[l.side] : w.people[l.person!].loyalty;
+  w.authority = 30;
+  assert.ok(assign(w, other.id, l.post));
+  const after = l.side ? w.factions[l.side] : w.people[l.person!].loyalty;
+  assert.equal(Math.round((before - after) * 10) / 10, l.side ? BALANCE.staff.patronTrust : BALANCE.staff.patronLoyalty);
+  assert.equal(holder(w, l.post)!.id, other.id);
+  assert.ok(!w.log[w.log.length - 1].lines.some((x) => x.includes(`За ${other.name}`)), `у ${p.name} был покровитель, у сменщика его нет`);
 });
 
 test("генерация: 10 персонажей с биографией и стремлением, звезда в пределах 0–10", () => {

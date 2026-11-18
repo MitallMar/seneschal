@@ -8,7 +8,8 @@ import { EVENTS } from "../src/data/events";
 import { SIDES, COURSES, PAY, ELDERS } from "../src/data/economy";
 import { HANDS, LEVERS } from "../src/data/handwriting";
 import { BALANCE, resetBalance, setAt } from "../src/sim/balance";
-import { newWorld, runSeason, runEvent, assign, holder, type World } from "../src/sim/sim";
+import { newWorld, runSeason, runEvent, assign, holder, setRel, type World } from "../src/sim/sim";
+import { councilSteady } from "../src/sim/authority";
 import {
   zoneWord, zoneOf, zoneMult, patienceWord, doer, setCourse, setFloor, courseStrength, handsNow, fieldHands, planSeason, economySeason,
   payOptions, payTax, taxLeft, lessonOf, forecastFork, ledgerOf, elderRel, elderSaw, addLine, seasonKind, mastery, handsOf, handText, levers,
@@ -32,9 +33,14 @@ function calm(seed = "хозяйство"): World {
 }
 // Старые проверки потоков считают исполнителя «как велено» за единицу: мастерство и опыт в них выключены ручками.
 function flat() {
+  noHead();
   setAt("economy.flow.scale", 1);   // и скудость земли: базовые потоки — как записаны в ручках
   for (const key of ["masteryMin", "masteryMax", "expNovice", "expSettled", "expMaster"]) setAt(`economy.doer.${key}`, 1);
   noHand();
+}
+// …и главный: его довод в настрое проверяется отдельно.
+function noHead() {
+  for (const key of ["headFor", "headAgainst"]) setAt(`economy.doer.${key}`, 0);
 }
 // …и почерк тоже: все его рычаги — в ноль.
 function noHand() {
@@ -258,6 +264,7 @@ test("исполнитель: с огоньком, как велено, без �
 });
 
 test("засидевшийся: опыт мастерский и выше, почерк вдвое сильнее, курс его не зажигает", () => {
+  noHead();
   const w = newWorld("засиделся");
   const p = fix(holder(w, "starosta")!, ["dolg"]);
   p.loyalty = BALANCE.loyalty.trusts;
@@ -594,10 +601,35 @@ test("отчёт о хозяйстве: метрики считаются по �
   assert.ok(free[1] < E.tax.trial, "при «ладят» урок испытания без жертв не закрыть");
 });
 
+test("главный в настрое: признан всеми и без вражды — довод «за» каждому; главного нет, не признан или вражда — довод «против»", () => {
+  noHand();
+  const w = newWorld("главный");
+  const council = POSTS.map((d) => fix(holder(w, d.id)!, ["dolg"]));
+  for (const p of council) p.loyalty = 0;
+  for (const a of council) for (const b of council) if (a.id < b.id) setRel(w, a.id, b.id, 3);
+  w.head = council[0].id;
+  const moods = () => POSTS.map((d) => doer(w, d.id).how);
+  assert.ok(councilSteady(w).ok);
+  assert.ok(moods().every((m) => m === "как велено"), "один довод «за» — ещё не огонёк");
+  council[1].loyalty = BALANCE.loyalty.trusts;
+  assert.equal(doer(w, council[1].post!).how, "с огоньком", "главный и доверие Сенешалю — два довода");
+  council[1].loyalty = 0;
+  w.head = null;
+  assert.ok(moods().every((m) => m === "без огонька"), "главного нет — довод «против» каждому");
+  w.head = council[0].id;
+  setRel(w, council[0].id, council[2].id, BALANCE.council.headMinRel - 1);
+  assert.ok(moods().every((m) => m === "без огонька"), "главного не признаёт один — страдают все");
+  setRel(w, council[0].id, council[2].id, 3);
+  setRel(w, council[3].id, council[4].id, BALANCE.rel.enemy);
+  assert.ok(moods().every((m) => m === "без огонька"), "вражда в совете");
+  noHead();
+  assert.ok(moods().every((m) => m === "как велено"), "ручки в ноль — довода нет");
+});
+
 // ---------- сила потока: мастерство × опыт × настрой (lyudi-i-ishody.md, 2.1) ----------
 
 test("сила потока: мастерство по годности, опыт и настрой перемножаются; в ведомости видно, из чего она сложилась", () => {
-  noHand();
+  noHand(); noHead();
   const w = newWorld("сила");
   const p = fix(holder(w, "starosta")!, ["zabota", "obychai"]);   // годность тиуна — Забота и Обычай: прирождённый
   p.loyalty = 0;

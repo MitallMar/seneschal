@@ -76,6 +76,9 @@ export interface LogEntry {
 // Дело на столе Сенешаля: событие, которое придёт в этом сезоне. order — приказ: какой вариант исполнить.
 export interface Desk { event: string; order?: string }
 
+// Должность, занятая не по годности, и покровитель посаженного: сторона или человек замка. Снял — запись уходит.
+export interface Legacy { post: PostId; how: string; side?: Side; person?: number }
+
 export interface World {
   seed: string;
   rng: Rng;
@@ -92,7 +95,7 @@ export interface World {
   desk: Desk | null;                       // дело на столе: событие будущего сезона, по которому Сенешаль может отдать приказ
   authority: number;
   deedsLeft: number;
-  legacy: { post: PostId; how: string }[];  // наследство прежних баронов: должности, занятые не по годности, и почему
+  legacy: Legacy[];  // наследство прежних баронов: должности, занятые не по годности, и почему
   log: LogEntry[];
 }
 
@@ -281,7 +284,7 @@ export function newWorld(seed: string, labOpen = false): World {
   pickDesk(w);
   const legacy = w.legacy.map((l) => {
     const p = holder(w, l.post)!;
-    return `Наследство прежних баронов: ${postName(l.post).toLowerCase()} ${p.name} посажен${p.female ? "а" : ""} ${l.how}, а не по годности.`;
+    return `Наследство прежних баронов: ${postName(l.post).toLowerCase()} ${p.name} посажен${p.female ? "а" : ""} ${l.how}, а не по годности. ${patronText(w, l)}`;
   });
   const lines = [
     `Совет достался от прежних баронов. Должности заняты давно — у людей есть стаж. ${legacy.length ? "По годности сидят не все." : "Все сидят по годности."}`,
@@ -349,10 +352,40 @@ function inherit(w: World) {
     prev.post = undefined; prev.tenure = 0; prev.exp = 0;
     passed.add(prev.id);
     w.posts[d.id] = next.id;
-    next.bio.push(gender(why.text.replace("{post}", postName(d.id)), next));
-    w.legacy.push({ post: d.id, how: why.how });
+    // покровитель: у родни — человек замка или деревня, у старшинства — люди замка, у милости — двор
+    const l: Legacy = { post: d.id, how: why.how };
+    if (why.id === "rodstvo" && w.rng.chance(B.staff.patronKin)) l.person = w.rng.pick(w.people.filter((p) => p.id !== next.id && p.id !== prev.id)).id;
+    else l.side = why.id === "rodstvo" ? w.rng.pick(VILLAGES) : why.id === "starshinstvo" ? "zamok" : "dvor";
+    next.bio.push(`${gender(why.text.replace("{post}", postName(d.id)), next)} ${patronText(w, l)}`);
+    w.legacy.push(l);
   }
   if (w.legacy.length) w.head = w.people.filter((p) => p.post).reduce((a, b) => (b.loyalty > a.loyalty ? b : a)).id;
+}
+
+const PATRON_SIDE: Partial<Record<Side, string>> = { brod: "родня в деревне у брода", opushka: "родня в деревне у опушки", zamok: "старшие слуги замка", dvor: "двор Герцога" };
+const patronName = (w: World, l: Legacy): string => (l.person != null ? `${w.people[l.person].name}, родня` : PATRON_SIDE[l.side!] ?? "прежние люди барона");
+export const patronText = (w: World, l: Legacy): string => `За ${holder(w, l.post)?.female ? "неё" : "него"} ${l.side === "zamok" ? "стоят" : "стоит"} ${patronName(w, l)}.`;
+// Покровитель посаженного прежним бароном, пока тот на должности.
+export function patronOf(w: World, p: Person): Legacy | undefined {
+  return p.post ? w.legacy.find((l) => l.post === p.post) : undefined;
+}
+// Сняли посаженного: покровитель обижен — падает доверие стороны или отношение человека к Сенешалю; по уговору — мягче.
+function offendPatron(w: World, p: Person, post: PostId, agreed: boolean, lines: string[]) {
+  const l = w.legacy.find((x) => x.post === post);
+  if (!l) return;
+  w.legacy = w.legacy.filter((x) => x !== l);
+  const soft = agreed ? B.staff.patronAgreed : 1, how = agreed ? " Ушёл по уговору — обида мягче." : "";
+  if (l.person != null) {
+    const o = w.people[l.person], v = round1(B.staff.patronLoyalty * soft);
+    if (!v) return;
+    o.loyalty = clamp(o.loyalty - v, -REL_MAX, REL_MAX);
+    lines.push(`За ${p.name} стоял${o.female ? "а" : ""} ${o.name}, родня: отношение к Сенешалю −${v}.${how}`);
+  } else if (l.side) {
+    const v = round1(B.staff.patronTrust * soft);
+    if (!v) return;
+    addTrust(w, l.side, -v);
+    lines.push(`За ${p.name} стоял${l.side === "dvor" ? "" : l.side === "zamok" ? "и" : "а"} ${PATRON_SIDE[l.side]}: доверие −${v}.${how}`);
+  }
 }
 
 // ---------- Перестановки ----------
@@ -397,6 +430,7 @@ export function assign(w: World, personId: number, post: PostId | null): boolean
     const prev = holder(w, post);
     if (prev) {
       prev.post = undefined; prev.tenure = 0; prev.exp = Math.floor(prev.exp * B.staff.removedExpKeep);
+      offendPatron(w, prev, post, !!prev.agreed, lines);
       if (prev.agreed) lines.push(`${prev.name} оставил${prev.female ? "а" : ""} должность «${postName(post)}» по уговору, без обиды.`);
       else {
         prev.loyalty = clamp(prev.loyalty + (prev.aspiration?.post === post ? B.staff.removedDesiredLoyalty : B.staff.removedLoyalty), -REL_MAX, REL_MAX);
@@ -405,7 +439,7 @@ export function assign(w: World, personId: number, post: PostId | null): boolean
       prev.agreed = false; prev.persuade = 0;
     }
   }
-  if (p.post) { w.posts[p.post] = null; }
+  if (p.post) { w.posts[p.post] = null; offendPatron(w, p, p.post, !!p.agreed || p.aspiration?.post === post, lines); }
   if (p.post && !post && p.agreed) lines.push(`${p.name} оставил${p.female ? "а" : ""} должность по уговору, без обиды.`);
   p.post = post ?? undefined; p.tenure = 0; p.exp = 0; p.agreed = false; p.persuade = 0;
   if (post) {
@@ -435,33 +469,31 @@ export function setHead(w: World, id: number | null) {
   if (id != null) w.log.push({ season: w.season, kind: "staff", title: "Главный на время отлучки", lines: [`За главного — ${w.people[id].name}.`] });
 }
 
-// Разговор — личное дело. Открывает по порядку: черты (ключевую и нажитые, кроме скрытых) → стремление → склонности словами.
-// Скрытный о главном в себе молчит, и личное дело не пропадает: тот же разговор сразу идёт дальше, к стремлению.
+// Разговор — личное дело. Открывает по порядку: стремление → склонности словами → черты (ключевую и нажитые, кроме скрытых).
+// Скрытный о главном в себе молчит, и личное дело на это не уходит: «молчит» он говорит в разговоре о склонностях.
 type Topic = "черты" | "стремление" | "склонности";
 const untold = (p: Person) => p.gained.filter((g) => !g.known && !g.trait.hidden);
 function restTalk(p: Person): Exclude<Topic, "черты"> | null {
   if (!p.know.aspiration) return "стремление";
   return p.know.axes ? null : "склонности";
 }
+// Порядок тем: стремление → склонности → черты. Склонности раньше черт: по ним Сенешаль судит о годности, а с неё начинаются перестановки.
 export function nextTalk(p: Person): Topic | null {
-  return !p.know.traitAsked || untold(p).length ? "черты" : restTalk(p);
+  return restTalk(p) ?? (!p.know.traitAsked || untold(p).length ? "черты" : null);
 }
 export function talk(w: World, id: number): boolean {
   const p = w.people[id];
-  let topic = nextTalk(p);
+  const topic = nextTalk(p);
   if (w.deedsLeft <= 0 || !topic) return false;
   w.deedsLeft--;
   p.know.talks++;
   p.loyalty = clamp(p.loyalty + B.staff.talkLoyalty, -REL_MAX, REL_MAX);
-  const lines = [`Сенешаль говорил с ${p.name}.`];
+  const lines = [`Сенешаль говорил с ${p.name}.`], silent = `О главном в себе ${p.female ? "она" : "он"} молчит: такую черту выдаст только поступок.`;
   if (topic === "черты") {
     if (!p.know.trait && !p.trait.hidden) {
       p.know.trait = true;
       lines.push(`Ключевая черта: «${p.trait.name}» — ${lower(p.trait.desc)}.`);
-    } else if (!p.know.trait && !p.know.traitAsked) {
-      lines.push(`О главном в себе ${p.female ? "она" : "он"} молчит: такую черту выдаст только поступок.`);
-      topic = restTalk(p) ?? topic;
-    }
+    } else if (!p.know.trait && !p.know.traitAsked) lines.push(silent);
     p.know.traitAsked = true;
     for (const g of untold(p)) {
       g.known = true;
@@ -474,6 +506,8 @@ export function talk(w: World, id: number): boolean {
   } else if (topic === "склонности") {
     p.know.axes = true;
     lines.push(`Склонности: ${AXES.map((x) => `${AXIS_NAMES[x]} — ${axisWord(p.star[x])}`).join(", ")}.`);
+    // скрытный: о чертах спрашивать нечего, и отдельного личного дела на «молчит» не уходит
+    if (p.trait.hidden && !p.know.trait && !p.know.traitAsked && !untold(p).length) { p.know.traitAsked = true; lines.push(silent); }
   }
   w.log.push({ season: w.season, kind: "info", title: "Разговор", lines });
   return true;
