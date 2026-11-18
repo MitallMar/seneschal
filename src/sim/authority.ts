@@ -6,8 +6,6 @@ import { BALANCE as B } from "./balance";
 import { round2 } from "./util";
 import { getRel } from "./state";
 import type { World, AuthKind, AuthLine, Complaint, AuthState } from "./state";
-
-export type { AuthKind, AuthLine, Complaint, AuthState } from "./state";
 import { zoneOf, patienceWord, seasonKind } from "./economy/zones";
 import { addLine } from "./economy/ledger";
 

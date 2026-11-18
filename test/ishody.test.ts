@@ -3,8 +3,11 @@ import { test, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import { EVENTS } from "../src/data/events";
 import { BALANCE, resetBalance, setAt } from "../src/sim/balance";
-import { newWorld, runEvent, holder, setRel, type World } from "../src/sim/sim";
-import { economySeason, handsNow } from "../src/sim/economy";
+import { newWorld } from "../src/sim/council/generate";
+import { runEvent } from "../src/sim/council/council";
+import { holder, setRel, type World } from "../src/sim/state";
+import { economySeason } from "../src/sim/economy/season";
+import { handsNow } from "../src/sim/economy/plan";
 import { fix, pair } from "./_world";
 
 afterEach(() => resetBalance());

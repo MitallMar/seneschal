@@ -2,10 +2,16 @@
 import { test, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import { BALANCE, resetBalance, setAt } from "../src/sim/balance";
-import { newWorld, runSeason, runEvent, holder, getRel, isStale, fitness } from "../src/sim/sim";
+import { newWorld } from "../src/sim/council/generate";
+import { runSeason } from "../src/sim/season";
+import { runEvent } from "../src/sim/council/council";
+import { holder, getRel, isStale, fitness } from "../src/sim/state";
 import { EVENTS } from "../src/data/events";
 import { PRESETS, newPreset } from "../src/sim/presets";
-import { zoneOf, patienceWord, taxLeft, doer, planSeason } from "../src/sim/economy";
+import { zoneOf, patienceWord } from "../src/sim/economy/zones";
+import { taxLeft } from "../src/sim/economy/pay";
+import { doer } from "../src/sim/economy/doer";
+import { planSeason } from "../src/sim/economy/plan";
 import { councilSteady } from "../src/sim/authority";
 import { dump } from "./_world";
 

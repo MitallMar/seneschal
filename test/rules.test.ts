@@ -131,9 +131,10 @@ test("в src/ нет циклов импортов", () => {
   assert.deepEqual(all.filter((f) => reach(f).has(f)).map(name), []);
 });
 
-// Фасады sim.ts и economy.ts — только для импортёров снаружи ядра, пока идёт рефакторинг И20: ядро берёт модуль напрямую, иначе фасад замыкает цикл.
-test("ядро не импортирует фасады sim.ts и economy.ts", () => {
-  const facades = [join(src, "sim/sim.ts"), join(src, "sim/economy.ts")];
-  const bad = layerFiles("sim").filter((f) => !facades.includes(f) && imports(readFileSync(f, "utf8")).some((t) => facades.includes(`${resolve(dirname(f), t)}.ts`))).map(name);
+// Фасадов «всё из одного файла» в ядре нет: каждый импортирует нужный модуль. Такой файл тянет всё сразу и первым замыкает цикл.
+test("в ядре нет фасадов: файлов из одних реэкспортов", () => {
+  assert.equal(existsSync(join(src, "sim/sim.ts")), false);
+  assert.equal(existsSync(join(src, "sim/economy.ts")), false);
+  const bad = layerFiles("sim").filter((f) => /^\s*export\s*\*\s*from/m.test(noComments(readFileSync(f, "utf8")))).map(name);
   assert.deepEqual(bad, []);
 });

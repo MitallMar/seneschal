@@ -2,7 +2,8 @@
 import { CATEGORY_NAMES } from "../../data/economy";
 import { BALANCE as B } from "../../sim/balance";
 import { authorityCap, authoritySupport, authorityWeak, complaintLeft, judge, feast, feastGain, feastCost, FEASTS } from "../../sim/authority";
-import type { AuthLine, FeastId } from "../../sim/authority";
+import type { FeastId } from "../../sim/authority";
+import type { AuthLine } from "../../sim/state";
 import { postName } from "../../sim/state";
 import { command, deskView } from "../../sim/season";
 import { $, esc } from "../dom";

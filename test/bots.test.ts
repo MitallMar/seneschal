@@ -2,7 +2,11 @@
 import { test, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import { BALANCE, resetBalance } from "../src/sim/balance";
-import { newWorld, runSeason, runEvent, holder, isStale, getRel, relWord } from "../src/sim/sim";
+import { newWorld } from "../src/sim/council/generate";
+import { runSeason } from "../src/sim/season";
+import { runEvent } from "../src/sim/council/council";
+import { holder, isStale, getRel } from "../src/sim/state";
+import { relWord } from "../src/sim/council/know";
 import { BOTS, bot, playBot, rivals, type Bot } from "../src/sim/bots";
 import { METRICS, metricsOf, botStats, pairStats, botsReport, outcomeStats } from "../src/sim/bots-report";
 import { PROBE, resetProbe } from "../src/sim/probe";
