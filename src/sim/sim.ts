@@ -8,7 +8,9 @@ import { BALANCE as B } from "./balance";
 import { Rng } from "./rng";
 import { PROBE } from "./probe";
 import { SIDES, VILLAGES } from "../data/economy";
+import { councilSteady, councilFeud } from "./authority";
 import { initAuthority, addAuthority, priceOf, authorityWeak, addComplaint, authoritySeason, type AuthState } from "./authority";
+import { takeHands, invest } from "./economy";
 import { initEconomy, economySeason, rollForecast, addLine, addTrust, belowFloor, courseLean, elderSaw, type Economy } from "./economy";
 
 // Черта, приобретённая по ходу жизни. target — против кого она («Злопамятный к …»); known — знает ли о ней Сенешаль.
@@ -508,6 +510,10 @@ function scoreOptions(w: World, p: Person, ev: GameEvent, noisy = true, mine = f
     }
     if (stale && opt.axes.includes("vygoda") && p.star.vygoda >= B.decide.staleGreedFrom) { base += B.decide.staleGreedBonus; parts.push("в свою пользу"); }
     if (opt.risky && p.trait.id === "ostorozhny") base -= B.decide.cautiousRisk;
+    // род варианта: смелый чаще берёт Дерзость, осторожный — те, у кого её мало
+    const dash = (p.star.derzost - B.star.center) * B.decide.kindLean;
+    if (opt.risky) base += dash;
+    if (opt.careful) base -= dash;
     // приобретённые черты тянут к своим осям
     const lean = activeTraits(p).reduce((sum, t) => sum + opt.axes.reduce((x, a) => x + (t.lean?.[a] ?? 0), 0) / opt.axes.length, 0);
     if (lean) { base += lean; if (lean > 0) parts.push("по привычке"); }
@@ -558,14 +564,17 @@ function competence(p: Person): number {
 function applyEffects(w: World, ev: GameEvent, opt: EventOption, mult: number, doer: Person | undefined, lines: string[]): Partial<Record<Effect, number>> {
   let k = mult;
   if (doer) k *= competence(doer);
+  if (opt.careful) k *= B.exp.carefulGain;
   let failed = false;
   if (opt.risky && doer) {
     const pSuccess = B.exp.riskBase + B.exp.riskSkill * competence(doer);
     if (!w.rng.chance(pSuccess)) failed = true;
   }
+  // смелый вариант: при удаче выигрыш больше, цена та же
+  const gain = opt.risky && !failed ? B.exp.boldGain : 1;
   const out: Partial<Record<Effect, number>> = {};
   for (const [key, v] of Object.entries(opt.effects) as [Effect, number][]) {
-    let val = v * k;
+    let val = v * k * (v > 0 ? gain : 1);
     if (failed && val > 0) val = -val * B.exp.failBackfire;
     val = round1(val);
     out[key] = val;
@@ -580,6 +589,9 @@ function applyEffects(w: World, ev: GameEvent, opt: EventOption, mult: number, d
     } else if (key === "derevni") for (const v of ev.village ? [ev.village] : VILLAGES) addTrust(w, v, val * B.economy.trust.event);
     else addTrust(w, key, val * B.economy.trust.event);
   }
+  if (opt.hands) takeHands(w, opt.hands);
+  if (opt.later && !failed) invest(w, ev, opt.later, k * gain, lines);
+  if (opt.later && failed) lines.push("Вложение пропало: отдачи не будет.");
   if (failed) lines.push(`Рискованное дело провалилось — не хватило опыта (${doer ? expWord(doer) : "?"}).`);
   return out;
 }
@@ -661,6 +673,9 @@ export function runEvent(w: World, ev: GameEvent): LogEntry {
 }
 
 function council(w: World, ev: GameEvent, a: Person, b: Person, lines: string[]): Partial<Record<Effect, number>> {
+  // слаженность совета: при признанном главном и без вражды дела двух сфер идут сильнее, при открытой вражде — слабее
+  const co = councilFeud(w) ? B.council.feud : councilSteady(w).ok ? B.council.cohesion : 1;
+  if (co !== 1) lines.push(co > 1 ? "Совет слажен: дело двух сфер спорится." : "В совете вражда: дело двух сфер идёт хуже.");
   const da = decide(w, a, ev), db = decide(w, b, ev);
   const r = getRel(w, a.id, b.id);
   const word = relWord(r);
@@ -674,7 +689,7 @@ function council(w: World, ev: GameEvent, a: Person, b: Person, lines: string[])
     recordChoice(w, a, da.opt, lines); recordChoice(w, b, db.opt, lines);
     addRel(w, a.id, b.id, B.council.agreeRel);
     const doer = a.exp >= b.exp ? a : b;
-    return applyEffects(w, ev, da.opt, mult, doer, lines);
+    return applyEffects(w, ev, da.opt, mult * co, doer, lines);
   }
 
   // Главный, если он третий, может рассудить
@@ -689,7 +704,7 @@ function council(w: World, ev: GameEvent, a: Person, b: Person, lines: string[])
       lines.push(`Спорили (${word}). Рассудил главный, ${head.name}: делать как хочет ${win.name}.`);
       addRel(w, head.id, lose.id, B.council.headJudgeRel);
       recordChoice(w, win, opt, lines);
-      return applyEffects(w, ev, opt, 1, win, lines);
+      return applyEffects(w, ev, opt, co, head.post ? head : win, lines);   // решение берёт главный: в силу идёт его опыт
     }
     lines.push(`Главного, ${head.name}, не признали — у него с кем-то из них плохие отношения.`);
   }
@@ -711,7 +726,7 @@ function council(w: World, ev: GameEvent, a: Person, b: Person, lines: string[])
     lines.push(`Они ${word} — договорились: «${opt.text}».`);
     recordChoice(w, a, opt, lines); recordChoice(w, b, opt, lines);
     addRel(w, a.id, b.id, B.council.dealRel);
-    return applyEffects(w, ev, opt, 1, win, lines);
+    return applyEffects(w, ev, opt, B.council.dealGain * co, win, lines);
   }
   if (r > B.rel.rival) {
     // терпят — компромисс или кто-то продавил
@@ -719,7 +734,7 @@ function council(w: World, ev: GameEvent, a: Person, b: Person, lines: string[])
       outcome = "compromise";
       lines.push(`Они ${word} друг друга — сделали наполовину, как хотел ${win.name}, но вполсилы.`);
       recordChoice(w, win, wd.opt, lines);
-      return applyEffects(w, ev, wd.opt, B.council.compromise, win, lines);
+      return applyEffects(w, ev, wd.opt, B.council.compromise * co, win, lines);
     }
     outcome = "push";
     lines.push(`Они ${word} друг друга. ${win.name} продавил${win.female ? "а" : ""} своё; ${lose.name} затаил${lose.female ? "а" : ""} обиду.`);
@@ -727,7 +742,7 @@ function council(w: World, ev: GameEvent, a: Person, b: Person, lines: string[])
     const around = bypass(w, ev, win, lose, ld.opt, lines);
     if (around) return around;
     recordChoice(w, win, wd.opt, lines);
-    return applyEffects(w, ev, wd.opt, 1, win, lines);
+    return applyEffects(w, ev, wd.opt, co, win, lines);
   }
   if (r > B.rel.enemy) {
     outcome = "rival";
@@ -740,7 +755,7 @@ function council(w: World, ev: GameEvent, a: Person, b: Person, lines: string[])
       lines.push(`📜 Жалоба: ${lose.name} ждёт Сенешаля с жалобой на ${win.name}.`);
       addComplaint(w, lose.id, win.id);
     }
-    return applyEffects(w, ev, wd.opt, 1, win, lines);
+    return applyEffects(w, ev, wd.opt, B.council.rivalGain * co, win, lines);
   }
   // враги
   if (w.rng.chance(B.council.sabotageChance)) {
@@ -750,7 +765,7 @@ function council(w: World, ev: GameEvent, a: Person, b: Person, lines: string[])
     reveal(w, lose, "sabotage", lines);
     gainTrait(w, win, "zlopamyatny_k", lines, lose.id);
     recordChoice(w, win, wd.opt, lines);
-    const eff = applyEffects(w, ev, wd.opt, B.council.sabotage, win, lines);
+    const eff = applyEffects(w, ev, wd.opt, B.council.sabotage * co, win, lines);
     w.resources.poryadok = round1(w.resources.poryadok - B.council.sabotageOrder);
     eff.poryadok = round1((eff.poryadok ?? 0) - B.council.sabotageOrder);
     lines.push(`📜 Жалобы с обеих сторон ждут Сенешаля.`);
@@ -761,7 +776,7 @@ function council(w: World, ev: GameEvent, a: Person, b: Person, lines: string[])
   lines.push(`Они враги, но ${lose.name} на этот раз смолчал${lose.female ? "а" : ""}. ${win.name} сделал${win.female ? "а" : ""} по-своему.`);
   addRel(w, a.id, b.id, B.council.silentRel);
   recordChoice(w, win, wd.opt, lines);
-  return applyEffects(w, ev, wd.opt, 1, win, lines);
+  return applyEffects(w, ev, wd.opt, B.council.rivalGain * co, win, lines);
 }
 
 // ---------- Сезон ----------

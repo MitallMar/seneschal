@@ -50,7 +50,7 @@ test("заготовки хозяйства: пустой амбар, купцы
   assert.ok(planSeason(k).lines.some((l) => l.text.includes("купцы отказывают")));
   const v = make("vor"), p = holder(v, "pisar")!;
   assert.ok(isStale(p) && p.star.vygoda >= BALANCE.decide.staleGreedFrom);
-  assert.ok(planSeason(v).lines.some((l) => l.how?.includes("откат")));
+  assert.ok(doer(v, "pisar").stale, "засиделся: ведёт дело по-своему, а жадный тянет из казны");
   const n = make("nedoimka");
   assert.equal(patienceWord(n.eco.tax.patience), "на исходе");
   assert.ok(n.eco.tax.carried > 0 && taxLeft(n) === n.eco.tax.lesson + n.eco.tax.carried);

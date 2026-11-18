@@ -280,7 +280,7 @@ test("спор: разошлись, главный третий и с обоим
     setRel(w, head.id, b.id, 0);
     const e = runEvent(w, event("plotina"));
     assert.ok(said(e.lines, `Рассудил главный, ${head.name}: делать как хочет ${b.name}`), `${seed}: ${e.lines.join(" | ")}`);
-    assert.deepEqual(e.effects, { poryadok: 2, kuptsy: 1, derevni: -1 });
+    assert.deepEqual(e.effects, { poryadok: 1.8, kuptsy: 0.9, derevni: -0.9 }, "спорщики — враги: дело двух сфер идёт хуже, ×0,9");
     assert.equal(getRel(w, head.id, a.id), BALANCE.council.headJudgeRel);
     assert.equal(getRel(w, a.id, b.id), -8, "спорщики при суде главного не ссорятся сильнее");
     assert.deepEqual([a.decisions, b.decisions, head.decisions], [0, 1, 0]);
@@ -311,21 +311,21 @@ test("спор: враги — саботаж: дело сделано на тр
     setAt("council.sabotageChance", 1);
     const e = runEvent(w, event("plotina"));
     assert.ok(said(e.lines, "Саботаж") && said(e.lines, "Жалобы с обеих сторон"), `${seed}: ${e.lines.join(" | ")}`);
-    assert.deepEqual(e.effects, { derevni: 0.6, poryadok: -1.3 });
+    assert.deepEqual(e.effects, { derevni: 0.5, poryadok: -1.3 });
     assert.equal(w.resources.poryadok, -1.3);
     assert.equal(getRel(w, a.id, b.id), -9);
     assert.deepEqual([a.decisions, b.decisions], [1, 0]);
   }
 });
 
-test("спор: враги, но саботажа не случилось — проигравший смолчал, дело сделано целиком", () => {
+test("спор: враги, но саботажа не случилось — проигравший смолчал, дело сделано слабее", () => {
   const w = newWorld("смолчал");
   const [a, b] = pair(w, "starosta", ["zabota", "obychai"], "desyatnik", ["dolg"], -8);
   a.tenure = 60;
   setAt("council.sabotageChance", 0);
   const e = runEvent(w, event("plotina"));
   assert.ok(said(e.lines, "смолчал") && !said(e.lines, "Саботаж"));
-  assert.deepEqual(e.effects, { derevni: 2, poryadok: -1 });
+  assert.deepEqual(e.effects, { derevni: 1.4, poryadok: -0.7 }, "враг смолчал ×0,75 и вражда в совете ×0,9"); // 2 × 0,675 = 1,35 → 1,4
   assert.equal(getRel(w, a.id, b.id), -8.5);
 });
 
@@ -349,7 +349,7 @@ test("спор: терпят — компромисс вполсилы или о
   };
   const half = run(1), push = run(0);
   assert.ok(said(half.e.lines, "вполсилы"));
-  assert.deepEqual(half.e.effects, { derevni: 1.4, poryadok: -0.7 });
+  assert.deepEqual(half.e.effects, { derevni: 1.2, poryadok: -0.6 });
   assert.equal(half.rel, 0);
   assert.ok(said(push.e.lines, "продавил"));
   assert.deepEqual(push.e.effects, { derevni: 2, poryadok: -1 });

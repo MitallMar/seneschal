@@ -6,11 +6,12 @@ import type { Side } from "../src/data/types";
 import { POSTS } from "../src/data/core";
 import { EVENTS } from "../src/data/events";
 import { SIDES, COURSES, PAY, ELDERS } from "../src/data/economy";
+import { HANDS, LEVERS } from "../src/data/handwriting";
 import { BALANCE, resetBalance, setAt } from "../src/sim/balance";
 import { newWorld, runSeason, runEvent, assign, holder, type World } from "../src/sim/sim";
 import {
   zoneWord, zoneOf, zoneMult, patienceWord, doer, setCourse, setFloor, courseStrength, handsNow, fieldHands, planSeason, economySeason,
-  payOptions, payTax, taxLeft, lessonOf, forecastFork, ledgerOf, elderRel, elderSaw, addLine, seasonKind,
+  payOptions, payTax, taxLeft, lessonOf, forecastFork, ledgerOf, elderRel, elderSaw, addLine, seasonKind, mastery, handsOf, handText, levers,
 } from "../src/sim/economy";
 import { economyMetrics, freeYear, PAYERS } from "../src/sim/economy-report";
 import { dump, fix } from "./_world";
@@ -22,11 +23,21 @@ const event = (id: string) => EVENTS.find((e) => e.id === id)!;
 const said = (lines: string[], part: string) => lines.some((l) => l.includes(part));
 // Совет без настроений: все «как велено» — не засиделись, к Сенешалю ровно, должность не желанная и не чужая. Нижних черт нет.
 function calm(seed = "хозяйство"): World {
+  flat();
   const w = newWorld(seed);
   for (const d of POSTS) fix(holder(w, d.id)!, ["dolg"]).loyalty = 0;
   for (const el of w.eco.elders) el.rel = el.rel.map(() => 0);
   w.eco.floor = { eda: 0, serebro: 0 };
   return w;
+}
+// Старые проверки потоков считают исполнителя «как велено» за единицу: мастерство и опыт в них выключены ручками.
+function flat() {
+  for (const key of ["masteryMin", "masteryMax", "expNovice", "expSettled", "expMaster"]) setAt(`economy.doer.${key}`, 1);
+  noHand();
+}
+// …и почерк тоже: все его рычаги — в ноль.
+function noHand() {
+  for (const key of ["flow", "trust", "order", "hands", "silver", "sell", "patience"]) setAt(`economy.hand.${key}`, 0);
 }
 // Сезоны без событий совета: только хозяйство.
 function pass(w: World, n = 1): string[] {
@@ -151,7 +162,8 @@ test("весна: товары уходят купцам, пошлины, жал
   assert.deepEqual(l.before, { eda: 3, tovary: 1, serebro: 2 });
   assert.deepEqual(l.after, w.eco.stock);
   const duty = line(w, "пошлины")!;
-  assert.deepEqual([duty.v, duty.side, duty.how], [0.5, "kuptsy", "как велено"]);
+  assert.deepEqual([duty.v, duty.side], [0.5, "kuptsy"]);
+  assert.ok(/^(негоден|годен|прирождённый), мастер, как велено/.test(duty.how!), `в ведомости — из чего сложилась сила: ${duty.how}`);
   assert.ok(duty.who!.includes(holder(w, "pisar")!.name), "ответственный назван");
   assert.equal(line(w, "жалованье")!.v, -E.flow.salary);
   assert.equal(ledgerOf(l, "eda").lines.reduce((s, x) => s + x.v, 0), -E.flow.upkeep);
@@ -236,26 +248,28 @@ test("исполнитель: с огоньком, как велено, без �
   p.aspiration = undefined;
   p.loyalty = BALANCE.loyalty.unhappy;
   assert.deepEqual([doer(w, "pisar").how, doer(w, "pisar").mult], ["без огонька", E.doer.dull]);
-  assert.equal(planSeason(w).lines.find((l) => l.text === "пошлины")!.v, E.flow.duties * E.doer.dull);
+  assert.equal(planSeason(w).lines.find((l) => l.text === "пошлины")!.v, Math.round(E.flow.duties * E.doer.dull * 100) / 100);
   p.tenure = BALANCE.exp.staleFrom;
-  assert.equal(doer(w, "pisar").how, "по-своему");
+  assert.ok(doer(w, "pisar").stale && doer(w, "pisar").note.includes("засиделся"));
   assign(w, p.id, null);
   assert.deepEqual([doer(w, "pisar").how, doer(w, "pisar").mult], ["должность пуста", E.doer.empty]);
   assert.equal(planSeason(w).lines.find((l) => l.text === "пошлины")!.v, E.flow.duties * E.doer.empty);
 });
 
-test("по-своему: засидевшийся ключник запускает склады, тиун оставляет оброк деревням, жадный писарь берёт откат", () => {
-  const w = calm();
-  w.eco.autoPay = false;
-  const base = (season: number, part: string, cat: string) => { w.season = season; return planSeason(w).lines.find((l) => l.text.includes(part) && l.cat === cat)!; };
-  const was = { spoil: base(4, "испорчено", "eda").v, quit: base(3, "оброк серебром", "serebro").v, sale: base(1, "за товары", "serebro").v };
-  for (const post of ["klyuchnik", "starosta", "pisar"] as const) holder(w, post)!.tenure = BALANCE.exp.staleFrom;
-  holder(w, "pisar")!.star.vygoda = 10;
-  assert.equal(base(4, "испорчено", "eda").v, was.spoil * E.doer.staleSpoil);
-  assert.ok(base(4, "испорчено", "eda").how!.includes("склады запущены"));
-  assert.equal(base(3, "оброк серебром", "serebro").v, Math.round(was.quit * E.doer.staleQuitrent * 100) / 100);
-  assert.equal(base(1, "за товары", "serebro").v, was.sale * E.doer.staleKickback);
-  assert.ok(base(1, "за товары", "serebro").how!.includes("откат"));
+test("засидевшийся: опыт мастерский и выше, почерк вдвое сильнее, курс его не зажигает", () => {
+  const w = newWorld("засиделся");
+  const p = fix(holder(w, "starosta")!, ["dolg"]);
+  p.loyalty = BALANCE.loyalty.trusts;
+  const fresh = handsOf(p, "starosta");
+  assert.deepEqual(fresh.map((x) => [x.hand.axis, x.weight]), [["dolg", 1]]);
+  setCourse(w, "kopim");
+  assert.equal(doer(w, "starosta").how, "с огоньком", "доверяет, и курс по его склонности");
+  p.tenure = BALANCE.exp.staleFrom;
+  const d = doer(w, "starosta");
+  assert.deepEqual([d.stale, d.exp, d.how], [true, E.doer.expStale, "как велено"]);
+  assert.ok(d.note.includes("засиделся") && d.hand.includes("почерк вдвое сильнее"), `${d.note}; ${d.hand}`);
+  assert.equal(handsOf(p, "starosta")[0].weight, E.hand.stale);
+  assert.equal(levers(w).quitrent, E.hand.stale * E.hand.nativePlus, "почерк Долга у тиуна: оброк собран сполна — вдвое");
 });
 
 test("курс: шесть курсов; «Копим к подати» поднимает оброк, со второго сезона сильнее, деревни ворчат", () => {
@@ -577,4 +591,90 @@ test("отчёт о хозяйстве: метрики считаются по �
   const free = ["заодно", "ладят", "терпят", "отказывают"].map((z) => freeYear(z as "ладят").free);
   assert.ok(free[0] > free[1] && free[1] > free[2] && free[2] > free[3], free.join(" > "));
   assert.ok(free[1] < E.tax.trial, "при «ладят» урок испытания без жертв не закрыть");
+});
+
+// ---------- сила потока: мастерство × опыт × настрой (lyudi-i-ishody.md, 2.1) ----------
+
+test("сила потока: мастерство по годности, опыт и настрой перемножаются; в ведомости видно, из чего она сложилась", () => {
+  noHand();
+  const w = newWorld("сила");
+  const p = fix(holder(w, "starosta")!, ["zabota", "obychai"]);   // годность тиуна — Забота и Обычай: прирождённый
+  p.loyalty = 0;
+  assert.deepEqual(mastery(p, "starosta"), { mult: E.doer.masteryMax, word: "прирождённый" });
+  let d = doer(w, "starosta");
+  assert.deepEqual([d.mastery, d.exp, d.mood, d.note], [E.doer.masteryMax, E.doer.expMaster, E.doer.plain, "прирождённый, мастер, как велено"]);
+  assert.equal(d.hand, "почерк — Забота, с оттенком: Обычай");
+  assert.equal(d.mult, Math.round(E.doer.masteryMax * E.doer.expMaster * 100) / 100);
+  p.exp = 0; p.tenure = 0;
+  assert.equal(doer(w, "starosta").exp, E.doer.expNovice);
+  p.exp = BALANCE.exp.settled;
+  assert.equal(doer(w, "starosta").exp, E.doer.expSettled);
+  fix(p, ["derzost", "vygoda"]).loyalty = BALANCE.loyalty.unhappy;      // чужие склонности и недоволен
+  d = doer(w, "starosta");
+  assert.deepEqual([d.mastery, d.note], [E.doer.masteryMin, "негоден, мастер, без огонька"]);
+  const worst = E.doer.masteryMin * E.doer.expNovice * E.doer.dull, best = E.doer.masteryMax * E.doer.expMaster * E.doer.fire;
+  assert.ok(worst < 0.62 && best > 1.45, `размах от ${worst.toFixed(2)} до ${best.toFixed(2)}`);
+  // годный тиун даёт больше урожая, чем негодный, при прочих равных
+  const crop = (high: Parameters<typeof fix>[1]) => {
+    const x = newWorld("сила");
+    fix(holder(x, "starosta")!, high).loyalty = 0;
+    x.season = 3;
+    return planSeason(x).lines.filter((l) => l.text.startsWith("урожай")).reduce((s, l) => s + l.v, 0);
+  };
+  assert.ok(crop(["zabota", "obychai"]) > crop(["derzost", "vygoda"]) * 1.3, `${crop(["zabota", "obychai"])} против ${crop(["derzost", "vygoda"])}`);
+});
+
+// ---------- почерк (lyudi-i-ishody.md, 2.2) ----------
+
+test("почерк: 25 клеток, у каждой плюс и цена; рычаги названы", () => {
+  assert.equal(HANDS.length, POSTS.length * 5);
+  assert.equal(new Set(HANDS.map((h) => `${h.post}|${h.axis}`)).size, 25);
+  for (const h of HANDS) {
+    assert.ok(h.plus.length && h.good && h.bad, `${h.post}, ${h.axis}`);
+    for (const [lever] of [...h.plus, ...h.minus]) assert.ok(LEVERS.includes(lever), lever);
+  }
+});
+
+test("почерк: ведущая сильная склонность — в полную силу, вторая сильная — оттенком, слабые — ровно", () => {
+  const w = newWorld("почерк");
+  const p = holder(w, "starosta")!;
+  p.tenure = 5;
+  p.star = { dolg: 5, vygoda: 5, zabota: 6.5, derzost: 5, obychai: 5 };
+  assert.deepEqual(handsOf(p, "starosta"), [], "сильных склонностей нет — без уклона");
+  p.star.zabota = 9;
+  assert.deepEqual(handsOf(p, "starosta").map((x) => [x.hand.axis, x.weight]), [["zabota", 1]]);
+  p.star.derzost = 8;
+  assert.deepEqual(handsOf(p, "starosta").map((x) => [x.hand.axis, x.weight]), [["zabota", 1], ["derzost", E.hand.second]]);
+  assert.deepEqual(handText(p).map((x) => [x.axis, x.shade]), [["zabota", false], ["derzost", true]]);
+  assert.equal(doer(w, "starosta").hand, "почерк — Забота, с оттенком: Дерзость");
+  assert.ok(!doer(w, "starosta").note.includes("Забота"), "в ведомость почерк не идёт: он выдал бы склонности");
+});
+
+test("почерк: родная склонность — плюс сильнее минуса, чужая — минус не слабее плюса", () => {
+  const w = newWorld("почерк");
+  for (const d of POSTS) { const h = holder(w, d.id)!; h.tenure = 5; h.star = { dolg: 5, vygoda: 5, zabota: 5, derzost: 5, obychai: 5 }; }
+  const tiun = holder(w, "starosta")!;
+  tiun.star.zabota = 9;                       // родная для тиуна: деревни довольны (плюс), оброк меньше (минус)
+  let L = levers(w);
+  assert.deepEqual([L.villages, L.quitrent], [E.hand.nativePlus, -E.hand.nativeMinus]);
+  tiun.star.zabota = 5; tiun.star.derzost = 9; // чужая: урожай больше (плюс), руки уходят (минус)
+  L = levers(w);
+  assert.deepEqual([L.harvest, L.hands], [1, -E.hand.foreignMinus]);
+  assert.equal(fieldHands(w).total, 8 - E.hand.hands, "расчистка новых полей отнимает руки");
+});
+
+test("почерк доходит до потоков и доверия: заботливый и долговой тиун дают разный оброк и разное доверие деревень", () => {
+  const year = (axis: "zabota" | "dolg") => {
+    const w = newWorld("почерк-год");
+    for (const d of POSTS) { const h = holder(w, d.id)!; h.tenure = 5; h.exp = 5; h.loyalty = 0; h.star = { dolg: 5, vygoda: 5, zabota: 5, derzost: 5, obychai: 5 }; }
+    for (const el of w.eco.elders) el.rel = el.rel.map(() => 0);
+    holder(w, "starosta")!.star[axis] = 9;
+    w.eco.autoPay = false; w.season = 3;
+    const quit = planSeason(w).lines.filter((l) => l.text === "оброк серебром").reduce((s, l) => s + l.v, 0);
+    economySeason(w, []);
+    return { quit, trust: w.factions.brod };
+  };
+  const soft = year("zabota"), hard = year("dolg");
+  assert.ok(hard.quit > soft.quit * 1.1, `оброк (при том что заботливый тиун годнее): Долг ${hard.quit} против Заботы ${soft.quit}`);
+  assert.ok(soft.trust > hard.trust, `доверие деревни: Забота ${soft.trust} против Долга ${hard.trust}`);
 });

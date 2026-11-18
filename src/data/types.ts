@@ -100,8 +100,13 @@ export interface EventOption {
   text: string;
   axes: Axis[];           // к каким склонностям относится вариант
   effects: Partial<Record<Effect, number>>;
-  risky?: boolean;        // исход сильнее зависит от опыта
+  risky?: boolean;        // смелый вариант: выигрыш больше, но провал по опыту бьёт сильнее
+  careful?: boolean;      // осторожный вариант: и выигрыш, и цена меньше, без риска
+  hands?: number;         // сколько рук людей замка вариант занимает на этот сезон
+  later?: Later;          // вложение: отдача через сезон-другой
 }
+// Отложенные последствия вложения: через seasons сезонов, со строкой в ведомости.
+export interface Later { seasons: number; effects: Partial<Record<Effect, number>>; text: string }
 
 export interface GameEvent {
   id: string;

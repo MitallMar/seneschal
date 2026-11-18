@@ -388,7 +388,7 @@ async def s_economy(br, errs):
     cats = await pg.evaluate(CATS)
     ok('после сезона у каждой категории есть ведомость со строками', all(c['lines'] >= 1 for c in cats), [c['lines'] for c in cats])
     ok('ведомость еды: было → стало, прокорм, нижняя черта', 'было 3' in cats[1]['ledger'] and 'прокорм замка' in cats[1]['ledger'] and 'нижняя черта: 2,5' in cats[1]['ledger'], cats[1]['ledger'])
-    ok('ведомость серебра: пошлины с ответственным и тем, как исполнял', re.search(r'пошлины.*Купцы · писарь-казначей \S+ · (с огоньком|как велено|без огонька|по-своему)', cats[3]['ledger']), cats[3]['ledger'])
+    ok('ведомость серебра: пошлины с ответственным и тем, из чего сложилась сила (годность, опыт, настрой)', re.search(r'пошлины.*Купцы · писарь-казначей \S+ · (негоден|годен|прирождённый), (новичок|освоился|мастер|засиделся), (с огоньком|как велено|без огонька)', cats[3]['ledger']), cats[3]['ledger'])
     ok('ведомость людей: куда ушли руки и рекруты', 'рекруты на год' in cats[0]['ledger'] and 'в поле' in cats[0]['ledger'], cats[0]['ledger'])
     ok('пока мышь не наведена, ведомость скрыта', not any(c['shown'] for c in cats))
     await pg.hover('.cat[data-cat="eda"]')
@@ -421,6 +421,15 @@ async def s_economy(br, errs):
     ok('через пять лет запасы не ниже нуля', all(c['v'] >= 0 for c in cats), [c['v'] for c in cats])
     ok('дорожка показывает годы 4–6', 'год 4' in await pg.evaluate("()=>document.querySelector('#eco-track .yrs').textContent"))
     ok('после испытания урок обычный', 'испытание' not in await pg.evaluate(TAX), await pg.evaluate(TAX))
+    # почерк на карточках: у держателей должностей; дизайнер видит все склонности почерка
+    hands = await pg.evaluate("()=>[...document.querySelectorAll('#people .card.on-post')].map(c=>[...c.querySelectorAll('.hand')].map(h=>h.dataset.hand))")
+    ok('у каждого в совете на карточке строка почерка', len(hands) == 5 and all(len(h) >= 1 for h in hands), hands)
+    ok('у тех, кто без должности, почерка нет', await pg.evaluate("()=>document.querySelectorAll('#people .card:not(.on-post) .hand').length") == 0)
+    await pg.check('#designer')
+    shown = await pg.evaluate("()=>[...document.querySelectorAll('#people .card.on-post .hand')].map(h=>({k:h.dataset.hand, t:h.textContent}))")
+    ok('дизайнер видит почерк целиком: склонность, плюс и цена', not any(h['k'] == 'unknown' for h in shown) and any(';' in h['t'] for h in shown), shown[:3])
+    ok('во «Взгляде дизайнера» у исполнителей видна сила потока', '×' in await pg.evaluate("()=>document.getElementById('doers').textContent"))
+    await pg.uncheck('#designer')
     await shot(pg, 'economy')
 
 @section('authority', 'авторитет: опора и потолок, ведомость, дело сезона и приказ, обычаи и пиры, уговор вместо снятия, жалобы')
@@ -471,7 +480,7 @@ async def s_authority(br, errs):
     ledger = await pg.evaluate(TXT('auth-ledger'))
     ok('ведомость авторитета за прошлый сезон: обычай и опора построчно', 'весна, год 1' in ledger and 'обычай соблюдён' in ledger and 'опора' in ledger, ledger)
     ok('на столе новое дело, приказа ещё нет', await pg.evaluate("()=>!document.getElementById('desk-order') && document.querySelectorAll('#desk button[data-command]:not([disabled])').length") == 3)
-    ok('авторитет вырос на опору', (await status(pg))['authority'] > 11, await status(pg))
+    ok('опора пришла плюсом в ведомость авторитета', re.search(r'\+0,\d+\s*опора', ledger), ledger)
     if best['loy'] < 10:
         await pg.click(f"button[data-persuade='{best['id']}']")
     agreed = await pg.evaluate("()=>[...document.querySelectorAll('#people .card .badge.agreed')].length")

@@ -125,7 +125,7 @@ test("события: родные склонности должности вс�
 
 test("характер читается в прогонах: по ведущей склонности решают не реже порога на чужой должности и чаще — на своей", () => {
   for (const lab of [false, true]) {
-    const r = runStats(20, 20, lab);
+    const r = runStats(60, 20, lab); // на двадцати партиях доля на чужой должности гуляет на ±7 пунктов
     const own = r.own.matched / r.own.decisions, foreign = r.foreign.matched / r.foreign.decisions;
     assert.ok(foreign >= BALANCE.report.leadForeign, `лабиринт ${lab}: на чужой ${foreign}`);
     assert.ok(own > foreign, `лабиринт ${lab}: на своей ${own}, на чужой ${foreign}`);

@@ -249,3 +249,5 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
 .knob-def { font-size: 11px; color: var(--muted); width: 84px; }
 .zone { white-space: nowrap; }
 .knob-sub { margin: 8px 0 2px; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.hand { font-size: 12px; margin-top: 4px; line-height: 1.35; }
+.hand.unknown, .hand[data-hand="none"] { color: var(--muted); }

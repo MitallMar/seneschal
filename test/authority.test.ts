@@ -261,7 +261,7 @@ test("оказался прав: приказ против мнения сове
   assert.ok(!command(w, "prodat"), "приказ по делу один");
   runSeason(w);
   const e = w.log.find((x) => x.title === "Свадьба в деревне — по приказу")!;
-  assert.deepEqual(e.effects, { derevni: 1.6, pripasy: -0.8 }, "советник без доверия исполняет без огонька");
+  assert.deepEqual(e.effects, { derevni: 1.7, pripasy: -0.8 }, "советник без доверия исполняет без огонька");
   assert.ok(said(e.lines, "оказался прав"));
   assert.equal(w.auth.totals.order, A.rightGain);
   assert.equal(k.loyalty, A.rightLoyalty);
