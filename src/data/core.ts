@@ -69,7 +69,7 @@ export const LIFE_TRAITS: Trait[] = [
   { id: "prizhimisty", name: "Прижимистый", desc: "Привык во всём искать выгоду", source: "habit", axis: "vygoda", star: {}, lean: { vygoda: 1 }, mods: {} },
   { id: "serdobolny", name: "Сердобольный", desc: "Привык жалеть людей", source: "habit", axis: "zabota", star: {}, lean: { zabota: 1 }, mods: { softness: 1 } },
   { id: "riskovy", name: "Рисковый", desc: "Привык идти напролом", source: "habit", axis: "derzost", star: {}, lean: { derzost: 1 }, mods: { random: 0.5 } },
-  { id: "starover", name: "Старовер", desc: "Привык держаться старых правил", source: "habit", axis: "obychai", star: {}, lean: { obychai: 1 }, mods: { random: -0.3 } },
+  { id: "starover", name: "Чтит старину", desc: "Привык держаться старых правил", source: "habit", axis: "obychai", star: {}, lean: { obychai: 1 }, mods: { random: -0.3 } },
   { id: "master_dela", name: "Мастер своего дела", desc: "Дошёл до потолка опыта: дело спорится, ошибок меньше", source: "post", star: {}, mods: { skill: 0.1, random: -0.3 } },
   { id: "obros_svyazyami", name: "Оброс связями", desc: "Засиделся: свои люди повсюду, в споре его трудно сдвинуть, наказы слушает хуже", source: "post", star: {}, mods: { clout: 2, obedience: -1 } },
   { id: "ustal_ot_sluzhby", name: "Устал от службы", desc: "Слишком долго на должности, которой не хотел: тянет лямку", source: "post", star: {}, mods: { skill: -0.1, softness: 1 } },

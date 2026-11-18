@@ -8,7 +8,8 @@ import { BALANCE as B } from "./balance";
 import { Rng } from "./rng";
 
 // Черта, приобретённая по ходу жизни. target — против кого она («Злопамятный к …»); known — знает ли о ней Сенешаль.
-export interface Gained { trait: Trait; target?: number; season: number; known: boolean }
+// У должностной черты post — на какой должности нажита, away — сколько сезонов человек уже не на этой должности.
+export interface Gained { trait: Trait; target?: number; season: number; known: boolean; post?: PostId; away?: number }
 
 // Молва: строка, которую Сенешаль знает о человеке сразу. О черте (trait) или о склонности (axis); wrong — молва неверная.
 export interface Rumor { text: string; axis?: Axis; trait?: string; wrong: boolean }
@@ -29,7 +30,7 @@ export interface Person {
   female: boolean;
   age: number;
   trait: Trait;             // ключевая черта, с рождения
-  gained: Gained[];         // приобретённые черты, не больше B.traits.maxGained
+  gained: Gained[];         // приобретённые черты; в предел B.traits.maxGained не входят должностные
   mark?: Mark;
   star: Star;
   startStar: Star;
@@ -244,8 +245,8 @@ export function newWorld(seed: string, labOpen = false): World {
   autoAssign(w, true);
   // Кто сидит на должности до потолка опыта, тот уже мастер: черта нажита до начала партии, Сенешаль о ней пока не знает.
   for (const p of w.people) {
-    if (p.exp >= B.exp.master && p.gained.length < B.traits.maxGained) {
-      p.gained.push({ trait: LIFE_TRAITS.find((t) => t.id === "master_dela")!, season: 0, known: false });
+    if (p.exp >= B.exp.master) {
+      p.gained.push({ trait: LIFE_TRAITS.find((t) => t.id === "master_dela")!, season: 0, known: false, post: p.post });
     }
   }
   // Первая посадка — обучающая: о каждом известна одна вещь. О члене совета — молва или ключевая черта, об остальных — молва.
@@ -373,15 +374,20 @@ export function setHead(w: World, id: number | null) {
   if (id != null) w.log.push({ season: w.season, kind: "staff", title: "Главный на время отлучки", lines: [`За главного — ${w.people[id].name}.`] });
 }
 
-// Разговор — личное дело. Открывает по порядку: черты (ключевую, если она не скрытая, и нажитые) → стремление → склонности словами.
-export function nextTalk(p: Person): "черты" | "стремление" | "склонности" | null {
-  if (!p.know.traitAsked || p.gained.some((g) => !g.known)) return "черты";
+// Разговор — личное дело. Открывает по порядку: черты (ключевую и нажитые, кроме скрытых) → стремление → склонности словами.
+// Скрытный о главном в себе молчит, и личное дело не пропадает: тот же разговор сразу идёт дальше, к стремлению.
+type Topic = "черты" | "стремление" | "склонности";
+const untold = (p: Person) => p.gained.filter((g) => !g.known && !g.trait.hidden);
+function restTalk(p: Person): Exclude<Topic, "черты"> | null {
   if (!p.know.aspiration) return "стремление";
   return p.know.axes ? null : "склонности";
 }
+export function nextTalk(p: Person): Topic | null {
+  return !p.know.traitAsked || untold(p).length ? "черты" : restTalk(p);
+}
 export function talk(w: World, id: number): boolean {
   const p = w.people[id];
-  const topic = nextTalk(p);
+  let topic = nextTalk(p);
   if (w.deedsLeft <= 0 || !topic) return false;
   w.deedsLeft--;
   p.know.talks++;
@@ -393,16 +399,18 @@ export function talk(w: World, id: number): boolean {
       lines.push(`Ключевая черта: «${p.trait.name}» — ${lower(p.trait.desc)}.`);
     } else if (!p.know.trait && !p.know.traitAsked) {
       lines.push(`О главном в себе ${p.female ? "она" : "он"} молчит: такую черту выдаст только поступок.`);
+      topic = restTalk(p) ?? topic;
     }
     p.know.traitAsked = true;
-    for (const g of p.gained.filter((x) => !x.known)) {
+    for (const g of untold(p)) {
       g.known = true;
       lines.push(`Нажитая черта: «${traitLabel(w, g)}» — ${lower(g.trait.desc)}.`);
     }
-  } else if (topic === "стремление") {
+  }
+  if (topic === "стремление") {
     p.know.aspiration = true;
     lines.push(`Стремление: ${p.aspiration ? p.aspiration.text : "ничего особенного не хочет"}.`);
-  } else {
+  } else if (topic === "склонности") {
     p.know.axes = true;
     lines.push(`Склонности: ${AXES.map((x) => `${AXIS_NAMES[x]} — ${axisWord(p.star[x])}`).join(", ")}.`);
   }
@@ -494,12 +502,18 @@ function recordChoice(w: World, p: Person, opt: EventOption, lines: string[]) {
   }
 }
 
-// Поступок выдаёт скрытую ключевую черту.
-function reveal(p: Person, deed: Deed, lines: string[]) {
-  if (p.know.trait || !p.trait.hidden || p.trait.revealedBy !== deed) return;
-  p.know.trait = true;
-  p.know.traitAsked = true;
-  lines.push(`👁 Поступок выдал черту: ${p.name} — «${p.trait.name}», ${lower(p.trait.desc)}.`);
+// Поступок выдаёт скрытую черту: ключевую и приобретённую.
+function reveal(w: World, p: Person, deed: Deed, lines: string[]) {
+  if (!p.know.trait && p.trait.hidden && p.trait.revealedBy === deed) {
+    p.know.trait = true;
+    p.know.traitAsked = true;
+    lines.push(`👁 Поступок выдал черту: ${p.name} — «${p.trait.name}», ${lower(p.trait.desc)}.`);
+  }
+  for (const g of p.gained) {
+    if (g.known || g.trait.revealedBy !== deed) continue;
+    g.known = true;
+    lines.push(`👁 Поступок выдал черту: ${p.name} — «${traitLabel(w, g)}», ${lower(g.trait.desc)}.`);
+  }
 }
 
 // Обход: хитрый проиграл спор, для вида согласился, а сделал по-своему. Возвращает последствия, если обход случился.
@@ -507,7 +521,7 @@ function bypass(w: World, win: Person, lose: Person, opt: EventOption, lines: st
   if (mod(lose, "sly", win) <= 0 || !w.rng.chance(B.traits.bypassChance)) return undefined;
   const f = lose.female;
   lines.push(`Но ${lose.name} только для вида согласил${f ? "ась" : "ся"}, а сделал${f ? "а" : ""} по-своему, в обход: «${opt.text}».`);
-  reveal(lose, "bypass", lines);
+  reveal(w, lose, "bypass", lines);
   addRel(w, win.id, lose.id, B.traits.bypassRel);
   recordChoice(w, lose, opt, lines);
   return applyEffects(w, opt, B.traits.bypass, lose, lines);
@@ -620,7 +634,7 @@ function council(w: World, ev: GameEvent, a: Person, b: Person, lines: string[])
   if (w.rng.chance(B.council.sabotageChance)) {
     lines.push(`Они враги. ${win.name} сделал${win.female ? "а" : ""} по-своему, а ${lose.name} мешал${lose.female ? "а" : ""} назло: «${ld.opt.text}» — вот чего ${lose.female ? "она" : "он"} хотел${lose.female ? "а" : ""}. Саботаж.`);
     addRel(w, a.id, b.id, B.council.sabotageRel);
-    reveal(lose, "sabotage", lines);
+    reveal(w, lose, "sabotage", lines);
     gainTrait(w, win, "zlopamyatny_k", lines, lose.id);
     recordChoice(w, win, wd.opt, lines);
     const eff = applyEffects(w, wd.opt, B.council.sabotage, win, lines);
@@ -743,13 +757,19 @@ export function headOpinion(w: World, p: Person): { head: Person; text: string; 
 // ---------- Черты в течение жизни ----------
 
 // Человек приобретает черту: не больше B.traits.maxGained сверх ключевой, одна и та же (с той же целью) — один раз.
-// Запись идёт в летопись (lines) и в биографию; сдвиг звезды черты применяется сразу. Сенешаль о новой черте знает: она нажита у него на глазах.
+// Должностные черты (source "post") в предел не входят: они про место, а не про человека, и уходят вслед за должностью (dropPostTraits).
+// Запись идёт в летопись (lines) и в биографию; сдвиг звезды черты применяется сразу.
+// Сенешаль о новой черте знает: она нажита у него на глазах. Скрытую (hidden) выдаст только поступок, как ключевую.
 export function gainTrait(w: World, p: Person, traitId: string, lines: string[], target?: number): boolean {
   const trait = LIFE_TRAITS.find((t) => t.id === traitId);
   if (!trait) throw new Error(`Нет приобретаемой черты ${traitId}`);
-  if (p.gained.length >= B.traits.maxGained) return false;
-  if (p.gained.some((g) => g.trait.id === traitId && g.target === target)) return false;
-  p.gained.push({ trait, target, season: w.season, known: true });
+  const onPost = trait.source === "post";
+  const had = p.gained.find((g) => g.trait.id === traitId && g.target === target);
+  // та же должностная черта, нажитая уже на новом месте, пока старая не снята: она переходит на новую должность
+  if (had && onPost) { had.post = p.post; had.away = 0; }
+  if (had) return false;
+  if (!onPost && p.gained.filter((g) => g.trait.source !== "post").length >= B.traits.maxGained) return false;
+  p.gained.push({ trait, target, season: w.season, known: !trait.hidden, ...(onPost ? { post: p.post } : {}) });
   addStar(p.star, trait.star);
   for (const a of AXES) p.star[a] = round1(clamp(p.star[a], 0, STAR_MAX));
   const label = traitLabel(w, { trait, target });
@@ -768,8 +788,21 @@ export function breakdown(w: World, id: number, traitId: string, why: string): b
   return true;
 }
 
-// Раз в сезон: черты из привычки и из должности.
+// Должностная черта держится на должности: ушёл — через B.traits.postTraitLag сезонов она снимается, вернулся раньше — остаётся.
+function dropPostTraits(w: World, p: Person, lines: string[]) {
+  p.gained = p.gained.filter((g) => {
+    if (g.trait.source !== "post") return true;
+    g.away = g.post === p.post ? 0 : (g.away ?? 0) + 1;
+    if (g.away < B.traits.postTraitLag) return true;
+    lines.push(`✧ Черта ушла: ${p.name} больше не «${g.trait.name}» — должность оставлена.`);
+    p.bio.push(`Оставив должность (сезон ${w.season}), утратил${p.female ? "а" : ""} черту «${g.trait.name}».`);
+    return false;
+  });
+}
+
+// Раз в сезон: должностные черты уходят вслед за должностью, появляются черты из привычки и из должности.
 function lifeTraits(w: World, p: Person, lines: string[]) {
+  dropPostTraits(w, p, lines);
   p.recent = p.recent.filter((r) => r.season > w.season - B.traits.habitSeasons);
   const n = p.recent.length;
   if (n >= B.traits.habitMinDecisions) {

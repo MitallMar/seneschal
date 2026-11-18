@@ -63,6 +63,7 @@ CARDS = """()=>[...document.querySelectorAll('#people .card')].map(c=>({name:c.q
   order:c.querySelector('select[data-order]').value, stats:c.querySelector('.stats').textContent}))"""
 WORDS = ('сильно', 'заметно', 'слабо')
 FIT = ('подходит', 'сомнительно', 'не знаю')
+POST_TRAITS = ('Мастер своего дела', 'Оброс связями', 'Устал от службы')  # в предел не входят, уходят вслед за должностью
 HIDDEN = ('Неждан', 'Ярема')                           # у них ключевая черта скрытая: разговор её не открывает
 
 def closed(c):
@@ -286,7 +287,8 @@ async def s_know(br, errs):
     card = next(c for c in await pg.evaluate(CARDS) if c['id'] == sly['id']); log = await pg.evaluate(LOG)
     ok('скрытую черту разговор не открыл: дело потрачено, на карточке «выдаст поступок»', not card['traitKnown'] and 'выдаст поступок' in card['trait']
        and (await status(pg))['deeds'] == 2 and 'выдаст только поступок' in log, card['trait'])
-    ok('следующий разговор со скрытным — уже о стремлении', card['talkText'] == 'Поговорить: стремление')
+    ok('тем же разговором скрытный рассказал о стремлении; следующий разговор — о склонностях', 'неизвестно' not in card['asp']
+       and 'Стремление:' in log and card['talkText'] == 'Поговорить: склонности', (card['asp'], card['talkText']))
 
     await pg.click('#season')
     cards = await pg.evaluate(CARDS)
@@ -312,8 +314,10 @@ async def s_know(br, errs):
     cards = await pg.evaluate(CARDS); log = await pg.evaluate(LOG)
     grown = [c for c in cards if c['gained']]
     ok('за четыре с лишним года люди нажили черты: метки на карточках, записи в летописи и биографии', len(grown) >= 2 and '✦ Новая черта:' in log
-       and all(c['bio'] == 6 + len(c['gained']) for c in grown), [(c['name'], c['gained'], c['bio']) for c in cards])
-    ok('приобретённых черт у человека не больше трёх', all(len(c['gained']) <= 3 for c in cards))
+       and all(c['bio'] >= 6 + len(c['gained']) for c in grown), [(c['name'], c['gained'], c['bio']) for c in cards])
+    ok('приобретённых черт у человека не больше трёх, должностные не в счёт', all(len([g for g in c['gained'] if g not in POST_TRAITS]) <= 3 for c in cards))
+    ok('должностные черты — только у тех, кто на должности', all(c['onPost'] for c in cards if any(g in POST_TRAITS for g in c['gained'])),
+       [(c['name'], c['gained']) for c in cards if not c['onPost']])
     ok('мусора в летописи нет', not re.search(r'undefined|NaN|\{|\}', log))
     await pg.check('#designer')
     cards = await pg.evaluate(CARDS)

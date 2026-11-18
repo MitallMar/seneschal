@@ -1,7 +1,7 @@
 // Знание о людях и черты в течение жизни (задача И4): что Сенешаль знает о человеке и как человек меняется.
 import { test, afterEach } from "node:test";
 import assert from "node:assert/strict";
-import type { Axis } from "../src/data/types";
+import type { Axis, Trait } from "../src/data/types";
 import { AXES, ASPIRATIONS, LIFE_TRAITS, POSTS, TRAITS } from "../src/data/core";
 import { EVENTS } from "../src/data/events";
 import { BALANCE, resetBalance, setAt } from "../src/sim/balance";
@@ -180,7 +180,43 @@ test("скрытую черту разговор не открывает", () =>
     assert.equal(talk(w, p.id), true);
     assert.deepEqual([p.know.trait, p.know.traitAsked], [false, true]);
     assert.ok(said(lastLog(w).lines, "выдаст только поступок"));
-    assert.equal(nextTalk(p), "стремление");
+    assert.ok(p.know.aspiration && said(lastLog(w).lines, "Стремление:"), "тем же разговором открыто стремление: личное дело не пропало");
+    assert.equal(nextTalk(p), "склонности");
+  }
+});
+
+test("скрытный, чьё стремление уже известно: первый разговор сразу о склонностях", () => {
+  const w = newWorld("скрытые");
+  const p = w.people.find((x) => x.trait.id === "khitry")!;
+  p.know.aspiration = true;
+  assert.equal(talk(w, p.id), true);
+  assert.ok(said(lastLog(w).lines, "выдаст только поступок") && said(lastLog(w).lines, "Склонности:"));
+  assert.ok(p.know.axes && !p.know.trait);
+  assert.equal(nextTalk(p), null);
+});
+
+test("скрытая приобретённая черта: сразу не видна, разговор её не открывает, выдаёт поступок", () => {
+  const sly: Trait = { id: "test_skrytaya", name: "Себе на уме", desc: "Черта для теста", source: "break", star: {}, mods: { sly: 1 }, hidden: true, revealedBy: "bypass" };
+  LIFE_TRAITS.push(sly);
+  try {
+    const w = newWorld("обход");
+    const [a, b] = pair(w, "starosta", ["zabota", "obychai"], "desyatnik", ["dolg"], 0);
+    b.tenure = 60;
+    const lines: string[] = [];
+    assert.equal(gainTrait(w, a, sly.id, lines), true);
+    assert.equal(a.gained[0].known, false, "скрытая нажитая черта Сенешалю неизвестна");
+    a.know.traitAsked = true;
+    assert.equal(nextTalk(a), "стремление", "разговор о чертах её не предлагает");
+    talk(w, a.id); talk(w, a.id);
+    assert.equal(a.gained[0].known, false, "разговоры её не открыли");
+    assert.equal(nextTalk(a), null);
+    setAt("council.compromiseChance", 0);
+    setAt("traits.bypassChance", 1);
+    const e = runEvent(w, event("plotina"));
+    assert.ok(said(e.lines, "в обход"), e.lines.join(" | "));
+    assert.ok(a.gained[0].known && said(e.lines, `Поступок выдал черту: ${a.name} — «Себе на уме»`));
+  } finally {
+    LIFE_TRAITS.pop();
   }
 });
 
@@ -268,6 +304,40 @@ test("черты из должности: «Мастер своего дела»
   assert.ok(said(lastLog(w).lines, `${s.name} — «Оброс связями»`) && said(lastLog(w).lines, `${t.name} — «Устал от службы»`));
 });
 
+test("должностная черта снимается через сезон после ухода с должности, с записью в летописи и биографии", () => {
+  const w = newWorld("должность");
+  const m = holder(w, "starosta")!;
+  m.gained = []; m.recent = []; m.exp = m.tenure = BALANCE.exp.master;
+  runSeason(w);
+  assert.ok(has(m, "master_dela") && m.gained[0].post === "starosta");
+  const bio = m.bio.length;
+  assign(w, m.id, null);
+  assert.ok(has(m, "master_dela"), "сразу после ухода черта ещё есть");
+  runSeason(w);
+  assert.ok(!has(m, "master_dela"));
+  assert.ok(said(lastLog(w).lines, `${m.name} больше не «Мастер своего дела»`));
+  assert.ok(m.bio.length === bio + 1 && m.bio.at(-1)!.includes("Мастер своего дела"));
+});
+
+test("должностная черта остаётся, если человек вернулся на ту же должность раньше срока; на чужой должности — снимается", () => {
+  setAt("traits.postTraitLag", 2);
+  const w = newWorld("должность");
+  const [m, o] = [holder(w, "starosta")!, holder(w, "desyatnik")!];
+  for (const p of [m, o]) { p.gained = []; p.recent = []; p.aspiration = undefined; p.exp = p.tenure = BALANCE.exp.master; }
+  runSeason(w);
+  assert.ok(has(m, "master_dela") && has(o, "master_dela"));
+  assign(w, m.id, null);
+  assign(w, o.id, "pisar");
+  runSeason(w);
+  assert.ok(has(m, "master_dela") && has(o, "master_dela"), "срок ещё не вышел");
+  assign(w, m.id, "starosta");
+  runSeason(w);
+  assert.ok(has(m, "master_dela"), "вернулся на свою должность — черта осталась");
+  assert.ok(!has(o, "master_dela"), "другая должность — не возвращение");
+  runSeason(w); runSeason(w);
+  assert.ok(has(m, "master_dela") && m.gained.find((g) => g.trait.id === "master_dela")!.away === 0);
+});
+
 test("черта из отношений: после саботажа пострадавший — «Злопамятный к <имя>», и действует она только против этого человека", () => {
   const w = newWorld("саботаж");
   const [a, b] = pair(w, "starosta", ["zabota", "obychai"], "desyatnik", ["dolg"], -8);
@@ -323,6 +393,7 @@ test("предел: приобретённых черт не больше руч
   const p = free(w)[0];
   const lines: string[] = [];
   const ids = ["prizhimisty", "serdobolny", "riskovy", "starover"];
+  assert.equal(LIFE_TRAITS.find((t) => t.id === "starover")!.name, "Чтит старину", "название новое, id прежний");
   assert.deepEqual(ids.map((id) => gainTrait(w, p, id, lines)), [true, true, true, false]);
   assert.equal(p.gained.length, BALANCE.traits.maxGained);
   assert.equal(lines.length, 3);
@@ -330,10 +401,19 @@ test("предел: приобретённых черт не больше руч
   setAt("traits.maxGained", 1);
   const q = free(w)[1];
   assert.deepEqual(ids.map((id) => gainTrait(w, q, id, lines)), [true, false, false, false]);
-  setAt("traits.maxGained", 0);
-  const m = holder(w, "starosta")!; m.gained = []; m.exp = m.tenure = BALANCE.exp.master;
+  // должностные черты в предел не входят: появляются при полном наборе и места в нём не занимают
+  setAt("traits.maxGained", 3);
+  const m = holder(w, "starosta")!; m.gained = []; m.recent = []; m.aspiration = undefined;
+  m.exp = BALANCE.exp.master; m.tenure = BALANCE.exp.staleFrom;
+  assert.deepEqual(ids.slice(0, 3).map((id) => gainTrait(w, m, id, lines)), [true, true, true]);
   runSeason(w);
-  assert.equal(m.gained.length, 0);
+  assert.ok(has(m, "master_dela") && has(m, "obros_svyazyami"), "сверх трёх привычек — две должностные");
+  assert.equal(m.gained.length, 5);
+  setAt("traits.maxGained", 0);
+  const z = holder(w, "desyatnik")!; z.gained = []; z.recent = []; z.exp = z.tenure = BALANCE.exp.master;
+  runSeason(w);
+  assert.deepEqual(z.gained.map((g) => g.trait.id), ["master_dela"], "предел 0: должностная всё равно появляется");
+  assert.equal(gainTrait(w, z, "prizhimisty", lines), false);
   assert.throws(() => gainTrait(w, q, "net_takoy", lines), /Нет приобретаемой черты/);
 });
 
@@ -415,7 +495,8 @@ test("прогон 30 сезонов: черт не больше предела,
     const w = newWorld(seed, true);
     for (let s = 0; s < 30; s++) runSeason(w);
     for (const p of w.people) {
-      assert.ok(p.gained.length <= BALANCE.traits.maxGained, `${seed}, ${p.name}`);
+      assert.ok(p.gained.filter((g) => g.trait.source !== "post").length <= BALANCE.traits.maxGained, `${seed}, ${p.name}`);
+      assert.ok(p.gained.every((g) => g.trait.source !== "post" || (g.post && (g.post === p.post || (g.away ?? 0) < BALANCE.traits.postTraitLag))), `${seed}, ${p.name}: должностная черта без должности`);
       assert.equal(new Set(p.gained.map((g) => `${g.trait.id}|${g.target}`)).size, p.gained.length, `${seed}, ${p.name}: повтор черты`);
       assert.ok(!p.know.aspiration && !p.know.axes, `${seed}, ${p.name}: без разговоров стремление и рассказ о склонностях закрыты`);
       if (!p.post && !p.decisions) assert.ok(AXES.every((a) => !axisKnown(p, a)), `${seed}, ${p.name}: не был в деле — оси закрыты`);
