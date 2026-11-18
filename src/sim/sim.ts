@@ -84,7 +84,7 @@ const relKey = (a: number, b: number) => (a < b ? `${a}|${b}` : `${b}|${a}`);
 export function getRel(w: World, a: number, b: number): number {
   return w.rel.get(relKey(a, b)) ?? 0;
 }
-// Задать отношения двоих напрямую: для тестов и заготовок ситуаций в спортзале. Игра меняет отношения только через addRel.
+// Задать отношения двоих напрямую: для тестов и заготовок ситуаций в эмуляторе. Игра меняет отношения только через addRel.
 export function setRel(w: World, a: number, b: number, v: number): void {
   w.rel.set(relKey(a, b), clamp(v, -REL_MAX, REL_MAX));
 }

@@ -21,6 +21,7 @@ from playwright.async_api import async_playwright
 ROOT = Path(__file__).resolve().parents[2]
 DIST = ROOT / 'dist' / 'index.html'
 PAGE = DIST.as_uri()
+EMU = (ROOT / 'dist' / 'natura.html').as_uri()           # эмулятор натуры — вторая собранная страница
 CHROME = os.environ.get('CHROME', '/usr/bin/google-chrome')
 SHOTS = ROOT / 'test' / 'e2e' / 'shots'
 VIEW = {'width': 1440, 'height': 900}
@@ -330,6 +331,53 @@ async def s_know(br, errs):
     ok('первая посадка: у кого известна черта, у того нет молвы, и первый разговор с ним — не о ключевой черте', len(known) >= 1
        and all(c['onPost'] and c['rumor'] == '' for c in known) and any(c['talkText'] == 'Поговорить: стремление' for c in known),
        [(c['name'], c['trait'], c['talkText']) for c in known])
+
+@section('natura', 'эмулятор натуры: прогон, метрики и цели, графики, человек с древом, таблицы наполнения, ручки действуют сразу')
+async def s_natura(br, errs):
+    pg = await br.new_page()
+    pg.on('pageerror', lambda e: errs.append('ошибка страницы: ' + str(e)))
+    pg.on('console', lambda m: errs.append('консоль: ' + m.text) if m.type == 'error' else None)
+    await pg.goto(EMU)
+    await pg.wait_for_selector('#metric-cards .card')
+    n = lambda sel: pg.evaluate("s=>document.querySelectorAll(s).length", sel)
+    m = await pg.evaluate("()=>window.__emu.metrics()")
+    ok('эмулятор открылся: 600 рероллов, семь карточек метрик, предупреждений нет', 'эмулятор натуры' in await pg.title()
+       and await pg.evaluate("()=>window.__emu.people()") == 600 and await n('#metric-cards .card') == 7 and await n('#metric-cards .card.bad') == 0
+       and 'Предупреждений нет' in await pg.inner_text('#warnings'), await pg.inner_text('#warnings'))
+    ok('метрики в целях: рероллы не похожи, натура угадывается, все черты выпадают', m['jaccard'] <= 0.5 and 0.6 <= m['nn'] <= 0.85 and m['never'] == [], (m['jaccard'], m['nn']))
+    ok('графики: строка на каждую черту мешка и на каждую натуру, тепловые карты 30 натур', await n('#chart-traits .track') == 84
+       and await n('#chart-natures .track') == 60 and await n('#heat-signs tr') == 31 and await n('#heat-axes tr') == 31 and await n('#heat-signs td.core') == 90)
+    ok('таблицы наполнения: 30 натур, 84 черты, 12 признаков, черты и должности совета', await n('#table-natures tr') == 31 and await n('#table-bag tr') == 85
+       and await n('#table-signs tr') == 13 and await n('#table-key tr') == 11 and await n('#table-life tr') >= 12 and await n('#table-posts tr') == 6)
+    ok('человек: три куста у якорей ядра, дальний якорь, признаки и склонности; двенадцать рероллов', await n('#person-view .bush') >= 4
+       and await n('#person-view .bipolar .bi') == 12 and await n('#person-rerolls .reroll') == 12 and await n('#party-view tr') == 11)
+    before = await pg.inner_html('#person-view')
+    await pg.click('#reroll')
+    ok('«Реролл» даёт другого человека той же натуры', await pg.inner_html('#person-view') != before and 'Служилый' in await pg.inner_text('#person-view'))
+    await pg.select_option('#nature', 'torgash')
+    ok('выбор натуры: человек другой натуры', 'Торгаш' in await pg.inner_text('#person-view'))
+    await pg.select_option('#bag-kind', 'perk')
+    ok('мешок фильтруется по виду: двенадцать перков', await n('#table-bag tr') == 13)
+    knobs = await n('#knobs input[type=range]')
+    ok('ручки: все ручки раздела natura, изменённых нет', knobs >= 40 and await n('#knobs .knob.changed') == 0, knobs)
+    await pg.evaluate("()=>{const el=document.querySelector(\"input[data-knob='natura.lifeSteps']\"); el.value='3'; el.dispatchEvent(new Event('input',{bubbles:true}));}")
+    await pg.wait_for_function("()=>window.__emu.metrics().kinds.life + window.__emu.metrics().kinds.perk > 2.5")
+    m2 = await pg.evaluate("()=>window.__emu.metrics()")
+    ok('ручка действует сразу: три шага жизни — у человека почти три черты жизни и перка, ручка подсвечена', await n('#knobs .knob.changed') == 1
+       and 2.5 < m2['kinds']['life'] + m2['kinds']['perk'] <= 3 and m2['traitsMean'] > m['traitsMean'] + 1.5, m2['kinds'])
+    await pg.click('#export')
+    ok('«Выгрузить изменённые» даёт строку с путём ручки и значениями', 'natura.lifeSteps: 1 → 3' in await pg.input_value('#export-out'))
+    await pg.evaluate("()=>window.__emu.setKnob('natura.temperature', 4)")
+    ok('плохие ручки — красные карточки и предупреждения', await n('#metric-cards .card.bad') >= 1 and await n('#warnings .warn') >= 1)
+    await shot(pg, 'natura-bad')
+    await pg.click('#reset')
+    m3 = await pg.evaluate("()=>window.__emu.metrics()")
+    ok('«Сброс» возвращает ручки и те же числа', await n('#knobs .knob.changed') == 0 and m3['jaccard'] == m['jaccard'] and m3['nn'] == m['nn'])
+    await pg.select_option('#rolls', '300')
+    ok('число рероллов меняется', await pg.evaluate("()=>window.__emu.people()") == 300)
+    await shot(pg, 'natura')
+    game = await open_game(br, errs)
+    ok('с прототипа совета есть ссылка на эмулятор', await game.get_attribute('#to-emu', 'href') == 'natura.html')
 
 @section('lab', 'лабиринт: приключенцы приходят только при галочке «Лабиринт открыт»; долгая партия в 80 сезонов')
 async def s_lab(br, errs):

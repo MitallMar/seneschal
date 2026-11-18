@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Сенешаль — эмулятор натуры</title>
+<style>/*__CSS__*/</style>
+</head>
+<body>
+<header class="top">
+  <h1>Эмулятор натуры</h1>
+  <label>Семя <input id="seed" value="натура"></label>
+  <label>Рероллов
+    <select id="rolls"><option>300</option><option selected>600</option><option>1000</option><option>2000</option></select>
+  </label>
+  <button id="run" class="primary">Прогнать</button>
+  <span id="state" class="muted"></span>
+  <nav>
+    <a href="#metrics">Метрики</a><a href="#charts">Графики</a><a href="#person">Человек</a><a href="#party">Партия</a>
+    <a href="#t-natures">Натуры</a><a href="#t-bag">Мешок</a><a href="#t-signs">Признаки</a><a href="#t-council">Совет</a>
+    <a href="index.html">← прототип совета</a>
+  </nav>
+</header>
+<div class="layout">
+  <aside id="knobs-panel">
+    <h2>Ручки</h2>
+    <p class="muted">Ручка действует сразу: прогон пересчитывается. Изменённые подсвечены.</p>
+    <div class="row"><button id="reset">Сброс</button><button id="export">Выгрузить изменённые</button></div>
+    <textarea id="export-out" rows="4" readonly hidden></textarea>
+    <div id="knobs"></div>
+  </aside>
+  <main>
+    <section id="metrics"><h2>Метрики и цели</h2><div id="metric-cards" class="cards"></div><div id="warnings"></div></section>
+    <section id="charts">
+      <h2>Графики</h2>
+      <h3>Как часто выпадает каждая черта</h3>
+      <p class="muted">Доля людей в прогоне, у кого черта есть. Цвет — вид черты; ★ редкая, ★★ исключительная; черта — предел для обычной.</p>
+      <div id="legend-kinds" class="legend"></div>
+      <div id="chart-traits"></div>
+      <h3>Черт на человека по видам</h3>
+      <div id="chart-kinds"></div>
+      <h3>Натуры: похожесть рероллов и различимость</h3>
+      <p class="muted">Слева — насколько похожи два реролла одной натуры (меньше — разнообразнее). Справа — как часто натуру угадывают по чертам.</p>
+      <div id="chart-natures"></div>
+      <h3>Натуры × признаки</h3>
+      <p class="muted">Средний признак по рероллам натуры: красное — плюс-полюс, синее — минус-полюс. Рамка — признак ядра.</p>
+      <div id="heat-signs" class="scroll"></div>
+      <h3>Натуры × деловые склонности</h3>
+      <p class="muted">Средняя склонность по рероллам натуры (шкала 0–10), темнее — выше.</p>
+      <div id="heat-axes" class="scroll"></div>
+      <h3>Деловые склонности: из признаков против нынешней звезды совета</h3>
+      <div id="chart-axes"></div>
+    </section>
+    <section id="person">
+      <h2>Один человек</h2>
+      <div class="row">
+        <label>Натура <select id="nature"></select></label>
+        <button id="reroll">Реролл</button>
+        <span class="muted">Якоря ядра → куст; дальний якорь; противоречие; черты жизни и перки.</span>
+      </div>
+      <div id="person-view"></div>
+      <h3>Двенадцать рероллов этой натуры</h3>
+      <div id="person-rerolls"></div>
+    </section>
+    <section id="party">
+      <h2>Партия из десяти</h2>
+      <p class="muted">Люди растут по очереди: черта, уже взятая кем-то в партии, следующему выпадает реже.</p>
+      <div id="party-view"></div>
+    </section>
+    <section id="t-natures"><h2>Натуры: ядро и точки кристаллизации</h2><div id="table-natures" class="scroll"></div></section>
+    <section id="t-bag">
+      <h2>Мешок черт и перков</h2>
+      <div class="row">
+        <label>Вид <select id="bag-kind"><option value="">все</option><option value="born">рождение</option><option value="life">жизнь</option><option value="perk">перки</option></select></label>
+        <label>Сортировка <select id="bag-sort"><option value="order">как в мешке</option><option value="freq">по частоте</option><option value="name">по названию</option></select></label>
+      </div>
+      <div id="table-bag" class="scroll"></div>
+    </section>
+    <section id="t-signs"><h2>Признаки и веса деловых склонностей</h2><div id="table-signs" class="scroll"></div></section>
+    <section id="t-council">
+      <h2>Совет: что уже в игре (И4–И6)</h2>
+      <p class="muted">Эти таблицы — из совета, генератор натур их пока не использует. Здесь они для сверки: какие черты жизни уже есть и где мешок их повторяет.</p>
+      <h3>Ключевые черты (с рождения)</h3><div id="table-key" class="scroll"></div>
+      <h3>Черты в течение жизни</h3><div id="table-life" class="scroll"></div>
+      <h3>Должности: годность, родные склонности и как часто события задевают склонность</h3><div id="table-posts" class="scroll"></div>
+    </section>
+  </main>
+</div>
+<script>/*__JS__*/</script>
+</body>
+</html>

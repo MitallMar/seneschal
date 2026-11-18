@@ -136,3 +136,4 @@ details.bio ul { margin: 4px 0 0; padding-left: 18px; line-height: 1.4; }
 .entry p { margin: 2px 0; }
 .eff { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 3px; }
 .eff span { font-size: 11.5px; border-radius: 8px; padding: 0 6px; background: #f0e9dc; }
+.controls a { color: var(--accent); font-size: 14px; }

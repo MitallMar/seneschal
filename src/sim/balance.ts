@@ -1,13 +1,13 @@
 // Все числа баланса совета в одном месте. Калибровка = правка этого файла.
 //
-// Каждое число записано ручкой k(значение, min, max, step, подпись): из диапазона спортзал совета (задача И2) строит ползунки.
+// Каждое число записано ручкой k(значение, min, max, step, подпись): из диапазона эмулятор совета (задача И2) строит ползунки.
 // Наружу идут две вещи, собранные из одного описания:
 //   BALANCE — дерево простых чисел, его читает логика (BALANCE.decide.noise === 1.2);
 //   KNOBS   — список ручек { path: "decide.noise", def, min, max, step, label } для ползунков.
 // Ручка меняет число прямо в BALANCE (setAt), поэтому логика читает BALANCE каждый раз заново и не держит копий:
 // следующее же решение совета считается уже по новому числу.
 // Единицы: время в сезонах; звезда и её оси 0..10; отношения между людьми и отношение к Сенешалю −10..10; шансы — доли от 0 до 1.
-// Первый уровень дерева — раздел: по нему спортзал группирует ручки.
+// Первый уровень дерева — раздел: по нему эмулятор группирует ручки.
 
 export interface Knob { v: number; min: number; max: number; step: number; label: string }
 export interface KnobInfo { path: string; def: number; min: number; max: number; step: number; label: string }
@@ -266,7 +266,7 @@ export function setAt(path: string, value: number, B: Balance = BALANCE): number
   (keys.reduce<unknown>((o, key) => (o as Dict)[key], B) as Dict)[last] = v;
   return v;
 }
-// «Было / стало» в спортзале и выгрузка значений: снимок — плоский объект { путь: число }.
+// «Было / стало» в эмуляторе и выгрузка значений: снимок — плоский объект { путь: число }.
 export function snapshotBalance(B: Balance = BALANCE): Record<string, number> {
   return Object.fromEntries(KNOBS.map((q) => [q.path, getAt(q.path, B)]));
 }
