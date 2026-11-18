@@ -5,7 +5,7 @@ import { AXES, AXIS_NAMES } from "../data/core";
 import { SIGNS, NATURES, BAG } from "../data/natura";
 import { BALANCE as B } from "./balance";
 import { rollPerson, type NaturaPerson } from "./natura";
-import { newWorld } from "./sim";
+import { newWorld } from "./council/generate";
 import { topAxis } from "./state";
 import { mean, round3 } from "./util";
 

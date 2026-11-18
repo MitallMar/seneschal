@@ -10,7 +10,7 @@ import { STAR_MAX, REL_MAX, relKey, topAxis, postName, holder, fitness } from ".
 import type { Rumor, Person, Legacy, World, Economy } from "../state";
 import { SIDES, VILLAGES } from "../../data/economy";
 import { initAuthority } from "../authority";
-import { initEconomy } from "../economy";
+import { initEconomy } from "../economy/season";
 import { gender, addStar, noAxes } from "./people";
 import { pickDesk } from "../season";
 
