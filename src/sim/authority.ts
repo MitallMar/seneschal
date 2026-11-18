@@ -12,7 +12,7 @@ export const AUTH_KIND_NAMES: Record<AuthKind, string> = {
   order: "приказы против совета", staff: "перестановки и наказы", burn: "сгорело сверх потолка",
 };
 export interface AuthLine { v: number; text: string; kind: AuthKind }
-// Жалоба — дело на столе Сенешаля: from жалуется на on. Пролежала сезон — авторитет падает.
+// Жалоба — дело на столе Сенешаля: from жалуется на on. Ждёт год; не разобрал — авторитет падает, жалоба уходит.
 export interface Complaint { id: number; from: number; on: number; season: number }
 export interface AuthState {
   cur: AuthLine[];                       // строки текущего сезона
@@ -38,7 +38,13 @@ export function initAuthority(): AuthState {
 // Потолок по статусу: пока один — Сенешаль на испытании. Излишек сверх потолка сгорает.
 export const authorityCap = (): number => B.authority.cap;
 
-// Любое изменение авторитета идёт через эту функцию: строка в ведомость, излишек сверх потолка сгорает.
+// Авторитет ниже порога — слово Сенешаля весит меньше: каждая трата дороже на надбавку. Бесплатное остаётся бесплатным.
+export const authorityWeak = (w: World): boolean => w.authority < B.authority.weakBelow;
+export const priceOf = (w: World, base: number): number => (base > 0 && authorityWeak(w) ? base + B.authority.weakExtra : base);
+// Сколько сезонов жалоба ещё ждёт разбора.
+export const complaintLeft = (w: World, c: Complaint): number => c.season + B.authority.complaintSeasons - w.season;
+
+// Любое изменение авторитета идёт через эту функцию: строка в ведомость, излишек сверх потолка сгорает, ниже нуля авторитет не уходит.
 export function addAuthority(w: World, v: number, text: string, kind: AuthKind): number {
   if (!v) return 0;
   const a = w.auth, cap = authorityCap(), next = r2(w.authority + v);
@@ -49,7 +55,7 @@ export function addAuthority(w: World, v: number, text: string, kind: AuthKind):
     a.cur.push({ v: -burn, text: "сгорело сверх потолка", kind: "burn" });
     a.totals.burn = r2(a.totals.burn - burn);
     w.authority = Math.max(cap, w.authority);
-  } else w.authority = next;
+  } else w.authority = Math.max(0, next);
   return v;
 }
 
@@ -84,14 +90,14 @@ export function authoritySupport(w: World): { lines: AuthLine[]; total: number }
 // Конец сезона: брошенные жалобы, опора, ведомость. Зовёт upkeep после хозяйства (подать уже посчитана).
 export function authoritySeason(w: World, lines: string[]): void {
   const A = B.authority, a = w.auth;
-  const old = a.complaints.filter((c) => c.season < w.season);
+  const old = a.complaints.filter((c) => complaintLeft(w, c) <= 0);
   for (const c of old) {
     const from = w.people[c.from];
-    addAuthority(w, -A.complaintLeft, `жалоба ${from.name} пролежала сезон без разбора`, "complaint");
+    addAuthority(w, -A.complaintLeft, `жалоба ${from.name} не дождалась разбора`, "complaint");
     from.loyalty = Math.max(-10, Math.round((from.loyalty - A.leftLoyalty) * 10) / 10);
-    lines.push(`📜 Жалоба ${from.name} на ${w.people[c.on].name} пролежала сезон: Сенешаль её не разобрал. Авторитет −${A.complaintLeft}.`);
+    lines.push(`📜 Жалоба ${from.name} на ${w.people[c.on].name} пролежала год: Сенешаль её так и не разобрал. Авторитет −${A.complaintLeft}.`);
   }
-  a.complaints = a.complaints.filter((c) => c.season >= w.season);
+  a.complaints = a.complaints.filter((c) => complaintLeft(w, c) > 0);
   for (const l of authoritySupport(w).lines) addAuthority(w, l.v, l.text, "support");
   a.last = a.cur; a.lastSeason = w.season; a.cur = [];
 }

@@ -207,3 +207,4 @@ details.bio ul { margin: 4px 0 0; padding-left: 18px; line-height: 1.4; }
 .complaint button { padding: 2px 8px; font-size: 12px; }
 #desk-panel .hint { margin: 4px 0 0; }
 .badge.agreed { color: var(--good); border-color: var(--good); }
+.weak { margin: 4px 0 0; font-size: 13px; color: var(--bad); }

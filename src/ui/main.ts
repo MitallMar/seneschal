@@ -2,7 +2,7 @@ import { AXES, AXIS_NAMES, POSTS, FACTION_NAMES, RESOURCE_NAMES } from "../data/
 import { SIDES, SIDE_NAMES, SIDE_GIVES, CATEGORIES, CATEGORY_NAMES, CATEGORY_UNIT, COURSES, SEASON_NAMES } from "../data/economy";
 import type { Axis, PostId, Star, Effect, Category, CourseId, PayId, Stock } from "../data/types";
 import { BALANCE as B } from "../sim/balance";
-import { authorityCap, authoritySupport, judge, feast, feastGain, feastCost, FEASTS, type AuthLine, type FeastId } from "../sim/authority";
+import { authorityCap, authoritySupport, authorityWeak, complaintLeft, judge, feast, feastGain, feastCost, FEASTS, type AuthLine, type FeastId } from "../sim/authority";
 import {
   zoneOf, patienceWord, handsNow, fieldHands, forecastFork, ledgerOf, payOptions, payTax, taxLeft, setCourse, setFloor,
   seasonKind, elderRel, doer, planSeason, type LedgerLine,
@@ -10,7 +10,7 @@ import {
 import {
   newWorld, runSeason, assign, assignCost, setHead, talk, giveOrder, holder, getRel, relWord,
   loyaltyWord, expWord, isStale, forecast, consistency, fitness, topAxis, postName,
-  axisKnown, axisWord, fitWord, headOpinion, nextTalk, rumorCheck, traitLabel, persuade, command, deskView,
+  axisKnown, axisWord, fitWord, headOpinion, nextTalk, rumorCheck, traitLabel, persuade, command, deskView, orderCost,
   type World, type Person,
 } from "../sim/sim";
 
@@ -92,20 +92,24 @@ function axisRows(p: Person): string {
 function renderCouncil() {
   const html = POSTS.map((def) => {
     const h = holder(w, def.id);
-    const opts = [`<option value="">— пусто —</option>`]
+    const freeCost = h ? assignCost(w, h, null).cost : 0;
+    const empty = freeCost > w.authority ? `<option value="" disabled>— пусто — · −${freeCost} авт., не хватает</option>` : `<option value="">— пусто —</option>`;
+    const opts = [empty]
       .concat(
         w.people.map((p) => {
           const sel = h?.id === p.id ? "selected" : "";
           const marks: string[] = [];
+          let off = "";
           if (p.aspiration?.post === def.id && (p.know.aspiration || designer)) marks.push("хочет сюда");
           if (p.post && p.post !== def.id) marks.push(`сейчас ${postName(p.post).toLowerCase()}`);
           marks.push(fitWord(p, def.id));
           if (designer) marks.push(`годн. ${fitness(p, def.id).toFixed(1)}`);
           if (!sel) {
             const c = assignCost(w, p, def.id).cost;
-            if (c) marks.push(`−${c} авт.`);
+            if (c) marks.push(c > w.authority ? `−${c} авт., не хватает` : `−${c} авт.`);
+            if (c > w.authority) off = "disabled";
           }
-          return `<option value="${p.id}" ${sel}>${esc(p.name)}${marks.length ? " · " + marks.join(", ") : ""}</option>`;
+          return `<option value="${p.id}" ${sel} ${off}>${esc(p.name)}${marks.length ? " · " + marks.join(", ") : ""}</option>`;
         }),
       )
       .join("");
@@ -304,9 +308,10 @@ function renderDesk() {
     ? `<div class="auth-ledger" id="auth-ledger"><b>Ведомость авторитета: ${seasonLabel(a.lastSeason)}</b>${a.last.map(authLine).join("") || "<p>Без перемен.</p>"}</div>`
     : `<div class="auth-ledger" id="auth-ledger"><p>Ведомость авторитета появится после первого сезона.</p></div>`;
   const now = a.cur.length ? `<div class="auth-ledger" id="auth-now"><b>В этом сезоне уже</b>${a.cur.map(authLine).join("")}</div>` : "";
+  const weak = authorityWeak(w) ? `<p class="weak" id="auth-weak">Авторитет ниже ${B.authority.weakBelow}: слово весит меньше — каждая трата дороже на ${B.authority.weakExtra}.</p>` : "";
   const why = support.lines.map((l) => `${signed(l.v)} ${l.text.replace("опора: ", "")}`).join("; ") || "опоры нет";
   $("auth").innerHTML = `<div id="auth-line">Авторитет <b>${fmt(w.authority)}</b> из ${fmt(authorityCap())} · опора за сезон <b>${signed(support.total) || "0"}</b></div>
-    <p class="hint" id="auth-support">${esc(why)}. Сверх потолка авторитет сгорает.</p>${now}${last}`;
+    <p class="hint" id="auth-support">${esc(why)}. Сверх потолка авторитет сгорает, ниже нуля не уходит.</p>${weak}${now}${last}`;
 
   const d = deskView(w);
   if (!d) $("desk").innerHTML = `<h3>Дело сезона</h3><p class="hint">На столе пусто.</p>`;
@@ -325,12 +330,13 @@ function renderDesk() {
     b.addEventListener("click", () => { command(w, b.dataset.command!); render(); }));
 
   const list = a.complaints.map((c) => {
-    const old = c.season < w.season ? " · лежит с прошлого сезона" : "";
+    const left = complaintLeft(w, c);
+    const old = left <= 1 ? " · последний сезон" : ` · ждёт ещё ${left} сез.`;
     return `<div class="complaint"><span>${esc(w.people[c.from].name)} на ${esc(w.people[c.on].name)}${old}</span>
       <button data-judge="${c.id}" ${noDeeds ? "disabled" : ""}>Разобрать</button></div>`;
   }).join("");
   $("complaints").innerHTML = `<h3>Жалобы</h3>${list || `<p class="hint">Жалоб нет.</p>`}
-    ${list ? `<p class="hint">Суд лично — личное дело, авторитет +${fmt(B.authority.judge)}. Пролежит сезон — −${fmt(B.authority.complaintLeft)}.</p>` : ""}`;
+    ${list ? `<p class="hint">Суд лично — личное дело, авторитет +${fmt(B.authority.judge)}. Жалоба ждёт год; не разобрал — −${fmt(B.authority.complaintLeft)}, и она уходит.</p>` : ""}`;
   $("complaints").querySelectorAll<HTMLButtonElement>("button[data-judge]").forEach((b) =>
     b.addEventListener("click", () => { judge(w, Number(b.dataset.judge)); render(); }));
 
@@ -388,7 +394,10 @@ function opinionLine(p: Person): string {
 
 function renderPeople() {
   $("people").innerHTML = w.people.map((p) => {
-    const orderSel = `<select data-order="${p.id}" title="Наказ (во 2-м акте, стоит 1 авторитета)"><option value="">наказ: нет</option>${AXES.map((a) => `<option value="${a}" ${p.order === a ? "selected" : ""}>наказ: ${AXIS_NAMES[a]}</option>`).join("")}</select>`;
+    const noOrder = !p.order && orderCost(w) > w.authority ? "disabled" : "";
+    const orderOpts = AXES.map((a) => `<option value="${a}" ${p.order === a ? "selected" : ""} ${noOrder}>наказ: ${AXIS_NAMES[a]}</option>`).join("");
+    const orderTitle = `Наказ (во 2-м акте, стоит ${orderCost(w)} авторитета)`;
+    const orderSel = `<select data-order="${p.id}" title="${orderTitle}"><option value="">наказ: нет</option>${orderOpts}</select>`;
     const topic = nextTalk(p);
     const talkBtn = `<button data-talk="${p.id}" ${w.deedsLeft <= 0 || !topic ? "disabled" : ""}>${topic ? `Поговорить: ${topic}` : "Всё рассказал"}</button>`;
     const leaveBtn = !p.post ? "" : p.agreed ? `<span class="badge agreed">согласен${p.female ? "на" : ""} уйти</span>`
