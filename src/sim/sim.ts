@@ -61,6 +61,7 @@ export interface LogEntry {
   lines: string[];
   effects?: Partial<Record<Effect, number>>;
   tone?: "good" | "bad" | "mixed" | "neutral";
+  weights?: string[];       // из чего сложился выбор: веса вариантов у каждого, кто решал («Взгляд дизайнера»)
 }
 
 // Дело на столе Сенешаля: событие, которое придёт в этом сезоне. order — приказ: какой вариант исполнить.
@@ -507,10 +508,16 @@ function scoreOptions(w: World, p: Person, ev: GameEvent, noisy = true, mine = f
   });
 }
 
+// Веса вариантов последнего события: копятся в decide, runEvent забирает их в запись летописи.
+let trace: string[] = [];
+
 function decide(w: World, p: Person, ev: GameEvent): Scored & { surprise: boolean } {
   const scored = scoreOptions(w, p, ev, true, true);
   const best = scored.reduce((a, b) => (b.score > a.score ? b : a));
   const expected = scored.reduce((a, b) => (b.base > a.base ? b : a));
+  const row = (s: Scored) => `${s.opt.id === best.opt.id ? "→ " : ""}«${s.opt.text}» ${round1(s.score)} (без случая ${round1(s.base)}; ${s.why})`;
+  trace.push(`${p.name}: ${scored.map(row).join(" · ")}`);
+  if (scored.length < ev.options.length) trace.push(`${p.name}: под нижней чертой, не рассматривал${p.female ? "а" : ""} — ${ev.options.length - scored.length}`);
   return { ...best, surprise: best.opt.id !== expected.opt.id };
 }
 
@@ -605,6 +612,7 @@ export function runEvent(w: World, ev: GameEvent): LogEntry {
   const holders = ev.posts.map((post) => holder(w, post)).filter((x): x is Person => !!x);
   const lines: string[] = [ev.text];
   let effects: Partial<Record<Effect, number>> = {};
+  trace = [];
 
   if (holders.length === 0) {
     lines.push("Должности пусты — делом никто не занялся.");
@@ -621,7 +629,7 @@ export function runEvent(w: World, ev: GameEvent): LogEntry {
     effects = council(w, ev, holders[0], holders[1], lines);
   }
   const title = `${ev.title}${ev.adventurers ? " ⚔" : ""}`;
-  const entry: LogEntry = { season: w.season, kind: "event", title, lines, effects, tone: toneOf(effects) };
+  const entry: LogEntry = { season: w.season, kind: "event", title, lines, effects, tone: toneOf(effects), weights: trace };
   w.log.push(entry);
   return entry;
 }

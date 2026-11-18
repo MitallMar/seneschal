@@ -1,14 +1,15 @@
 import { AXES, AXIS_NAMES, POSTS, FACTION_NAMES, RESOURCE_NAMES } from "../data/core";
 import { SIDES, SIDE_NAMES, SIDE_GIVES, CATEGORIES, CATEGORY_NAMES, CATEGORY_UNIT, COURSES, SEASON_NAMES } from "../data/economy";
 import type { Axis, PostId, Star, Effect, Category, CourseId, PayId, Stock } from "../data/types";
-import { BALANCE as B } from "../sim/balance";
+import { BALANCE as B, KNOBS, getAt, setAt, snapshotBalance, restoreBalance, resetBalance, type KnobInfo } from "../sim/balance";
+import { PRESETS, newPreset } from "../sim/presets";
 import { authorityCap, authoritySupport, authorityWeak, complaintLeft, judge, feast, feastGain, feastCost, FEASTS, type AuthLine, type FeastId } from "../sim/authority";
 import {
   zoneOf, patienceWord, handsNow, fieldHands, forecastFork, ledgerOf, payOptions, payTax, taxLeft, setCourse, setFloor,
   seasonKind, elderRel, doer, planSeason, type LedgerLine,
 } from "../sim/economy";
 import {
-  newWorld, runSeason, assign, assignCost, setHead, talk, giveOrder, holder, getRel, relWord,
+  runSeason, assign, assignCost, setHead, talk, giveOrder, holder, getRel, relWord,
   loyaltyWord, expWord, isStale, forecast, consistency, fitness, topAxis, postName,
   axisKnown, axisWord, fitWord, headOpinion, nextTalk, rumorCheck, traitLabel, persuade, command, deskView, orderCost,
   type World, type Person,
@@ -25,9 +26,24 @@ const SEASONS = SEASON_NAMES;
 let w: World;
 let designer = false;
 
+let tab: "council" | "eco" = "council";
+
+// Адрес страницы помнит семя, заготовку и галочки: ?seed=…&preset=…&lab=1&designer=1&tab=eco&knobs=1
+function syncUrl() {
+  const q = new URLSearchParams();
+  q.set("seed", ($("seed") as HTMLInputElement).value.trim() || "замок");
+  const preset = ($("preset") as HTMLSelectElement).value;
+  if (preset) q.set("preset", preset);
+  if (($("lab") as HTMLInputElement).checked) q.set("lab", "1");
+  if (designer) q.set("designer", "1");
+  if (tab !== "council") q.set("tab", tab);
+  if (!$("knobs-panel").hasAttribute("hidden")) q.set("knobs", "1");
+  try { history.replaceState(null, "", `?${q.toString()}`); } catch { /* страница открыта так, что адрес менять нельзя — не беда */ }
+}
+
 function start() {
   const seed = ($("seed") as HTMLInputElement).value.trim() || "замок";
-  w = newWorld(seed, ($("lab") as HTMLInputElement).checked);
+  w = newPreset(seed, ($("preset") as HTMLSelectElement).value || null, ($("lab") as HTMLInputElement).checked);
   render();
 }
 
@@ -446,18 +462,126 @@ function effChips(eff?: Partial<Record<Effect, number>>) {
   return chips.length ? `<div class="eff">${chips.join("")}</div>` : "";
 }
 
+// «Взгляд дизайнера»: из чего сложился выбор — веса вариантов у каждого, кто решал.
+function weights(list?: string[]): string {
+  if (!designer || !list?.length) return "";
+  return `<div class="weights">${list.map((l) => `<p>${esc(l)}</p>`).join("")}</div>`;
+}
+
 function renderLog() {
   const items = w.log.slice(-250).reverse();
   $("log").innerHTML = items.map((e) => {
     const cls = e.kind === "event" ? e.tone ?? "" : e.kind;
     const s = e.season ? seasonLabel(e.season) : "начало";
-    return `<div class="entry ${cls}"><div class="entry-title"><span class="s">${s}</span>${esc(e.title)}</div>${e.lines.map((l) => `<p>${esc(l)}</p>`).join("")}${effChips(e.effects)}</div>`;
+    return `<div class="entry ${cls}"><div class="entry-title"><span class="s">${s}</span>${esc(e.title)}</div>${e.lines.map((l) => `<p>${esc(l)}</p>`).join("")}${weights(e.weights)}${effChips(e.effects)}</div>`;
   }).join("");
 }
 
 function renderStatus() {
   $("status").innerHTML = `Сейчас: <b>${seasonLabel(w.season)}</b> · Авторитет: <b>${w.authority}</b> · Личных дел: <b>${w.deedsLeft}</b> · Потолок авторитета: ${authorityCap()}`;
 }
+
+// ---------- Сводка: ведомость категорий одной таблицей — прошлый сезон и прогноз ----------
+function renderYear() {
+  const e = w.eco, forks = forecastFork(w), hands = fieldHands(w), plan = planSeason(w), t = e.tax;
+  const rows = CATEGORIES.map((cat) => {
+    if (cat === "lyudi") return `<tr data-cat="lyudi"><th>Люди</th><td>${fmt(hands.total)}</td><td>—</td><td>в поле ${fmt(hands.field)} из ${fmt(B.economy.hands.field)}</td></tr>`;
+    const f = forks.find((x) => x.cat === cat)!;
+    const last = e.last ? `${fmt(e.last.before[cat])} → ${fmt(e.last.after[cat])}` : "—";
+    const exact = designer ? ` <small>план ${fmt(plan.stock[cat])}</small>` : "";
+    return `<tr data-cat="${cat}"><th>${CATEGORY_NAMES[cat]}</th><td>${fmt(e.stock[cat])}</td><td>${last}</td>
+      <td><span class="fc-${f.word.replace(" ", "-")}">${f.word}</span> ${fmt(f.lo)}–${fmt(f.hi)}${exact}</td></tr>`;
+  }).join("");
+  const zones = SIDES.filter((s) => zoneOf(w, s) !== "ладят").map((s) => `${SIDE_NAMES[s].toLowerCase()} — ${zoneOf(w, s)}`).join("; ");
+  $("year").innerHTML = `<table class="year"><tr><th></th><th>сейчас</th><th>прошлый сезон</th><th>к концу сезона</th></tr>${rows}</table>
+    <p class="hint" id="year-tax">Урок ${fmt(t.due)} мер, внесено ${fmt(t.paid)}, осталось ${fmt(taxLeft(w))} · Герцог ${patienceWord(t.patience)} · авторитет ${fmt(w.authority)}</p>
+    <p class="hint" id="year-zones">Стороны: ${zones || "все ладят"}.</p>`;
+}
+
+// ---------- Ручки баланса: «было / стало», сброс, выгрузка ----------
+const SECTION_NAMES: Record<string, string> = {
+  star: "Звезда склонностей", decide: "Решение человека", exp: "Опыт и исход дела", rel: "Отношения", council: "Спор в совете",
+  loyalty: "Отношение к Сенешалю", staff: "Перестановки и наказ", know: "Знание о людях", traits: "Черты в течение жизни",
+  economy: "Хозяйство и подать", authority: "Авторитет", season: "Сезон", report: "Цели отчёта осей",
+};
+const SUB_NAMES: Record<string, string> = {
+  start: "старт партии", trust: "доверие сторон", zone: "зоны и потоки", doer: "исполнитель", hands: "руки", flow: "потоки", year: "множители по сезонам",
+  course: "курс", tax: "урок и терпение Герцога", rate: "курсы подати", pay: "способы платить", goal: "цели отчёта", fork: "прогноз",
+};
+// Натура и здоровье к совету не подключены: их ручки — в эмуляторе натуры.
+const EMU_KNOBS = KNOBS.filter((q) => q.path.split(".")[0] in SECTION_NAMES);
+const knobId = (q: KnobInfo) => `k-${q.path.replace(/\./g, "-")}`;
+const DEFAULTS: Record<string, number> = Object.fromEntries(KNOBS.map((q) => [q.path, q.def]));
+// Два набора значений: «было» (1) и «стало» (2). Правка ручки меняет тот набор, что включён.
+const sets: Record<string, number>[] = [{ ...DEFAULTS }, { ...DEFAULTS }];
+let active = 1;
+const changedKnobs = () => EMU_KNOBS.filter((q) => getAt(q.path) !== q.def);
+
+function renderKnobs() {
+  const sections = [...new Set(EMU_KNOBS.map((q) => q.path.split(".")[0]))];
+  $("knobs").innerHTML = sections.map((sec) => {
+    const mine = EMU_KNOBS.filter((q) => q.path.split(".")[0] === sec);
+    let sub = "";
+    const rows = mine.map((q) => {
+      const v = getAt(q.path), parts = q.path.split(".");
+      const head = parts.length > 2 && parts[1] !== sub ? `<div class="knob-sub">${SUB_NAMES[parts[1]] ?? parts[1]}</div>` : "";
+      if (parts.length > 2) sub = parts[1];
+      return `${head}<div class="knob${v !== q.def ? " changed" : ""}" id="${knobId(q)}" title="${q.path}">
+        <div class="knob-label">${esc(q.label)}</div>
+        <div class="knob-row">
+          <input type="range" data-knob="${q.path}" min="${q.min}" max="${q.max}" step="${q.step}" value="${v}">
+          <span class="knob-val">${v}</span><span class="knob-def">по умолч. ${q.def}</span>
+        </div>
+      </div>`;
+    }).join("");
+    const n = mine.filter((q) => getAt(q.path) !== q.def).length;
+    const open = n || ($("knobs").querySelector<HTMLDetailsElement>(`details[data-sec="${sec}"]`)?.open ?? false);
+    return `<details class="knob-group" data-sec="${sec}"${open ? " open" : ""}><summary>${SECTION_NAMES[sec]} <small>${mine.length}${n ? `, изменено ${n}` : ""}</small></summary>${rows}</details>`;
+  }).join("");
+  $("ab1").classList.toggle("on", active === 0);
+  $("ab2").classList.toggle("on", active === 1);
+  const n = changedKnobs().length;
+  $("knobs-state").textContent = `Включён набор «${active ? "стало" : "было"}». ${n ? `Изменено ручек: ${n}.` : "Все ручки по умолчанию."} Ручка действует со следующего решения; чтобы сравнить партию целиком — R.`;
+}
+function setKnob(path: string, value: number): number {
+  const v = setAt(path, value);
+  sets[active] = snapshotBalance();
+  return v;
+}
+function switchSet(i: number) {
+  if (i === active) return;
+  sets[active] = snapshotBalance();
+  active = i;
+  restoreBalance(sets[active]);
+  renderKnobs(); render();
+}
+function dumpKnobs(): string {
+  const list = changedKnobs();
+  const text = list.length ? list.map((q) => `${q.path}: ${q.def} → ${getAt(q.path)}  // ${q.label}`).join("\n") : "Все ручки по умолчанию.";
+  const out = $("dump-out") as HTMLTextAreaElement;
+  out.hidden = false; out.value = text;
+  out.select();
+  return text;
+}
+function toggleKnobs(show = $("knobs-panel").hasAttribute("hidden")) {
+  $("knobs-panel").hidden = !show;
+  document.body.classList.toggle("knobs-open", show);
+  if (show) renderKnobs();
+  syncUrl();
+}
+function setTab(next: "council" | "eco") {
+  tab = next;
+  $("tab-council").hidden = tab !== "council";
+  $("tab-eco").hidden = tab !== "eco";
+  document.querySelectorAll<HTMLButtonElement>(".tabs button").forEach((b) => b.classList.toggle("on", b.dataset.tab === tab));
+  syncUrl();
+}
+function setDesigner(on: boolean) {
+  designer = on;
+  ($("designer") as HTMLInputElement).checked = on;
+  render();
+}
+const seasons = (n: number) => { for (let i = 0; i < n; i++) runSeason(w); render(); };
 
 function render() {
   renderStatus();
@@ -467,11 +591,78 @@ function render() {
   renderEconomy();
   renderPeople();
   renderLog();
+  renderYear();
+  syncUrl();
 }
 
 $("new").addEventListener("click", start);
-$("season").addEventListener("click", () => { runSeason(w); render(); });
-$("season5").addEventListener("click", () => { for (let i = 0; i < 5; i++) runSeason(w); render(); });
-$("lab").addEventListener("change", () => { w.labOpen = ($("lab") as HTMLInputElement).checked; });
-$("designer").addEventListener("change", () => { designer = ($("designer") as HTMLInputElement).checked; render(); });
+$("season").addEventListener("click", () => seasons(1));
+$("season5").addEventListener("click", () => seasons(5));
+$("lab").addEventListener("change", () => { w.labOpen = ($("lab") as HTMLInputElement).checked; syncUrl(); });
+$("designer").addEventListener("change", () => setDesigner(($("designer") as HTMLInputElement).checked));
+$("preset").addEventListener("change", start);
+$("knobs-toggle").addEventListener("click", () => toggleKnobs());
+$("ab1").addEventListener("click", () => switchSet(0));
+$("ab2").addEventListener("click", () => switchSet(1));
+$("knobs-reset").addEventListener("click", () => { resetBalance(); sets[active] = snapshotBalance(); renderKnobs(); render(); });
+$("knobs-dump").addEventListener("click", dumpKnobs);
+$("knobs").addEventListener("input", (e) => {
+  const el = e.target as HTMLInputElement;
+  if (!el.dataset.knob) return;
+  const v = setKnob(el.dataset.knob, Number(el.value));
+  const q = KNOBS.find((x) => x.path === el.dataset.knob)!, row = $(knobId(q));
+  row.classList.toggle("changed", v !== q.def);
+  row.querySelector(".knob-val")!.textContent = String(v);
+  render();
+});
+$("knobs").addEventListener("change", renderKnobs);
+document.querySelectorAll<HTMLButtonElement>(".tabs button").forEach((b) => b.addEventListener("click", () => setTab(b.dataset.tab as "council" | "eco")));
+// После щелчка кнопка не держит фокус: иначе пробел нажал бы её ещё раз.
+document.addEventListener("click", (e) => { if (e.target instanceof HTMLButtonElement) e.target.blur(); });
+
+// Горячие клавиши — по коду клавиши, раскладка не важна. В полях ввода и списках клавиши работают как обычно.
+document.addEventListener("keydown", (e) => {
+  const t = e.target as HTMLElement;
+  const typing = ["INPUT", "SELECT", "TEXTAREA"].includes(t.tagName) && t.id !== "dump-out"; // поле выгрузки только для чтения: клавиши в нём работают
+  if (e.ctrlKey || e.metaKey || e.altKey || typing) return;
+  const keys: Record<string, () => void> = {
+    Space: () => seasons(1), KeyF: () => seasons(5), KeyR: start, KeyD: () => setDesigner(!designer), Tab: () => toggleKnobs(),
+    KeyP: () => { toggleKnobs(true); dumpKnobs(); }, Digit1: () => switchSet(0), Digit2: () => switchSet(1),
+  };
+  const run = keys[e.code];
+  if (!run) return;
+  e.preventDefault();
+  run();
+});
+
+// Параметры адреса
+const params = new URLSearchParams(location.search);
+$("preset").innerHTML = `<option value="">без заготовки</option>${PRESETS.map((p) => `<option value="${p.id}" title="${esc(p.desc)}">${esc(p.name)}</option>`).join("")}`;
+if (params.get("seed")) ($("seed") as HTMLInputElement).value = params.get("seed")!;
+if (PRESETS.some((p) => p.id === params.get("preset"))) ($("preset") as HTMLSelectElement).value = params.get("preset")!;
+($("lab") as HTMLInputElement).checked = params.get("lab") === "1";
+designer = params.get("designer") === "1";
+($("designer") as HTMLInputElement).checked = designer;
 start();
+setTab(params.get("tab") === "eco" ? "eco" : "council");
+if (params.get("knobs") === "1") toggleKnobs(true);
+
+// Для автопроверок и консоли: то же, что кнопки, без щелчков.
+interface Emu {
+  restart: (seed?: string, preset?: string) => void; season: (n?: number) => void; setKnob: (path: string, v: number) => number;
+  snapshot: () => { season: number; authority: number; stock: Record<Stock, number>; knobs: Record<string, number>; set: string; log: number };
+}
+const emu: Emu = {
+  restart: (seed, preset) => {
+    if (seed !== undefined) ($("seed") as HTMLInputElement).value = seed;
+    if (preset !== undefined) ($("preset") as HTMLSelectElement).value = preset;
+    start();
+  },
+  season: (n = 1) => seasons(n),
+  setKnob: (path, v) => { const out = setKnob(path, v); renderKnobs(); render(); return out; },
+  snapshot: () => ({
+    season: w.season, authority: w.authority, stock: { ...w.eco.stock }, set: active ? "стало" : "было", log: w.log.length,
+    knobs: Object.fromEntries(changedKnobs().map((q) => [q.path, getAt(q.path)])),
+  }),
+};
+(window as unknown as { __emu: Emu }).__emu = emu;

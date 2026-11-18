@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Сенешаль — прототип совета и хозяйства</title>
+<title>Сенешаль — эмулятор совета и хозяйства</title>
 <style>:root {
   --bg: #f3ede1;
   --paper: #fbf7ee;
@@ -50,10 +50,10 @@ select { background: var(--paper); border: 1px solid var(--line); border-radius:
 .status b { color: var(--ink); }
 
 main {
-  display: grid; grid-template-columns: minmax(300px, 360px) 1fr minmax(320px, 420px);
+  display: grid; grid-template-columns: 1fr minmax(320px, 420px);
   gap: 14px; padding: 14px 16px; align-items: start;
 }
-@media (max-width: 1200px) { main { grid-template-columns: 1fr 1fr; } .right { grid-column: 1 / -1; } }
+@media (max-width: 1100px) { main { grid-template-columns: 1fr; } }
 @media (max-width: 760px) { main { grid-template-columns: 1fr; } }
 .panel {
   background: var(--paper); border: 1px solid var(--line); border-radius: 10px;
@@ -130,7 +130,8 @@ details.bio ul { margin: 4px 0 0; padding-left: 18px; line-height: 1.4; }
 .card-actions select { font-size: 13px; }
 
 /* Летопись */
-.log-panel { max-height: calc(100vh - 110px); overflow: auto; position: sticky; top: 72px; }
+.log-panel { max-height: calc(100vh - 300px); overflow: auto; }
+.right { position: sticky; top: 96px; }
 .entry { border-left: 3px solid var(--line); padding: 4px 0 6px 10px; margin-bottom: 10px; font-size: 13.5px; line-height: 1.4; }
 .entry.good { border-left-color: var(--good); }
 .entry.bad { border-left-color: var(--bad); }
@@ -145,7 +146,7 @@ details.bio ul { margin: 4px 0 0; padding-left: 18px; line-height: 1.4; }
 .controls a { color: var(--accent); font-size: 14px; }
 
 /* Хозяйство и подать */
-.eco { margin: 14px 16px 0; }
+.eco { margin: 0; }
 .eco h3 { margin: 0 0 6px; font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: normal; }
 .eco-cats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
 @media (max-width: 900px) { .eco-cats { grid-template-columns: 1fr 1fr; } }
@@ -178,8 +179,7 @@ details.bio ul { margin: 4px 0 0; padding-left: 18px; line-height: 1.4; }
 .ll.hidden-line { background: #f6e3dc; }
 .lfoot { margin-top: 4px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 3px; }
 .lfoot.mismatch { color: var(--bad); }
-.eco-row { display: grid; grid-template-columns: 1.3fr 1fr .8fr; gap: 14px; margin-top: 12px; }
-@media (max-width: 1100px) { .eco-row { grid-template-columns: 1fr; } }
+.eco-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; margin-top: 12px; }
 .eco-track .yrs, .eco-track .cells { display: grid; grid-template-columns: repeat(12, 1fr); gap: 3px; }
 .eco-track .yrs { grid-template-columns: repeat(3, 1fr); font-size: 11px; color: var(--muted); margin-bottom: 2px; }
 .cell { border: 1px solid var(--line); border-radius: 5px; padding: 3px 2px; min-height: 40px; font-size: 10px; text-align: center; background: #fffdf8; display: flex; flex-direction: column; gap: 1px; }
@@ -214,29 +214,124 @@ details.bio ul { margin: 4px 0 0; padding-left: 18px; line-height: 1.4; }
 #desk-panel .hint { margin: 4px 0 0; }
 .badge.agreed { color: var(--good); border-color: var(--good); }
 .weak { margin: 4px 0 0; font-size: 13px; color: var(--bad); }
+
+/* Эмулятор: вкладки, сводка, ручки */
+.tabs { display: flex; gap: 6px; margin-bottom: 12px; }
+.tabs button { font-size: 15px; padding: 6px 16px; }
+.tabs button.on, .knobs-bar button.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+.council-tab { display: grid; grid-template-columns: minmax(300px, 360px) 1fr; gap: 14px; align-items: start; }
+.tab[hidden] { display: none; }
+@media (max-width: 900px) { .council-tab { grid-template-columns: 1fr; } }
+.help { flex-basis: 100%; font-size: 13px; color: var(--muted); }
+.help summary { cursor: pointer; }
+.help .tip { margin-top: 4px; }
+table.year { border-collapse: collapse; width: 100%; font-size: 13px; }
+table.year th, table.year td { text-align: left; padding: 2px 6px 2px 0; border-bottom: 1px dotted var(--line); font-weight: normal; }
+table.year tr:first-child th { color: var(--muted); font-size: 11px; }
+table.year td:nth-child(2) { font-variant-numeric: tabular-nums; font-weight: bold; }
+table.year small { color: var(--muted); }
+#year-panel .hint { margin: 6px 0 0; }
+.weights { margin: 4px 0; padding: 4px 6px; background: #f1ebdc; border-radius: 5px; font-size: 12px; color: var(--muted); }
+.weights p { margin: 1px 0; }
+#knobs-panel {
+  position: fixed; left: 0; top: 0; bottom: 0; width: 340px; z-index: 8; overflow: auto;
+  background: var(--paper); border-right: 1px solid var(--line); padding: 12px 14px; box-shadow: 4px 0 14px rgba(0, 0, 0, .08);
+}
+#knobs-panel[hidden] { display: none; }
+#knobs-panel h2 { margin: 0 0 8px; font-size: 16px; text-transform: uppercase; letter-spacing: .08em; color: var(--accent); }
+body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
+.knobs-bar { display: flex; flex-wrap: wrap; gap: 6px; }
+.knobs-bar button { padding: 4px 10px; font-size: 13px; }
+#dump-out { width: 100%; margin: 6px 0; font: 12px/1.3 ui-monospace, monospace; border: 1px solid var(--line); border-radius: 6px; background: #fffdf8; }
+.knob-group { margin-top: 8px; }
+.knob-group > summary { font-weight: 600; cursor: pointer; }
+.knob-group > summary small { color: var(--muted); font-weight: normal; }
+.knob { padding: 4px 6px; border-radius: 5px; margin-top: 2px; }
+.knob.changed { background: #fbe9c8; }
+.knob-label { font-size: 12px; line-height: 1.25; }
+.knob-row { display: flex; gap: 6px; align-items: center; }
+.knob-row input[type=range] { flex: 1; min-width: 0; }
+.knob-val { width: 44px; text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+.knob-def { font-size: 11px; color: var(--muted); width: 84px; }
+.zone { white-space: nowrap; }
+.knob-sub { margin: 8px 0 2px; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
 </style>
 </head>
 <body>
 <header class="top">
   <div class="brand">
     <h1>Сенешаль</h1>
-    <span class="sub">прототип совета и хозяйства</span>
+    <span class="sub">эмулятор совета и хозяйства</span>
   </div>
   <div class="controls">
     <label class="seed">Семя <input id="seed" value="замок"></label>
-    <button id="new">Новая партия</button>
+    <select id="preset" title="Заготовка ситуации: партия, в которой сразу есть что смотреть"></select>
+    <button id="new" title="R">Новая партия</button>
     <label class="chk"><input type="checkbox" id="lab"> Лабиринт открыт</label>
     <span class="sep"></span>
-    <button id="season" class="primary">Прогнать сезон</button>
-    <button id="season5">+5 сезонов</button>
-    <label class="chk"><input type="checkbox" id="designer"> Взгляд дизайнера</label>
+    <button id="season" class="primary" title="Пробел">Прогнать сезон</button>
+    <button id="season5" title="F">+5 сезонов</button>
+    <label class="chk" title="D"><input type="checkbox" id="designer"> Взгляд дизайнера</label>
+    <button id="knobs-toggle" title="Tab">Ручки</button>
     <a id="to-emu" href="natura.html">Эмулятор натуры →</a>
   </div>
   <div id="status" class="status"></div>
-  <div id="tip" class="tip">О каждом известно что-то одно: молва или черта. Узнать человека можно двумя путями: <b>поговорить</b> (личное дело: сначала черты, потом стремление, потом склонности) или <b>посмотреть в деле</b> — каждое решение на должности показывает склонность, а скрытую черту выдаёт только поступок.</div>
+  <details class="help">
+    <summary>Подсказка и клавиши</summary>
+    <div id="tip" class="tip">О каждом известно что-то одно: молва или черта. Узнать человека можно двумя путями: <b>поговорить</b> (личное дело: сначала черты, потом стремление, потом склонности) или <b>посмотреть в деле</b> — каждое решение на должности показывает склонность, а скрытую черту выдаёт только поступок.</div>
+    <div class="tip" id="keys">Клавиши: <b>Пробел</b> — сезон, <b>F</b> — пять сезонов, <b>R</b> — заново с тем же семенем, <b>D</b> — взгляд дизайнера, <b>Tab</b> — ручки, <b>1</b> / <b>2</b> — «было» / «стало», <b>P</b> — выгрузить изменённые ручки. Адрес страницы помнит семя, заготовку и галочки: им можно поделиться.</div>
+  </details>
 </header>
 
-<section class="eco panel" id="economy">
+<aside id="knobs-panel" hidden>
+  <h2>Ручки баланса</h2>
+  <div class="knobs-bar">
+    <button id="ab1" title="1">было</button>
+    <button id="ab2" title="2">стало</button>
+    <button id="knobs-reset">Сброс</button>
+    <button id="knobs-dump" title="P">Выгрузить</button>
+  </div>
+  <p class="hint" id="knobs-state"></p>
+  <textarea id="dump-out" rows="5" readonly hidden></textarea>
+  <div id="knobs"></div>
+</aside>
+
+<main>
+  <section class="work">
+    <nav class="tabs">
+      <button data-tab="council">Совет и люди</button>
+      <button data-tab="eco">Хозяйство и подать</button>
+    </nav>
+    <div id="tab-council" class="tab council-tab">
+      <div class="left">
+    <div class="panel" id="desk-panel">
+      <h2>Стол Сенешаля</h2>
+      <div id="auth"></div>
+      <div id="desk"></div>
+      <div id="complaints"></div>
+      <div id="feasts"></div>
+    </div>
+    <div class="panel">
+      <h2>Совет</h2>
+      <p class="hint">Кого поставить на должность и кто главный, пока Сенешаля нет. Перестановка против воли стоит авторитета.</p>
+      <div id="council"></div>
+    </div>
+    <div class="panel">
+      <h2>Отношения в совете</h2>
+      <div id="relations"></div>
+    </div>
+  
+      </div>
+      <div class="mid">
+    <div class="panel">
+      <h2>Люди</h2>
+      <p class="hint">Молва — догадка, бывает неверной. Склонность видна словом («сильно / заметно / слабо»), когда человек о ней рассказал или его несколько раз видели в деле; иначе «?». «Поговорить» тратит личное дело (3 за сезон).</p>
+      <div id="people" class="people"></div>
+    </div>
+  </div>
+    </div>
+    <div id="tab-eco" class="tab" hidden>
+<div class="eco panel" id="economy">
   <h2>Хозяйство и подать</h2>
   <div id="eco-cats" class="eco-cats"></div>
   <div class="eco-row">
@@ -254,37 +349,15 @@ details.bio ul { margin: 4px 0 0; padding-left: 18px; line-height: 1.4; }
       <div id="eco-sides" class="eco-sides"></div>
     </div>
   </div>
-</section>
-
-<main>
-  <section class="left">
-    <div class="panel" id="desk-panel">
-      <h2>Стол Сенешаля</h2>
-      <div id="auth"></div>
-      <div id="desk"></div>
-      <div id="complaints"></div>
-      <div id="feasts"></div>
-    </div>
-    <div class="panel">
-      <h2>Совет</h2>
-      <p class="hint">Кого поставить на должность и кто главный, пока Сенешаля нет. Перестановка против воли стоит авторитета.</p>
-      <div id="council"></div>
-    </div>
-    <div class="panel">
-      <h2>Отношения в совете</h2>
-      <div id="relations"></div>
-    </div>
-  </section>
-
-  <section class="mid">
-    <div class="panel">
-      <h2>Люди</h2>
-      <p class="hint">Молва — догадка, бывает неверной. Склонность видна словом («сильно / заметно / слабо»), когда человек о ней рассказал или его несколько раз видели в деле; иначе «?». «Поговорить» тратит личное дело (3 за сезон).</p>
-      <div id="people" class="people"></div>
+</div>
     </div>
   </section>
 
   <section class="right">
+    <div class="panel" id="year-panel">
+      <h2>Сводка</h2>
+      <div id="year"></div>
+    </div>
     <div class="panel log-panel">
       <h2>Летопись</h2>
       <div id="log"></div>
@@ -890,6 +963,29 @@ details.bio ul { margin: 4px 0 0; padding-left: 18px; line-height: 1.4; }
   }
   var KNOBS = [];
   var BALANCE = walk(SPEC, "", {}, KNOBS);
+  function getAt(path, B = BALANCE) {
+    return path.split(".").reduce((o, key) => o == null ? void 0 : o[key], B);
+  }
+  function setAt(path, value, B = BALANCE) {
+    const knob = KNOBS.find((q) => q.path === path);
+    if (!knob) throw new Error(`\u0412 balance.ts \u043D\u0435\u0442 \u0440\u0443\u0447\u043A\u0438 ${path}`);
+    let v = Math.min(knob.max, Math.max(knob.min, Number(value)));
+    v = Math.round((v - knob.min) / knob.step) * knob.step + knob.min;
+    v = Number(v.toFixed(6));
+    const keys = path.split(".");
+    const last = keys.pop();
+    keys.reduce((o, key) => o[key], B)[last] = v;
+    return v;
+  }
+  function snapshotBalance(B = BALANCE) {
+    return Object.fromEntries(KNOBS.map((q) => [q.path, getAt(q.path, B)]));
+  }
+  function restoreBalance(snap, B = BALANCE) {
+    for (const [path, v] of Object.entries(snap)) setAt(path, v, B);
+  }
+  function resetBalance(B = BALANCE) {
+    restoreBalance(Object.fromEntries(KNOBS.map((q) => [q.path, q.def])), B);
+  }
 
   // src/data/rumors.ts
   var RUMORS_AXIS = {
@@ -1756,6 +1852,107 @@ details.bio ul { margin: 4px 0 0; padding-left: 18px; line-height: 1.4; }
     return tiun ? el.rel[tiun.id] : void 0;
   }
 
+  // src/sim/authority.ts
+  var FEASTS = [
+    { id: "prazdnik", name: "\u041F\u0440\u0430\u0437\u0434\u043D\u0438\u043A \u043F\u043E \u043E\u0431\u044B\u0447\u0430\u044E", pay: "eda", text: "\u0441\u0442\u043E\u043B \u0434\u043B\u044F \u0434\u0435\u0440\u0435\u0432\u0435\u043D\u044C \u0438 \u043E\u0431\u0440\u044F\u0434 \u0443 \u043E\u043F\u0443\u0448\u043A\u0438 \u2014 \u0438\u0437 \u0430\u043C\u0431\u0430\u0440\u0430" },
+    { id: "pir", name: "\u041F\u0438\u0440 \u0432 \u0437\u0430\u043C\u043A\u0435", pay: "serebro", text: "\u043F\u0438\u0440 \u0434\u043B\u044F \u043B\u044E\u0434\u0435\u0439 \u0437\u0430\u043C\u043A\u0430 \u0438 \u0433\u043E\u0441\u0442\u0435\u0439 \u2014 \u0438\u0437 \u043A\u0430\u0437\u043D\u044B" }
+  ];
+  var r22 = (v) => Math.round(v * 100) / 100;
+  function initAuthority() {
+    const totals = { support: 0, tax: 0, judge: 0, complaint: 0, feast: 0, order: 0, staff: 0, burn: 0 };
+    return { cur: [], last: null, lastSeason: 0, feasts: [], complaints: [], nextId: 1, totals };
+  }
+  var authorityCap = () => BALANCE.authority.cap;
+  var authorityWeak = (w2) => w2.authority < BALANCE.authority.weakBelow;
+  var priceOf = (w2, base) => base > 0 && authorityWeak(w2) ? base + BALANCE.authority.weakExtra : base;
+  var complaintLeft = (w2, c) => c.season + BALANCE.authority.complaintSeasons - w2.season;
+  function addAuthority(w2, v, text, kind) {
+    if (!v) return 0;
+    const a = w2.auth, cap = authorityCap(), next = r22(w2.authority + v);
+    a.cur.push({ v: r22(v), text, kind });
+    a.totals[kind] = r22(a.totals[kind] + v);
+    if (next > cap && v > 0) {
+      const burn = r22(next - Math.max(cap, w2.authority));
+      a.cur.push({ v: -burn, text: "\u0441\u0433\u043E\u0440\u0435\u043B\u043E \u0441\u0432\u0435\u0440\u0445 \u043F\u043E\u0442\u043E\u043B\u043A\u0430", kind: "burn" });
+      a.totals.burn = r22(a.totals.burn - burn);
+      w2.authority = Math.max(cap, w2.authority);
+    } else w2.authority = Math.max(0, next);
+    return v;
+  }
+  function councilSteady(w2) {
+    const council3 = w2.people.filter((p) => p.post);
+    const head = w2.head != null ? w2.people[w2.head] : void 0;
+    if (!head || !head.post) return { ok: false, why: "\u0433\u043B\u0430\u0432\u043D\u043E\u0433\u043E \u043D\u0435\u0442" };
+    const against = council3.find((p) => p.id !== head.id && getRel(w2, head.id, p.id) < BALANCE.council.headMinRel);
+    if (against) return { ok: false, why: `\u0433\u043B\u0430\u0432\u043D\u043E\u0433\u043E \u043D\u0435 \u043F\u0440\u0438\u0437\u043D\u0430\u0451\u0442 ${against.name}` };
+    for (const a of council3) for (const b of council3) if (a.id < b.id && getRel(w2, a.id, b.id) <= BALANCE.rel.enemy) return { ok: false, why: `${a.name} \u0438 ${b.name} \u2014 \u0432\u0440\u0430\u0433\u0438` };
+    return { ok: true, why: "\u0433\u043B\u0430\u0432\u043D\u044B\u0439 \u043F\u0440\u0438\u0437\u043D\u0430\u043D, \u0432\u0440\u0430\u0436\u0434\u044B \u043D\u0435\u0442" };
+  }
+  function authoritySupport(w2) {
+    const A = BALANCE.authority, lines = [];
+    const ally = SIDES.filter((s) => zoneOf(w2, s) === "\u0437\u0430\u043E\u0434\u043D\u043E"), friendly = SIDES.filter((s) => zoneOf(w2, s) === "\u043B\u0430\u0434\u044F\u0442");
+    const names = (list) => list.map((s) => SIDE_NAMES[s].toLowerCase()).join(", ");
+    if (ally.length) lines.push({ v: r22(ally.length * A.sideAlly), text: `\u043E\u043F\u043E\u0440\u0430: \u0437\u0430\u043E\u0434\u043D\u043E \u2014 ${names(ally)}`, kind: "support" });
+    if (friendly.length) lines.push({ v: r22(friendly.length * A.sideFriendly), text: `\u043E\u043F\u043E\u0440\u0430: \u043B\u0430\u0434\u044F\u0442 \u2014 ${names(friendly)}`, kind: "support" });
+    const c = councilSteady(w2);
+    if (c.ok) lines.push({ v: A.council, text: `\u043E\u043F\u043E\u0440\u0430: \u0441\u043E\u0432\u0435\u0442 \u2014 ${c.why}`, kind: "support" });
+    const duke = patienceWord(w2.eco.tax.patience);
+    const dv = duke === "\u0431\u043B\u0430\u0433\u043E\u0432\u043E\u043B\u0438\u0442" ? A.dukeFavor : duke === "\u043D\u0435\u0434\u043E\u0432\u043E\u043B\u0435\u043D" ? -A.dukeDispleased : duke === "\u043D\u0430 \u0438\u0441\u0445\u043E\u0434\u0435" ? -A.dukeEdge : 0;
+    if (dv) lines.push({ v: dv, text: `\u043E\u043F\u043E\u0440\u0430: \u0413\u0435\u0440\u0446\u043E\u0433 ${duke}`, kind: "support" });
+    const sum = r22(lines.reduce((s, l) => s + l.v, 0));
+    if (sum < 0 && duke !== "\u043D\u0430 \u0438\u0441\u0445\u043E\u0434\u0435") return { lines: [], total: 0 };
+    return { lines, total: sum };
+  }
+  function authoritySeason(w2, lines) {
+    const A = BALANCE.authority, a = w2.auth;
+    const old = a.complaints.filter((c) => complaintLeft(w2, c) <= 0);
+    for (const c of old) {
+      const from = w2.people[c.from];
+      addAuthority(w2, -A.complaintLeft, `\u0436\u0430\u043B\u043E\u0431\u0430 ${from.name} \u043D\u0435 \u0434\u043E\u0436\u0434\u0430\u043B\u0430\u0441\u044C \u0440\u0430\u0437\u0431\u043E\u0440\u0430`, "complaint");
+      from.loyalty = Math.max(-10, Math.round((from.loyalty - A.leftLoyalty) * 10) / 10);
+      lines.push(`\u{1F4DC} \u0416\u0430\u043B\u043E\u0431\u0430 ${from.name} \u043D\u0430 ${w2.people[c.on].name} \u043F\u0440\u043E\u043B\u0435\u0436\u0430\u043B\u0430 \u0433\u043E\u0434: \u0421\u0435\u043D\u0435\u0448\u0430\u043B\u044C \u0435\u0451 \u0442\u0430\u043A \u0438 \u043D\u0435 \u0440\u0430\u0437\u043E\u0431\u0440\u0430\u043B. \u0410\u0432\u0442\u043E\u0440\u0438\u0442\u0435\u0442 \u2212${A.complaintLeft}.`);
+    }
+    a.complaints = a.complaints.filter((c) => complaintLeft(w2, c) > 0);
+    for (const l of authoritySupport(w2).lines) addAuthority(w2, l.v, l.text, "support");
+    a.last = a.cur;
+    a.lastSeason = w2.season;
+    a.cur = [];
+  }
+  function addComplaint(w2, from, on) {
+    w2.auth.complaints.push({ id: w2.auth.nextId++, from, on, season: w2.season });
+  }
+  function judge(w2, id) {
+    const A = BALANCE.authority, c = w2.auth.complaints.find((x) => x.id === id);
+    if (!c || w2.deedsLeft <= 0) return false;
+    w2.deedsLeft--;
+    w2.auth.complaints = w2.auth.complaints.filter((x) => x.id !== id);
+    const from = w2.people[c.from], on = w2.people[c.on];
+    from.loyalty = Math.min(10, Math.round((from.loyalty + A.judgeLoyalty) * 10) / 10);
+    addAuthority(w2, A.judge, `\u0441\u0443\u0434 \u043B\u0438\u0447\u043D\u043E: \u0436\u0430\u043B\u043E\u0431\u0430 ${from.name} \u043D\u0430 ${on.name}`, "judge");
+    w2.log.push({ season: w2.season, kind: "info", title: "\u0421\u0443\u0434 \u043B\u0438\u0447\u043D\u043E", lines: [`\u0421\u0435\u043D\u0435\u0448\u0430\u043B\u044C \u0441\u0430\u043C \u0440\u0430\u0437\u043E\u0431\u0440\u0430\u043B \u0436\u0430\u043B\u043E\u0431\u0443 ${from.name} \u043D\u0430 ${on.name}. ${from.name} \u0432\u044B\u0441\u043B\u0443\u0448\u0430\u043D${from.female ? "\u0430" : ""}. \u0410\u0432\u0442\u043E\u0440\u0438\u0442\u0435\u0442 +${A.judge}.`] });
+    return true;
+  }
+  function feastsThisYear(w2) {
+    const from = w2.season - seasonKind(w2.season);
+    return w2.auth.feasts.filter((s) => s >= from).length;
+  }
+  function feastGain(w2) {
+    return r22(BALANCE.authority.feast * Math.pow(BALANCE.authority.feastRepeat, feastsThisYear(w2)));
+  }
+  var feastCost = (id) => id === "prazdnik" ? BALANCE.authority.feastFood : BALANCE.authority.feastSilver;
+  function feast(w2, id) {
+    const def = FEASTS.find((f) => f.id === id), cost = feastCost(id);
+    if (w2.deedsLeft <= 0 || w2.eco.stock[def.pay] < cost) return false;
+    const gain = feastGain(w2);
+    w2.deedsLeft--;
+    addLine(w2, { cat: def.pay, v: -cost, text: `${def.name.toLowerCase()}: ${def.text}` });
+    w2.auth.feasts.push(w2.season);
+    addAuthority(w2, gain, `\u043E\u0431\u044B\u0447\u0430\u0439 \u0441\u043E\u0431\u043B\u044E\u0434\u0451\u043D: ${def.name.toLowerCase()}`, "feast");
+    const line = `${def.name}: ${def.text}. ${CATEGORY_NAMES[def.pay]} \u2212${cost}, \u0430\u0432\u0442\u043E\u0440\u0438\u0442\u0435\u0442 +${gain}.`;
+    w2.log.push({ season: w2.season, kind: "info", title: "\u041E\u0431\u044B\u0447\u0430\u0439 \u0441\u043E\u0431\u043B\u044E\u0434\u0451\u043D", lines: [line] });
+    return true;
+  }
+
   // src/sim/sim.ts
   var STAR_MAX = 10;
   var REL_MAX = 10;
@@ -1764,6 +1961,9 @@ details.bio ul { margin: 4px 0 0; padding-left: 18px; line-height: 1.4; }
   var relKey = (a, b) => a < b ? `${a}|${b}` : `${b}|${a}`;
   function getRel(w2, a, b) {
     return w2.rel.get(relKey(a, b)) ?? 0;
+  }
+  function setRel(w2, a, b, v) {
+    w2.rel.set(relKey(a, b), clamp2(v, -REL_MAX, REL_MAX));
   }
   function activeTraits(p, vs) {
     return [p.trait, ...p.gained.filter((g) => !g.trait.targeted || g.target === vs?.id).map((g) => g.trait)];
@@ -1979,8 +2179,8 @@ details.bio ul { margin: 4px 0 0; padding-left: 18px; line-height: 1.4; }
         p.exp = Math.min(p.tenure, BALANCE.exp.master);
       }
     }
-    const council2 = w2.people.filter((p) => p.post);
-    w2.head = council2.sort((a, b) => b.loyalty - a.loyalty)[0]?.id ?? null;
+    const council3 = w2.people.filter((p) => p.post);
+    w2.head = council3.sort((a, b) => b.loyalty - a.loyalty)[0]?.id ?? null;
   }
   function assignCost(w2, p, post) {
     const current = post ? holder(w2, post) : void 0;
@@ -2134,22 +2334,22 @@ details.bio ul { margin: 4px 0 0; padding-left: 18px; line-height: 1.4; }
     return belowFloor(w2, "eda", opt.effects.pripasy ?? 0) || belowFloor(w2, "serebro", opt.effects.kazna ?? 0);
   }
   function scoreOptions(w2, p, ev, noisy = true, mine = false) {
-    const stale = isStale(p);
-    const open = mine && !stale ? ev.options.filter((o) => !underFloor(w2, o)) : ev.options;
+    const stale2 = isStale(p);
+    const open = mine && !stale2 ? ev.options.filter((o) => !underFloor(w2, o)) : ev.options;
     return (open.length ? open : ev.options).map((opt) => {
       let base = opt.axes.reduce((s, a) => s + p.star[a], 0) / opt.axes.length;
       const parts = [];
       const lead = opt.axes.reduce((b, a) => p.star[a] > p.star[b] ? a : b, opt.axes[0]);
       parts.push(`\u043F\u043E ${AXIS_DAT[lead]}`);
       if (p.order && opt.axes.includes(p.order)) {
-        const obey = Math.max(0, p.loyalty + BALANCE.decide.orderObeyBase + mod(p, "obedience") - (stale ? BALANCE.decide.orderStalePenalty : 0));
+        const obey = Math.max(0, p.loyalty + BALANCE.decide.orderObeyBase + mod(p, "obedience") - (stale2 ? BALANCE.decide.orderStalePenalty : 0));
         const bonus = obey * BALANCE.decide.orderWeight;
         if (bonus > BALANCE.decide.orderMinBonus) {
           base += bonus;
           parts.push("\u043F\u043E \u043D\u0430\u043A\u0430\u0437\u0443");
         }
       }
-      if (stale && opt.axes.includes("vygoda") && p.star.vygoda >= BALANCE.decide.staleGreedFrom) {
+      if (stale2 && opt.axes.includes("vygoda") && p.star.vygoda >= BALANCE.decide.staleGreedFrom) {
         base += BALANCE.decide.staleGreedBonus;
         parts.push("\u0432 \u0441\u0432\u043E\u044E \u043F\u043E\u043B\u044C\u0437\u0443");
       }
@@ -2168,10 +2368,14 @@ details.bio ul { margin: 4px 0 0; padding-left: 18px; line-height: 1.4; }
       return { opt, score: base + noise, base, why: parts.join(", ") };
     });
   }
+  var trace = [];
   function decide(w2, p, ev) {
     const scored = scoreOptions(w2, p, ev, true, true);
     const best = scored.reduce((a, b) => b.score > a.score ? b : a);
     const expected = scored.reduce((a, b) => b.base > a.base ? b : a);
+    const row = (s) => `${s.opt.id === best.opt.id ? "\u2192 " : ""}\xAB${s.opt.text}\xBB ${round1(s.score)} (\u0431\u0435\u0437 \u0441\u043B\u0443\u0447\u0430\u044F ${round1(s.base)}; ${s.why})`;
+    trace.push(`${p.name}: ${scored.map(row).join(" \xB7 ")}`);
+    if (scored.length < ev.options.length) trace.push(`${p.name}: \u043F\u043E\u0434 \u043D\u0438\u0436\u043D\u0435\u0439 \u0447\u0435\u0440\u0442\u043E\u0439, \u043D\u0435 \u0440\u0430\u0441\u0441\u043C\u0430\u0442\u0440\u0438\u0432\u0430\u043B${p.female ? "\u0430" : ""} \u2014 ${ev.options.length - scored.length}`);
     return { ...best, surprise: best.opt.id !== expected.opt.id };
   }
   function competence(p) {
@@ -2253,6 +2457,7 @@ details.bio ul { margin: 4px 0 0; padding-left: 18px; line-height: 1.4; }
     const holders = ev.posts.map((post) => holder(w2, post)).filter((x) => !!x);
     const lines = [ev.text];
     let effects = {};
+    trace = [];
     if (holders.length === 0) {
       lines.push("\u0414\u043E\u043B\u0436\u043D\u043E\u0441\u0442\u0438 \u043F\u0443\u0441\u0442\u044B \u2014 \u0434\u0435\u043B\u043E\u043C \u043D\u0438\u043A\u0442\u043E \u043D\u0435 \u0437\u0430\u043D\u044F\u043B\u0441\u044F.");
       w2.resources.poryadok -= BALANCE.council.emptyOrder;
@@ -2268,7 +2473,7 @@ details.bio ul { margin: 4px 0 0; padding-left: 18px; line-height: 1.4; }
       effects = council(w2, ev, holders[0], holders[1], lines);
     }
     const title = `${ev.title}${ev.adventurers ? " \u2694" : ""}`;
-    const entry = { season: w2.season, kind: "event", title, lines, effects, tone: toneOf(effects) };
+    const entry = { season: w2.season, kind: "event", title, lines, effects, tone: toneOf(effects), weights: trace };
     w2.log.push(entry);
     return entry;
   }
@@ -2545,105 +2750,71 @@ details.bio ul { margin: 4px 0 0; padding-left: 18px; line-height: 1.4; }
     if (asp && asp !== p.post && p.tenure >= BALANCE.traits.tiredFrom) gainTrait(w2, p, "ustal_ot_sluzhby", lines);
   }
 
-  // src/sim/authority.ts
-  var FEASTS = [
-    { id: "prazdnik", name: "\u041F\u0440\u0430\u0437\u0434\u043D\u0438\u043A \u043F\u043E \u043E\u0431\u044B\u0447\u0430\u044E", pay: "eda", text: "\u0441\u0442\u043E\u043B \u0434\u043B\u044F \u0434\u0435\u0440\u0435\u0432\u0435\u043D\u044C \u0438 \u043E\u0431\u0440\u044F\u0434 \u0443 \u043E\u043F\u0443\u0448\u043A\u0438 \u2014 \u0438\u0437 \u0430\u043C\u0431\u0430\u0440\u0430" },
-    { id: "pir", name: "\u041F\u0438\u0440 \u0432 \u0437\u0430\u043C\u043A\u0435", pay: "serebro", text: "\u043F\u0438\u0440 \u0434\u043B\u044F \u043B\u044E\u0434\u0435\u0439 \u0437\u0430\u043C\u043A\u0430 \u0438 \u0433\u043E\u0441\u0442\u0435\u0439 \u2014 \u0438\u0437 \u043A\u0430\u0437\u043D\u044B" }
+  // src/sim/presets.ts
+  var council2 = (w2) => w2.people.filter((p) => p.post);
+  function stale(w2, post) {
+    const p = holder(w2, post);
+    if (!p) return void 0;
+    p.tenure = BALANCE.exp.staleFrom + BALANCE.exp.settled;
+    p.exp = BALANCE.exp.master;
+    if (!p.gained.some((g) => g.trait.id === "obros_svyazyami")) p.gained.push({ trait: LIFE_TRAITS.find((t) => t.id === "obros_svyazyami"), season: 0, known: true, post });
+    return p;
+  }
+  function vacate(w2, post) {
+    const p = holder(w2, post);
+    if (!p) return;
+    if (w2.head === p.id) w2.head = null;
+    w2.posts[post] = null;
+    p.post = void 0;
+    p.tenure = 0;
+    p.exp = 0;
+  }
+  var PRESETS = [
+    { id: "vragi", name: "\u0412\u0440\u0430\u0433\u0438 \u0432 \u0441\u043E\u0432\u0435\u0442\u0435", desc: "\u0432\u0441\u0435 \u0432 \u0441\u043E\u0432\u0435\u0442\u0435 \u2014 \u0432\u0440\u0430\u0433\u0438 \u0434\u0440\u0443\u0433 \u0434\u0440\u0443\u0433\u0443: \u0441\u0430\u0431\u043E\u0442\u0430\u0436, \u0436\u0430\u043B\u043E\u0431\u044B, \u043E\u043F\u043E\u0440\u044B \u043E\u0442 \u0441\u043E\u0432\u0435\u0442\u0430 \u043D\u0435\u0442", apply: (w2) => {
+      for (const a of council2(w2)) for (const b of council2(w2)) if (a.id < b.id) setRel(w2, a.id, b.id, BALANCE.rel.enemy - 1);
+    } },
+    { id: "pisar", name: "\u0417\u0430\u0441\u0438\u0434\u0435\u0432\u0448\u0438\u0439\u0441\u044F \u043F\u0438\u0441\u0430\u0440\u044C", desc: "\u043F\u0438\u0441\u0430\u0440\u044C \u0441\u0438\u0434\u0438\u0442 \u0434\u0430\u0432\u043D\u043E: \u043E\u0431\u0440\u043E\u0441 \u0441\u0432\u044F\u0437\u044F\u043C\u0438, \u043D\u0430\u043A\u0430\u0437\u044B \u0441\u043B\u0443\u0448\u0430\u0435\u0442 \u0445\u0443\u0436\u0435, \u0432\u0435\u0434\u0451\u0442 \u0434\u0435\u043B\u043E \u043F\u043E-\u0441\u0432\u043E\u0435\u043C\u0443", apply: (w2) => {
+      stale(w2, "pisar");
+    } },
+    { id: "novichki", name: "\u0412\u0441\u0435 \u043D\u043E\u0432\u0438\u0447\u043A\u0438", desc: "\u0432\u0435\u0441\u044C \u0441\u043E\u0432\u0435\u0442 \u0442\u043E\u043B\u044C\u043A\u043E \u0447\u0442\u043E \u043D\u0430\u0437\u043D\u0430\u0447\u0435\u043D: \u043E\u043F\u044B\u0442\u0430 \u043D\u0435\u0442, \u0434\u0435\u043B\u0430 \u0438\u0434\u0443\u0442 \u0445\u0443\u0436\u0435", apply: (w2) => {
+      for (const p of council2(w2)) {
+        p.tenure = 0;
+        p.exp = 0;
+        p.gained = p.gained.filter((g) => g.trait.source !== "post");
+      }
+    } },
+    { id: "pusto", name: "\u041F\u0443\u0441\u0442\u0430\u044F \u0434\u043E\u043B\u0436\u043D\u043E\u0441\u0442\u044C", desc: "\u043A\u043B\u044E\u0447\u043D\u0438\u043A\u0430 \u043D\u0435\u0442: \u043F\u043E\u0442\u043E\u043A \u0432\u043F\u043E\u043B\u0441\u0438\u043B\u044B, \u0435\u0434\u0443 \u0441\u0447\u0438\u0442\u0430\u0442\u044C \u043D\u0435\u043A\u043E\u043C\u0443, \u0434\u0435\u043B\u0430 \u0434\u0432\u0443\u0445 \u0441\u0444\u0435\u0440 \u0440\u0435\u0448\u0430\u0435\u0442 \u043E\u0434\u0438\u043D", apply: (w2) => vacate(w2, "klyuchnik") },
+    { id: "glavny", name: "\u0413\u043B\u0430\u0432\u043D\u044B\u0439 \u0431\u0435\u0437 \u043F\u0440\u0438\u0437\u043D\u0430\u043D\u0438\u044F", desc: "\u0433\u043B\u0430\u0432\u043D\u043E\u0433\u043E \u043D\u0435 \u043F\u0440\u0438\u0437\u043D\u0430\u044E\u0442 \u0434\u0432\u043E\u0435 \u0438\u0437 \u0441\u043E\u0432\u0435\u0442\u0430: \u0441\u043F\u043E\u0440\u044B \u043E\u043D \u043D\u0435 \u0440\u0430\u0441\u0441\u0443\u0434\u0438\u0442, \u043E\u043F\u043E\u0440\u044B \u043E\u0442 \u0441\u043E\u0432\u0435\u0442\u0430 \u043D\u0435\u0442", apply: (w2) => {
+      const c = council2(w2);
+      w2.head ?? (w2.head = c[0].id);
+      for (const p of c.filter((x) => x.id !== w2.head).slice(0, 2)) setRel(w2, w2.head, p.id, BALANCE.council.headMinRel - 2);
+    } },
+    { id: "ambar", name: "\u0418\u0441\u043F\u044B\u0442\u0430\u043D\u0438\u0435 \u0441 \u043F\u0443\u0441\u0442\u044B\u043C \u0430\u043C\u0431\u0430\u0440\u043E\u043C", desc: "\u043F\u0435\u0440\u0432\u044B\u0439 \u0433\u043E\u0434 \u0438\u0441\u043F\u044B\u0442\u0430\u043D\u0438\u044F, \u0430 \u0435\u0434\u044B \u0438 \u0441\u0435\u0440\u0435\u0431\u0440\u0430 \u043F\u043E\u0447\u0442\u0438 \u043D\u0435\u0442", apply: (w2) => {
+      w2.eco.stock = { eda: BALANCE.economy.flow.upkeep, tovary: 0, serebro: 0 };
+    } },
+    { id: "kuptsy", name: "\u041A\u0443\u043F\u0446\u044B \u043E\u0442\u043A\u0430\u0437\u044B\u0432\u0430\u044E\u0442", desc: "\u043A\u0443\u043F\u0446\u044B \u043D\u0435 \u0442\u043E\u0440\u0433\u0443\u044E\u0442 \u0438 \u043D\u0435 \u043F\u043B\u0430\u0442\u044F\u0442 \u043F\u043E\u0448\u043B\u0438\u043D: \u0442\u043E\u0432\u0430\u0440\u044B \u043B\u0435\u0436\u0430\u0442, \u0441\u0435\u0440\u0435\u0431\u0440\u0443 \u0432\u0437\u044F\u0442\u044C\u0441\u044F \u043D\u0435\u043E\u0442\u043A\u0443\u0434\u0430", apply: (w2) => {
+      w2.factions.kuptsy = BALANCE.economy.trust.refuse - 1;
+      w2.eco.zoneWas.kuptsy = "\u043E\u0442\u043A\u0430\u0437\u044B\u0432\u0430\u044E\u0442";
+    } },
+    { id: "vor", name: "\u0412\u043E\u0440\u043E\u0432\u0430\u0442\u044B\u0439 \u043F\u0438\u0441\u0430\u0440\u044C \u043D\u0430 \u0441\u0447\u0451\u0442\u0435", desc: "\u043F\u0438\u0441\u0430\u0440\u044C \u0437\u0430\u0441\u0438\u0434\u0435\u043B\u0441\u044F \u0438 \u0436\u0430\u0434\u0435\u043D: \u0431\u0435\u0440\u0451\u0442 \u043E\u0442\u043A\u0430\u0442, \u0441\u0435\u0440\u0435\u0431\u0440\u043E \u0443\u0442\u0435\u043A\u0430\u0435\u0442, \u0430 \u0441\u0442\u0440\u043E\u043A\u0443 \u043E\u043D \u043F\u0440\u044F\u0447\u0435\u0442", apply: (w2) => {
+      const p = stale(w2, "pisar");
+      if (p) p.star.vygoda = STAR_MAX - 1;
+    } },
+    { id: "nedoimka", name: "\u041D\u0435\u0434\u043E\u0438\u043C\u043A\u0430 \u0438 \u0442\u0435\u0440\u043F\u0435\u043D\u0438\u0435 \u043D\u0430 \u0438\u0441\u0445\u043E\u0434\u0435", desc: "\u043F\u0440\u043E\u0448\u043B\u044B\u0439 \u0443\u0440\u043E\u043A \u043D\u0435 \u0437\u0430\u043A\u0440\u044B\u0442: \u043D\u0435\u0434\u043E\u0438\u043C\u043A\u0430 \u0441 \u043D\u0430\u0434\u0431\u0430\u0432\u043A\u043E\u0439 \u043B\u0435\u0436\u0438\u0442 \u043D\u0430 \u044D\u0442\u043E\u043C \u0433\u043E\u0434\u0443, \u0413\u0435\u0440\u0446\u043E\u0433 \u043D\u0430 \u043F\u0440\u0435\u0434\u0435\u043B\u0435", apply: (w2) => {
+      const t = w2.eco.tax;
+      t.carried = Math.round(t.lesson * (1 + BALANCE.economy.tax.arrears) / 2);
+      t.due = t.lesson + t.carried;
+      t.patience = Math.max(0, BALANCE.economy.tax.displeased - 1);
+    } }
   ];
-  var r22 = (v) => Math.round(v * 100) / 100;
-  function initAuthority() {
-    const totals = { support: 0, tax: 0, judge: 0, complaint: 0, feast: 0, order: 0, staff: 0, burn: 0 };
-    return { cur: [], last: null, lastSeason: 0, feasts: [], complaints: [], nextId: 1, totals };
-  }
-  var authorityCap = () => BALANCE.authority.cap;
-  var authorityWeak = (w2) => w2.authority < BALANCE.authority.weakBelow;
-  var priceOf = (w2, base) => base > 0 && authorityWeak(w2) ? base + BALANCE.authority.weakExtra : base;
-  var complaintLeft = (w2, c) => c.season + BALANCE.authority.complaintSeasons - w2.season;
-  function addAuthority(w2, v, text, kind) {
-    if (!v) return 0;
-    const a = w2.auth, cap = authorityCap(), next = r22(w2.authority + v);
-    a.cur.push({ v: r22(v), text, kind });
-    a.totals[kind] = r22(a.totals[kind] + v);
-    if (next > cap && v > 0) {
-      const burn = r22(next - Math.max(cap, w2.authority));
-      a.cur.push({ v: -burn, text: "\u0441\u0433\u043E\u0440\u0435\u043B\u043E \u0441\u0432\u0435\u0440\u0445 \u043F\u043E\u0442\u043E\u043B\u043A\u0430", kind: "burn" });
-      a.totals.burn = r22(a.totals.burn - burn);
-      w2.authority = Math.max(cap, w2.authority);
-    } else w2.authority = Math.max(0, next);
-    return v;
-  }
-  function councilSteady(w2) {
-    const council2 = w2.people.filter((p) => p.post);
-    const head = w2.head != null ? w2.people[w2.head] : void 0;
-    if (!head || !head.post) return { ok: false, why: "\u0433\u043B\u0430\u0432\u043D\u043E\u0433\u043E \u043D\u0435\u0442" };
-    const against = council2.find((p) => p.id !== head.id && getRel(w2, head.id, p.id) < BALANCE.council.headMinRel);
-    if (against) return { ok: false, why: `\u0433\u043B\u0430\u0432\u043D\u043E\u0433\u043E \u043D\u0435 \u043F\u0440\u0438\u0437\u043D\u0430\u0451\u0442 ${against.name}` };
-    for (const a of council2) for (const b of council2) if (a.id < b.id && getRel(w2, a.id, b.id) <= BALANCE.rel.enemy) return { ok: false, why: `${a.name} \u0438 ${b.name} \u2014 \u0432\u0440\u0430\u0433\u0438` };
-    return { ok: true, why: "\u0433\u043B\u0430\u0432\u043D\u044B\u0439 \u043F\u0440\u0438\u0437\u043D\u0430\u043D, \u0432\u0440\u0430\u0436\u0434\u044B \u043D\u0435\u0442" };
-  }
-  function authoritySupport(w2) {
-    const A = BALANCE.authority, lines = [];
-    const ally = SIDES.filter((s) => zoneOf(w2, s) === "\u0437\u0430\u043E\u0434\u043D\u043E"), friendly = SIDES.filter((s) => zoneOf(w2, s) === "\u043B\u0430\u0434\u044F\u0442");
-    const names = (list) => list.map((s) => SIDE_NAMES[s].toLowerCase()).join(", ");
-    if (ally.length) lines.push({ v: r22(ally.length * A.sideAlly), text: `\u043E\u043F\u043E\u0440\u0430: \u0437\u0430\u043E\u0434\u043D\u043E \u2014 ${names(ally)}`, kind: "support" });
-    if (friendly.length) lines.push({ v: r22(friendly.length * A.sideFriendly), text: `\u043E\u043F\u043E\u0440\u0430: \u043B\u0430\u0434\u044F\u0442 \u2014 ${names(friendly)}`, kind: "support" });
-    const c = councilSteady(w2);
-    if (c.ok) lines.push({ v: A.council, text: `\u043E\u043F\u043E\u0440\u0430: \u0441\u043E\u0432\u0435\u0442 \u2014 ${c.why}`, kind: "support" });
-    const duke = patienceWord(w2.eco.tax.patience);
-    const dv = duke === "\u0431\u043B\u0430\u0433\u043E\u0432\u043E\u043B\u0438\u0442" ? A.dukeFavor : duke === "\u043D\u0435\u0434\u043E\u0432\u043E\u043B\u0435\u043D" ? -A.dukeDispleased : duke === "\u043D\u0430 \u0438\u0441\u0445\u043E\u0434\u0435" ? -A.dukeEdge : 0;
-    if (dv) lines.push({ v: dv, text: `\u043E\u043F\u043E\u0440\u0430: \u0413\u0435\u0440\u0446\u043E\u0433 ${duke}`, kind: "support" });
-    const sum = r22(lines.reduce((s, l) => s + l.v, 0));
-    if (sum < 0 && duke !== "\u043D\u0430 \u0438\u0441\u0445\u043E\u0434\u0435") return { lines: [], total: 0 };
-    return { lines, total: sum };
-  }
-  function authoritySeason(w2, lines) {
-    const A = BALANCE.authority, a = w2.auth;
-    const old = a.complaints.filter((c) => complaintLeft(w2, c) <= 0);
-    for (const c of old) {
-      const from = w2.people[c.from];
-      addAuthority(w2, -A.complaintLeft, `\u0436\u0430\u043B\u043E\u0431\u0430 ${from.name} \u043D\u0435 \u0434\u043E\u0436\u0434\u0430\u043B\u0430\u0441\u044C \u0440\u0430\u0437\u0431\u043E\u0440\u0430`, "complaint");
-      from.loyalty = Math.max(-10, Math.round((from.loyalty - A.leftLoyalty) * 10) / 10);
-      lines.push(`\u{1F4DC} \u0416\u0430\u043B\u043E\u0431\u0430 ${from.name} \u043D\u0430 ${w2.people[c.on].name} \u043F\u0440\u043E\u043B\u0435\u0436\u0430\u043B\u0430 \u0433\u043E\u0434: \u0421\u0435\u043D\u0435\u0448\u0430\u043B\u044C \u0435\u0451 \u0442\u0430\u043A \u0438 \u043D\u0435 \u0440\u0430\u0437\u043E\u0431\u0440\u0430\u043B. \u0410\u0432\u0442\u043E\u0440\u0438\u0442\u0435\u0442 \u2212${A.complaintLeft}.`);
+  function newPreset(seed, presetId, labOpen = false) {
+    const w2 = newWorld(seed, labOpen);
+    const preset = PRESETS.find((x) => x.id === presetId);
+    if (preset) {
+      preset.apply(w2);
+      w2.log.push({ season: 0, kind: "info", title: `\u0417\u0430\u0433\u043E\u0442\u043E\u0432\u043A\u0430: ${preset.name}`, lines: [`${preset.desc[0].toUpperCase()}${preset.desc.slice(1)}.`] });
     }
-    a.complaints = a.complaints.filter((c) => complaintLeft(w2, c) > 0);
-    for (const l of authoritySupport(w2).lines) addAuthority(w2, l.v, l.text, "support");
-    a.last = a.cur;
-    a.lastSeason = w2.season;
-    a.cur = [];
-  }
-  function addComplaint(w2, from, on) {
-    w2.auth.complaints.push({ id: w2.auth.nextId++, from, on, season: w2.season });
-  }
-  function judge(w2, id) {
-    const A = BALANCE.authority, c = w2.auth.complaints.find((x) => x.id === id);
-    if (!c || w2.deedsLeft <= 0) return false;
-    w2.deedsLeft--;
-    w2.auth.complaints = w2.auth.complaints.filter((x) => x.id !== id);
-    const from = w2.people[c.from], on = w2.people[c.on];
-    from.loyalty = Math.min(10, Math.round((from.loyalty + A.judgeLoyalty) * 10) / 10);
-    addAuthority(w2, A.judge, `\u0441\u0443\u0434 \u043B\u0438\u0447\u043D\u043E: \u0436\u0430\u043B\u043E\u0431\u0430 ${from.name} \u043D\u0430 ${on.name}`, "judge");
-    w2.log.push({ season: w2.season, kind: "info", title: "\u0421\u0443\u0434 \u043B\u0438\u0447\u043D\u043E", lines: [`\u0421\u0435\u043D\u0435\u0448\u0430\u043B\u044C \u0441\u0430\u043C \u0440\u0430\u0437\u043E\u0431\u0440\u0430\u043B \u0436\u0430\u043B\u043E\u0431\u0443 ${from.name} \u043D\u0430 ${on.name}. ${from.name} \u0432\u044B\u0441\u043B\u0443\u0448\u0430\u043D${from.female ? "\u0430" : ""}. \u0410\u0432\u0442\u043E\u0440\u0438\u0442\u0435\u0442 +${A.judge}.`] });
-    return true;
-  }
-  function feastsThisYear(w2) {
-    const from = w2.season - seasonKind(w2.season);
-    return w2.auth.feasts.filter((s) => s >= from).length;
-  }
-  function feastGain(w2) {
-    return r22(BALANCE.authority.feast * Math.pow(BALANCE.authority.feastRepeat, feastsThisYear(w2)));
-  }
-  var feastCost = (id) => id === "prazdnik" ? BALANCE.authority.feastFood : BALANCE.authority.feastSilver;
-  function feast(w2, id) {
-    const def = FEASTS.find((f) => f.id === id), cost = feastCost(id);
-    if (w2.deedsLeft <= 0 || w2.eco.stock[def.pay] < cost) return false;
-    const gain = feastGain(w2);
-    w2.deedsLeft--;
-    addLine(w2, { cat: def.pay, v: -cost, text: `${def.name.toLowerCase()}: ${def.text}` });
-    w2.auth.feasts.push(w2.season);
-    addAuthority(w2, gain, `\u043E\u0431\u044B\u0447\u0430\u0439 \u0441\u043E\u0431\u043B\u044E\u0434\u0451\u043D: ${def.name.toLowerCase()}`, "feast");
-    const line = `${def.name}: ${def.text}. ${CATEGORY_NAMES[def.pay]} \u2212${cost}, \u0430\u0432\u0442\u043E\u0440\u0438\u0442\u0435\u0442 +${gain}.`;
-    w2.log.push({ season: w2.season, kind: "info", title: "\u041E\u0431\u044B\u0447\u0430\u0439 \u0441\u043E\u0431\u043B\u044E\u0434\u0451\u043D", lines: [line] });
-    return true;
+    return w2;
   }
 
   // src/ui/main.ts
@@ -2659,9 +2830,24 @@ details.bio ul { margin: 4px 0 0; padding-left: 18px; line-height: 1.4; }
   var SEASONS = SEASON_NAMES;
   var w;
   var designer = false;
+  var tab = "council";
+  function syncUrl() {
+    const q = new URLSearchParams();
+    q.set("seed", $("seed").value.trim() || "\u0437\u0430\u043C\u043E\u043A");
+    const preset = $("preset").value;
+    if (preset) q.set("preset", preset);
+    if ($("lab").checked) q.set("lab", "1");
+    if (designer) q.set("designer", "1");
+    if (tab !== "council") q.set("tab", tab);
+    if (!$("knobs-panel").hasAttribute("hidden")) q.set("knobs", "1");
+    try {
+      history.replaceState(null, "", `?${q.toString()}`);
+    } catch {
+    }
+  }
   function start() {
     const seed = $("seed").value.trim() || "\u0437\u0430\u043C\u043E\u043A";
-    w = newWorld(seed, $("lab").checked);
+    w = newPreset(seed, $("preset").value || null, $("lab").checked);
     render();
   }
   function seasonLabel(n) {
@@ -3073,17 +3259,142 @@ details.bio ul { margin: 4px 0 0; padding-left: 18px; line-height: 1.4; }
     const chips = Object.entries(eff).filter(([, v]) => v).map(([k2, v]) => `<span class="${v > 0 ? "pos" : "neg"}">${names[k2]} ${v > 0 ? "+" : ""}${v}</span>`);
     return chips.length ? `<div class="eff">${chips.join("")}</div>` : "";
   }
+  function weights(list) {
+    if (!designer || !list?.length) return "";
+    return `<div class="weights">${list.map((l) => `<p>${esc(l)}</p>`).join("")}</div>`;
+  }
   function renderLog() {
     const items = w.log.slice(-250).reverse();
     $("log").innerHTML = items.map((e) => {
       const cls = e.kind === "event" ? e.tone ?? "" : e.kind;
       const s = e.season ? seasonLabel(e.season) : "\u043D\u0430\u0447\u0430\u043B\u043E";
-      return `<div class="entry ${cls}"><div class="entry-title"><span class="s">${s}</span>${esc(e.title)}</div>${e.lines.map((l) => `<p>${esc(l)}</p>`).join("")}${effChips(e.effects)}</div>`;
+      return `<div class="entry ${cls}"><div class="entry-title"><span class="s">${s}</span>${esc(e.title)}</div>${e.lines.map((l) => `<p>${esc(l)}</p>`).join("")}${weights(e.weights)}${effChips(e.effects)}</div>`;
     }).join("");
   }
   function renderStatus() {
     $("status").innerHTML = `\u0421\u0435\u0439\u0447\u0430\u0441: <b>${seasonLabel(w.season)}</b> \xB7 \u0410\u0432\u0442\u043E\u0440\u0438\u0442\u0435\u0442: <b>${w.authority}</b> \xB7 \u041B\u0438\u0447\u043D\u044B\u0445 \u0434\u0435\u043B: <b>${w.deedsLeft}</b> \xB7 \u041F\u043E\u0442\u043E\u043B\u043E\u043A \u0430\u0432\u0442\u043E\u0440\u0438\u0442\u0435\u0442\u0430: ${authorityCap()}`;
   }
+  function renderYear() {
+    const e = w.eco, forks = forecastFork(w), hands = fieldHands(w), plan = planSeason(w), t = e.tax;
+    const rows = CATEGORIES.map((cat) => {
+      if (cat === "lyudi") return `<tr data-cat="lyudi"><th>\u041B\u044E\u0434\u0438</th><td>${fmt(hands.total)}</td><td>\u2014</td><td>\u0432 \u043F\u043E\u043B\u0435 ${fmt(hands.field)} \u0438\u0437 ${fmt(BALANCE.economy.hands.field)}</td></tr>`;
+      const f = forks.find((x) => x.cat === cat);
+      const last = e.last ? `${fmt(e.last.before[cat])} \u2192 ${fmt(e.last.after[cat])}` : "\u2014";
+      const exact = designer ? ` <small>\u043F\u043B\u0430\u043D ${fmt(plan.stock[cat])}</small>` : "";
+      return `<tr data-cat="${cat}"><th>${CATEGORY_NAMES[cat]}</th><td>${fmt(e.stock[cat])}</td><td>${last}</td>
+      <td><span class="fc-${f.word.replace(" ", "-")}">${f.word}</span> ${fmt(f.lo)}\u2013${fmt(f.hi)}${exact}</td></tr>`;
+    }).join("");
+    const zones = SIDES.filter((s) => zoneOf(w, s) !== "\u043B\u0430\u0434\u044F\u0442").map((s) => `${SIDE_NAMES[s].toLowerCase()} \u2014 ${zoneOf(w, s)}`).join("; ");
+    $("year").innerHTML = `<table class="year"><tr><th></th><th>\u0441\u0435\u0439\u0447\u0430\u0441</th><th>\u043F\u0440\u043E\u0448\u043B\u044B\u0439 \u0441\u0435\u0437\u043E\u043D</th><th>\u043A \u043A\u043E\u043D\u0446\u0443 \u0441\u0435\u0437\u043E\u043D\u0430</th></tr>${rows}</table>
+    <p class="hint" id="year-tax">\u0423\u0440\u043E\u043A ${fmt(t.due)} \u043C\u0435\u0440, \u0432\u043D\u0435\u0441\u0435\u043D\u043E ${fmt(t.paid)}, \u043E\u0441\u0442\u0430\u043B\u043E\u0441\u044C ${fmt(taxLeft(w))} \xB7 \u0413\u0435\u0440\u0446\u043E\u0433 ${patienceWord(t.patience)} \xB7 \u0430\u0432\u0442\u043E\u0440\u0438\u0442\u0435\u0442 ${fmt(w.authority)}</p>
+    <p class="hint" id="year-zones">\u0421\u0442\u043E\u0440\u043E\u043D\u044B: ${zones || "\u0432\u0441\u0435 \u043B\u0430\u0434\u044F\u0442"}.</p>`;
+  }
+  var SECTION_NAMES = {
+    star: "\u0417\u0432\u0435\u0437\u0434\u0430 \u0441\u043A\u043B\u043E\u043D\u043D\u043E\u0441\u0442\u0435\u0439",
+    decide: "\u0420\u0435\u0448\u0435\u043D\u0438\u0435 \u0447\u0435\u043B\u043E\u0432\u0435\u043A\u0430",
+    exp: "\u041E\u043F\u044B\u0442 \u0438 \u0438\u0441\u0445\u043E\u0434 \u0434\u0435\u043B\u0430",
+    rel: "\u041E\u0442\u043D\u043E\u0448\u0435\u043D\u0438\u044F",
+    council: "\u0421\u043F\u043E\u0440 \u0432 \u0441\u043E\u0432\u0435\u0442\u0435",
+    loyalty: "\u041E\u0442\u043D\u043E\u0448\u0435\u043D\u0438\u0435 \u043A \u0421\u0435\u043D\u0435\u0448\u0430\u043B\u044E",
+    staff: "\u041F\u0435\u0440\u0435\u0441\u0442\u0430\u043D\u043E\u0432\u043A\u0438 \u0438 \u043D\u0430\u043A\u0430\u0437",
+    know: "\u0417\u043D\u0430\u043D\u0438\u0435 \u043E \u043B\u044E\u0434\u044F\u0445",
+    traits: "\u0427\u0435\u0440\u0442\u044B \u0432 \u0442\u0435\u0447\u0435\u043D\u0438\u0435 \u0436\u0438\u0437\u043D\u0438",
+    economy: "\u0425\u043E\u0437\u044F\u0439\u0441\u0442\u0432\u043E \u0438 \u043F\u043E\u0434\u0430\u0442\u044C",
+    authority: "\u0410\u0432\u0442\u043E\u0440\u0438\u0442\u0435\u0442",
+    season: "\u0421\u0435\u0437\u043E\u043D",
+    report: "\u0426\u0435\u043B\u0438 \u043E\u0442\u0447\u0451\u0442\u0430 \u043E\u0441\u0435\u0439"
+  };
+  var SUB_NAMES = {
+    start: "\u0441\u0442\u0430\u0440\u0442 \u043F\u0430\u0440\u0442\u0438\u0438",
+    trust: "\u0434\u043E\u0432\u0435\u0440\u0438\u0435 \u0441\u0442\u043E\u0440\u043E\u043D",
+    zone: "\u0437\u043E\u043D\u044B \u0438 \u043F\u043E\u0442\u043E\u043A\u0438",
+    doer: "\u0438\u0441\u043F\u043E\u043B\u043D\u0438\u0442\u0435\u043B\u044C",
+    hands: "\u0440\u0443\u043A\u0438",
+    flow: "\u043F\u043E\u0442\u043E\u043A\u0438",
+    year: "\u043C\u043D\u043E\u0436\u0438\u0442\u0435\u043B\u0438 \u043F\u043E \u0441\u0435\u0437\u043E\u043D\u0430\u043C",
+    course: "\u043A\u0443\u0440\u0441",
+    tax: "\u0443\u0440\u043E\u043A \u0438 \u0442\u0435\u0440\u043F\u0435\u043D\u0438\u0435 \u0413\u0435\u0440\u0446\u043E\u0433\u0430",
+    rate: "\u043A\u0443\u0440\u0441\u044B \u043F\u043E\u0434\u0430\u0442\u0438",
+    pay: "\u0441\u043F\u043E\u0441\u043E\u0431\u044B \u043F\u043B\u0430\u0442\u0438\u0442\u044C",
+    goal: "\u0446\u0435\u043B\u0438 \u043E\u0442\u0447\u0451\u0442\u0430",
+    fork: "\u043F\u0440\u043E\u0433\u043D\u043E\u0437"
+  };
+  var EMU_KNOBS = KNOBS.filter((q) => q.path.split(".")[0] in SECTION_NAMES);
+  var knobId = (q) => `k-${q.path.replace(/\./g, "-")}`;
+  var DEFAULTS = Object.fromEntries(KNOBS.map((q) => [q.path, q.def]));
+  var sets = [{ ...DEFAULTS }, { ...DEFAULTS }];
+  var active = 1;
+  var changedKnobs = () => EMU_KNOBS.filter((q) => getAt(q.path) !== q.def);
+  function renderKnobs() {
+    const sections = [...new Set(EMU_KNOBS.map((q) => q.path.split(".")[0]))];
+    $("knobs").innerHTML = sections.map((sec) => {
+      const mine = EMU_KNOBS.filter((q) => q.path.split(".")[0] === sec);
+      let sub = "";
+      const rows = mine.map((q) => {
+        const v = getAt(q.path), parts = q.path.split(".");
+        const head = parts.length > 2 && parts[1] !== sub ? `<div class="knob-sub">${SUB_NAMES[parts[1]] ?? parts[1]}</div>` : "";
+        if (parts.length > 2) sub = parts[1];
+        return `${head}<div class="knob${v !== q.def ? " changed" : ""}" id="${knobId(q)}" title="${q.path}">
+        <div class="knob-label">${esc(q.label)}</div>
+        <div class="knob-row">
+          <input type="range" data-knob="${q.path}" min="${q.min}" max="${q.max}" step="${q.step}" value="${v}">
+          <span class="knob-val">${v}</span><span class="knob-def">\u043F\u043E \u0443\u043C\u043E\u043B\u0447. ${q.def}</span>
+        </div>
+      </div>`;
+      }).join("");
+      const n2 = mine.filter((q) => getAt(q.path) !== q.def).length;
+      const open = n2 || ($("knobs").querySelector(`details[data-sec="${sec}"]`)?.open ?? false);
+      return `<details class="knob-group" data-sec="${sec}"${open ? " open" : ""}><summary>${SECTION_NAMES[sec]} <small>${mine.length}${n2 ? `, \u0438\u0437\u043C\u0435\u043D\u0435\u043D\u043E ${n2}` : ""}</small></summary>${rows}</details>`;
+    }).join("");
+    $("ab1").classList.toggle("on", active === 0);
+    $("ab2").classList.toggle("on", active === 1);
+    const n = changedKnobs().length;
+    $("knobs-state").textContent = `\u0412\u043A\u043B\u044E\u0447\u0451\u043D \u043D\u0430\u0431\u043E\u0440 \xAB${active ? "\u0441\u0442\u0430\u043B\u043E" : "\u0431\u044B\u043B\u043E"}\xBB. ${n ? `\u0418\u0437\u043C\u0435\u043D\u0435\u043D\u043E \u0440\u0443\u0447\u0435\u043A: ${n}.` : "\u0412\u0441\u0435 \u0440\u0443\u0447\u043A\u0438 \u043F\u043E \u0443\u043C\u043E\u043B\u0447\u0430\u043D\u0438\u044E."} \u0420\u0443\u0447\u043A\u0430 \u0434\u0435\u0439\u0441\u0442\u0432\u0443\u0435\u0442 \u0441\u043E \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0435\u0433\u043E \u0440\u0435\u0448\u0435\u043D\u0438\u044F; \u0447\u0442\u043E\u0431\u044B \u0441\u0440\u0430\u0432\u043D\u0438\u0442\u044C \u043F\u0430\u0440\u0442\u0438\u044E \u0446\u0435\u043B\u0438\u043A\u043E\u043C \u2014 R.`;
+  }
+  function setKnob(path, value) {
+    const v = setAt(path, value);
+    sets[active] = snapshotBalance();
+    return v;
+  }
+  function switchSet(i) {
+    if (i === active) return;
+    sets[active] = snapshotBalance();
+    active = i;
+    restoreBalance(sets[active]);
+    renderKnobs();
+    render();
+  }
+  function dumpKnobs() {
+    const list = changedKnobs();
+    const text = list.length ? list.map((q) => `${q.path}: ${q.def} \u2192 ${getAt(q.path)}  // ${q.label}`).join("\n") : "\u0412\u0441\u0435 \u0440\u0443\u0447\u043A\u0438 \u043F\u043E \u0443\u043C\u043E\u043B\u0447\u0430\u043D\u0438\u044E.";
+    const out = $("dump-out");
+    out.hidden = false;
+    out.value = text;
+    out.select();
+    return text;
+  }
+  function toggleKnobs(show = $("knobs-panel").hasAttribute("hidden")) {
+    $("knobs-panel").hidden = !show;
+    document.body.classList.toggle("knobs-open", show);
+    if (show) renderKnobs();
+    syncUrl();
+  }
+  function setTab(next) {
+    tab = next;
+    $("tab-council").hidden = tab !== "council";
+    $("tab-eco").hidden = tab !== "eco";
+    document.querySelectorAll(".tabs button").forEach((b) => b.classList.toggle("on", b.dataset.tab === tab));
+    syncUrl();
+  }
+  function setDesigner(on) {
+    designer = on;
+    $("designer").checked = on;
+    render();
+  }
+  var seasons = (n) => {
+    for (let i = 0; i < n; i++) runSeason(w);
+    render();
+  };
   function render() {
     renderStatus();
     renderDesk();
@@ -3092,24 +3403,97 @@ details.bio ul { margin: 4px 0 0; padding-left: 18px; line-height: 1.4; }
     renderEconomy();
     renderPeople();
     renderLog();
+    renderYear();
+    syncUrl();
   }
   $("new").addEventListener("click", start);
-  $("season").addEventListener("click", () => {
-    runSeason(w);
-    render();
-  });
-  $("season5").addEventListener("click", () => {
-    for (let i = 0; i < 5; i++) runSeason(w);
-    render();
-  });
+  $("season").addEventListener("click", () => seasons(1));
+  $("season5").addEventListener("click", () => seasons(5));
   $("lab").addEventListener("change", () => {
     w.labOpen = $("lab").checked;
+    syncUrl();
   });
-  $("designer").addEventListener("change", () => {
-    designer = $("designer").checked;
+  $("designer").addEventListener("change", () => setDesigner($("designer").checked));
+  $("preset").addEventListener("change", start);
+  $("knobs-toggle").addEventListener("click", () => toggleKnobs());
+  $("ab1").addEventListener("click", () => switchSet(0));
+  $("ab2").addEventListener("click", () => switchSet(1));
+  $("knobs-reset").addEventListener("click", () => {
+    resetBalance();
+    sets[active] = snapshotBalance();
+    renderKnobs();
     render();
   });
+  $("knobs-dump").addEventListener("click", dumpKnobs);
+  $("knobs").addEventListener("input", (e) => {
+    const el = e.target;
+    if (!el.dataset.knob) return;
+    const v = setKnob(el.dataset.knob, Number(el.value));
+    const q = KNOBS.find((x) => x.path === el.dataset.knob), row = $(knobId(q));
+    row.classList.toggle("changed", v !== q.def);
+    row.querySelector(".knob-val").textContent = String(v);
+    render();
+  });
+  $("knobs").addEventListener("change", renderKnobs);
+  document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("click", () => setTab(b.dataset.tab)));
+  document.addEventListener("click", (e) => {
+    if (e.target instanceof HTMLButtonElement) e.target.blur();
+  });
+  document.addEventListener("keydown", (e) => {
+    const t = e.target;
+    const typing = ["INPUT", "SELECT", "TEXTAREA"].includes(t.tagName) && t.id !== "dump-out";
+    if (e.ctrlKey || e.metaKey || e.altKey || typing) return;
+    const keys = {
+      Space: () => seasons(1),
+      KeyF: () => seasons(5),
+      KeyR: start,
+      KeyD: () => setDesigner(!designer),
+      Tab: () => toggleKnobs(),
+      KeyP: () => {
+        toggleKnobs(true);
+        dumpKnobs();
+      },
+      Digit1: () => switchSet(0),
+      Digit2: () => switchSet(1)
+    };
+    const run = keys[e.code];
+    if (!run) return;
+    e.preventDefault();
+    run();
+  });
+  var params = new URLSearchParams(location.search);
+  $("preset").innerHTML = `<option value="">\u0431\u0435\u0437 \u0437\u0430\u0433\u043E\u0442\u043E\u0432\u043A\u0438</option>${PRESETS.map((p) => `<option value="${p.id}" title="${esc(p.desc)}">${esc(p.name)}</option>`).join("")}`;
+  if (params.get("seed")) $("seed").value = params.get("seed");
+  if (PRESETS.some((p) => p.id === params.get("preset"))) $("preset").value = params.get("preset");
+  $("lab").checked = params.get("lab") === "1";
+  designer = params.get("designer") === "1";
+  $("designer").checked = designer;
   start();
+  setTab(params.get("tab") === "eco" ? "eco" : "council");
+  if (params.get("knobs") === "1") toggleKnobs(true);
+  var emu = {
+    restart: (seed, preset) => {
+      if (seed !== void 0) $("seed").value = seed;
+      if (preset !== void 0) $("preset").value = preset;
+      start();
+    },
+    season: (n = 1) => seasons(n),
+    setKnob: (path, v) => {
+      const out = setKnob(path, v);
+      renderKnobs();
+      render();
+      return out;
+    },
+    snapshot: () => ({
+      season: w.season,
+      authority: w.authority,
+      stock: { ...w.eco.stock },
+      set: active ? "\u0441\u0442\u0430\u043B\u043E" : "\u0431\u044B\u043B\u043E",
+      log: w.log.length,
+      knobs: Object.fromEntries(changedKnobs().map((q) => [q.path, getAt(q.path)]))
+    })
+  };
+  window.__emu = emu;
 })();
 </script>
 </body>
