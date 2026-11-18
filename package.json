@@ -11,7 +11,8 @@
     "test": "node --import tsx --test --test-reporter=spec \"test/*.test.ts\"",
     "check": "npm run typecheck && npm run lint && npm test && npm run build",
     "e2e": "python3 test/e2e/smoke.py",
-    "sim": "tsx tools/headless.ts"
+    "sim": "tsx tools/headless.ts",
+    "axes": "tsx tools/axes.ts"
   },
   "devDependencies": {
     "@types/node": "^26.6.6",

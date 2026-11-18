@@ -26,13 +26,13 @@ export const OPPOSED: [Axis, Axis][] = [
   ["dolg", "derzost"],
 ];
 
-// into — «годится в …»: куда ставят
-export const POSTS: { id: PostId; name: string; into: string; sphere: string; axes: Axis[] }[] = [
-  { id: "starosta", name: "Староста", into: "старосты", sphere: "деревни, поля, крестьяне", axes: ["zabota", "obychai"] },
-  { id: "desyatnik", name: "Десятник", into: "десятники", sphere: "стража, дороги, караваны", axes: ["dolg", "derzost"] },
-  { id: "klyuchnik", name: "Ключник", into: "ключники", sphere: "замок, припасы, челядь, стройка", axes: ["dolg", "vygoda"] },
-  { id: "pisar", name: "Писарь-казначей", into: "писари", sphere: "деньги, торговля, бумаги, двор", axes: ["vygoda", "dolg"] },
-  { id: "lesnichiy", name: "Лесничий", into: "лесничие", sphere: "опушка, лес, лесной народ", axes: ["obychai", "zabota"] },
+// into — «годится в …»: куда ставят; axes — оси годности; native — родные склонности: их события должности задевают часто, остальные изредка
+export const POSTS: { id: PostId; name: string; into: string; sphere: string; axes: Axis[]; native: Axis[] }[] = [
+  { id: "starosta", name: "Староста", into: "старосты", sphere: "деревни, поля, крестьяне", axes: ["zabota", "obychai"], native: ["zabota", "obychai", "dolg"] },
+  { id: "desyatnik", name: "Десятник", into: "десятники", sphere: "стража, дороги, караваны", axes: ["dolg", "derzost"], native: ["dolg", "derzost"] },
+  { id: "klyuchnik", name: "Ключник", into: "ключники", sphere: "замок, припасы, челядь, стройка", axes: ["dolg", "vygoda"], native: ["dolg", "vygoda", "zabota"] },
+  { id: "pisar", name: "Писарь-казначей", into: "писари", sphere: "деньги, торговля, бумаги, двор", axes: ["vygoda", "dolg"], native: ["vygoda", "dolg", "derzost"] },
+  { id: "lesnichiy", name: "Лесничий", into: "лесничие", sphere: "опушка, лес, лесной народ", axes: ["obychai", "zabota"], native: ["obychai", "zabota"] },
 ];
 
 export const FACTION_NAMES: Record<Faction, string> = {
