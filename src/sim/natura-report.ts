@@ -5,7 +5,9 @@ import { AXES, AXIS_NAMES } from "../data/core";
 import { SIGNS, NATURES, BAG } from "../data/natura";
 import { BALANCE as B } from "./balance";
 import { rollPerson, type NaturaPerson } from "./natura";
-import { newWorld, topAxis } from "./sim";
+import { newWorld } from "./sim";
+import { topAxis } from "./state";
+import { mean, round3 } from "./util";
 
 export interface AxisDist { mean: number; spread: number; top: number } // среднее, разброс, доля людей с этой ведущей склонностью
 export interface NaturaMetrics {
@@ -26,10 +28,8 @@ export interface NaturaMetrics {
   kinds: { born: number; life: number; perk: number }; // черт на человека по видам
 }
 
-const mean = (xs: number[]) => (xs.length ? xs.reduce((s, v) => s + v, 0) / xs.length : 0);
 const spread = (xs: number[]) => { const m = mean(xs); return Math.sqrt(mean(xs.map((v) => (v - m) * (v - m)))); };
 const median = (xs: number[]) => { const a = [...xs].sort((x, y) => x - y); return a.length ? a[Math.floor(a.length / 2)] : 0; };
-const round3 = (v: number) => Math.round(v * 1000) / 1000;
 
 export function jaccard(a: Set<string>, b: Set<string>): number {
   let both = 0;

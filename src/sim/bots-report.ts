@@ -3,11 +3,12 @@
 import { POSTS } from "../data/core";
 import { SIDES } from "../data/economy";
 import { BALANCE as B } from "./balance";
-import { getRel, topAxis, type Outcome } from "./sim";
+import { getRel, topAxis, type Outcome } from "./state";
 import { zoneOf, patienceWord } from "./economy";
 import { authorityCap } from "./authority";
 import { BOTS, bot, playBot, type Bot, type BotRun } from "./bots";
 import { PRESETS } from "./presets";
+import { mean } from "./util";
 
 // Метрика партии: id, подпись для таблицы, сколько знаков после запятой, доля ли это (печатать процентами).
 // diag — замер, а не исход партии: в вердикт пары не идёт.
@@ -65,7 +66,6 @@ export type Metrics = Record<string, number>;
 
 const PEACE: Outcome[] = ["agree", "deal"], FORCED: Outcome[] = ["compromise", "push"], HOSTILE: Outcome[] = ["rival", "sabotage", "silent"];
 const share = (a: number, b: number) => (b ? a / b : 0);
-const mean = (xs: number[]) => (xs.length ? xs.reduce((s, v) => s + v, 0) / xs.length : 0);
 const sd = (xs: number[]) => { const m = mean(xs); return xs.length > 1 ? Math.sqrt(xs.reduce((s, v) => s + (v - m) ** 2, 0) / (xs.length - 1)) : 0; };
 
 export function metricsOf(run: BotRun): Metrics {

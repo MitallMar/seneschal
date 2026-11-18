@@ -2421,6 +2421,205 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
     }
   };
 
+  // src/sim/util.ts
+  var clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  var round1 = (v) => Math.round(v * 10) / 10;
+  var round2 = (v) => Math.round(v * 100) / 100;
+  var round3 = (v) => Math.round(v * 1e3) / 1e3;
+  var mean = (xs) => xs.length ? xs.reduce((s, v) => s + v, 0) / xs.length : 0;
+
+  // src/sim/state.ts
+  var STAR_MAX = 10;
+  var REL_MAX = 10;
+  var relKey = (a, b) => a < b ? `${a}|${b}` : `${b}|${a}`;
+  function topAxis(star) {
+    return AXES.reduce((best, a) => star[a] > star[best] ? a : best, AXES[0]);
+  }
+  function postName(id) {
+    return POSTS.find((p) => p.id === id).name;
+  }
+  function holder(w, post) {
+    const id = w.posts[post];
+    return id == null ? void 0 : w.people[id];
+  }
+  function fitness(p, post) {
+    const def = POSTS.find((x) => x.id === post);
+    let f = def.axes.reduce((s, a) => s + p.star[a], 0) / def.axes.length;
+    if (p.mark?.goodPost === post) f += BALANCE.exp.fitMarkGood;
+    if (p.mark?.badPost === post) f -= BALANCE.exp.fitMarkBad;
+    if (p.aspiration?.post === post) f += BALANCE.exp.fitAspiration;
+    return f;
+  }
+
+  // src/sim/natura.ts
+  var SIGN_MAX = 5;
+  var SIGN_IDS = SIGNS.map((s) => s.id);
+  var TRIGGERS = ["habit", "post", "rel", "break", "deed"];
+  var dot = (a, b) => SIGN_IDS.reduce((s, k2) => s + (a[k2] ?? 0) * (b[k2] ?? 0), 0);
+  function cos(a, b) {
+    const n = Math.sqrt(dot(a, a) * dot(b, b));
+    return n ? dot(a, b) / n : 0;
+  }
+  var sum = (vecs, scale = 1) => {
+    const out = {};
+    for (const v of vecs) for (const k2 of SIGN_IDS) if (v[k2]) out[k2] = (out[k2] ?? 0) + v[k2] * scale;
+    return out;
+  };
+  var unit = (v) => sum([v], 1 / (Math.sqrt(dot(v, v)) || 1));
+  var bagTrait = (id) => {
+    const t = BAG.find((x) => x.id === id);
+    if (!t) throw new Error(`\u0412 \u043C\u0435\u0448\u043A\u0435 \u043D\u0435\u0442 \u0447\u0435\u0440\u0442\u044B ${id}`);
+    return t;
+  };
+  var natureById = (id) => {
+    const n = NATURES.find((x) => x.id === id);
+    if (!n) throw new Error(`\u041D\u0435\u0442 \u043D\u0430\u0442\u0443\u0440\u044B ${id}`);
+    return n;
+  };
+  var inConflict = (a, b) => !!a.conflicts?.includes(b.id) || !!b.conflicts?.includes(a.id);
+  var isFar = (n, t) => Math.abs(cos(n.core, t.vec)) <= BALANCE.natura.farCos;
+  var isContra = (n, t) => cos(n.core, t.vec) <= -BALANCE.natura.contraCos;
+  function signsOf(nature, traits) {
+    const raw = sum([sum([nature.core], BALANCE.natura.coreScale), ...traits.map((t) => t.vec)]);
+    return Object.fromEntries(SIGN_IDS.map((k2) => [k2, round1(SIGN_MAX * Math.tanh((raw[k2] ?? 0) / BALANCE.natura.signSoft))]));
+  }
+  function eventVec(ev) {
+    const w = BALANCE.natura.w;
+    return sum(AXES.filter((a) => ev.shift[a]).map((a) => sum([w[a]], ev.shift[a])));
+  }
+  function beforeCount(age) {
+    const extra = Math.floor(Math.max(0, age - BALANCE.natura.adultAge) / BALANCE.natura.beforeAgeStep);
+    return clamp(BALANCE.natura.beforeMin + extra, BALANCE.natura.beforeMin, Math.max(BALANCE.natura.beforeMin, BALANCE.natura.beforeMax));
+  }
+  function businessStar(signs) {
+    const w = BALANCE.natura.w;
+    return Object.fromEntries(AXES.map((a) => [a, round1(clamp(BALANCE.star.center + BALANCE.natura.shift[a] + BALANCE.natura.axisGain * dot(w[a], signs), 0, STAR_MAX))]));
+  }
+  var rarityWeight = (t) => t.rarity === "rare" ? BALANCE.natura.rareWeight : t.rarity === "exceptional" ? BALANCE.natura.exceptionalWeight : 1;
+  function saturation(nature, traits, t) {
+    const cur = sum([sum([nature.core], BALANCE.natura.coreSat), ...traits.map((x) => x.vec)]);
+    const overlap = SIGN_IDS.reduce((s, k2) => s + Math.max(0, (cur[k2] ?? 0) * (t.vec[k2] ?? 0)), 0);
+    return 1 / (1 + BALANCE.natura.satK * overlap);
+  }
+  function candidateWeight(nature, traits, t, target, opts = {}) {
+    const close = target ? Math.max(0, cos(t.vec, target)) + BALANCE.natura.closenessFloor : 1;
+    const pull = opts.events?.length ? Math.max(BALANCE.natura.closenessFloor, 1 + BALANCE.natura.eventK * cos(t.vec, sum(opts.events))) : 1;
+    const repeat = Math.pow(BALANCE.natura.repeatPenalty, opts.taken?.get(t.id) ?? 0);
+    return Math.pow(close * pull, 1 / BALANCE.natura.temperature) * rarityWeight(t) * saturation(nature, traits, t) * repeat;
+  }
+  function pickWeighted(rng, items, weight) {
+    const ws = items.map(weight);
+    const total = ws.reduce((s, v) => s + v, 0);
+    if (!items.length || total <= 0) return void 0;
+    let r = rng.next() * total;
+    for (let i = 0; i < items.length; i++) {
+      r -= ws[i];
+      if (r < 0) return items[i];
+    }
+    return items[items.length - 1];
+  }
+  function allowed(p, kinds, swap = false) {
+    const blocks = (held, t) => inConflict(held, t) && !(swap && held.kind === "life" && t.replaces?.includes(held.id) && !isAnchor(p, held.id));
+    return BAG.filter((t) => kinds.includes(t.kind) && !p.traits.includes(t) && !p.traits.some((x) => blocks(x, t)) && (!t.requires || t.requires.some((id) => p.traits.some((x) => x.id === id))));
+  }
+  var isAnchor = (p, id) => p.anchors.includes(id) || p.far === id || p.contra === id;
+  function growthTarget(rng, p) {
+    const fromFar = !!p.far && (rng.chance(BALANCE.natura.farShare) || !p.anchors.length);
+    if (fromFar) return { anchor: p.far, target: bagTrait(p.far).vec };
+    if (!p.anchors.length) return { anchor: "", target: p.nature.core };
+    const anchor = rng.pick(p.anchors);
+    return { anchor, target: sum([unit(bagTrait(anchor).vec), sum([unit(p.nature.core)], BALANCE.natura.corePull)]) };
+  }
+  function shortList(pool, ev) {
+    return pool.map((t, i) => ({ t, i, c: cos(t.vec, ev) })).sort((a, b) => b.c - a.c || a.i - b.i).slice(0, BALANCE.natura.eventList).map((x) => x.t);
+  }
+  function refresh(p) {
+    p.signs = signsOf(p.nature, p.traits);
+    p.star = businessStar(p.signs);
+    return p;
+  }
+  function growPerson(rng, nature, opts = {}) {
+    const age = opts.age ?? rng.int(BALANCE.natura.ageMin, Math.max(BALANCE.natura.ageMin, BALANCE.natura.ageMax));
+    const zero = signsOf(nature, []);
+    const p = {
+      nature,
+      age,
+      traits: [],
+      anchors: [],
+      far: "",
+      contra: "",
+      from: {},
+      via: {},
+      inGame: [],
+      lost: [],
+      events: opts.events ?? [],
+      signs: zero,
+      star: businessStar(zero)
+    };
+    const w = (target, events) => (t) => candidateWeight(nature, p.traits, t, target, { events, taken: opts.taken });
+    const innate = rng.int(BALANCE.natura.innateMin, Math.max(BALANCE.natura.innateMin, BALANCE.natura.innateMax));
+    for (const crystal of rng.shuffle(nature.crystals).slice(0, innate)) {
+      const t = pickWeighted(rng, allowed(p, ["born"]).filter((x) => cos(x.vec, crystal) > 0), w(crystal, opts.events));
+      if (t) {
+        p.traits.push(t);
+        p.anchors.push(t.id);
+      }
+    }
+    const count = beforeCount(age);
+    const story = opts.backstory ?? rng.shuffle(BACKSTORY).slice(0, count);
+    const hasContra = () => p.traits.find((x) => isContra(nature, x));
+    story.slice(0, count).forEach((ev, i) => {
+      const vec = eventVec(ev);
+      const life = allowed(p, ["life"]).filter((x) => x.source.includes("backstory"));
+      const far = i === 0, contra = !far && i === Math.min(count, story.length) - 1 && !hasContra();
+      const narrowed = far ? life.filter((x) => isFar(nature, x)) : contra ? life.filter((x) => isContra(nature, x)) : life;
+      const grow = far || contra ? void 0 : growthTarget(rng, p);
+      const list = shortList(narrowed.length ? narrowed : life, vec), events = [vec, ...opts.events ?? []];
+      const t = pickWeighted(rng, list, w(grow?.target, events)) ?? pickWeighted(rng, list, w(void 0, events));
+      if (!t) return;
+      p.traits.push(t);
+      p.via[t.id] = ev.id;
+      if (far) p.far = t.id;
+      else if (grow?.anchor) p.from[t.id] = grow.anchor;
+    });
+    p.contra = hasContra()?.id ?? "";
+    delete p.from[p.contra];
+    return refresh(p);
+  }
+  function growLife(rng, p, opts = {}) {
+    const pool = allowed(p, ["life", "perk"], true).filter((t2) => !opts.trigger || t2.trigger === opts.trigger);
+    const grow = growthTarget(rng, p);
+    const weight = (target) => (x) => candidateWeight(p.nature, p.traits, x, target, opts) * (x.kind === "perk" ? BALANCE.natura.perkWeight : 1);
+    const t = pickWeighted(rng, pool, weight(grow.target)) ?? pickWeighted(rng, pool, weight());
+    if (!t) return void 0;
+    const gone = p.traits.filter((x) => x.kind === "life" && t.replaces?.includes(x.id) && !isAnchor(p, x.id));
+    p.traits = p.traits.filter((x) => !gone.includes(x));
+    p.lost.push(...gone.map((x) => x.id));
+    p.inGame = p.inGame.filter((id) => !gone.some((x) => x.id === id));
+    p.traits.push(t);
+    p.inGame.push(t.id);
+    if (grow.anchor) p.from[t.id] = grow.anchor;
+    if (opts.events) p.events = [...p.events, ...opts.events];
+    refresh(p);
+    return t;
+  }
+  function growParty(seed, size, natureIds) {
+    const rng = new Rng(seed);
+    const natures = natureIds ? natureIds.map(natureById) : rng.shuffle(NATURES).slice(0, size);
+    const taken = /* @__PURE__ */ new Map();
+    return natures.map((n) => {
+      const p = growPerson(rng, n, { taken });
+      for (const t of p.traits) taken.set(t.id, (taken.get(t.id) ?? 0) + 1);
+      return p;
+    });
+  }
+  function rollPerson(seed, nature, age) {
+    const rng = new Rng(seed);
+    const p = growPerson(rng, nature, { age });
+    for (let i = 0; i < BALANCE.natura.lifeSteps; i++) growLife(rng, p, { trigger: rng.pick(TRIGGERS), events: [eventVec(rng.pick(BACKSTORY))] });
+    return p;
+  }
+
   // src/data/rumors.ts
   var RUMORS_AXIS = {
     dolg: ["\u0413\u043E\u0432\u043E\u0440\u044F\u0442, \u0441\u043B\u043E\u0432\u043E \u0434\u0435\u0440\u0436\u0438\u0442.", "\u0413\u043E\u0432\u043E\u0440\u044F\u0442, \u043F\u0440\u0438\u043A\u0430\u0437 \u0434\u043B\u044F {\u0435\u0433\u043E} \u2014 \u0437\u0430\u043A\u043E\u043D.", "\u0413\u043E\u0432\u043E\u0440\u044F\u0442, \u0441\u043B\u0443\u0436\u0431\u0443 \u0441\u0442\u0430\u0432\u0438\u0442 \u0432\u044B\u0448\u0435 \u0441\u0432\u043E\u0435\u0433\u043E."],
@@ -2936,9 +3135,6 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
   ];
 
   // src/sim/economy.ts
-  var clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-  var r1 = (v) => Math.round(v * 10) / 10;
-  var r2 = (v) => Math.round(v * 100) / 100;
   function zoneWord(v) {
     const T = BALANCE.economy.trust;
     return v >= T.ally ? "\u0437\u0430\u043E\u0434\u043D\u043E" : v >= T.friendly ? "\u043B\u0430\u0434\u044F\u0442" : v > T.refuse ? "\u0442\u0435\u0440\u043F\u044F\u0442" : "\u043E\u0442\u043A\u0430\u0437\u044B\u0432\u0430\u044E\u0442";
@@ -2949,8 +3145,8 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
       const trait = TRAITS.find((t) => t.id === e.trait);
       const star = {};
       for (const a of AXES) star[a] = BALANCE.star.base + w.rng.range(0, BALANCE.star.baseRandom) + (trait.star[a] ?? 0);
-      const mean3 = AXES.reduce((t, a) => t + star[a], 0) / AXES.length;
-      for (const a of AXES) star[a] = r1(clamp(BALANCE.star.center + (star[a] - mean3) * BALANCE.star.spread, BALANCE.star.floor, STAR_MAX));
+      const mean2 = AXES.reduce((t, a) => t + star[a], 0) / AXES.length;
+      for (const a of AXES) star[a] = round1(clamp(BALANCE.star.center + (star[a] - mean2) * BALANCE.star.spread, BALANCE.star.floor, STAR_MAX));
       const rel = w.people.map((p) => {
         let v = w.rng.range(-BALANCE.rel.startSpread, BALANCE.rel.startSpread);
         for (const [x, y] of OPPOSED) {
@@ -2958,7 +3154,7 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
           if (star[x] >= from && p.star[y] >= from || star[y] >= from && p.star[x] >= from) v -= BALANCE.rel.opposedPenalty;
         }
         if (topAxis(star) === topAxis(p.star)) v += BALANCE.rel.sameTop;
-        return r1(v);
+        return round1(v);
       });
       return { side: e.side, name: e.name, female: e.female, age: e.age, trait, star, rel };
     });
@@ -2996,7 +3192,7 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
     const t = w.eco.tax;
     t.year++;
     t.lesson = lessonOf(t.year);
-    t.due = r1(t.lesson + t.carried);
+    t.due = round1(t.lesson + t.carried);
     t.paid = 0;
     t.early = false;
     t.by = {};
@@ -3004,7 +3200,7 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
     return `\u0413\u0435\u0440\u0446\u043E\u0433 \u043E\u0431\u044A\u044F\u0432\u0438\u043B \u0443\u0440\u043E\u043A \u043D\u0430 \u0433\u043E\u0434${trial}: ${t.lesson} \u043C\u0435\u0440${t.carried ? ` \u0438 \u043D\u0435\u0434\u043E\u0438\u043C\u043A\u0430 ${t.carried}` : ""} \u2014 \u043A \u043E\u0441\u0435\u043D\u0438 ${t.due}.`;
   }
   function rollForecast(w) {
-    for (const c of STOCKS) w.eco.fc[c] = r2(w.rng.range(-1, 1));
+    for (const c of STOCKS) w.eco.fc[c] = round2(w.rng.range(-1, 1));
   }
 
   // src/sim/authority.ts
@@ -3014,21 +3210,6 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
   }
 
   // src/sim/sim.ts
-  var STAR_MAX = 10;
-  var REL_MAX = 10;
-  var clamp2 = (v, a, b) => Math.max(a, Math.min(b, v));
-  var round1 = (v) => Math.round(v * 10) / 10;
-  var relKey = (a, b) => a < b ? `${a}|${b}` : `${b}|${a}`;
-  function topAxis(star) {
-    return AXES.reduce((best, a) => star[a] > star[best] ? a : best, AXES[0]);
-  }
-  function postName(id) {
-    return POSTS.find((p) => p.id === id).name;
-  }
-  function holder(w, post) {
-    const id = w.posts[post];
-    return id == null ? void 0 : w.people[id];
-  }
   function gender(text, p, other) {
     return text.replace(/\{name\}/g, p.name).replace(/\{other\}/g, other ? other.name : "\u0441\u043E\u0441\u0435\u0434\u043E\u043C").replace(/\{oа\}/g, other?.female ? "\u0430" : "").replace(/\{а\}/g, p.female ? "\u0430" : "").replace(/\{ся\}|\{ась\}/g, p.female ? "\u0430\u0441\u044C" : "\u0441\u044F").replace(/\{он\}/g, p.female ? "\u043E\u043D\u0430" : "\u043E\u043D").replace(/\{его\}/g, p.female ? "\u0435\u0451" : "\u0435\u0433\u043E").replace(/\{ему\}/g, p.female ? "\u0435\u0439" : "\u0435\u043C\u0443");
   }
@@ -3100,11 +3281,11 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
         p.bio.push(gender(ev.text, p, other));
         if (ev.aspiration) aspirations.push(ev.aspiration);
       }
-      const mean3 = AXES.reduce((t, a) => t + p.star[a], 0) / AXES.length;
-      for (const a of AXES) p.star[a] = clamp2(BALANCE.star.center + (p.star[a] - mean3) * BALANCE.star.spread, BALANCE.star.floor, STAR_MAX);
+      const mean2 = AXES.reduce((t, a) => t + p.star[a], 0) / AXES.length;
+      for (const a of AXES) p.star[a] = clamp(BALANCE.star.center + (p.star[a] - mean2) * BALANCE.star.spread, BALANCE.star.floor, STAR_MAX);
       const bounds = ROSTER[p.id].bounds;
       if (bounds) {
-        for (const a of AXES) if (bounds[a]) p.star[a] = clamp2(p.star[a], bounds[a][0], bounds[a][1]);
+        for (const a of AXES) if (bounds[a]) p.star[a] = clamp(p.star[a], bounds[a][0], bounds[a][1]);
       }
       for (const a of AXES) p.star[a] = round1(p.star[a]);
       p.startStar = { ...p.star };
@@ -3131,7 +3312,7 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
         }
         if (topAxis(a.star) === topAxis(b.star)) v += BALANCE.rel.sameTop;
         v += personal.get(relKey(i, j)) ?? 0;
-        w.rel.set(relKey(i, j), clamp2(round1(v), -REL_MAX, REL_MAX));
+        w.rel.set(relKey(i, j), clamp(round1(v), -REL_MAX, REL_MAX));
       }
     }
     autoAssign(w, true);
@@ -3173,14 +3354,6 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
     if (!weak.length) wrong = false;
     const axis = wrong ? w.rng.pick(weak) : topAxis(p.star);
     return { text: gender(w.rng.pick(RUMORS_AXIS[axis]), p), axis, wrong };
-  }
-  function fitness(p, post) {
-    const def = POSTS.find((x) => x.id === post);
-    let f = def.axes.reduce((s, a) => s + p.star[a], 0) / def.axes.length;
-    if (p.mark?.goodPost === post) f += BALANCE.exp.fitMarkGood;
-    if (p.mark?.badPost === post) f -= BALANCE.exp.fitMarkBad;
-    if (p.aspiration?.post === post) f += BALANCE.exp.fitAspiration;
-    return f;
   }
   function autoAssign(w, initial = false) {
     for (const k2 of Object.keys(w.posts)) w.posts[k2] = null;
@@ -3236,179 +3409,7 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
     w.desk = { event: w.rng.pick(eventPool(w)).id };
   }
 
-  // src/sim/natura.ts
-  var SIGN_MAX = 5;
-  var SIGN_IDS = SIGNS.map((s) => s.id);
-  var TRIGGERS = ["habit", "post", "rel", "break", "deed"];
-  var clamp3 = (v, a, b) => Math.max(a, Math.min(b, v));
-  var round12 = (v) => Math.round(v * 10) / 10;
-  var dot = (a, b) => SIGN_IDS.reduce((s, k2) => s + (a[k2] ?? 0) * (b[k2] ?? 0), 0);
-  function cos(a, b) {
-    const n = Math.sqrt(dot(a, a) * dot(b, b));
-    return n ? dot(a, b) / n : 0;
-  }
-  var sum = (vecs, scale = 1) => {
-    const out = {};
-    for (const v of vecs) for (const k2 of SIGN_IDS) if (v[k2]) out[k2] = (out[k2] ?? 0) + v[k2] * scale;
-    return out;
-  };
-  var unit = (v) => sum([v], 1 / (Math.sqrt(dot(v, v)) || 1));
-  var bagTrait = (id) => {
-    const t = BAG.find((x) => x.id === id);
-    if (!t) throw new Error(`\u0412 \u043C\u0435\u0448\u043A\u0435 \u043D\u0435\u0442 \u0447\u0435\u0440\u0442\u044B ${id}`);
-    return t;
-  };
-  var natureById = (id) => {
-    const n = NATURES.find((x) => x.id === id);
-    if (!n) throw new Error(`\u041D\u0435\u0442 \u043D\u0430\u0442\u0443\u0440\u044B ${id}`);
-    return n;
-  };
-  var inConflict = (a, b) => !!a.conflicts?.includes(b.id) || !!b.conflicts?.includes(a.id);
-  var isFar = (n, t) => Math.abs(cos(n.core, t.vec)) <= BALANCE.natura.farCos;
-  var isContra = (n, t) => cos(n.core, t.vec) <= -BALANCE.natura.contraCos;
-  function signsOf(nature, traits) {
-    const raw = sum([sum([nature.core], BALANCE.natura.coreScale), ...traits.map((t) => t.vec)]);
-    return Object.fromEntries(SIGN_IDS.map((k2) => [k2, round12(SIGN_MAX * Math.tanh((raw[k2] ?? 0) / BALANCE.natura.signSoft))]));
-  }
-  function eventVec(ev) {
-    const w = BALANCE.natura.w;
-    return sum(AXES.filter((a) => ev.shift[a]).map((a) => sum([w[a]], ev.shift[a])));
-  }
-  function beforeCount(age) {
-    const extra = Math.floor(Math.max(0, age - BALANCE.natura.adultAge) / BALANCE.natura.beforeAgeStep);
-    return clamp3(BALANCE.natura.beforeMin + extra, BALANCE.natura.beforeMin, Math.max(BALANCE.natura.beforeMin, BALANCE.natura.beforeMax));
-  }
-  function businessStar(signs) {
-    const w = BALANCE.natura.w;
-    return Object.fromEntries(AXES.map((a) => [a, round12(clamp3(BALANCE.star.center + BALANCE.natura.shift[a] + BALANCE.natura.axisGain * dot(w[a], signs), 0, STAR_MAX))]));
-  }
-  var rarityWeight = (t) => t.rarity === "rare" ? BALANCE.natura.rareWeight : t.rarity === "exceptional" ? BALANCE.natura.exceptionalWeight : 1;
-  function saturation(nature, traits, t) {
-    const cur = sum([sum([nature.core], BALANCE.natura.coreSat), ...traits.map((x) => x.vec)]);
-    const overlap = SIGN_IDS.reduce((s, k2) => s + Math.max(0, (cur[k2] ?? 0) * (t.vec[k2] ?? 0)), 0);
-    return 1 / (1 + BALANCE.natura.satK * overlap);
-  }
-  function candidateWeight(nature, traits, t, target, opts = {}) {
-    const close = target ? Math.max(0, cos(t.vec, target)) + BALANCE.natura.closenessFloor : 1;
-    const pull = opts.events?.length ? Math.max(BALANCE.natura.closenessFloor, 1 + BALANCE.natura.eventK * cos(t.vec, sum(opts.events))) : 1;
-    const repeat = Math.pow(BALANCE.natura.repeatPenalty, opts.taken?.get(t.id) ?? 0);
-    return Math.pow(close * pull, 1 / BALANCE.natura.temperature) * rarityWeight(t) * saturation(nature, traits, t) * repeat;
-  }
-  function pickWeighted(rng, items, weight) {
-    const ws = items.map(weight);
-    const total = ws.reduce((s, v) => s + v, 0);
-    if (!items.length || total <= 0) return void 0;
-    let r = rng.next() * total;
-    for (let i = 0; i < items.length; i++) {
-      r -= ws[i];
-      if (r < 0) return items[i];
-    }
-    return items[items.length - 1];
-  }
-  function allowed(p, kinds, swap = false) {
-    const blocks = (held, t) => inConflict(held, t) && !(swap && held.kind === "life" && t.replaces?.includes(held.id) && !isAnchor(p, held.id));
-    return BAG.filter((t) => kinds.includes(t.kind) && !p.traits.includes(t) && !p.traits.some((x) => blocks(x, t)) && (!t.requires || t.requires.some((id) => p.traits.some((x) => x.id === id))));
-  }
-  var isAnchor = (p, id) => p.anchors.includes(id) || p.far === id || p.contra === id;
-  function growthTarget(rng, p) {
-    const fromFar = !!p.far && (rng.chance(BALANCE.natura.farShare) || !p.anchors.length);
-    if (fromFar) return { anchor: p.far, target: bagTrait(p.far).vec };
-    if (!p.anchors.length) return { anchor: "", target: p.nature.core };
-    const anchor = rng.pick(p.anchors);
-    return { anchor, target: sum([unit(bagTrait(anchor).vec), sum([unit(p.nature.core)], BALANCE.natura.corePull)]) };
-  }
-  function shortList(pool, ev) {
-    return pool.map((t, i) => ({ t, i, c: cos(t.vec, ev) })).sort((a, b) => b.c - a.c || a.i - b.i).slice(0, BALANCE.natura.eventList).map((x) => x.t);
-  }
-  function refresh(p) {
-    p.signs = signsOf(p.nature, p.traits);
-    p.star = businessStar(p.signs);
-    return p;
-  }
-  function growPerson(rng, nature, opts = {}) {
-    const age = opts.age ?? rng.int(BALANCE.natura.ageMin, Math.max(BALANCE.natura.ageMin, BALANCE.natura.ageMax));
-    const zero = signsOf(nature, []);
-    const p = {
-      nature,
-      age,
-      traits: [],
-      anchors: [],
-      far: "",
-      contra: "",
-      from: {},
-      via: {},
-      inGame: [],
-      lost: [],
-      events: opts.events ?? [],
-      signs: zero,
-      star: businessStar(zero)
-    };
-    const w = (target, events) => (t) => candidateWeight(nature, p.traits, t, target, { events, taken: opts.taken });
-    const innate = rng.int(BALANCE.natura.innateMin, Math.max(BALANCE.natura.innateMin, BALANCE.natura.innateMax));
-    for (const crystal of rng.shuffle(nature.crystals).slice(0, innate)) {
-      const t = pickWeighted(rng, allowed(p, ["born"]).filter((x) => cos(x.vec, crystal) > 0), w(crystal, opts.events));
-      if (t) {
-        p.traits.push(t);
-        p.anchors.push(t.id);
-      }
-    }
-    const count = beforeCount(age);
-    const story = opts.backstory ?? rng.shuffle(BACKSTORY).slice(0, count);
-    const hasContra = () => p.traits.find((x) => isContra(nature, x));
-    story.slice(0, count).forEach((ev, i) => {
-      const vec = eventVec(ev);
-      const life = allowed(p, ["life"]).filter((x) => x.source.includes("backstory"));
-      const far = i === 0, contra = !far && i === Math.min(count, story.length) - 1 && !hasContra();
-      const narrowed = far ? life.filter((x) => isFar(nature, x)) : contra ? life.filter((x) => isContra(nature, x)) : life;
-      const grow = far || contra ? void 0 : growthTarget(rng, p);
-      const list = shortList(narrowed.length ? narrowed : life, vec), events = [vec, ...opts.events ?? []];
-      const t = pickWeighted(rng, list, w(grow?.target, events)) ?? pickWeighted(rng, list, w(void 0, events));
-      if (!t) return;
-      p.traits.push(t);
-      p.via[t.id] = ev.id;
-      if (far) p.far = t.id;
-      else if (grow?.anchor) p.from[t.id] = grow.anchor;
-    });
-    p.contra = hasContra()?.id ?? "";
-    delete p.from[p.contra];
-    return refresh(p);
-  }
-  function growLife(rng, p, opts = {}) {
-    const pool = allowed(p, ["life", "perk"], true).filter((t2) => !opts.trigger || t2.trigger === opts.trigger);
-    const grow = growthTarget(rng, p);
-    const weight = (target) => (x) => candidateWeight(p.nature, p.traits, x, target, opts) * (x.kind === "perk" ? BALANCE.natura.perkWeight : 1);
-    const t = pickWeighted(rng, pool, weight(grow.target)) ?? pickWeighted(rng, pool, weight());
-    if (!t) return void 0;
-    const gone = p.traits.filter((x) => x.kind === "life" && t.replaces?.includes(x.id) && !isAnchor(p, x.id));
-    p.traits = p.traits.filter((x) => !gone.includes(x));
-    p.lost.push(...gone.map((x) => x.id));
-    p.inGame = p.inGame.filter((id) => !gone.some((x) => x.id === id));
-    p.traits.push(t);
-    p.inGame.push(t.id);
-    if (grow.anchor) p.from[t.id] = grow.anchor;
-    if (opts.events) p.events = [...p.events, ...opts.events];
-    refresh(p);
-    return t;
-  }
-  function growParty(seed, size, natureIds) {
-    const rng = new Rng(seed);
-    const natures = natureIds ? natureIds.map(natureById) : rng.shuffle(NATURES).slice(0, size);
-    const taken = /* @__PURE__ */ new Map();
-    return natures.map((n) => {
-      const p = growPerson(rng, n, { taken });
-      for (const t of p.traits) taken.set(t.id, (taken.get(t.id) ?? 0) + 1);
-      return p;
-    });
-  }
-  function rollPerson(seed, nature, age) {
-    const rng = new Rng(seed);
-    const p = growPerson(rng, nature, { age });
-    for (let i = 0; i < BALANCE.natura.lifeSteps; i++) growLife(rng, p, { trigger: rng.pick(TRIGGERS), events: [eventVec(rng.pick(BACKSTORY))] });
-    return p;
-  }
-
   // src/sim/natura-report.ts
-  var mean = (xs) => xs.length ? xs.reduce((s, v) => s + v, 0) / xs.length : 0;
   var spread = (xs) => {
     const m2 = mean(xs);
     return Math.sqrt(mean(xs.map((v) => (v - m2) * (v - m2))));
@@ -3417,7 +3418,6 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
     const a = [...xs].sort((x, y) => x - y);
     return a.length ? a[Math.floor(a.length / 2)] : 0;
   };
-  var round3 = (v) => Math.round(v * 1e3) / 1e3;
   function jaccard(a, b) {
     let both = 0;
     for (const x of a) if (b.has(x)) both++;
@@ -3793,8 +3793,6 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
   var KREPOST_MAX = 10;
   var SEASONS_IN_YEAR = 4;
   var WINTER = 3;
-  var clamp4 = (v, a, b) => Math.max(a, Math.min(b, v));
-  var round13 = (v) => Math.round(v * 10) / 10;
   var healthTrait = (id) => {
     const t = HEALTH_TRAITS.find((x) => x.id === id);
     if (!t) throw new Error(`\u041D\u0435\u0442 \u0447\u0435\u0440\u0442\u044B \u0437\u0434\u043E\u0440\u043E\u0432\u044C\u044F ${id}`);
@@ -3815,7 +3813,7 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
     return { id, hereditary: t ? [t.id] : [] };
   }
   function birthHealth(rng, family, vices = []) {
-    const krepost = round13(clamp4(BALANCE.health.krepostMean + rng.gauss() * BALANCE.health.krepostSpread, 1, KREPOST_MAX));
+    const krepost = round1(clamp(BALANCE.health.krepostMean + rng.gauss() * BALANCE.health.krepostSpread, 1, KREPOST_MAX));
     const traits = [];
     const born = rng.chance(BALANCE.health.bornChance) ? pickByWeight(rng, HEALTH_TRAITS.filter((x) => x.origin === "born")) : void 0;
     if (born) traits.push(born.id);
@@ -3837,18 +3835,18 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
   function krepostNow(h2, age) {
     const m2 = healthMods(h2);
     const aged = Math.max(0, age - BALANCE.health.oldFrom) / BALANCE.health.agingStep * m2.aging;
-    return round13(clamp4(h2.krepost + m2.krepost - aged, 0, KREPOST_MAX));
+    return round1(clamp(h2.krepost + m2.krepost - aged, 0, KREPOST_MAX));
   }
   function illChance(h2, age, season) {
     const m2 = healthMods(h2);
     const weak = Math.max(0, 1 + (BALANCE.health.krepostMean - krepostNow(h2, age)) * BALANCE.health.krepostRisk);
     const winter = season % SEASONS_IN_YEAR === WINTER ? BALANCE.health.winterMult * m2.winter : 1;
-    return clamp4(BALANCE.health.illBase * m2.risk * weak * winter, 0, 1);
+    return clamp(BALANCE.health.illBase * m2.risk * weak * winter, 0, 1);
   }
   function ageDeathChance(h2, age) {
     const span = Math.max(1, BALANCE.health.lifeMax - BALANCE.health.elderFrom);
     const x = Math.max(0, age - BALANCE.health.elderFrom) / span * healthMods(h2).aging;
-    return clamp4(x * x * BALANCE.health.ageDeathMax, 0, 1);
+    return clamp(x * x * BALANCE.health.ageDeathMax, 0, 1);
   }
   function gain(rng, h2, cause, ev, onlyBad = false) {
     const t = pickByWeight(rng, HEALTH_TRAITS.filter((x) => x.origin === "gained" && x.cause === cause && !h2.traits.includes(x.id) && !(onlyBad && x.good)));
@@ -3882,7 +3880,7 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
       return out;
     }
     if (rng.chance(BALANCE.health.woundChance)) {
-      if (rng.chance(clamp4(BALANCE.health.woundDeath * m2.death * weak, 0, 1))) {
+      if (rng.chance(clamp(BALANCE.health.woundDeath * m2.death * weak, 0, 1))) {
         die(h2, "\u0440\u0430\u043D\u0430", ev, "\u0422\u044F\u0436\u0435\u043B\u043E \u0440\u0430\u043D\u0435\u043D \u0438 \u043D\u0435 \u0432\u044B\u0436\u0438\u043B.");
         return out;
       }
@@ -3891,7 +3889,7 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
       if (rng.chance(BALANCE.health.woundChronic)) gain(rng, h2, "wound", ev);
     } else if (rng.chance(illChance(h2, age, season))) {
       if (rng.chance(BALANCE.health.hardShare)) {
-        if (rng.chance(clamp4(BALANCE.health.hardDeath * m2.death * weak, 0, 1))) {
+        if (rng.chance(clamp(BALANCE.health.hardDeath * m2.death * weak, 0, 1))) {
           die(h2, "\u0431\u043E\u043B\u0435\u0437\u043D\u044C", ev, "\u0422\u044F\u0436\u0435\u043B\u043E \u0437\u0430\u0431\u043E\u043B\u0435\u043B \u0438 \u0443\u043C\u0435\u0440.");
           return out;
         }
@@ -3939,7 +3937,6 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
     const a = [...xs].sort((x, y) => x - y);
     return a.length ? a[Math.floor(a.length / 2)] : 0;
   };
-  var round32 = (v) => Math.round(v * 1e3) / 1e3;
   var isBad = (h2) => h2.traits.some((id) => !healthTrait(id).good && healthTrait(id).origin !== "gained");
   function healthCohort(people2, seed) {
     const rng = new Rng(seed);
@@ -3957,17 +3954,17 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
     const badBorn = cohort.filter((c) => isBad(c.h)).length / Math.max(1, people2);
     const hered = (h2) => h2.traits.some((id) => healthTrait(id).origin === "hereditary");
     const kin = cohort.filter((c) => cohort.some((o) => o !== c && o.family === c.family && hered(o.h)));
-    const kinShare = { withKin: round32(kin.filter((c) => hered(c.h)).length / Math.max(1, kin.length)), base: round32(cohort.filter((c) => hered(c.h)).length / Math.max(1, people2)) };
+    const kinShare = { withKin: round3(kin.filter((c) => hered(c.h)).length / Math.max(1, kin.length)), base: round3(cohort.filter((c) => hered(c.h)).length / Math.max(1, people2)) };
     const rng = new Rng(`${seed}-\u043F\u0430\u0440\u0442\u0438\u044F`);
     const lived = cohort.map((c) => liveThrough(rng, c.h, c.age, seasons));
     const causes = { "\u0431\u043E\u043B\u0435\u0437\u043D\u044C": 0, "\u0440\u0430\u043D\u0430": 0, "\u0441\u0442\u0430\u0440\u043E\u0441\u0442\u044C": 0, "\u0437\u0434\u043E\u0440\u043E\u0432\u044C\u0435": 0 };
     for (const c of cohort) if (c.h.state !== "ok" && c.h.cause) causes[c.h.cause] += 1 / Math.max(1, people2);
     const removedAt = lived.map((l) => l.removedAt);
-    const curve = Array.from({ length: years + 1 }, (_, y) => round32(removedAt.filter((s) => s === void 0 || s >= y * SEASONS_IN_YEAR).length / Math.max(1, people2)));
+    const curve = Array.from({ length: years + 1 }, (_, y) => round3(removedAt.filter((s) => s === void 0 || s >= y * SEASONS_IN_YEAR).length / Math.max(1, people2)));
     const edges = [BALANCE.health.ageMin, BALANCE.health.oldFrom, BALANCE.health.elderFrom, BALANCE.health.lifeMax].filter((v, i, a) => i === 0 || v > a[i - 1]);
     const byAge = edges.slice(0, -1).map((from, i) => {
       const idx = cohort.map((c, k2) => c.age >= from && c.age < edges[i + 1] ? k2 : -1).filter((k2) => k2 >= 0);
-      return { from, to: edges[i + 1], people: idx.length, removed: round32(idx.filter((k2) => removedAt[k2] !== void 0).length / Math.max(1, idx.length)) };
+      return { from, to: edges[i + 1], people: idx.length, removed: round3(idx.filter((k2) => removedAt[k2] !== void 0).length / Math.max(1, idx.length)) };
     }).filter((b) => b.people > 0);
     const start = new Map(cohort.map((c) => [c, c.h.traits.length]));
     const lifeRng = new Rng(`${seed}-\u0436\u0438\u0437\u043D\u044C`);
@@ -3982,26 +3979,26 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
     const ages = lives.map((l) => l.age);
     const hist = Array.from({ length: Math.ceil((BALANCE.health.lifeMax + 20 - adult) / 10) }, (_, i) => {
       const from = adult + i * 10;
-      return { age: from, share: round32(ages.filter((a) => a >= from && a < from + 10).length / Math.max(1, people2)) };
+      return { age: from, share: round3(ages.filter((a) => a >= from && a < from + 10).length / Math.max(1, people2)) };
     });
     return {
       people: people2,
       years,
-      removed: round32(removedAt.filter((s) => s !== void 0).length / Math.max(1, people2)),
-      dead: round32(cohort.filter((c) => c.h.state === "dead").length / Math.max(1, people2)),
-      causes: Object.fromEntries(Object.entries(causes).map(([key, v]) => [key, round32(v)])),
+      removed: round3(removedAt.filter((s) => s !== void 0).length / Math.max(1, people2)),
+      dead: round3(cohort.filter((c) => c.h.state === "dead").length / Math.max(1, people2)),
+      causes: Object.fromEntries(Object.entries(causes).map(([key, v]) => [key, round3(v)])),
       curve,
       byAge,
-      sickEver: round32(cohort.filter((c) => c.h.log.some((e) => e.kind === "ill" || e.kind === "hard" || e.kind === "wound")).length / Math.max(1, people2)),
-      offShare: round32(lived.reduce((s, l) => s + l.offSeasons, 0) / Math.max(1, lived.reduce((s, l) => s + l.lived, 0))),
-      gained: round32(cohort.filter((c) => c.h.traits.length > (start.get(c) ?? 0) || c.h.log.some((e) => e.kind === "trait")).length / Math.max(1, people2)),
-      badBorn: round32(badBorn),
-      traitShare: Object.fromEntries(HEALTH_TRAITS.map((t) => [t.id, round32(cohort.filter((c) => c.h.traits.includes(t.id)).length / Math.max(1, people2))])),
+      sickEver: round3(cohort.filter((c) => c.h.log.some((e) => e.kind === "ill" || e.kind === "hard" || e.kind === "wound")).length / Math.max(1, people2)),
+      offShare: round3(lived.reduce((s, l) => s + l.offSeasons, 0) / Math.max(1, lived.reduce((s, l) => s + l.lived, 0))),
+      gained: round3(cohort.filter((c) => c.h.traits.length > (start.get(c) ?? 0) || c.h.log.some((e) => e.kind === "trait")).length / Math.max(1, people2)),
+      badBorn: round3(badBorn),
+      traitShare: Object.fromEntries(HEALTH_TRAITS.map((t) => [t.id, round3(cohort.filter((c) => c.h.traits.includes(t.id)).length / Math.max(1, people2))])),
       kinShare,
       life: {
         median: Math.round(median2(ages)),
-        reachElder: round32(ages.filter((a) => a >= BALANCE.health.elderFrom).length / Math.max(1, people2)),
-        reachMax: round32(ages.filter((a) => a >= BALANCE.health.lifeMax - 10).length / Math.max(1, people2)),
+        reachElder: round3(ages.filter((a) => a >= BALANCE.health.elderFrom).length / Math.max(1, people2)),
+        reachMax: round3(ages.filter((a) => a >= BALANCE.health.lifeMax - 10).length / Math.max(1, people2)),
         hist,
         medianHealthy: Math.round(median2(lives.filter((l) => !l.bad).map((l) => l.age))),
         medianBad: Math.round(median2(lives.filter((l) => l.bad).map((l) => l.age)))
@@ -4030,7 +4027,6 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
   var pct = (v) => `${Math.round(v * 100)}%`;
   var f1 = (v) => v.toFixed(1).replace(".", ",");
   var f2 = (v) => v.toFixed(2).replace(".", ",");
-  var mean2 = (xs) => xs.length ? xs.reduce((s, v) => s + v, 0) / xs.length : 0;
   var KIND = { born: "\u0432\u0440\u043E\u0436\u0434\u0451\u043D\u043D\u0430\u044F", life: "\u043D\u0430\u0436\u0438\u0442\u0430\u044F", perk: "\u043F\u0435\u0440\u043A" };
   var TRIGGER = { habit: "\u043F\u0440\u0438\u0432\u044B\u0447\u043A\u0430", post: "\u0434\u043E\u043B\u0436\u043D\u043E\u0441\u0442\u044C", rel: "\u043E\u0442\u043D\u043E\u0448\u0435\u043D\u0438\u044F", break: "\u043F\u0435\u0440\u0435\u043B\u043E\u043C", deed: "\u043F\u043E\u0441\u0442\u0443\u043F\u043E\u043A" };
   var RARITY = { common: "", rare: " \u2605", exceptional: " \u2605\u2605" };
@@ -4141,14 +4137,14 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
     }).join("")}</div>`;
     const byNature = (x) => people.filter((p) => p.nature === x);
     const signCell = (x, s) => {
-      const v = mean2(byNature(x).map((p) => p.signs[s]));
+      const v = mean(byNature(x).map((p) => p.signs[s]));
       const color = v >= 0 ? `rgba(201,84,60,${(Math.abs(v) / 5).toFixed(2)})` : `rgba(63,111,176,${(Math.abs(v) / 5).toFixed(2)})`;
       return `<td class="c${x.core[s] ? " core" : ""}" style="background:${color}">${f1(v)}</td>`;
     };
     $("heat-signs").innerHTML = `<table class="heat"><tr><th>\u041D\u0430\u0442\u0443\u0440\u0430</th>${SIGNS.map((s) => `<th title="\u043C\u0438\u043D\u0443\u0441: ${esc(s.minus)}">${esc(s.plus)}</th>`).join("")}</tr>
     ${NATURES.map((x) => `<tr><td>${esc(x.name)}</td>${SIGNS.map((s) => signCell(x, s.id)).join("")}</tr>`).join("")}</table>`;
     const axisCell = (x, a) => {
-      const v = mean2(byNature(x).map((p) => p.star[a]));
+      const v = mean(byNature(x).map((p) => p.star[a]));
       return `<td class="c" style="background:rgba(${AXIS_RGB[a]},${Math.max(0, Math.min(1, (v - 2) / 7)).toFixed(2)})">${f1(v)}</td>`;
     };
     $("heat-axes").innerHTML = `<table class="heat"><tr><th>\u041D\u0430\u0442\u0443\u0440\u0430</th>${AXES.map((a) => `<th>${AXIS_NAMES[a]}</th>`).join("")}</tr>
@@ -4292,10 +4288,10 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
       const own = people.filter((p) => p.nature === x);
       const freq = BAG.map((t) => ({ t, share: own.filter((p) => p.traits.includes(t)).length / Math.max(1, own.length) })).sort((a, b) => b.share - a.share).slice(0, 6);
       const crystals = x.crystals.map((c) => `${vecTags(c)} ${born.filter((t) => cos(t.vec, c) > 0).length}`).join(" ");
-      const topAxis2 = AXES.reduce((best, a) => mean2(own.map((p) => p.star[a])) > mean2(own.map((p) => p.star[best])) ? a : best, AXES[0]);
+      const topAxis2 = AXES.reduce((best, a) => mean(own.map((p) => p.star[a])) > mean(own.map((p) => p.star[best])) ? a : best, AXES[0]);
       return `<tr><td><b>${esc(x.name)}</b><br><span class="muted">${x.id}</span></td><td>${vecTags(x.core)}</td><td>${crystals}</td>
       <td class="c">${lifeBag.filter((t) => isFar(x, t)).length}</td><td class="c">${lifeBag.filter((t) => isContra(x, t)).length}</td>
-      <td>${freq.map((r) => `${traitTag(r.t)} ${pct(r.share)}`).join(" ")}</td><td>${AXIS_NAMES[topAxis2]} ${f1(mean2(own.map((p) => p.star[topAxis2])))}</td></tr>`;
+      <td>${freq.map((r) => `${traitTag(r.t)} ${pct(r.share)}`).join(" ")}</td><td>${AXIS_NAMES[topAxis2]} ${f1(mean(own.map((p) => p.star[topAxis2])))}</td></tr>`;
     }).join("")}</table>`;
     const kind = val("bag-kind"), sort = val("bag-sort");
     let bag = BAG.filter((t) => !kind || t.kind === kind);

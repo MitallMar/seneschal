@@ -4,6 +4,7 @@ import type { HealthTrait, HealthCause } from "../data/types";
 import { HEALTH_TRAITS, NATURA_HEALTH } from "../data/health";
 import { BALANCE as B } from "./balance";
 import { Rng } from "./rng";
+import { clamp, round1 } from "./util";
 
 // Шкала крепости (не баланс): 0…10.
 export const KREPOST_MAX = 10;
@@ -25,8 +26,6 @@ export interface Health {
   log: HealthEvent[];
 }
 
-const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
-const round1 = (v: number) => Math.round(v * 10) / 10;
 export const healthTrait = (id: string): HealthTrait => {
   const t = HEALTH_TRAITS.find((x) => x.id === id);
   if (!t) throw new Error(`Нет черты здоровья ${id}`);

@@ -4,7 +4,8 @@ import type { Axis, PostId, GameEvent } from "../data/types";
 import { AXES, AXIS_NAMES, POSTS } from "../data/core";
 import { EVENTS } from "../data/events";
 import { BALANCE as B } from "./balance";
-import { newWorld, runSeason, topAxis } from "./sim";
+import { newWorld, runSeason } from "./sim";
+import { topAxis } from "./state";
 
 export interface AxisShare { events: number; options: number } // доли от 0 до 1
 // Должность × ось. events — в какой доле событий должности есть вариант по этой оси (человеку есть где её проявить);

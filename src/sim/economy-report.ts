@@ -3,10 +3,12 @@
 import type { PayId, Side, Stock } from "../data/types";
 import { SIDES, STOCKS, PAY } from "../data/economy";
 import { BALANCE as B } from "./balance";
-import { newWorld, type World } from "./sim";
+import { newWorld } from "./sim";
+import type { World } from "./state";
 import { bot, playBot, type Bot } from "./bots";
 import { authorityCap, type AuthKind } from "./authority";
 import { economySeason, zoneOf, patienceWord, type Zone } from "./economy";
+import { mean, round2 } from "./util";
 
 // Кто играет партии отчёта: боты (src/sim/bots.ts). «Ничего не трогает» — совет платит сам; «Хозяин» платит руками; дальше — его варианты платы.
 export const PAYERS: Bot[] = ["idle", "master", "Х11", "Х13", "Х14"].map(bot);
@@ -29,37 +31,35 @@ export interface EconomyMetrics {
 }
 
 const KINDS: AuthKind[] = ["support", "tax", "judge", "complaint", "feast", "order", "staff", "burn"];
-const r2 = (v: number) => Math.round(v * 100) / 100;
-const mean = (xs: number[]) => (xs.length ? xs.reduce((s, v) => s + v, 0) / xs.length : 0);
 
 export function economyMetrics(seeds: number, seasons: number, payer: Bot = PAYERS[0], prefix = "хозяйство"): EconomyMetrics {
   const worlds = Array.from({ length: seeds }, (_, i) => playBot(`${prefix}-${i}`, payer, seasons).w);
   const years = Math.floor((seasons + 1) / 4);  // сборщица приезжает на третий сезон года
   const hist = worlds.map((w) => w.eco.tax.history);
-  const share = (f: (w: World) => boolean) => r2(worlds.filter(f).length / Math.max(1, seeds));
+  const share = (f: (w: World) => boolean) => round2(worlds.filter(f).length / Math.max(1, seeds));
   const measuresBy: Partial<Record<PayId, number>> = {};
   for (const def of PAY) {
-    const v = r2(mean(hist.map((h) => h.reduce((s, y) => s + (y.by[def.id] ?? 0), 0))));
+    const v = round2(mean(hist.map((h) => h.reduce((s, y) => s + (y.by[def.id] ?? 0), 0))));
     if (v) measuresBy[def.id] = v;
   }
   const lessons = Array.from({ length: years }, (_, y) => (y < B.economy.tax.trialYears ? B.economy.tax.trial : B.economy.tax.normal)).reduce((s, v) => s + v, 0);
   const zoneNames: Zone[] = ["заодно", "ладят", "терпят", "отказывают"];
   return {
     seeds, seasons, years,
-    closedByYear: Array.from({ length: years }, (_, y) => r2(hist.filter((h) => h[y]?.closed).length / Math.max(1, seeds))),
+    closedByYear: Array.from({ length: years }, (_, y) => round2(hist.filter((h) => h[y]?.closed).length / Math.max(1, seeds))),
     closedAll: share((w) => w.eco.tax.history.length > 0 && w.eco.tax.history.every((y) => y.closed)),
     measuresBy,
-    paidShare: r2(mean(hist.map((h) => h.reduce((s, y) => s + y.paid, 0))) / Math.max(1, lessons)),
-    shortages: r2(mean(worlds.map((w) => w.eco.shortages))),
+    paidShare: round2(mean(hist.map((h) => h.reduce((s, y) => s + y.paid, 0))) / Math.max(1, lessons)),
+    shortages: round2(mean(worlds.map((w) => w.eco.shortages))),
     shortParties: share((w) => w.eco.shortages > 0),
     patience: Object.fromEntries(["благоволит", "ждёт", "недоволен", "на исходе"].map((z) => [z, share((w) => patienceWord(w.eco.tax.patience) === z)])),
     zones: Object.fromEntries(SIDES.map((s) => [s, Object.fromEntries(zoneNames.map((z) => [z, share((w) => zoneOf(w, s) === z)]))])) as EconomyMetrics["zones"],
-    stock: Object.fromEntries(STOCKS.map((c) => [c, r2(mean(worlds.map((w) => w.eco.stock[c])))])) as Record<Stock, number>,
-    carried: r2(mean(worlds.map((w) => w.eco.tax.carried))),
+    stock: Object.fromEntries(STOCKS.map((c) => [c, round2(mean(worlds.map((w) => w.eco.stock[c])))])) as Record<Stock, number>,
+    carried: round2(mean(worlds.map((w) => w.eco.tax.carried))),
     authority: {
-      mean: r2(mean(worlds.map((w) => w.authority))), min: Math.min(...worlds.map((w) => w.authority)), max: Math.max(...worlds.map((w) => w.authority)),
+      mean: round2(mean(worlds.map((w) => w.authority))), min: Math.min(...worlds.map((w) => w.authority)), max: Math.max(...worlds.map((w) => w.authority)),
       atCap: share((w) => w.authority >= authorityCap()), low: share((w) => w.authority <= B.staff.authorityStart / 2),
-      by: Object.fromEntries(KINDS.map((k) => [k, r2(mean(worlds.map((w) => w.auth.totals[k])))])) as Record<AuthKind, number>,
+      by: Object.fromEntries(KINDS.map((k) => [k, round2(mean(worlds.map((w) => w.auth.totals[k])))])) as Record<AuthKind, number>,
     },
   };
 }
@@ -80,9 +80,9 @@ export function freeYear(zone: Zone, seed = "год"): { free: number; income: R
     for (const l of w.eco.last!.lines) if (l.text.startsWith("недодано")) lack += Number(l.text.match(/[\d.]+/)![0]) / (l.cat === "eda" ? B.economy.rate.eda : B.economy.rate.serebro);
     w.season++;
   }
-  const income = Object.fromEntries(STOCKS.map((c) => [c, r2(w.eco.stock[c] - start[c])])) as Record<Stock, number>;
+  const income = Object.fromEntries(STOCKS.map((c) => [c, round2(w.eco.stock[c] - start[c])])) as Record<Stock, number>;
   const free = income.serebro / B.economy.rate.serebro + income.eda / B.economy.rate.eda + income.tovary * B.economy.flow.price / B.economy.rate.serebro - lack;
-  return { free: r2(free), income };
+  return { free: round2(free), income };
 }
 
 // Замечания по хозяйству: то, что стоит показать автору.
