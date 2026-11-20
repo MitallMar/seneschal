@@ -22,6 +22,7 @@ export interface Knowledge {
   traitAsked: boolean;         // о черте уже говорили: скрытую разговор не открывает
   aspiration: boolean;         // стремление известно
   axes: boolean;               // склонности рассказал сам (третий разговор)
+  links: boolean;              // связи рассказал сам: покровитель, с кем ладит и на кого держит обиду
   seen: Record<Axis, number>;  // сколько решений по оси видели в деле
 }
 

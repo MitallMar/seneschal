@@ -10,6 +10,8 @@ import type { Person } from "../../sim/state";
 import { $, esc } from "../dom";
 import { app, AXIS_COLOR } from "./app";
 import { starSvg, axisRows } from "./star";
+import { linksText } from "../../sim/council/talk";
+import { waysOf } from "../../sim/world/answer";
 
 function traitTags(p: Person): string {
   const tags: string[] = [];
@@ -53,7 +55,14 @@ function handLine(p: Person): string {
     const title = x.shade ? "Оттенок почерка" : `Почерк${isStale(p) ? " (засиделся: вдвое сильнее)" : ""}`;
     return `<div class="hand" data-hand="${x.axis}">${title} — <b style="color:${AXIS_COLOR[x.axis]}">${AXIS_NAMES[x.axis]}</b>: ${esc(x.text)}.</div>`;
   });
-  return rows.join("");
+  return rows.join("") + waysOf(p).filter((x) => app.designer || axisKnown(p, x.answer.axis)).map((x) =>
+    `<div class="hand way" data-way="${x.answer.kind}">В беде${x.shade ? " (оттенок)" : ""} — «${esc(x.answer.name)}»: ${esc(x.answer.good)}; ${esc(x.answer.price)}.</div>`).join("");
+}
+
+// Связи: кто за человека стоит, с кем он ладит и на кого в обиде. Видны после разговора о связях.
+function linksLine(p: Person): string {
+  if (!p.know.links && !app.designer) return "";
+  return `<div class="links" data-links="${p.id}">Связи: ${esc(linksText(app.w, p))}.</div>`;
 }
 
 export function renderPeople() {
@@ -82,6 +91,7 @@ export function renderPeople() {
         </div>
       </div>
       ${handLine(p)}
+      ${linksLine(p)}
       ${opinionLine(p)}
       <details class="bio"><summary>Биография</summary><ul>${p.bio.map((b) => `<li>${esc(b)}</li>`).join("")}</ul></details>
       <div class="card-actions">

@@ -269,3 +269,6 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
 .tape .bad { color: var(--bad); }
 .tape .good { color: var(--good); }
 .wn { border-left: 3px solid var(--line); padding-left: 6px; margin: 2px 0; }
+.stand, .links { font-size: 13px; color: var(--muted); }
+.stand.good { color: var(--good); }
+.stand.bad { color: var(--bad); }

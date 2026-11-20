@@ -275,6 +275,9 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
 .tape .bad { color: var(--bad); }
 .tape .good { color: var(--good); }
 .wn { border-left: 3px solid var(--line); padding-left: 6px; margin: 2px 0; }
+.stand, .links { font-size: 13px; color: var(--muted); }
+.stand.good { color: var(--good); }
+.stand.bad { color: var(--bad); }
 </style>
 </head>
 <body>
@@ -896,7 +899,10 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
         max: k(1.25, 1, 2, 0.05, "\u041F\u043E\u0433\u043E\u0434\u0430 \u0433\u043E\u0434\u0430: \u043C\u043D\u043E\u0436\u0438\u0442\u0435\u043B\u044C \u0443\u0440\u043E\u0436\u0430\u044F \u043D\u0435 \u0432\u044B\u0448\u0435"),
         bad: k(0.85, 0.3, 1, 0.01, "\u041F\u043E\u0433\u043E\u0434\u0430 \u0441\u043B\u043E\u0432\u043E\u043C: \u043C\u043D\u043E\u0436\u0438\u0442\u0435\u043B\u044C \u043D\u0438\u0436\u0435 \u2014 \xAB\u043D\u0435\u0434\u043E\u0440\u043E\u0434\xBB"),
         poor: k(0.95, 0.3, 1.2, 0.01, "\u041F\u043E\u0433\u043E\u0434\u0430 \u0441\u043B\u043E\u0432\u043E\u043C: \u043C\u043D\u043E\u0436\u0438\u0442\u0435\u043B\u044C \u043D\u0438\u0436\u0435 \u2014 \xAB\u0441\u043A\u0443\u0434\u043D\u044B\u0439 \u0433\u043E\u0434\xBB; \u0442\u0430\u043A\u043E\u0439 \u0433\u043E\u0434 \u0438 \u0445\u0443\u0436\u0435 \u0441\u0447\u0438\u0442\u0430\u0435\u0442\u0441\u044F \u043F\u043B\u043E\u0445\u0438\u043C \u0432 \u043E\u0442\u0447\u0451\u0442\u0435 \u0431\u043E\u0442\u043E\u0432"),
-        good: k(1.08, 0.9, 2, 0.01, "\u041F\u043E\u0433\u043E\u0434\u0430 \u0441\u043B\u043E\u0432\u043E\u043C: \u043C\u043D\u043E\u0436\u0438\u0442\u0435\u043B\u044C \u043E\u0442 \u2014 \xAB\u0443\u0440\u043E\u0436\u0430\u0439\u043D\u044B\u0439 \u0433\u043E\u0434\xBB")
+        good: k(1.08, 0.9, 2, 0.01, "\u041F\u043E\u0433\u043E\u0434\u0430 \u0441\u043B\u043E\u0432\u043E\u043C: \u043C\u043D\u043E\u0436\u0438\u0442\u0435\u043B\u044C \u043E\u0442 \u2014 \xAB\u0443\u0440\u043E\u0436\u0430\u0439\u043D\u044B\u0439 \u0433\u043E\u0434\xBB"),
+        heavy: k(0.15, 0, 1, 0.01, "\u0422\u044F\u0436\u0451\u043B\u044B\u0439 \u0433\u043E\u0434 (\u0437\u0430\u0441\u0443\u0445\u0430, \u0433\u0440\u0430\u0434\u043E\u0431\u043E\u0439): \u0448\u0430\u043D\u0441 \u043D\u0430 \u043A\u0430\u0436\u0434\u044B\u0439 \u0433\u043E\u0434"),
+        heavyMin: k(0.6, 0.2, 1, 0.05, "\u0422\u044F\u0436\u0451\u043B\u044B\u0439 \u0433\u043E\u0434: \u043C\u043D\u043E\u0436\u0438\u0442\u0435\u043B\u044C \u0443\u0440\u043E\u0436\u0430\u044F \u043E\u0442"),
+        heavyMax: k(0.7, 0.2, 1, 0.05, "\u0422\u044F\u0436\u0451\u043B\u044B\u0439 \u0433\u043E\u0434: \u043C\u043D\u043E\u0436\u0438\u0442\u0435\u043B\u044C \u0443\u0440\u043E\u0436\u0430\u044F \u0434\u043E")
       },
       tags: {
         more: k(1.5, 0, 5, 0.1, "\u041C\u0435\u0442\u043A\u0438: \u043D\u0430\u0441\u043A\u043E\u043B\u044C\u043A\u043E \u0447\u0430\u0449\u0435 \u043F\u0440\u0438\u0445\u043E\u0434\u0438\u0442 \u0441\u043E\u0431\u044B\u0442\u0438\u0435 \u0441\u043E\u0432\u0435\u0442\u0430 \u0437\u0430 \u043A\u0430\u0436\u0434\u043E\u0435 \u0441\u043E\u0441\u0442\u043E\u044F\u043D\u0438\u0435 \u043C\u0438\u0440\u0430 \u0441 \u0435\u0433\u043E \u043C\u0435\u0442\u043A\u043E\u0439 (\u043F\u0440\u0438\u0431\u0430\u0432\u043A\u0430 \u043A \u0432\u0435\u0441\u0443 1, \u0443\u043C\u043D\u043E\u0436\u0430\u0435\u0442\u0441\u044F \u043D\u0430 \u0441\u0438\u043B\u0443 \u0441\u043E\u0441\u0442\u043E\u044F\u043D\u0438\u044F)"),
@@ -905,6 +911,7 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
       },
       decree: {
         size: k(1, 0, 3, 0.1, "\u0423\u043A\u0430\u0437: \u043C\u043D\u043E\u0436\u0438\u0442\u0435\u043B\u044C \u0440\u0430\u0437\u043C\u0435\u0440\u0430 \u0432 \u043C\u0435\u0440\u0430\u0445"),
+        extraTerm: k(1, 0, 3, 1, "\u0423\u043A\u0430\u0437: \u0441\u0442\u043E\u043B\u044C\u043A\u043E \u0441\u0435\u0437\u043E\u043D\u043E\u0432 \u0441\u0432\u0435\u0440\u0445 \u0441\u0440\u043E\u043A\u0430 \u0438\u0437 \u0434\u0430\u043D\u043D\u044B\u0445 (\u0441 \u0435\u0434\u0438\u043D\u0438\u0446\u0435\u0439 \u0441\u0440\u043E\u043A \u2014 \u0434\u0432\u0430-\u0442\u0440\u0438 \u0441\u0435\u0437\u043E\u043D\u0430)"),
         gap: k(2, 0, 8, 1, "\u0423\u043A\u0430\u0437: \u043F\u043E\u0441\u043B\u0435 \u0441\u0440\u043E\u043A\u0430 \u043F\u0440\u043E\u0448\u043B\u043E\u0433\u043E \u0443\u043A\u0430\u0437\u0430 \u0441\u0442\u043E\u043B\u044C\u043A\u043E \u0441\u0435\u0437\u043E\u043D\u043E\u0432 \u043D\u043E\u0432\u044B\u0439 \u043D\u0435 \u043F\u0440\u0438\u0445\u043E\u0434\u0438\u0442"),
         patience: k(1, 0, 5, 0.25, "\u0423\u043A\u0430\u0437 \u043D\u0435 \u0437\u0430\u043A\u0440\u044B\u0442 \u043A \u0441\u0440\u043E\u043A\u0443: \u0442\u0435\u0440\u043F\u0435\u043D\u0438\u0435 \u0413\u0435\u0440\u0446\u043E\u0433\u0430 \u043F\u0430\u0434\u0430\u0435\u0442 \u043D\u0430 \u0441\u0442\u043E\u043B\u044C\u043A\u043E (\u043F\u0440\u0438 \u043F\u043E\u043B\u043D\u043E\u043C \u043E\u0441\u0442\u0430\u0442\u043A\u0435; \u043C\u0435\u043D\u044C\u0448\u0435 \u043E\u0441\u0442\u0430\u0442\u043E\u043A \u2014 \u043C\u0435\u043D\u044C\u0448\u0435 \u043F\u043E\u0442\u0435\u0440\u044F)"),
         dvor: k(2, 0, 6, 0.5, "\u0423\u043A\u0430\u0437 \u043D\u0435 \u0437\u0430\u043A\u0440\u044B\u0442 \u043A \u0441\u0440\u043E\u043A\u0443: \u0434\u043E\u0432\u0435\u0440\u0438\u0435 \u0434\u0432\u043E\u0440\u0430 \u043F\u0430\u0434\u0430\u0435\u0442 \u043D\u0430 \u0441\u0442\u043E\u043B\u044C\u043A\u043E (\u043F\u0440\u0438 \u043F\u043E\u043B\u043D\u043E\u043C \u043E\u0441\u0442\u0430\u0442\u043A\u0435)"),
@@ -912,6 +919,22 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
         dvorGain: k(0.5, 0, 3, 0.25, "\u0423\u043A\u0430\u0437 \u0437\u0430\u043A\u0440\u044B\u0442 \u043A \u0441\u0440\u043E\u043A\u0443: \u0434\u043E\u0432\u0435\u0440\u0438\u0435 \u0434\u0432\u043E\u0440\u0430 \u0440\u0430\u0441\u0442\u0451\u0442 \u043D\u0430 \u0441\u0442\u043E\u043B\u044C\u043A\u043E")
       },
       effect: k(1, 0, 3, 0.1, "\u041C\u0435\u0441\u0442\u043D\u044B\u0435 \u043E\u0442\u0433\u043E\u043B\u043E\u0441\u043A\u0438: \u043C\u043D\u043E\u0436\u0438\u0442\u0435\u043B\u044C \u043F\u043E\u0441\u043B\u0435\u0434\u0441\u0442\u0432\u0438\u0439 \u0434\u043B\u044F \u0441\u0442\u043E\u0440\u043E\u043D \u0438 \u0437\u0430\u043F\u0430\u0441\u043E\u0432"),
+      // Ответ совета на беду (И21): сила держателя ответственной должности смягчает или усиливает потерю, почерк даёт способ ответа.
+      answer: {
+        gain: k(1, 0, 3, 0.1, "\u041E\u0442\u0432\u0435\u0442 \u043D\u0430 \u0431\u0435\u0434\u0443: \u043D\u0430 \u0441\u043A\u043E\u043B\u044C\u043A\u043E \u043F\u043E\u0442\u0435\u0440\u044F \u043C\u0435\u043D\u044C\u0448\u0435 \u0437\u0430 \u0435\u0434\u0438\u043D\u0438\u0446\u0443 \u0441\u0438\u043B\u044B \u0434\u0435\u0440\u0436\u0430\u0442\u0435\u043B\u044F \u0441\u0432\u0435\u0440\u0445 \xD71 (\u0438 \u0431\u043E\u043B\u044C\u0448\u0435 \u2014 \u0437\u0430 \u0435\u0434\u0438\u043D\u0438\u0446\u0443 \u043D\u0438\u0436\u0435)"),
+        min: k(0.6, 0.2, 1, 0.05, "\u041E\u0442\u0432\u0435\u0442 \u043D\u0430 \u0431\u0435\u0434\u0443: \u0441\u0438\u043B\u044C\u043D\u044B\u0439 \u0434\u0435\u0440\u0436\u0430\u0442\u0435\u043B\u044C \u0441\u043C\u044F\u0433\u0447\u0430\u0435\u0442 \u043F\u043E\u0442\u0435\u0440\u044E \u043D\u0435 \u0431\u043E\u043B\u044C\u0448\u0435 \u0447\u0435\u043C \u0434\u043E \u0442\u0430\u043A\u043E\u0439 \u0434\u043E\u043B\u0438"),
+        max: k(1.5, 1, 3, 0.05, "\u041E\u0442\u0432\u0435\u0442 \u043D\u0430 \u0431\u0435\u0434\u0443: \u0441\u043B\u0430\u0431\u044B\u0439 \u0434\u0435\u0440\u0436\u0430\u0442\u0435\u043B\u044C \u0443\u0441\u0438\u043B\u0438\u0432\u0430\u0435\u0442 \u043F\u043E\u0442\u0435\u0440\u044E \u043D\u0435 \u0431\u043E\u043B\u044C\u0448\u0435 \u0447\u0435\u043C \u0432\u043E \u0441\u0442\u043E\u043B\u044C\u043A\u043E \u0440\u0430\u0437; \u043F\u0443\u0441\u0442\u0430\u044F \u0434\u043E\u043B\u0436\u043D\u043E\u0441\u0442\u044C \u2014 \u0440\u043E\u0432\u043D\u043E \u0432\u043E \u0441\u0442\u043E\u043B\u044C\u043A\u043E"),
+        villages: k(0.5, 0, 1, 0.05, "\u0421\u043F\u043E\u0441\u043E\u0431 \xAB\u0414\u0435\u0440\u0435\u0432\u043D\u0438 \u043D\u0435 \u043E\u0431\u0438\u0440\u0430\u0435\u0442\xBB (\u0442\u0438\u0443\u043D, \u0417\u0430\u0431\u043E\u0442\u0430): \u0434\u043E\u043B\u044F \u043F\u043E\u0442\u0435\u0440\u0438 \u0434\u043E\u0432\u0435\u0440\u0438\u044F \u0434\u0435\u0440\u0435\u0432\u0435\u043D\u044C \u043E\u0442 \u0432\u0435\u0441\u0442\u0435\u0439"),
+        villagesFood: k(0.3, 0, 2, 0.1, "\u2026\u0435\u0433\u043E \u0446\u0435\u043D\u0430: \u0435\u0434\u044B \u0438\u0437 \u0430\u043C\u0431\u0430\u0440\u0430 \u0437\u0430 \u043A\u0430\u0436\u0434\u0443\u044E \u0441\u043C\u044F\u0433\u0447\u0451\u043D\u043D\u0443\u044E \u0432\u0435\u0441\u0442\u044C"),
+        decreeSize: k(0.8, 0.3, 1, 0.05, "\u0421\u043F\u043E\u0441\u043E\u0431 \xAB\u041E\u0442\u043A\u0443\u043F \u0443 \u0434\u0432\u043E\u0440\u0430\xBB (\u043F\u0438\u0441\u0430\u0440\u044C, \u0412\u044B\u0433\u043E\u0434\u0430): \u0434\u043E\u043B\u044F \u0440\u0430\u0437\u043C\u0435\u0440\u0430 \u0443\u043A\u0430\u0437\u0430"),
+        decreeDvor: k(0.5, 0, 3, 0.1, "\u2026\u0435\u0433\u043E \u0446\u0435\u043D\u0430: \u0434\u043E\u0432\u0435\u0440\u0438\u0435 \u0434\u0432\u043E\u0440\u0430 \u0437\u0430 \u043A\u0430\u0436\u0434\u044B\u0439 \u0443\u043A\u0430\u0437"),
+        termAdd: k(1, 0, 3, 1, "\u0421\u043F\u043E\u0441\u043E\u0431 \xAB\u041F\u043E \u0441\u0442\u0430\u0440\u044B\u043C \u0433\u0440\u0430\u043C\u043E\u0442\u0430\u043C\xBB (\u043F\u0438\u0441\u0430\u0440\u044C, \u041E\u0431\u044B\u0447\u0430\u0439): \u0441\u0435\u0437\u043E\u043D\u043E\u0432 \u0441\u0432\u0435\u0440\u0445 \u0441\u0440\u043E\u043A\u0430 \u0443\u043A\u0430\u0437\u0430"),
+        termDvor: k(0.3, 0, 3, 0.1, "\u2026\u0435\u0433\u043E \u0446\u0435\u043D\u0430: \u0434\u043E\u0432\u0435\u0440\u0438\u0435 \u0434\u0432\u043E\u0440\u0430 \u0437\u0430 \u043A\u0430\u0436\u0434\u0443\u044E \u043E\u0442\u0441\u0440\u043E\u0447\u043A\u0443"),
+        harvest: k(0.7, 0, 1, 0.05, "\u0421\u043F\u043E\u0441\u043E\u0431 \xAB\u0417\u0430\u043F\u0430\u0441 \u0432\u043F\u0440\u043E\u043A\xBB (\u043A\u043B\u044E\u0447\u043D\u0438\u043A, \u041E\u0431\u044B\u0447\u0430\u0439): \u0434\u043E\u043B\u044F \u043F\u043E\u0442\u0435\u0440\u0438 \u0443\u0440\u043E\u0436\u0430\u044F \u043E\u0442 \u043F\u043E\u0433\u043E\u0434\u044B \u0438 \u043D\u0435\u0434\u043E\u0440\u043E\u0434\u0430"),
+        harvestSilver: k(0.3, 0, 2, 0.1, "\u2026\u0435\u0433\u043E \u0446\u0435\u043D\u0430: \u0441\u0435\u0440\u0435\u0431\u0440\u0430 \u0437\u0430 \u043E\u0441\u0435\u043D\u044C, \u043A\u043E\u0433\u0434\u0430 \u0441\u043F\u043E\u0441\u043E\u0431 \u0441\u0440\u0430\u0431\u043E\u0442\u0430\u043B"),
+        forest: k(0.6, 0, 1, 0.05, "\u0421\u043F\u043E\u0441\u043E\u0431 \xAB\u041E\u0431\u0440\u044F\u0434\u044B \u0443 \u043C\u0435\u0436\u0438\xBB (\u043B\u0435\u0441\u043D\u0438\u0447\u0438\u0439, \u041E\u0431\u044B\u0447\u0430\u0439): \u0434\u043E\u043B\u044F \u043F\u043E\u0442\u0435\u0440\u044C \u043E\u0442 \u0431\u0435\u0434 \u043B\u0435\u0441\u0430"),
+        forestFood: k(0.3, 0, 2, 0.1, "\u2026\u0435\u0433\u043E \u0446\u0435\u043D\u0430: \u0435\u0434\u044B \u0438\u0437 \u0430\u043C\u0431\u0430\u0440\u0430 \u0437\u0430 \u043A\u0430\u0436\u0434\u0443\u044E \u0441\u043C\u044F\u0433\u0447\u0451\u043D\u043D\u0443\u044E \u0432\u0435\u0441\u0442\u044C \u043B\u0435\u0441\u0430")
+      },
       tape: k(50, 12, 120, 1, "\u042D\u043C\u0443\u043B\u044F\u0442\u043E\u0440: \u043B\u0435\u043D\u0442\u0430 \u043C\u0438\u0440\u0430 \u043D\u0430 \u0441\u0442\u043E\u043B\u044C\u043A\u043E \u0441\u0435\u0437\u043E\u043D\u043E\u0432"),
       goal: {
         bearMin: k(0.35, 0, 1, 0.05, "\u0426\u0435\u043B\u044C: \xAB\u041D\u0438\u0447\u0435\u0433\u043E \u043D\u0435 \u0442\u0440\u043E\u0433\u0430\u0435\u0442\xBB \u0437\u0430\u043A\u0440\u044B\u0432\u0430\u0435\u0442 \u0432\u0441\u0435 \u0442\u0440\u0438 \u0443\u0440\u043E\u043A\u0430 \u043D\u0435 \u0440\u0435\u0436\u0435 (\u0434\u043E\u043B\u044F \u043F\u0430\u0440\u0442\u0438\u0439)"),
@@ -1577,6 +1600,7 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
       name: "\u0412\u043E\u0439\u043D\u0430 \u043D\u0430 \u044E\u0433\u0435",
       text: "\u0413\u0435\u0440\u0446\u043E\u0433 \u0443\u0432\u044F\u0437 \u0432 \u0432\u043E\u0439\u043D\u0435 \u043D\u0430 \u044E\u0436\u043D\u043E\u0439 \u0433\u0440\u0430\u043D\u0438\u0446\u0435: \u043F\u043E\u043B\u043A\u0438 \u0443\u0445\u043E\u0434\u044F\u0442, \u0434\u043E\u0440\u043E\u0433\u0438 \u043F\u0443\u0441\u0442\u0435\u044E\u0442.",
       end: "\u041D\u0430 \u044E\u0433\u0435 \u0437\u0430\u043A\u043B\u044E\u0447\u0438\u043B\u0438 \u043C\u0438\u0440: \u043F\u043E\u043B\u043A\u0438 \u0438\u0434\u0443\u0442 \u0434\u043E\u043C\u043E\u0439.",
+      post: "pisar",
       tags: ["voyna"],
       mutes: ["torg"],
       seasons: [8, 12],
@@ -1584,9 +1608,9 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
       cost: 5,
       shift: { duty: 0.8, lesson: 1.5 },
       echoes: [
-        { delay: [1, 3], text: "\u0413\u043E\u043D\u0435\u0446 \u043F\u0440\u0438\u0432\u0451\u0437 \u0443\u043A\u0430\u0437 \u043E \u043D\u0430\u0431\u043E\u0440\u0435.", decree: { id: "nabor", title: "\u0423\u043A\u0430\u0437 \u043E \u043D\u0430\u0431\u043E\u0440\u0435", text: "\u0413\u0435\u0440\u0446\u043E\u0433 \u0442\u0440\u0435\u0431\u0443\u0435\u0442 \u043B\u044E\u0434\u0435\u0439 \u0432 \u043F\u043E\u043B\u043A\u0438.", accepts: ["lyudi"], measures: 2, term: 2 } },
-        { delay: [4, 7], text: "\u041F\u043E\u043B\u043A \u0438\u0434\u0451\u0442 \u043D\u0430 \u044E\u0433 \u0447\u0435\u0440\u0435\u0437 \u0431\u0430\u0440\u043E\u043D\u0441\u0442\u0432\u043E.", decree: { id: "postoy", title: "\u041F\u043E\u0441\u0442\u043E\u0439 \u0432\u043E\u0439\u0441\u043A\u0430", text: "\u041F\u043E\u043B\u043A \u0432\u0441\u0442\u0430\u0451\u0442 \u043D\u0430 \u043F\u043E\u0441\u0442\u043E\u0439: \u043A\u043E\u0440\u043C\u0438\u0442\u044C \u0435\u0433\u043E \u0432\u0435\u043B\u0435\u043D\u043E \u0431\u0430\u0440\u043E\u043D\u0443.", accepts: ["eda", "serebro"], measures: 2, term: 1 } },
-        { delay: [3, 6], text: "\u041A \u0431\u0440\u043E\u0434\u0443 \u0432\u044B\u0448\u043B\u0438 \u0431\u0435\u0436\u0435\u043D\u0446\u044B \u0441 \u044E\u0433\u0430: \u0434\u0435\u043B\u044F\u0442\u0441\u044F \u043F\u043E\u0441\u043B\u0435\u0434\u043D\u0438\u043C.", effects: { derevni: -1, pripasy: -1 }, village: "brod" }
+        { post: "desyatnik", delay: [1, 3], text: "\u0413\u043E\u043D\u0435\u0446 \u043F\u0440\u0438\u0432\u0451\u0437 \u0443\u043A\u0430\u0437 \u043E \u043D\u0430\u0431\u043E\u0440\u0435.", decree: { id: "nabor", title: "\u0423\u043A\u0430\u0437 \u043E \u043D\u0430\u0431\u043E\u0440\u0435", text: "\u0413\u0435\u0440\u0446\u043E\u0433 \u0442\u0440\u0435\u0431\u0443\u0435\u0442 \u043B\u044E\u0434\u0435\u0439 \u0432 \u043F\u043E\u043B\u043A\u0438.", accepts: ["lyudi"], measures: 2, term: 2 } },
+        { post: "desyatnik", delay: [4, 7], text: "\u041F\u043E\u043B\u043A \u0438\u0434\u0451\u0442 \u043D\u0430 \u044E\u0433 \u0447\u0435\u0440\u0435\u0437 \u0431\u0430\u0440\u043E\u043D\u0441\u0442\u0432\u043E.", decree: { id: "postoy", title: "\u041F\u043E\u0441\u0442\u043E\u0439 \u0432\u043E\u0439\u0441\u043A\u0430", text: "\u041F\u043E\u043B\u043A \u0432\u0441\u0442\u0430\u0451\u0442 \u043D\u0430 \u043F\u043E\u0441\u0442\u043E\u0439: \u043A\u043E\u0440\u043C\u0438\u0442\u044C \u0435\u0433\u043E \u0432\u0435\u043B\u0435\u043D\u043E \u0431\u0430\u0440\u043E\u043D\u0443.", accepts: ["eda", "serebro"], measures: 2, term: 1 } },
+        { post: "starosta", delay: [3, 6], text: "\u041A \u0431\u0440\u043E\u0434\u0443 \u0432\u044B\u0448\u043B\u0438 \u0431\u0435\u0436\u0435\u043D\u0446\u044B \u0441 \u044E\u0433\u0430: \u0434\u0435\u043B\u044F\u0442\u0441\u044F \u043F\u043E\u0441\u043B\u0435\u0434\u043D\u0438\u043C.", effects: { derevni: -1, pripasy: -1 }, village: "brod" }
       ]
     },
     {
@@ -1594,14 +1618,15 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
       name: "\u041C\u044F\u0442\u0435\u0436 \u0441\u043E\u0441\u0435\u0434\u043D\u0435\u0433\u043E \u0431\u0430\u0440\u043E\u043D\u0430",
       text: "\u0421\u043E\u0441\u0435\u0434 \u0437\u0430 \u0440\u0435\u043A\u043E\u0439 \u043F\u043E\u0434\u043D\u044F\u043B \u0437\u043D\u0430\u043C\u044F \u043F\u0440\u043E\u0442\u0438\u0432 \u0413\u0435\u0440\u0446\u043E\u0433\u0430: \u043D\u0430 \u0442\u0440\u0430\u043A\u0442\u0435 \u043D\u0435\u0441\u043F\u043E\u043A\u043E\u0439\u043D\u043E.",
       end: "\u041C\u044F\u0442\u0435\u0436 \u0437\u0430 \u0440\u0435\u043A\u043E\u0439 \u043F\u043E\u0434\u0430\u0432\u043B\u0435\u043D.",
+      post: "pisar",
       tags: ["voyna"],
       seasons: [4, 6],
       weight: 3,
       cost: 3,
       shift: { duty: 0.9, lesson: 0.5 },
       echoes: [
-        { delay: [1, 2], text: "\u0413\u0435\u0440\u0446\u043E\u0433 \u0441\u043E\u0431\u0438\u0440\u0430\u0435\u0442 \u043E\u043F\u043E\u043B\u0447\u0435\u043D\u0438\u0435 \u043F\u0440\u043E\u0442\u0438\u0432 \u043C\u044F\u0442\u0435\u0436\u043D\u0438\u043A\u0430.", decree: { id: "opolchenie", title: "\u041E\u043F\u043E\u043B\u0447\u0435\u043D\u0438\u0435 \u043F\u0440\u043E\u0442\u0438\u0432 \u043C\u044F\u0442\u0435\u0436\u043D\u0438\u043A\u0430", text: "\u0413\u0435\u0440\u0446\u043E\u0433 \u0442\u0440\u0435\u0431\u0443\u0435\u0442 \u043E\u043F\u043E\u043B\u0447\u0435\u043D\u0446\u0435\u0432 \u043D\u0430 \u0441\u0435\u0437\u043E\u043D-\u0434\u0440\u0443\u0433\u043E\u0439.", accepts: ["lyudi"], measures: 1, term: 2 } },
-        { delay: [2, 4], text: "\u0427\u0435\u0440\u0435\u0437 \u0437\u0435\u043C\u043B\u0438 \u043F\u0440\u043E\u0448\u043B\u0430 \u0448\u0430\u0439\u043A\u0430 \u0434\u0435\u0437\u0435\u0440\u0442\u0438\u0440\u043E\u0432: \u0432 \u0434\u0435\u0440\u0435\u0432\u043D\u044F\u0445 \u043D\u0435\u0434\u043E\u0441\u0447\u0438\u0442\u0430\u043B\u0438\u0441\u044C \u0434\u043E\u0431\u0440\u0430.", effects: { poryadok: -1, derevni: -1 } }
+        { post: "desyatnik", delay: [1, 2], text: "\u0413\u0435\u0440\u0446\u043E\u0433 \u0441\u043E\u0431\u0438\u0440\u0430\u0435\u0442 \u043E\u043F\u043E\u043B\u0447\u0435\u043D\u0438\u0435 \u043F\u0440\u043E\u0442\u0438\u0432 \u043C\u044F\u0442\u0435\u0436\u043D\u0438\u043A\u0430.", decree: { id: "opolchenie", title: "\u041E\u043F\u043E\u043B\u0447\u0435\u043D\u0438\u0435 \u043F\u0440\u043E\u0442\u0438\u0432 \u043C\u044F\u0442\u0435\u0436\u043D\u0438\u043A\u0430", text: "\u0413\u0435\u0440\u0446\u043E\u0433 \u0442\u0440\u0435\u0431\u0443\u0435\u0442 \u043E\u043F\u043E\u043B\u0447\u0435\u043D\u0446\u0435\u0432 \u043D\u0430 \u0441\u0435\u0437\u043E\u043D-\u0434\u0440\u0443\u0433\u043E\u0439.", accepts: ["lyudi"], measures: 1, term: 2 } },
+        { post: "desyatnik", delay: [2, 4], text: "\u0427\u0435\u0440\u0435\u0437 \u0437\u0435\u043C\u043B\u0438 \u043F\u0440\u043E\u0448\u043B\u0430 \u0448\u0430\u0439\u043A\u0430 \u0434\u0435\u0437\u0435\u0440\u0442\u0438\u0440\u043E\u0432: \u0432 \u0434\u0435\u0440\u0435\u0432\u043D\u044F\u0445 \u043D\u0435\u0434\u043E\u0441\u0447\u0438\u0442\u0430\u043B\u0438\u0441\u044C \u0434\u043E\u0431\u0440\u0430.", effects: { poryadok: -1, derevni: -1 } }
       ]
     },
     {
@@ -1609,13 +1634,14 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
       name: "\u041D\u0435\u0443\u0440\u043E\u0436\u0430\u0439 \u0432 \u0433\u0435\u0440\u0446\u043E\u0433\u0441\u0442\u0432\u0435",
       text: "\u041F\u043E \u0432\u0441\u0435\u043C\u0443 \u0433\u0435\u0440\u0446\u043E\u0433\u0441\u0442\u0432\u0443 \u043D\u0435\u0434\u043E\u0440\u043E\u0434: \u0445\u043B\u0435\u0431 \u0434\u043E\u0440\u043E\u0436\u0430\u0435\u0442, \u0441\u0442\u043E\u043B\u0438\u0446\u0430 \u043F\u0440\u043E\u0441\u0438\u0442 \u0437\u0435\u0440\u043D\u0430.",
       end: "\u041D\u0435\u0434\u043E\u0440\u043E\u0434 \u0432 \u0433\u0435\u0440\u0446\u043E\u0433\u0441\u0442\u0432\u0435 \u043F\u043E\u0437\u0430\u0434\u0438.",
+      post: "starosta",
       tags: ["golod"],
       seasons: [4, 5],
       weight: 4,
       cost: 4,
       shift: { harvest: 0.75 },
       echoes: [
-        { delay: [1, 3], text: "\u0414\u0432\u043E\u0440 \u0440\u0430\u0437\u043E\u0441\u043B\u0430\u043B \u0443\u043A\u0430\u0437: \u0437\u0435\u0440\u043D\u043E \u0434\u043B\u044F \u0441\u0442\u043E\u043B\u0438\u0446\u044B.", decree: { id: "zerno", title: "\u0417\u0435\u0440\u043D\u043E \u0434\u043B\u044F \u0441\u0442\u043E\u043B\u0438\u0446\u044B", text: "\u0413\u0435\u0440\u0446\u043E\u0433 \u0442\u0440\u0435\u0431\u0443\u0435\u0442 \u0437\u0435\u0440\u043D\u0430 \u0434\u043B\u044F \u0441\u0442\u043E\u043B\u0438\u0446\u044B \u0441\u0432\u0435\u0440\u0445 \u0443\u0440\u043E\u043A\u0430.", accepts: ["eda"], measures: 1.5, term: 2 } },
+        { post: "klyuchnik", delay: [1, 3], text: "\u0414\u0432\u043E\u0440 \u0440\u0430\u0437\u043E\u0441\u043B\u0430\u043B \u0443\u043A\u0430\u0437: \u0437\u0435\u0440\u043D\u043E \u0434\u043B\u044F \u0441\u0442\u043E\u043B\u0438\u0446\u044B.", decree: { id: "zerno", title: "\u0417\u0435\u0440\u043D\u043E \u0434\u043B\u044F \u0441\u0442\u043E\u043B\u0438\u0446\u044B", text: "\u0413\u0435\u0440\u0446\u043E\u0433 \u0442\u0440\u0435\u0431\u0443\u0435\u0442 \u0437\u0435\u0440\u043D\u0430 \u0434\u043B\u044F \u0441\u0442\u043E\u043B\u0438\u0446\u044B \u0441\u0432\u0435\u0440\u0445 \u0443\u0440\u043E\u043A\u0430.", accepts: ["eda"], measures: 1.5, term: 2 } },
         { delay: [2, 4], text: "\u041D\u0438\u0449\u0438\u0435 \u0441 \u043F\u0443\u0441\u0442\u044B\u0445 \u0437\u0435\u043C\u0435\u043B\u044C \u0434\u043E\u0448\u043B\u0438 \u0434\u043E \u0434\u0435\u0440\u0435\u0432\u043D\u0438 \u0443 \u043E\u043F\u0443\u0448\u043A\u0438: \u043F\u043E\u0434\u0430\u044F\u043D\u0438\u0435 \u0438\u0437 \u0441\u0432\u043E\u0438\u0445 \u0437\u0430\u043A\u0440\u043E\u043C\u043E\u0432.", effects: { derevni: -1 }, village: "opushka" }
       ]
     },
@@ -1624,6 +1650,7 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
       name: "\u041C\u043E\u0440 \u0432 \u0433\u0435\u0440\u0446\u043E\u0433\u0441\u0442\u0432\u0435",
       text: "\u041F\u043E \u0433\u043E\u0440\u043E\u0434\u0430\u043C \u0438\u0434\u0451\u0442 \u043C\u043E\u0440: \u0432\u043E\u0440\u043E\u0442\u0430 \u0437\u0430\u043F\u0438\u0440\u0430\u044E\u0442, \u0442\u043E\u0440\u0433 \u0432\u0441\u0442\u0430\u043B.",
       end: "\u041C\u043E\u0440 \u043E\u0442\u0441\u0442\u0443\u043F\u0438\u043B: \u0432\u043E\u0440\u043E\u0442\u0430 \u0433\u043E\u0440\u043E\u0434\u043E\u0432 \u043E\u0442\u043A\u0440\u044B\u0442\u044B.",
+      post: "pisar",
       tags: ["golod", "vera"],
       mutes: ["torg"],
       seasons: [3, 5],
@@ -1640,18 +1667,20 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
       name: "\u041F\u0430\u0434\u0451\u0436 \u0441\u043A\u043E\u0442\u0430 \u043F\u043E \u043E\u043A\u0440\u0443\u0433\u0435",
       text: "\u041F\u043E \u043E\u043A\u0440\u0443\u0433\u0435 \u043F\u0430\u0434\u0451\u0436: \u043F\u0430\u0445\u0430\u0442\u044C \u043D\u0435 \u043D\u0430 \u0447\u0435\u043C, \u043C\u044F\u0441\u043E \u0432 \u0446\u0435\u043D\u0435.",
       end: "\u041F\u0430\u0434\u0451\u0436 \u0441\u043E\u0448\u0451\u043B \u043D\u0430 \u043D\u0435\u0442.",
+      post: "starosta",
       tags: ["golod"],
       seasons: [2, 4],
       weight: 3,
       cost: 2,
       shift: { harvest: 0.88 },
-      echoes: [{ delay: [1, 2], text: "\u041F\u0430\u0434\u0451\u0436 \u0434\u043E\u0448\u0451\u043B \u0434\u043E \u0437\u0434\u0435\u0448\u043D\u0438\u0445 \u0432\u044B\u043F\u0430\u0441\u043E\u0432.", effects: { derevni: -1, pripasy: -1 } }]
+      echoes: [{ post: "klyuchnik", delay: [1, 2], text: "\u041F\u0430\u0434\u0451\u0436 \u0434\u043E\u0448\u0451\u043B \u0434\u043E \u0437\u0434\u0435\u0448\u043D\u0438\u0445 \u0432\u044B\u043F\u0430\u0441\u043E\u0432.", effects: { derevni: -1, pripasy: -1 } }]
     },
     {
       id: "tvari",
       name: "\u041B\u0435\u0441 \u043D\u0435\u0441\u043F\u043E\u043A\u043E\u0435\u043D",
       text: "\u0421 \u0441\u0435\u0432\u0435\u0440\u0430 \u0438\u0434\u0443\u0442 \u0442\u0432\u0430\u0440\u0438: \u043B\u0435\u0441\u043D\u043E\u0439 \u043D\u0430\u0440\u043E\u0434 \u0443\u0445\u043E\u0434\u0438\u0442 \u0432\u0433\u043B\u0443\u0431\u044C, \u0442\u0440\u043E\u043F\u044B \u0437\u0430\u043A\u0440\u044B\u0442\u044B.",
       end: "\u041B\u0435\u0441 \u0443\u0442\u0438\u0445: \u0442\u0440\u043E\u043F\u044B \u0441\u043D\u043E\u0432\u0430 \u043E\u0442\u043A\u0440\u044B\u0442\u044B.",
+      post: "lesnichiy",
       tags: ["les"],
       seasons: [3, 6],
       weight: 3,
@@ -1667,6 +1696,7 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
       name: "\u0421\u043F\u043E\u0440 \u043E \u0432\u0435\u0440\u0435",
       text: "\u0412 \u0441\u0442\u043E\u043B\u0438\u0446\u0435 \u0441\u043F\u043E\u0440\u044F\u0442 \u043E \u0432\u0435\u0440\u0435: \u043F\u0440\u043E\u043F\u043E\u0432\u0435\u0434\u043D\u0438\u043A\u0438 \u0445\u043E\u0434\u044F\u0442 \u043F\u043E \u0434\u0435\u0440\u0435\u0432\u043D\u044F\u043C \u0438 \u043C\u0443\u0442\u044F\u0442 \u043D\u0430\u0440\u043E\u0434.",
       end: "\u0421\u043E\u0431\u043E\u0440 \u0440\u0435\u0448\u0438\u043B \u0441\u043F\u043E\u0440 \u043E \u0432\u0435\u0440\u0435.",
+      post: "starosta",
       tags: ["vera"],
       seasons: [4, 8],
       weight: 2,
@@ -1681,6 +1711,7 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
       name: "\u041D\u043E\u0432\u0430\u044F \u043F\u043E\u0448\u043B\u0438\u043D\u0430 \u0413\u0435\u0440\u0446\u043E\u0433\u0430",
       text: "\u0413\u0435\u0440\u0446\u043E\u0433 \u043E\u0431\u043B\u043E\u0436\u0438\u043B \u0442\u0440\u0430\u043A\u0442 \u043D\u043E\u0432\u043E\u0439 \u043F\u043E\u0448\u043B\u0438\u043D\u043E\u0439: \u043A\u0443\u043F\u0446\u044B \u0438\u0449\u0443\u0442 \u043E\u0431\u0445\u043E\u0434\u043D\u044B\u0435 \u043F\u0443\u0442\u0438.",
       end: "\u041F\u043E\u0448\u043B\u0438\u043D\u0443 \u043D\u0430 \u0442\u0440\u0430\u043A\u0442\u0435 \u043E\u0442\u043C\u0435\u043D\u0438\u043B\u0438.",
+      post: "pisar",
       tags: ["torg"],
       seasons: [4, 8],
       weight: 3,
@@ -1694,6 +1725,7 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
       name: "\u042F\u0440\u043C\u0430\u0440\u043E\u0447\u043D\u044B\u0439 \u0433\u043E\u0434",
       text: "\u0412 \u0433\u043E\u0440\u043E\u0434\u0435 \u0431\u043E\u043B\u044C\u0448\u0430\u044F \u044F\u0440\u043C\u0430\u0440\u043A\u0430: \u043A\u0443\u043F\u0446\u044B \u0435\u0434\u0443\u0442 \u0441\u043E \u0432\u0441\u0435\u0445 \u0441\u0442\u043E\u0440\u043E\u043D \u0438 \u0431\u0435\u0440\u0443\u0442 \u0432\u0441\u0451.",
       end: "\u042F\u0440\u043C\u0430\u0440\u043E\u0447\u043D\u044B\u0439 \u0433\u043E\u0434 \u043A\u043E\u043D\u0447\u0438\u043B\u0441\u044F.",
+      post: "pisar",
       tags: ["torg"],
       seasons: [4, 4],
       weight: 3,
@@ -1706,6 +1738,7 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
       name: "\u0414\u043E\u0431\u0440\u044B\u0435 \u0433\u043E\u0434\u044B",
       text: "\u0422\u0451\u043F\u043B\u044B\u0435 \u0432\u0451\u0441\u043D\u044B \u0438 \u0442\u0438\u0445\u0438\u0435 \u043E\u0441\u0435\u043D\u0438: \u043F\u043E \u0432\u0441\u0435\u043C\u0443 \u0433\u0435\u0440\u0446\u043E\u0433\u0441\u0442\u0432\u0443 \u0437\u0430\u043A\u0440\u043E\u043C\u0430 \u043F\u043E\u043B\u043D\u044B.",
       end: "\u0414\u043E\u0431\u0440\u044B\u0435 \u0433\u043E\u0434\u044B \u043F\u043E\u0437\u0430\u0434\u0438.",
+      post: "starosta",
       tags: [],
       mutes: ["golod"],
       seasons: [4, 6],
@@ -1718,6 +1751,7 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
       name: "\u0421\u0432\u0430\u0434\u044C\u0431\u0430 \u0432 \u0434\u043E\u043C\u0435 \u0413\u0435\u0440\u0446\u043E\u0433\u0430",
       text: "\u0413\u0435\u0440\u0446\u043E\u0433 \u0436\u0435\u043D\u0438\u0442 \u043D\u0430\u0441\u043B\u0435\u0434\u043D\u0438\u043A\u0430: \u0434\u0432\u043E\u0440 \u0449\u0435\u0434\u0440 \u0438 \u0436\u0434\u0451\u0442 \u0434\u0430\u0440\u043E\u0432.",
       end: "\u0421\u0432\u0430\u0434\u0435\u0431\u043D\u044B\u0435 \u0442\u043E\u0440\u0436\u0435\u0441\u0442\u0432\u0430 \u043A\u043E\u043D\u0447\u0438\u043B\u0438\u0441\u044C.",
+      post: "pisar",
       tags: ["vera", "torg"],
       seasons: [2, 3],
       weight: 2,
@@ -1730,6 +1764,7 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
       name: "\u041F\u0430\u043B\u043E\u043C\u043D\u0438\u043A\u0438 \u0438\u0434\u0443\u0442 \u043A \u0441\u0432\u044F\u0442\u044B\u043D\u0435",
       text: "\u0427\u0435\u0440\u0435\u0437 \u0431\u0430\u0440\u043E\u043D\u0441\u0442\u0432\u043E \u043F\u043E\u0442\u044F\u043D\u0443\u043B\u0438\u0441\u044C \u043F\u0430\u043B\u043E\u043C\u043D\u0438\u043A\u0438 \u043A \u0441\u0432\u044F\u0442\u044B\u043D\u0435 \u0437\u0430 \u043B\u0435\u0441\u043E\u043C.",
       end: "\u041F\u0430\u043B\u043E\u043C\u043D\u0438\u043A\u043E\u0432 \u0441\u0442\u0430\u043B\u043E \u043C\u0435\u043D\u044C\u0448\u0435.",
+      post: "lesnichiy",
       tags: ["vera"],
       seasons: [3, 5],
       weight: 2,
@@ -1742,6 +1777,7 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
       name: "\u0422\u0438\u0445\u0438\u0439 \u043B\u0435\u0441",
       text: "\u041B\u0435\u0441 \u0449\u0435\u0434\u0440 \u0438 \u0441\u043F\u043E\u043A\u043E\u0435\u043D: \u043B\u0435\u0441\u043D\u043E\u0439 \u043D\u0430\u0440\u043E\u0434 \u0432\u044B\u0445\u043E\u0434\u0438\u0442 \u043A \u043C\u0435\u0436\u0435 \u0441 \u0434\u0430\u0440\u0430\u043C\u0438.",
       end: "\u041B\u0435\u0441 \u0441\u043D\u043E\u0432\u0430 \u0434\u0435\u0440\u0436\u0438\u0442\u0441\u044F \u043D\u0430\u0441\u0442\u043E\u0440\u043E\u0436\u0435.",
+      post: "lesnichiy",
       tags: ["les"],
       seasons: [3, 5],
       weight: 2,
@@ -1751,32 +1787,47 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
     }
   ];
   var WEATHER_WORDS = { bad: "\u043D\u0435\u0434\u043E\u0440\u043E\u0434", poor: "\u0441\u043A\u0443\u0434\u043D\u044B\u0439 \u0433\u043E\u0434", plain: "\u043E\u0431\u044B\u0447\u043D\u044B\u0439 \u0433\u043E\u0434", good: "\u0443\u0440\u043E\u0436\u0430\u0439\u043D\u044B\u0439 \u0433\u043E\u0434" };
+  var HEAVY_YEARS = [
+    { id: "zasuha", name: "\u0437\u0430\u0441\u0443\u0445\u0430", text: "\u0417\u0430\u0441\u0443\u0445\u0430: \u0441 \u0432\u0435\u0441\u043D\u044B \u043D\u0438 \u0434\u043E\u0436\u0434\u044F, \u043F\u043E\u043B\u044F \u0433\u043E\u0440\u044F\u0442 \u2014 \u0443\u0440\u043E\u0436\u0430\u0439 \u0431\u0443\u0434\u0435\u0442 \u0432\u0434\u0432\u043E\u0435 \u0445\u0443\u0436\u0435 \u043E\u0431\u044B\u0447\u043D\u043E\u0433\u043E." },
+    { id: "gradoboy", name: "\u0433\u0440\u0430\u0434\u043E\u0431\u043E\u0439", text: "\u0413\u0440\u0430\u0434\u043E\u0431\u043E\u0439: \u0432\u0441\u0445\u043E\u0434\u044B \u043F\u043E\u0431\u0438\u043B\u043E, \u043F\u0435\u0440\u0435\u0441\u0435\u0432\u0430\u0442\u044C \u043F\u043E\u0437\u0434\u043D\u043E \u2014 \u0443\u0440\u043E\u0436\u0430\u0439 \u0431\u0443\u0434\u0435\u0442 \u0432\u0434\u0432\u043E\u0435 \u0445\u0443\u0436\u0435 \u043E\u0431\u044B\u0447\u043D\u043E\u0433\u043E." }
+  ];
 
   // src/sim/world/gen.ts
   var stateDef = (id) => WORLD_STATES.find((s) => s.id === id);
   var isBad = (d) => d.cost > 0;
   function rollWeather(ws) {
     const W = BALANCE.world.weather;
-    ws.weather = round2(clamp(1 + ws.rng.gauss() * W.spread, W.min, W.max));
+    ws.heavy = ws.rng.chance(W.heavy) ? ws.rng.pick(HEAVY_YEARS).id : "";
+    const plain = round2(clamp(1 + ws.rng.gauss() * W.spread, W.min, W.max));
+    ws.weather = ws.heavy ? round2(ws.rng.range(W.heavyMin, W.heavyMax)) : plain;
+    if (ws.heavy) {
+      ws.news.push({ season: ws.season, layer: "baronstvo", kind: "weather", tone: "bad", text: HEAVY_YEARS.find((x) => x.id === ws.heavy).text });
+      return;
+    }
     const m = worldMods(ws).harvest, word = weatherWord(m);
     const text = { bad: "\u0413\u043E\u0434 \u043E\u0431\u0435\u0449\u0430\u0435\u0442 \u043D\u0435\u0434\u043E\u0440\u043E\u0434: \u043F\u043E\u043B\u044F \u0434\u0430\u0434\u0443\u0442 \u0437\u0430\u043C\u0435\u0442\u043D\u043E \u043C\u0435\u043D\u044C\u0448\u0435.", poor: "\u0413\u043E\u0434 \u043E\u0431\u0435\u0449\u0430\u0435\u0442 \u0431\u044B\u0442\u044C \u0441\u043A\u0443\u0434\u043D\u044B\u043C.", plain: "\u0413\u043E\u0434 \u043E\u0431\u0435\u0449\u0430\u0435\u0442 \u0431\u044B\u0442\u044C \u043E\u0431\u044B\u0447\u043D\u044B\u043C.", good: "\u0413\u043E\u0434 \u043E\u0431\u0435\u0449\u0430\u0435\u0442 \u0431\u044B\u0442\u044C \u0443\u0440\u043E\u0436\u0430\u0439\u043D\u044B\u043C." }[word];
     ws.news.push({ season: ws.season, layer: "baronstvo", kind: "weather", tone: word === "bad" || word === "poor" ? "bad" : word === "good" ? "good" : "neutral", text });
   }
   function initWorld(seed) {
-    const ws = { rng: new Rng(`${seed}|\u043C\u0438\u0440`), season: 1, active: [], queue: [], budget: BALANCE.world.budget.start, lastBad: 0, decreeFree: 0, weather: 1, news: [] };
+    const ws = { rng: new Rng(`${seed}|\u043C\u0438\u0440`), season: 1, active: [], queue: [], budget: BALANCE.world.budget.start, lastBad: 0, decreeFree: 0, weather: 1, heavy: "", news: [] };
     if (BALANCE.world.on) rollWeather(ws);
     return ws;
   }
   var power = (a) => a.strength * BALANCE.world.strength;
-  function worldMods(ws) {
+  function worldMods(ws, soft) {
     const out = { harvest: 1, price: 1, duty: 1, forest: 1, lesson: 0 };
     if (!BALANCE.world.on) return out;
-    out.harvest = ws.weather;
+    out.harvest = ws.weather < 1 ? 1 - (1 - ws.weather) * (soft?.weather ?? 1) : ws.weather;
     for (const a of ws.active) {
-      const sh = stateDef(a.id).shift;
+      const d = stateDef(a.id), sh = d.shift;
       if (!sh) continue;
-      for (const key of ["harvest", "price", "duty", "forest"]) if (sh[key] !== void 0) out[key] *= Math.max(0, 1 + (sh[key] - 1) * power(a));
-      out.lesson += (sh.lesson ?? 0) * power(a);
+      for (const key of ["harvest", "price", "duty", "forest"]) {
+        if (sh[key] === void 0) continue;
+        const loss = sh[key] < 1 ? soft?.state(d, key) ?? 1 : 1;
+        out[key] *= Math.max(0, 1 + (sh[key] - 1) * power(a) * loss);
+      }
+      const lesson = (sh.lesson ?? 0) * power(a);
+      out.lesson += lesson > 0 ? lesson * (soft?.state(d, "lesson") ?? 1) : lesson;
     }
     for (const key of ["harvest", "price", "duty", "forest"]) out[key] = round2(out[key]);
     out.lesson = round1(out.lesson);
@@ -1853,8 +1904,9 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
         }
         const measures = decreeMeasures(def.decree.measures, e.strength);
         if (measures > 0) {
-          ws.decreeFree = season + def.decree.term + W.decree.gap;
-          ws.news.push({ season, layer: "baronstvo", kind: "decree", tone: "bad", text: def.text, state: e.state, echo: e.echo, strength: e.strength, measures });
+          const term = def.decree.term + W.decree.extraTerm;
+          ws.decreeFree = season + term + W.decree.gap;
+          ws.news.push({ season, layer: "baronstvo", kind: "decree", tone: "bad", text: def.text, state: e.state, echo: e.echo, strength: e.strength, measures, term });
         }
       } else {
         const sum = Object.values(def.effects ?? {}).reduce((s, v) => s + v, 0);
@@ -1875,6 +1927,44 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
     }
     return out;
   }
+
+  // src/data/answers.ts
+  var ANSWERS = [
+    { post: "starosta", axis: "zabota", kind: "villages", name: "\u0414\u0435\u0440\u0435\u0432\u043D\u0438 \u043D\u0435 \u043E\u0431\u0438\u0440\u0430\u0435\u0442", good: "\u0431\u0435\u0434\u044B \u0431\u044C\u044E\u0442 \u043F\u043E \u0434\u043E\u0432\u0435\u0440\u0438\u044E \u0434\u0435\u0440\u0435\u0432\u0435\u043D\u044C \u0432\u0434\u0432\u043E\u0435 \u0441\u043B\u0430\u0431\u0435\u0435", price: "\u043A\u043E\u0440\u043C\u0438\u0442 \u043F\u043E\u0441\u0442\u0440\u0430\u0434\u0430\u0432\u0448\u0438\u0445 \u0438\u0437 \u0430\u043C\u0431\u0430\u0440\u0430" },
+    { post: "desyatnik", axis: "dolg", kind: "castleRecruits", name: "\u041D\u0430\u0431\u043E\u0440 \u0441\u0442\u0440\u0430\u0436\u0435\u0439", good: "\u0443\u043A\u0430\u0437 \u043E \u043B\u044E\u0434\u044F\u0445 \u0441\u043E\u0432\u0435\u0442 \u0437\u0430\u043A\u0440\u044B\u0432\u0430\u0435\u0442 \u0441\u0442\u0440\u0430\u0436\u0435\u0439 \u0438 \u0447\u0435\u043B\u044F\u0434\u044C\u044E, \u0430 \u043D\u0435 \u0434\u0435\u0440\u0435\u0432\u0435\u043D\u0441\u043A\u0438\u043C\u0438", price: "\u043F\u043E\u0440\u044F\u0434\u043E\u043A \u0438 \u043B\u044E\u0434\u0438 \u0437\u0430\u043C\u043A\u0430" },
+    { post: "pisar", axis: "vygoda", kind: "decreeSize", name: "\u041E\u0442\u043A\u0443\u043F \u0443 \u0434\u0432\u043E\u0440\u0430", good: "\u0432\u044B\u0442\u043E\u0440\u0433\u043E\u0432\u044B\u0432\u0430\u0435\u0442 \u0443\u043A\u0430\u0437 \u043F\u043E\u043C\u0435\u043D\u044C\u0448\u0435", price: "\u0434\u0432\u043E\u0440 \u043D\u0435\u0434\u043E\u0432\u043E\u043B\u0435\u043D \u0442\u043E\u0440\u0433\u043E\u043C" },
+    { post: "pisar", axis: "obychai", kind: "decreeTerm", name: "\u041F\u043E \u0441\u0442\u0430\u0440\u044B\u043C \u0433\u0440\u0430\u043C\u043E\u0442\u0430\u043C", good: "\u043D\u0430\u0445\u043E\u0434\u0438\u0442 \u0432 \u0433\u0440\u0430\u043C\u043E\u0442\u0430\u0445 \u043E\u0442\u0441\u0440\u043E\u0447\u043A\u0443: \u0443 \u0443\u043A\u0430\u0437\u0430 \u0441\u0435\u0437\u043E\u043D \u0441\u0432\u0435\u0440\u0445\u0443", price: "\u0434\u0432\u043E\u0440 \u0432\u043E\u0440\u0447\u0438\u0442 \u043D\u0430 \u043A\u0440\u044E\u0447\u043A\u043E\u0442\u0432\u043E\u0440\u0441\u0442\u0432\u043E" },
+    { post: "klyuchnik", axis: "obychai", kind: "harvest", name: "\u0417\u0430\u043F\u0430\u0441 \u0432\u043F\u0440\u043E\u043A", good: "\u043D\u0435\u0434\u043E\u0440\u043E\u0434 \u0431\u044C\u0451\u0442 \u043F\u043E \u0430\u043C\u0431\u0430\u0440\u0443 \u0441\u043B\u0430\u0431\u0435\u0435", price: "\u0437\u0430\u043A\u0443\u043F\u0430\u0435\u0442 \u0432\u043F\u0440\u043E\u043A \u0437\u0430 \u0441\u0435\u0440\u0435\u0431\u0440\u043E" },
+    { post: "lesnichiy", axis: "obychai", kind: "forest", name: "\u041E\u0431\u0440\u044F\u0434\u044B \u0443 \u043C\u0435\u0436\u0438", good: "\u0431\u0435\u0434\u044B \u043B\u0435\u0441\u0430 \u043C\u044F\u0433\u0447\u0435", price: "\u0434\u0430\u0440\u044B \u043B\u0435\u0441\u0443 \u0438\u0437 \u0430\u043C\u0431\u0430\u0440\u0430" }
+  ];
+
+  // src/sim/world/answer.ts
+  function standOf(w, post) {
+    const A = BALANCE.world.answer, p = holder(w, post), name = postName(post).toLowerCase();
+    if (!p) return { k: A.max, word: "\u0434\u043E\u043B\u0436\u043D\u043E\u0441\u0442\u044C \u043F\u0443\u0441\u0442\u0430", text: `${name}: \u0434\u043E\u043B\u0436\u043D\u043E\u0441\u0442\u044C \u043F\u0443\u0441\u0442\u0430 \u2014 \u0431\u0435\u0434\u0430 \u0431\u044C\u0451\u0442 \u0432 \u043F\u043E\u043B\u043D\u0443\u044E \u0441\u0438\u043B\u0443 \u0438 \u0441\u0432\u0435\u0440\u0445 \u0442\u043E\u0433\u043E` };
+    const k2 = round2(clamp(1 - (doer(w, post).mult - 1) * A.gain, A.min, A.max));
+    const word = k2 < 1 ? "\u0441\u043C\u044F\u0433\u0447\u0438\u043B" : k2 > 1 ? "\u0443\u0441\u0443\u0433\u0443\u0431\u0438\u043B" : "\u043D\u0435 \u043F\u043E\u043C\u043E\u0433";
+    const how = { "\u0441\u043C\u044F\u0433\u0447\u0438\u043B": `\u0441\u043C\u044F\u0433\u0447\u0438\u043B${p.female ? "\u0430" : ""}`, "\u0443\u0441\u0443\u0433\u0443\u0431\u0438\u043B": `\u0443\u0441\u0443\u0433\u0443\u0431\u0438\u043B${p.female ? "\u0430" : ""}`, "\u043D\u0435 \u043F\u043E\u043C\u043E\u0433": "\u043D\u0438 \u0441\u043C\u044F\u0433\u0447\u0438\u0442\u044C, \u043D\u0438 \u0438\u0441\u043F\u043E\u0440\u0442\u0438\u0442\u044C" }[word];
+    return { k: k2, p, word, text: `${name} ${p.name} \u2014 ${how}` };
+  }
+  function wayOf(w, kind) {
+    const answer = ANSWERS.find((a) => a.kind === kind), p = holder(w, answer.post);
+    const hand = p ? handsOf(p, answer.post).find((h2) => h2.hand.axis === answer.axis) : void 0;
+    return p && hand ? { answer, p, weight: Math.min(1, hand.weight) } : void 0;
+  }
+  var wayShare = (way, share) => way ? 1 - (1 - share) * way.weight : 1;
+  function waysOf(p) {
+    if (!p.post) return [];
+    return handsOf(p, p.post).flatMap((h2, i) => ANSWERS.filter((a) => a.post === p.post && a.axis === h2.hand.axis).map((answer) => ({ answer, shade: i > 0 })));
+  }
+  function softenOf(w) {
+    const A = BALANCE.world.answer, harvest = wayShare(wayOf(w, "harvest"), A.harvest), forest = wayShare(wayOf(w, "forest"), A.forest);
+    return {
+      state: (d, key) => standOf(w, d.post).k * (key === "harvest" ? harvest : key === "forest" ? forest : 1),
+      weather: standOf(w, "starosta").k * harvest
+    };
+  }
+  var worldModsFor = (w) => worldMods(w.world.sim, softenOf(w));
 
   // src/sim/economy/plan.ts
   function handsNow(w) {
@@ -1911,7 +2001,7 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
     const hands = fieldHands(w), fieldShare = clamp(hands.field / E.hands.field, 0, 1);
     const L = levers(w), by = (lever) => Math.max(0, 1 + L[lever] * E.hand.flow);
     const sown = kind === SPRING ? fieldShare : e.sown;
-    const M = worldMods(w.world.sim);
+    const M = worldModsFor(w);
     const seasonPrice = [E.year.priceSpring, E.year.priceSummer, E.year.priceAutumn, E.year.priceWinter][kind];
     const price = F.scale * F.price * seasonPrice * zoneMult(w, "kuptsy") * pisar.mult * (1 + courseStrength(w, "torguem")) * by("price") * M.price;
     if (stock.tovary > 0) {
@@ -1947,7 +2037,7 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
         const crop = F.scale * (F.harvest / VILLAGES.length) * z * tiun.mult * sown * fieldShare * by("harvest") * M.harvest;
         harvest += crop;
         const field = sown < 1 || fieldShare < 1 ? ` (\u043F\u043E\u0441\u0435\u044F\u043D\u043E ${Math.round(sown * 100)}%, \u0441\u0436\u0430\u0442\u043E ${Math.round(fieldShare * 100)}%)` : "";
-        const sky = M.harvest !== 1 ? `, ${WEATHER_WORDS[weatherWord(M.harvest)]}` : "";
+        const sky = M.harvest !== 1 ? `, ${WEATHER_WORDS[weatherWord(M.harvest)]}${M.harvest < 1 ? `: ${standOf(w, "starosta").text}` : ""}` : "";
         add("eda", crop, `\u0443\u0440\u043E\u0436\u0430\u0439${field}${sky}`, { side: v, who, how: tiun.note });
         add("serebro", F.scale * F.quitrentSilver * share * z * tiun.mult * quit * by("quitrent") * by("quitrentSilver"), "\u043E\u0431\u0440\u043E\u043A \u0441\u0435\u0440\u0435\u0431\u0440\u043E\u043C", { side: v, who, how });
         add("tovary", F.scale * F.quitrentGoods * share * z * tiun.mult * quit * by("quitrent"), "\u043E\u0431\u0440\u043E\u043A \u0442\u043E\u0432\u0430\u0440\u0430\u043C\u0438", { side: v, who, how });
@@ -2058,7 +2148,7 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
   function newTaxYear(w) {
     const t = w.eco.tax;
     t.year++;
-    const add = worldMods(w.world.sim).lesson;
+    const add = worldModsFor(w).lesson;
     t.lesson = round1(Math.max(0, lessonOf(t.year) + add));
     t.due = round1(t.lesson + t.carried);
     t.paid = 0;
@@ -3137,7 +3227,14 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
     const g = w.world, lines = [];
     for (const n of g.sim.news) {
       if (n.kind === "decree") {
-        const def = stateDef(n.state).echoes[n.echo].decree;
+        const echo = stateDef(n.state).echoes[n.echo], def = echo.decree, post = echo.post ?? stateDef(n.state).post;
+        const stand = standOf(w, post), size = wayOf(w, "decreeSize"), late = wayOf(w, "decreeTerm"), X = BALANCE.world.answer;
+        const due = round1(Math.max(X.min, stand.k * wayShare(size, X.decreeSize)) * n.measures);
+        const term = n.term + (late ? X.termAdd : 0);
+        if (size) addTrust(w, "dvor", -X.decreeDvor * size.weight);
+        if (late) addTrust(w, "dvor", -X.termDvor * late.weight);
+        const ways = [size, late].filter((x) => x && axisKnown(x.p, x.answer.axis)).map((x) => `${x.p.name}: \xAB${x.answer.name}\xBB \u2014 ${x.answer.good}; ${x.answer.price}`);
+        const note = `${stand.text}${due !== n.measures ? ` (${n.measures} \u2192 ${due} \u043C\u0435\u0440)` : ""}${ways.length ? `. ${ways.join(". ")}` : ""}`;
         const d = {
           id: g.nextId++,
           def: def.id,
@@ -3145,20 +3242,35 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
           title: def.title,
           text: def.text,
           accepts: def.accepts,
-          due: n.measures,
+          due,
           paid: 0,
           by: {},
           council: 0,
+          post,
+          note,
           issued: w.season,
-          until: w.season + def.term - 1
+          until: w.season + term - 1
         };
         g.decrees.push(d);
         const what = d.accepts.map((c) => CATEGORY_NAMES[c].toLowerCase()).join(" \u0438\u043B\u0438 ");
-        lines.push(`\u{1F4EF} ${n.text} ${d.title}: ${d.due} \u043C\u0435\u0440 (${what}), \u0441\u0440\u043E\u043A \u2014 \u0434\u043E \u043A\u043E\u043D\u0446\u0430 \u0441\u0435\u0437\u043E\u043D\u0430 \xAB${seasonName(d.until)}\xBB.`);
+        lines.push(`\u{1F4EF} ${n.text} ${d.title}: ${d.due} \u043C\u0435\u0440 (${what}), \u0441\u0440\u043E\u043A \u2014 \u0434\u043E \u043A\u043E\u043D\u0446\u0430 \u0441\u0435\u0437\u043E\u043D\u0430 \xAB${seasonName(d.until)}\xBB. \u0412\u0441\u0442\u0440\u0435\u0447\u0430\u043B ${note}.`);
       } else if (n.kind === "echo") {
-        const def = stateDef(n.state).echoes[n.echo];
-        applyDirect(w, def.effects ?? {}, BALANCE.world.effect * n.strength * BALANCE.world.strength, `\u0432\u0435\u0441\u0442\u0438: ${def.text.charAt(0).toLowerCase()}${def.text.slice(1)}`, def.village);
-        lines.push(n.text);
+        const def = stateDef(n.state).echoes[n.echo], post = def.post ?? stateDef(n.state).post, X = BALANCE.world.answer;
+        const stand = standOf(w, post), mercy = wayOf(w, "villages"), rites = post === "lesnichiy" ? wayOf(w, "forest") : void 0;
+        const scaled = {};
+        let lost = false, spared = false;
+        for (const [key, v] of Object.entries(def.effects ?? {})) {
+          const soft = key === "derevni" ? wayShare(mercy, X.villages) : 1;
+          scaled[key] = v < 0 ? v * stand.k * soft * wayShare(rites, X.forest) : v;
+          lost = lost || v < 0;
+          spared = spared || v < 0 && key === "derevni" && !!mercy;
+        }
+        const text = `\u0432\u0435\u0441\u0442\u0438: ${def.text.charAt(0).toLowerCase()}${def.text.slice(1)}`;
+        applyDirect(w, scaled, BALANCE.world.effect * n.strength * BALANCE.world.strength, text, def.village);
+        if (spared) addLine(w, { cat: "eda", v: -X.villagesFood * mercy.weight, text: "\u043F\u043E\u0441\u0442\u0440\u0430\u0434\u0430\u0432\u0448\u0438\u043C \u0438\u0437 \u0430\u043C\u0431\u0430\u0440\u0430", who: `${postName(mercy.p.post).toLowerCase()} ${mercy.p.name}` });
+        if (lost && rites) addLine(w, { cat: "eda", v: -X.forestFood * rites.weight, text: "\u0434\u0430\u0440\u044B \u043B\u0435\u0441\u0443", who: `${postName(rites.p.post).toLowerCase()} ${rites.p.name}` });
+        const ways = [spared ? mercy : void 0, lost ? rites : void 0].filter((x) => x && axisKnown(x.p, x.answer.axis)).map((x) => ` ${x.p.name}: \xAB${x.answer.name}\xBB \u2014 ${x.answer.good}; ${x.answer.price}.`).join("");
+        lines.push(lost ? `${n.text} \u041E\u0442\u0432\u0435\u0447\u0430\u043B ${stand.text}.${ways}` : n.text);
       } else lines.push(n.text);
     }
     if (lines.length) w.log.push({ season: w.season, kind: "info", title: "\u0412\u0435\u0441\u0442\u0438", lines });
@@ -3211,6 +3323,7 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
       else if (cat === "serebro") pay("serebro", (e.stock.serebro - e.floor.serebro) / R.serebro);
       else if (cat === "tovary") pay("tovary", e.stock.tovary / R.tovary);
       else {
+        if (wayOf(w, "castleRecruits")) pay("rekruty_zamok", decreeLeft(d));
         pay("volnye", decreeLeft(d));
         for (const v of [...VILLAGES].sort((a, b) => w.factions[b] - w.factions[a])) pay(v === "brod" ? "rekruty_brod" : "rekruty_opushka", decreeLeft(d));
       }
@@ -3218,7 +3331,11 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
     return round1(paid);
   }
   function decreesDue(w, lines) {
-    if (seasonKind(w.season) === AUTUMN) w.world.harvests.push(worldMods(w.world.sim).harvest);
+    if (seasonKind(w.season) === AUTUMN) {
+      const raw = worldMods(w.world.sim).harvest, stock = wayOf(w, "harvest");
+      w.world.harvests.push(raw);
+      if (stock && raw < 1) addLine(w, { cat: "serebro", v: -BALANCE.world.answer.harvestSilver * stock.weight, text: "\u0437\u0430\u043F\u0430\u0441 \u0432\u043F\u0440\u043E\u043A \u043D\u0430 \u0445\u0443\u0434\u043E\u0439 \u0433\u043E\u0434", who: `\u043A\u043B\u044E\u0447\u043D\u0438\u043A ${stock.p.name}` });
+    }
     for (const d of w.world.decrees.filter((x) => x.until <= w.season)) {
       if (decreeLeft(d) > 0 && w.eco.autoPay) {
         const sub = [];
@@ -3230,14 +3347,15 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
     }
   }
   function worldView(w) {
-    const ws = w.world.sim, mods = worldMods(ws);
+    const ws = w.world.sim, mods = worldModsFor(w);
     const states = ws.active.map((a) => {
-      const d = stateDef(a.id);
-      return { id: a.id, name: d.name, text: d.text, tags: d.tags, since: a.from, until: a.until, strength: a.strength, bad: d.cost > 0 };
+      const d = stateDef(a.id), bad = d.cost > 0;
+      return { id: a.id, name: d.name, text: d.text, tags: d.tags, since: a.from, until: a.until, strength: a.strength, bad, stand: bad ? standOf(w, d.post) : void 0 };
     });
-    const weather = WEATHER_WORDS[weatherWord(mods.harvest)];
+    const heavy = HEAVY_YEARS.find((x) => x.id === ws.heavy)?.name ?? "";
+    const weather = heavy || WEATHER_WORDS[weatherWord(mods.harvest)];
     const names = states.map((s) => s.name.toLowerCase()).join("; ");
-    return { weather, states, mods, line: BALANCE.world.on ? `${weather}${names ? `; ${names}` : "; \u0432 \u0433\u0435\u0440\u0446\u043E\u0433\u0441\u0442\u0432\u0435 \u0442\u0438\u0445\u043E"}` : "\u0442\u0438\u0445\u043E" };
+    return { weather, states, mods, heavy, tiun: BALANCE.world.on && ws.weather < 1 ? standOf(w, "starosta") : void 0, line: BALANCE.world.on ? `${weather}${names ? `; ${names}` : "; \u0432 \u0433\u0435\u0440\u0446\u043E\u0433\u0441\u0442\u0432\u0435 \u0442\u0438\u0445\u043E"}` : "\u0442\u0438\u0445\u043E" };
   }
   var tagNames = (tags) => tags.map((t) => WORLD_TAG_NAMES[t]).join(", ");
 
@@ -3389,7 +3507,7 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
         tenure: 0,
         exp: 0,
         recent: [],
-        know: { talks: 0, trait: false, traitAsked: false, aspiration: false, axes: false, seen: noAxes() },
+        know: { talks: 0, trait: false, traitAsked: false, aspiration: false, axes: false, links: false, seen: noAxes() },
         choices: noAxes(),
         decisions: 0,
         matchedTop: 0
@@ -3535,6 +3653,9 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
   var PATRON_SIDE = { brod: "\u0440\u043E\u0434\u043D\u044F \u0432 \u0434\u0435\u0440\u0435\u0432\u043D\u0435 \u0443 \u0431\u0440\u043E\u0434\u0430", opushka: "\u0440\u043E\u0434\u043D\u044F \u0432 \u0434\u0435\u0440\u0435\u0432\u043D\u0435 \u0443 \u043E\u043F\u0443\u0448\u043A\u0438", zamok: "\u0441\u0442\u0430\u0440\u0448\u0438\u0435 \u0441\u043B\u0443\u0433\u0438 \u0437\u0430\u043C\u043A\u0430", dvor: "\u0434\u0432\u043E\u0440 \u0413\u0435\u0440\u0446\u043E\u0433\u0430" };
   var patronName = (w, l) => l.person != null ? `${w.people[l.person].name}, \u0440\u043E\u0434\u043D\u044F` : PATRON_SIDE[l.side] ?? "\u043F\u0440\u0435\u0436\u043D\u0438\u0435 \u043B\u044E\u0434\u0438 \u0431\u0430\u0440\u043E\u043D\u0430";
   var patronText = (w, l) => `\u0417\u0430 ${holder(w, l.post)?.female ? "\u043D\u0435\u0451" : "\u043D\u0435\u0433\u043E"} ${l.side === "zamok" ? "\u0441\u0442\u043E\u044F\u0442" : "\u0441\u0442\u043E\u0438\u0442"} ${patronName(w, l)}.`;
+  function patronOf(w, p) {
+    return p.post ? w.legacy.find((l) => l.post === p.post) : void 0;
+  }
 
   // src/sim/presets.ts
   var council2 = (w) => w.people.filter((p) => p.post);
@@ -4097,8 +4218,25 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
     if (!p.know.aspiration) return "\u0441\u0442\u0440\u0435\u043C\u043B\u0435\u043D\u0438\u0435";
     return p.know.axes ? null : "\u0441\u043A\u043B\u043E\u043D\u043D\u043E\u0441\u0442\u0438";
   }
+  function linksOf(w, p) {
+    const l = patronOf(w, p), others = w.people.filter((q) => q.id !== p.id);
+    return {
+      patron: l ? patronText(w, l) : void 0,
+      friends: others.filter((q) => getRel(w, p.id, q.id) >= BALANCE.rel.friendly),
+      foes: others.filter((q) => getRel(w, p.id, q.id) <= BALANCE.rel.rival)
+    };
+  }
+  function linksText(w, p) {
+    const x = linksOf(w, p), names = (list) => list.map((q) => q.name).join(", ");
+    const parts = [
+      x.patron ? lower(x.patron).replace(/\.$/, "") : "",
+      x.friends.length ? `\u043B\u0430\u0434\u0438\u0442: ${names(x.friends)}` : "",
+      x.foes.length ? `\u0432 \u043E\u0431\u0438\u0434\u0435: ${names(x.foes)}` : ""
+    ].filter(Boolean);
+    return parts.length ? parts.join("; ") : "\u043D\u0438 \u043F\u043E\u043A\u0440\u043E\u0432\u0438\u0442\u0435\u043B\u0435\u0439, \u043D\u0438 \u0431\u043B\u0438\u0437\u043A\u0438\u0445, \u043D\u0438 \u043E\u0431\u0438\u0434";
+  }
   function nextTalk(p) {
-    return restTalk(p) ?? (!p.know.traitAsked || untold(p).length ? "\u0447\u0435\u0440\u0442\u044B" : null);
+    return restTalk(p) ?? (!p.know.traitAsked || untold(p).length ? "\u0447\u0435\u0440\u0442\u044B" : p.know.links ? null : "\u0441\u0432\u044F\u0437\u0438");
   }
   function talk(w, id) {
     const p = w.people[id];
@@ -4129,6 +4267,10 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
         p.know.traitAsked = true;
         lines.push(silent);
       }
+    }
+    if (topic === "\u0441\u0432\u044F\u0437\u0438") {
+      p.know.links = true;
+      lines.push(`\u0421\u0432\u044F\u0437\u0438: ${linksText(w, p)}.`);
     }
     w.log.push({ season: w.season, kind: "info", title: "\u0420\u0430\u0437\u0433\u043E\u0432\u043E\u0440", lines });
     return true;
@@ -4236,7 +4378,11 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
       const title = x.shade ? "\u041E\u0442\u0442\u0435\u043D\u043E\u043A \u043F\u043E\u0447\u0435\u0440\u043A\u0430" : `\u041F\u043E\u0447\u0435\u0440\u043A${isStale(p) ? " (\u0437\u0430\u0441\u0438\u0434\u0435\u043B\u0441\u044F: \u0432\u0434\u0432\u043E\u0435 \u0441\u0438\u043B\u044C\u043D\u0435\u0435)" : ""}`;
       return `<div class="hand" data-hand="${x.axis}">${title} \u2014 <b style="color:${AXIS_COLOR[x.axis]}">${AXIS_NAMES[x.axis]}</b>: ${esc(x.text)}.</div>`;
     });
-    return rows.join("");
+    return rows.join("") + waysOf(p).filter((x) => app.designer || axisKnown(p, x.answer.axis)).map((x) => `<div class="hand way" data-way="${x.answer.kind}">\u0412 \u0431\u0435\u0434\u0435${x.shade ? " (\u043E\u0442\u0442\u0435\u043D\u043E\u043A)" : ""} \u2014 \xAB${esc(x.answer.name)}\xBB: ${esc(x.answer.good)}; ${esc(x.answer.price)}.</div>`).join("");
+  }
+  function linksLine(p) {
+    if (!p.know.links && !app.designer) return "";
+    return `<div class="links" data-links="${p.id}">\u0421\u0432\u044F\u0437\u0438: ${esc(linksText(app.w, p))}.</div>`;
   }
   function renderPeople() {
     $("people").innerHTML = app.w.people.map((p) => {
@@ -4263,6 +4409,7 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
         </div>
       </div>
       ${handLine(p)}
+      ${linksLine(p)}
       ${opinionLine(p)}
       <details class="bio"><summary>\u0411\u0438\u043E\u0433\u0440\u0430\u0444\u0438\u044F</summary><ul>${p.bio.map((b) => `<li>${esc(b)}</li>`).join("")}</ul></details>
       <div class="card-actions">
@@ -4331,7 +4478,7 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
       }).join("");
       return `<div class="decree" data-decree-id="${d.id}">
       <b>${esc(d.title)}</b>: \u043E\u0441\u0442\u0430\u043B\u043E\u0441\u044C <b class="decree-left">${fmt(left)}</b> \u0438\u0437 ${fmt(d.due)} \u043C\u0435\u0440 (${what}) \xB7 ${last ? "\u0441\u0440\u043E\u043A \u2014 \u044D\u0442\u043E\u0442 \u0441\u0435\u0437\u043E\u043D" : `\u0441\u0440\u043E\u043A \u2014 ${seasonLabel(d.until)}`}
-      <p class="desk-text">${esc(d.text)}</p><div class="desk-opts">${opts}</div></div>`;
+      <p class="desk-text">${esc(d.text)}</p><p class="hint decree-note">\u0412\u0441\u0442\u0440\u0435\u0447\u0430\u043B ${esc(d.note)}.</p><div class="desk-opts">${opts}</div></div>`;
     }).join("");
     const auto = app.w.eco.autoPay ? "\u0441\u043E\u0432\u0435\u0442 \u0438\u0441\u043F\u043E\u043B\u043D\u0438\u0442 \u0435\u0433\u043E \u0441\u0430\u043C \u0432 \u043F\u043E\u0441\u043B\u0435\u0434\u043D\u0438\u0439 \u0441\u0435\u0437\u043E\u043D \u0441\u0440\u043E\u043A\u0430, \u043D\u0435 \u0442\u0440\u043E\u0433\u0430\u044F \u043D\u0438\u0436\u043D\u0438\u0445 \u0447\u0435\u0440\u0442" : "\u0441\u043E\u0432\u0435\u0442\u0443 \u044D\u0442\u043E \u043D\u0435 \u043E\u0441\u0442\u0430\u0432\u043B\u0435\u043D\u043E";
     const D = BALANCE.world.decree;
@@ -4347,13 +4494,14 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
     const states = v.states.map((s) => {
       const real2 = app.designer ? ` <small>\u0441\u0438\u043B\u0430 ${fmt(s.strength)}, \u0434\u043E \u0441\u0435\u0437\u043E\u043D\u0430 ${s.until}</small>` : "";
       return `<div class="ws ${s.bad ? "bad" : "good"}" data-state="${s.id}"><b>${esc(s.name)}</b>${real2} <small>${esc(tagNames(s.tags)) || "\u0431\u0435\u0437 \u043C\u0435\u0442\u043E\u043A"} \xB7 \u0438\u0434\u0451\u0442 ${app.w.season - s.since + 1}-\u0439 \u0441\u0435\u0437\u043E\u043D</small>
-      <div>${esc(s.text)}</div></div>`;
+      <div>${esc(s.text)}</div>${s.stand ? `<div class="stand ${s.stand.k < 1 ? "good" : s.stand.k > 1 ? "bad" : ""}">\u041E\u0442\u0432\u0435\u0447\u0430\u0435\u0442 ${esc(s.stand.text)}${app.designer ? ` <small>\u043F\u043E\u0442\u0435\u0440\u0438 \xD7${fmt(s.stand.k)}</small>` : ""}.</div>` : ""}</div>`;
     }).join("");
     const m = v.mods, pct = (x) => `${x >= 1 ? "+" : "\u2212"}${Math.round(Math.abs(x - 1) * 100)}%`;
     const shifts = [["\u0443\u0440\u043E\u0436\u0430\u0439", m.harvest], ["\u0446\u0435\u043D\u0430 \u0442\u043E\u0432\u0430\u0440\u043E\u0432", m.price], ["\u043F\u043E\u0448\u043B\u0438\u043D\u044B", m.duty], ["\u043B\u0435\u0441", m.forest]].filter(([, x]) => x !== 1).map(([name, x]) => `${name} ${pct(x)}`);
     if (m.lesson) shifts.push(`\u0443\u0440\u043E\u043A ${m.lesson > 0 ? "+" : "\u2212"}${fmt(Math.abs(m.lesson))} \u043C\u0435\u0440`);
     const real = app.designer ? ` <small id="world-budget">\u0431\u044E\u0434\u0436\u0435\u0442 \u0434\u0430\u0432\u043B\u0435\u043D\u0438\u044F ${fmt(ws.budget)} \u0438\u0437 ${fmt(BALANCE.world.budget.cap)}</small>` : "";
-    $("world-now").innerHTML = `<p id="world-weather">\u041F\u043E\u0433\u043E\u0434\u0430 \u0433\u043E\u0434\u0430: <b>${v.weather}</b>${real}</p>
+    const tiun = v.tiun ? ` \xB7 \u0437\u0430 \u0445\u0443\u0434\u043E\u0439 \u0433\u043E\u0434 \u043E\u0442\u0432\u0435\u0447\u0430\u0435\u0442 ${esc(v.tiun.text)}` : "";
+    $("world-now").innerHTML = `<p id="world-weather">\u041F\u043E\u0433\u043E\u0434\u0430 \u0433\u043E\u0434\u0430: <b>${v.weather}</b>${tiun}${real}</p>
     <p class="hint" id="world-shifts">${shifts.length ? `\u041C\u0438\u0440 \u0441\u0435\u0439\u0447\u0430\u0441 \u0441\u0434\u0432\u0438\u0433\u0430\u0435\u0442 \u0445\u043E\u0437\u044F\u0439\u0441\u0442\u0432\u043E: ${shifts.join(", ")}.` : "\u041C\u0438\u0440 \u0441\u0435\u0439\u0447\u0430\u0441 \u0445\u043E\u0437\u044F\u0439\u0441\u0442\u0432\u043E \u043D\u0435 \u0441\u0434\u0432\u0438\u0433\u0430\u0435\u0442."}</p>
     ${states || `<p class="hint">\u0412 \u0433\u0435\u0440\u0446\u043E\u0433\u0441\u0442\u0432\u0435 \u0442\u0438\u0445\u043E.</p>`}`;
     const seed = app.w.seed, tape = worldTape(seed, BALANCE.world.tape);

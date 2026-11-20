@@ -26,7 +26,7 @@ function renderDecrees() {
     }).join("");
     return `<div class="decree" data-decree-id="${d.id}">
       <b>${esc(d.title)}</b>: осталось <b class="decree-left">${fmt(left)}</b> из ${fmt(d.due)} мер (${what}) · ${last ? "срок — этот сезон" : `срок — ${seasonLabel(d.until)}`}
-      <p class="desk-text">${esc(d.text)}</p><div class="desk-opts">${opts}</div></div>`;
+      <p class="desk-text">${esc(d.text)}</p><p class="hint decree-note">Встречал ${esc(d.note)}.</p><div class="desk-opts">${opts}</div></div>`;
   }).join("");
   const auto = app.w.eco.autoPay ? "совет исполнит его сам в последний сезон срока, не трогая нижних черт" : "совету это не оставлено";
   const D = B.world.decree;
@@ -42,13 +42,14 @@ function renderTape() {
   const states = v.states.map((s) => {
     const real = app.designer ? ` <small>сила ${fmt(s.strength)}, до сезона ${s.until}</small>` : "";
     return `<div class="ws ${s.bad ? "bad" : "good"}" data-state="${s.id}"><b>${esc(s.name)}</b>${real} <small>${esc(tagNames(s.tags)) || "без меток"} · идёт ${app.w.season - s.since + 1}-й сезон</small>
-      <div>${esc(s.text)}</div></div>`;
+      <div>${esc(s.text)}</div>${s.stand ? `<div class="stand ${s.stand.k < 1 ? "good" : s.stand.k > 1 ? "bad" : ""}">Отвечает ${esc(s.stand.text)}${app.designer ? ` <small>потери ×${fmt(s.stand.k)}</small>` : ""}.</div>` : ""}</div>`;
   }).join("");
   const m = v.mods, pct = (x: number) => `${x >= 1 ? "+" : "−"}${Math.round(Math.abs(x - 1) * 100)}%`;
   const shifts = [["урожай", m.harvest], ["цена товаров", m.price], ["пошлины", m.duty], ["лес", m.forest]].filter(([, x]) => x !== 1).map(([name, x]) => `${name} ${pct(x as number)}`);
   if (m.lesson) shifts.push(`урок ${m.lesson > 0 ? "+" : "−"}${fmt(Math.abs(m.lesson))} мер`);
   const real = app.designer ? ` <small id="world-budget">бюджет давления ${fmt(ws.budget)} из ${fmt(B.world.budget.cap)}</small>` : "";
-  $("world-now").innerHTML = `<p id="world-weather">Погода года: <b>${v.weather}</b>${real}</p>
+  const tiun = v.tiun ? ` · за худой год отвечает ${esc(v.tiun.text)}` : "";
+  $("world-now").innerHTML = `<p id="world-weather">Погода года: <b>${v.weather}</b>${tiun}${real}</p>
     <p class="hint" id="world-shifts">${shifts.length ? `Мир сейчас сдвигает хозяйство: ${shifts.join(", ")}.` : "Мир сейчас хозяйство не сдвигает."}</p>
     ${states || `<p class="hint">В герцогстве тихо.</p>`}`;
 

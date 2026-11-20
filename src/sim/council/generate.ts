@@ -38,7 +38,7 @@ export function newWorld(seed: string, labOpen = false): World {
       id: i, name: r.name, female: r.female, age: r.age, trait, gained: [], mark, star, startStar: star,
       bio: [], loyalty: B.loyalty.start + (trait.mods.loyalty ?? 0) + rng.range(-B.loyalty.startSpread, B.loyalty.startSpread),
       tenure: 0, exp: 0, recent: [],
-      know: { talks: 0, trait: false, traitAsked: false, aspiration: false, axes: false, seen: noAxes() },
+      know: { talks: 0, trait: false, traitAsked: false, aspiration: false, axes: false, links: false, seen: noAxes() },
       choices: noAxes(), decisions: 0, matchedTop: 0,
     });
   });
