@@ -25,8 +25,9 @@ test("спор: думают одинаково и ладят — сошлись
     const e = runEvent(w, event("plotina"));
     assert.ok(said(e.lines, "Сошлись сразу"), `${seed}: ${e.lines.join(" | ")}`);
     assert.deepEqual(e.effects, { derevni: 2.5, poryadok: -1.2 });
-    assert.equal(w.factions.brod, start + 2.5);
-    assert.equal(w.factions.opushka, start + 2.5, "событие без названной деревни задевает обе");
+    const each = Math.round((start + 2.5 * BALANCE.economy.trust.both) * 10) / 10;
+    assert.equal(w.factions.brod, each);
+    assert.equal(w.factions.opushka, each, "событие без названной деревни задевает обе — пополам");
     assert.equal(getRel(w, a.id, b.id), 8.5);
     assert.deepEqual([a.decisions, b.decisions], [1, 1]);
   }

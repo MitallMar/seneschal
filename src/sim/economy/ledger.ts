@@ -1,10 +1,9 @@
 // Строки ведомости вне плана (события совета, воровство, плата подати), нижняя черта и вложения совета с отдачей позже.
 import type { Effect, GameEvent, Later } from "../../data/types";
-import { VILLAGES } from "../../data/economy";
 import { BALANCE as B } from "../balance";
 import { round1, round2 } from "../util";
 import type { World, LedgerLine, Pending } from "../state";
-import { addTrust } from "./zones";
+import { addTrust, addVillages } from "./zones";
 
 export const floor1 = (v: number) => Math.floor(v * 10 + 1e-9) / 10;
 
@@ -45,7 +44,7 @@ export function settle(w: World, lines: string[]): void {
     for (const [key, v] of Object.entries(x.effects) as [Effect, number][]) {
       if (key === "poryadok") w.resources.poryadok = round1(w.resources.poryadok + v);
       else if (key === "kazna" || key === "pripasy") addLine(w, { cat: key === "kazna" ? "serebro" : "eda", v, text: `отдача вложения: ${x.text}` });
-      else if (key === "derevni") for (const v2 of x.village ? [x.village] : VILLAGES) addTrust(w, v2, v * B.economy.trust.event);
+      else if (key === "derevni") addVillages(w, v, x.village);
       else addTrust(w, key, v * B.economy.trust.event);
     }
     lines.push(`🌱 Вложение дало отдачу: ${x.text}.`);

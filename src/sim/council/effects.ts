@@ -4,9 +4,8 @@ import { BALANCE as B } from "../balance";
 import { round1 } from "../util";
 import { postName } from "../state";
 import type { Person, LogEntry, World } from "../state";
-import { VILLAGES } from "../../data/economy";
 import { takeHands, invest, addLine, belowFloor } from "../economy/ledger";
-import { addTrust } from "../economy/zones";
+import { addTrust, addVillages } from "../economy/zones";
 import { lower } from "./people";
 import { expWord } from "./know";
 import { competence } from "./decide";
@@ -15,7 +14,7 @@ import { competence } from "./decide";
 export let lastOpt: string | undefined;
 export const resetLastOpt = (): void => { lastOpt = undefined; };
 
-// Последствия варианта. Доверие сторон: derevni — обеим деревням или той, что названа в событии. kazna и pripasy — запасы серебра и еды
+// Последствия варианта. Доверие сторон: derevni — той деревне, что названа в событии, целиком; общее — пополам между двумя (addVillages). kazna и pripasy — запасы серебра и еды
 // со строкой в ведомости; ниже нуля запас не опускается, в запись идёт то, что вышло на деле.
 // plus — доля пользы: множитель только к плюсам и к отдаче вложения. Саботаж срывает дело, а цена (минусы, руки) платится целиком.
 export function applyEffects(w: World, ev: GameEvent, opt: EventOption, mult: number, doer: Person | undefined, lines: string[], plus = 1): Partial<Record<Effect, number>> {
@@ -44,7 +43,7 @@ export function applyEffects(w: World, ev: GameEvent, opt: EventOption, mult: nu
       out[key] = addLine(w, { cat, v: val, text: `событие «${ev.title}»: ${lower(opt.text)}`, who, how: under });
       if (out[key] !== val) lines.push(`${cat === "eda" ? "Амбар" : "Казна"} не бездонны: взять удалось только ${-out[key]!}.`);
       if (under) lines.push(`Нижняя черта нарушена: ${doer?.name ?? "совет"} распорядил${doer?.female ? "ась" : "ся"} запасом по-своему.`);
-    } else if (key === "derevni") for (const v of ev.village ? [ev.village] : VILLAGES) addTrust(w, v, val * B.economy.trust.event);
+    } else if (key === "derevni") addVillages(w, val, ev.village);
     else addTrust(w, key, val * B.economy.trust.event);
   }
   if (opt.hands) takeHands(w, opt.hands);
@@ -68,7 +67,7 @@ export function applyDirect(w: World, effects: Partial<Record<Effect, number>>, 
     out[key] = val;
     if (key === "poryadok") w.resources.poryadok = round1(w.resources.poryadok + val);
     else if (key === "kazna" || key === "pripasy") out[key] = addLine(w, { cat: key === "kazna" ? "serebro" : "eda", v: val, text });
-    else if (key === "derevni") for (const side of village ? [village] : VILLAGES) addTrust(w, side, val * B.economy.trust.event);
+    else if (key === "derevni") addVillages(w, val, village);
     else addTrust(w, key, val * B.economy.trust.event);
   }
   return out;
