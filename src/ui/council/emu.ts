@@ -7,7 +7,7 @@ import { app, syncUrl } from "./app";
 const SECTION_NAMES: Record<string, string> = {
   star: "Звезда склонностей", decide: "Решение человека", exp: "Опыт и исход дела", rel: "Отношения", council: "Спор в совете",
   loyalty: "Отношение к Сенешалю", staff: "Перестановки и наказ", know: "Знание о людях", traits: "Черты в течение жизни",
-  economy: "Хозяйство и подать", authority: "Авторитет", world: "Мир вокруг", season: "Сезон", report: "Цели отчёта осей",
+  economy: "Хозяйство и подать", authority: "Авторитет", world: "Мир вокруг", order: "Порядок", season: "Сезон", report: "Цели отчёта осей",
 };
 
 const SUB_NAMES: Record<string, string> = {

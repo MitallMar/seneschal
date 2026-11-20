@@ -278,6 +278,22 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
 .stand, .links { font-size: 13px; color: var(--muted); }
 .stand.good { color: var(--good); }
 .stand.bad { color: var(--bad); }
+
+/* Порядок: шкала двумя цветами от нейтральной середины — тёплый край вольность, холодный строгость (не «хорошо ↔ плохо») */
+.eco-order { margin-top: 12px; }
+.ord-names { display: flex; font-size: 12px; color: var(--muted); }
+.ord-names span { text-align: center; }
+.ord-names span.on { color: var(--ink); font-weight: bold; }
+.ord-scale { display: flex; gap: 2px; margin: 2px 0 6px; }
+.ord-scale span { flex: 1; height: 18px; border-radius: 3px; text-align: center; font-size: 12px; line-height: 18px; color: #fff; }
+.ord-smuta { background: #b5651d; }
+.ord-volnitsa { background: #d9a05b; }
+.ord-tiho { background: #cfc6b4; }
+.ord-strogost { background: #7f9bb8; }
+.ord-ruka { background: #3f5f86; }
+.ord-scale span.now { outline: 2px solid var(--ink); }
+.ord-guard { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 13px; }
+.ord-guard button { padding: 2px 10px; font-size: 13px; }
 </style>
 </head>
 <body>
@@ -374,6 +390,10 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
       <h3>Стороны</h3>
       <div id="eco-sides" class="eco-sides"></div>
     </div>
+  </div>
+  <div class="eco-block eco-order">
+    <h3>Порядок: вольно ↔ строго</h3>
+    <div id="order"></div>
   </div>
 </div>
     </div>
@@ -876,6 +896,50 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
       persuadeLoyalty: k(0.05, 0, 0.2, 0.01, "\u0423\u0433\u043E\u0432\u043E\u0440\u0438\u0442\u044C \u0443\u0439\u0442\u0438: \u043F\u0440\u0438\u0431\u0430\u0432\u043A\u0430 \u043A \u0434\u043E\u043B\u0435 \u0437\u0430 \u0435\u0434\u0438\u043D\u0438\u0446\u0443 \u043E\u0442\u043D\u043E\u0448\u0435\u043D\u0438\u044F \u043A \u0421\u0435\u043D\u0435\u0448\u0430\u043B\u044E"),
       persuadeObedience: k(0.1, 0, 0.5, 0.05, "\u0423\u0433\u043E\u0432\u043E\u0440\u0438\u0442\u044C \u0443\u0439\u0442\u0438: \u043F\u0440\u0438\u0431\u0430\u0432\u043A\u0430 \u043A \u0434\u043E\u043B\u0435 \u0437\u0430 \u0435\u0434\u0438\u043D\u0438\u0446\u0443 \u043F\u043E\u0441\u043B\u0443\u0448\u0430\u043D\u0438\u044F (\u0447\u0435\u0440\u0442\u044B)")
     },
+    // Порядок — шкала строгости 0–15 (задача И13, замысел — hozyaystvo.md, раздел 8): пять ступеней по три градации, норма и дрейф.
+    order: {
+      start: k(7, 0, 15, 1, "\u041F\u043E\u0440\u044F\u0434\u043E\u043A \u043D\u0430 \u0441\u0442\u0430\u0440\u0442\u0435 \u043F\u0430\u0440\u0442\u0438\u0438 (0\u201315; 7 \u2014 \u0441\u0435\u0440\u0435\u0434\u0438\u043D\u0430 \xAB\u0422\u0438\u0445\u043E\xBB)"),
+      base: k(7, 0, 15, 1, "\u041D\u043E\u0440\u043C\u0430 \u043F\u043E\u0440\u044F\u0434\u043A\u0430 \u0431\u0435\u0437 \u0441\u0442\u0440\u0430\u0436\u0438, \u0434\u0435\u0441\u044F\u0442\u043D\u0438\u043A\u0430 \u0438 \u043A\u0443\u0440\u0441\u0430"),
+      guardMin: k(-2, -4, 0, 1, "\u0421\u0442\u0440\u0430\u0436\u0430: \u0441\u043A\u043E\u043B\u044C\u043A\u043E \u0441\u0442\u0443\u043F\u0435\u043D\u0435\u0439 \u043C\u043E\u0436\u043D\u043E \u0440\u0430\u0441\u043F\u0443\u0441\u0442\u0438\u0442\u044C"),
+      guardMax: k(4, 0, 6, 1, "\u0421\u0442\u0440\u0430\u0436\u0430: \u0441\u043A\u043E\u043B\u044C\u043A\u043E \u0441\u0442\u0443\u043F\u0435\u043D\u0435\u0439 \u043C\u043E\u0436\u043D\u043E \u0437\u0430\u0442\u044F\u043D\u0443\u0442\u044C"),
+      guardStep: k(2, 0, 4, 0.5, "\u0421\u0442\u0440\u0430\u0436\u0430: \u0448\u0430\u0433\u043E\u0432 \u043D\u043E\u0440\u043C\u044B \u0437\u0430 \u043E\u0434\u043D\u0443 \u0441\u0442\u0443\u043F\u0435\u043D\u044C"),
+      guardCost: k(0.15, 0, 2, 0.05, "\u0421\u0442\u0440\u0430\u0436\u0430: \u0441\u0435\u0440\u0435\u0431\u0440\u0430 \u0437\u0430 \u0441\u0435\u0437\u043E\u043D \u0437\u0430 \u043F\u0435\u0440\u0432\u0443\u044E \u0437\u0430\u0442\u044F\u043D\u0443\u0442\u0443\u044E \u0441\u0442\u0443\u043F\u0435\u043D\u044C; \u043A\u0430\u0436\u0434\u0430\u044F \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0430\u044F \u0434\u043E\u0440\u043E\u0436\u0435 \u043D\u0430 \u0441\u0442\u043E\u043B\u044C\u043A\u043E \u0436\u0435"),
+      guardHands: k(0.25, 0, 2, 0.05, "\u0421\u0442\u0440\u0430\u0436\u0430: \u0440\u0443\u043A \u0432 \u0434\u043E\u0437\u043E\u0440\u0430\u0445 \u0437\u0430 \u043A\u0430\u0436\u0434\u0443\u044E \u0437\u0430\u0442\u044F\u043D\u0443\u0442\u0443\u044E \u0441\u0442\u0443\u043F\u0435\u043D\u044C"),
+      guardSave: k(0.05, 0, 1, 0.05, "\u0421\u0442\u0440\u0430\u0436\u0430 \u0440\u0430\u0441\u043F\u0443\u0449\u0435\u043D\u0430: \u0441\u0435\u0440\u0435\u0431\u0440\u0430 \u0437\u0430 \u0441\u0435\u0437\u043E\u043D \u0441\u0431\u0435\u0440\u0435\u0433\u0430\u0435\u0442 \u043A\u0430\u0436\u0434\u0430\u044F \u0441\u0442\u0443\u043F\u0435\u043D\u044C"),
+      desyatnik: k(4, 0, 8, 0.5, "\u0414\u0435\u0441\u044F\u0442\u043D\u0438\u043A: \u043D\u0430 \u0441\u043A\u043E\u043B\u044C\u043A\u043E \u0448\u0430\u0433\u043E\u0432 \u0435\u0433\u043E \u0441\u0442\u0438\u043B\u044C \u0434\u0432\u0438\u0433\u0430\u0435\u0442 \u043D\u043E\u0440\u043C\u0443 (\u0414\u043E\u043B\u0433 \u0438 \u0414\u0435\u0440\u0437\u043E\u0441\u0442\u044C \u2014 \u0441\u0442\u0440\u043E\u0436\u0435, \u0417\u0430\u0431\u043E\u0442\u0430 \u2014 \u0432\u043E\u043B\u044C\u043D\u0435\u0435), \u043F\u0440\u0438 \u043F\u043E\u043B\u043D\u043E\u0439 \u0440\u0430\u0437\u043D\u0438\u0446\u0435 \u0441\u043A\u043B\u043E\u043D\u043D\u043E\u0441\u0442\u0435\u0439"),
+      noDesyatnik: k(1, 0, 6, 0.5, "\u0414\u0435\u0441\u044F\u0442\u043D\u0438\u043A\u0430 \u043D\u0435\u0442: \u043D\u043E\u0440\u043C\u0430 \u043D\u0438\u0436\u0435 \u043D\u0430 \u0441\u0442\u043E\u043B\u044C\u043A\u043E \u0448\u0430\u0433\u043E\u0432"),
+      course: k(1, 0, 4, 0.5, "\u041A\u0443\u0440\u0441: \xAB\u041F\u043E\u0440\u044F\u0434\u043E\u043A \u043D\u0430 \u0434\u043E\u0440\u043E\u0433\u0430\u0445\xBB \u043F\u043E\u0434\u043D\u0438\u043C\u0430\u0435\u0442 \u043D\u043E\u0440\u043C\u0443 \u043D\u0430 \u0441\u0442\u043E\u043B\u044C\u043A\u043E \u0448\u0430\u0433\u043E\u0432, \xAB\u041B\u044E\u0434\u044F\u043C \u043F\u043E\u043B\u0435\u0433\u0447\u0435\xBB \u2014 \u043E\u043F\u0443\u0441\u043A\u0430\u0435\u0442"),
+      pushStep: k(2, 0.5, 10, 0.5, "\u0421\u043E\u0431\u044B\u0442\u0438\u044F: \u0441\u0442\u043E\u043B\u044C\u043A\u043E \u0435\u0434\u0438\u043D\u0438\u0446 \u043F\u043E\u0440\u044F\u0434\u043A\u0430 \u0441\u0434\u0432\u0438\u0433\u0430\u044E\u0442 \u0448\u043A\u0430\u043B\u0443 \u043D\u0430 \u0448\u0430\u0433"),
+      pushMax: k(2, 0, 6, 1, "\u0421\u043E\u0431\u044B\u0442\u0438\u044F: \u043D\u0435 \u0431\u043E\u043B\u044C\u0448\u0435 \u0441\u0442\u043E\u043B\u044C\u043A\u0438\u0445 \u0448\u0430\u0433\u043E\u0432 \u0437\u0430 \u0441\u0435\u0437\u043E\u043D"),
+      light: k(0.75, 0.1, 1, 0.05, "\u0413\u0440\u0430\u0434\u0430\u0446\u0438\u044F \xAB\u043B\u0451\u0433\u043A\u0430\u044F\xBB: \u043C\u043D\u043E\u0436\u0438\u0442\u0435\u043B\u044C \u043F\u043B\u044E\u0441\u043E\u0432 \u0438 \u043C\u0438\u043D\u0443\u0441\u043E\u0432 \u0441\u0442\u0443\u043F\u0435\u043D\u0438"),
+      deep: k(1.25, 1, 3, 0.05, "\u0413\u0440\u0430\u0434\u0430\u0446\u0438\u044F \xAB\u0433\u043B\u0443\u0431\u043E\u043A\u0430\u044F\xBB: \u043C\u043D\u043E\u0436\u0438\u0442\u0435\u043B\u044C \u043F\u043B\u044E\u0441\u043E\u0432 \u0438 \u043C\u0438\u043D\u0443\u0441\u043E\u0432 \u0441\u0442\u0443\u043F\u0435\u043D\u0438"),
+      dutySmuta: k(0.3, 0, 1, 0.05, "\u0421\u043C\u0443\u0442\u0430: \u043F\u043E\u0448\u043B\u0438\u043D\u044B"),
+      dutyVolnitsa: k(0.8, 0, 1, 0.05, "\u0412\u043E\u043B\u044C\u043D\u0438\u0446\u0430: \u043F\u043E\u0448\u043B\u0438\u043D\u044B"),
+      dutyStrogost: k(1.1, 1, 2, 0.05, "\u0421\u0442\u0440\u043E\u0433\u043E\u0441\u0442\u044C: \u043F\u043E\u0448\u043B\u0438\u043D\u044B"),
+      dutyRuka: k(1.2, 1, 2, 0.05, "\u0422\u0432\u0451\u0440\u0434\u0430\u044F \u0440\u0443\u043A\u0430: \u043F\u043E\u0448\u043B\u0438\u043D\u044B"),
+      priceVolnitsa: k(1.1, 1, 2, 0.05, "\u0412\u043E\u043B\u044C\u043D\u0438\u0446\u0430 \u0438 \u0441\u043C\u0443\u0442\u0430: \u0446\u0435\u043D\u0430 \u0442\u043E\u0432\u0430\u0440\u043E\u0432 \u2014 \u0442\u043E\u0440\u0433 \u0432\u043E\u043B\u044C\u043D\u044B\u0439"),
+      trustVolnitsa: k(1.25, 1, 3, 0.05, "\u0412\u043E\u043B\u044C\u043D\u0438\u0446\u0430 \u0438 \u0441\u043C\u0443\u0442\u0430: \u0434\u043E\u0432\u0435\u0440\u0438\u0435 \u0434\u0435\u0440\u0435\u0432\u0435\u043D\u044C \u0440\u0430\u0441\u0442\u0451\u0442 \u0432\u043E \u0441\u0442\u043E\u043B\u044C\u043A\u043E \u0440\u0430\u0437 \u043B\u0435\u0433\u0447\u0435"),
+      trustStrogost: k(0.8, 0, 1, 0.05, "\u0421\u0442\u0440\u043E\u0433\u043E\u0441\u0442\u044C \u0438 \u0442\u0432\u0451\u0440\u0434\u0430\u044F \u0440\u0443\u043A\u0430: \u0434\u043E\u0432\u0435\u0440\u0438\u0435 \u0434\u0435\u0440\u0435\u0432\u0435\u043D\u044C \u0440\u0430\u0441\u0442\u0451\u0442 \u0432\u043E \u0441\u0442\u043E\u043B\u044C\u043A\u043E \u0440\u0430\u0437 \u043C\u0435\u0434\u043B\u0435\u043D\u043D\u0435\u0435"),
+      seenVolnitsa: k(1.5, 1, 4, 0.25, "\u0412\u043E\u043B\u044C\u043D\u0438\u0446\u0430 \u0438 \u0441\u043C\u0443\u0442\u0430: \u043C\u043E\u043B\u0432\u0430 \u0433\u0440\u043E\u043C\u0447\u0435 \u2014 \u043A\u0430\u0436\u0434\u043E\u0435 \u0440\u0435\u0448\u0435\u043D\u0438\u0435 \u0432 \u0434\u0435\u043B\u0435 \u0441\u0447\u0438\u0442\u0430\u0435\u0442\u0441\u044F \u0437\u0430 \u0441\u0442\u043E\u043B\u044C\u043A\u043E"),
+      seenStrogost: k(0.75, 0, 1, 0.05, "\u0421\u0442\u0440\u043E\u0433\u043E\u0441\u0442\u044C: \u043C\u043E\u043B\u0432\u0430 \u0442\u0438\u0448\u0435 \u2014 \u0440\u0435\u0448\u0435\u043D\u0438\u0435 \u0432 \u0434\u0435\u043B\u0435 \u0441\u0447\u0438\u0442\u0430\u0435\u0442\u0441\u044F \u0437\u0430 \u0441\u0442\u043E\u043B\u044C\u043A\u043E"),
+      seenRuka: k(0.5, 0, 1, 0.05, "\u0422\u0432\u0451\u0440\u0434\u0430\u044F \u0440\u0443\u043A\u0430: \u043B\u044E\u0434\u0438 \u043C\u043E\u043B\u0447\u0430\u0442 \u2014 \u0440\u0435\u0448\u0435\u043D\u0438\u0435 \u0432 \u0434\u0435\u043B\u0435 \u0441\u0447\u0438\u0442\u0430\u0435\u0442\u0441\u044F \u0437\u0430 \u0441\u0442\u043E\u043B\u044C\u043A\u043E"),
+      theftSmuta: k(2, 1, 5, 0.25, "\u0421\u043C\u0443\u0442\u0430: \u0448\u0430\u043D\u0441 \u043A\u0440\u0430\u0436\u0438 \u0438\u0437 \u043A\u0430\u0437\u043D\u044B"),
+      theftVolnitsa: k(1.5, 1, 5, 0.25, "\u0412\u043E\u043B\u044C\u043D\u0438\u0446\u0430: \u0448\u0430\u043D\u0441 \u043A\u0440\u0430\u0436\u0438 \u0438\u0437 \u043A\u0430\u0437\u043D\u044B"),
+      theftStrogost: k(0.5, 0, 1, 0.05, "\u0421\u0442\u0440\u043E\u0433\u043E\u0441\u0442\u044C: \u0448\u0430\u043D\u0441 \u043A\u0440\u0430\u0436\u0438 \u0438\u0437 \u043A\u0430\u0437\u043D\u044B \u2014 \u043A\u0440\u0430\u0436\u0438 \u043B\u043E\u0432\u044F\u0442"),
+      theftRuka: k(0.1, 0, 1, 0.05, "\u0422\u0432\u0451\u0440\u0434\u0430\u044F \u0440\u0443\u043A\u0430: \u0448\u0430\u043D\u0441 \u043A\u0440\u0430\u0436\u0438 \u0438\u0437 \u043A\u0430\u0437\u043D\u044B"),
+      stagnation: k(3, 1, 12, 1, "\u0422\u0438\u0445\u043E \u2014 \u0437\u0430\u0441\u0442\u043E\u0439: \u043A\u0430\u0436\u0434\u044B\u0439 \u0442\u0430\u043A\u043E\u0439 \u043F\u043E \u0441\u0447\u0451\u0442\u0443 \u0441\u0435\u0437\u043E\u043D \u0432 \xAB\u0422\u0438\u0445\u043E\xBB \u0441\u0442\u0430\u0436 \u0440\u0430\u0441\u0442\u0451\u0442 \u043D\u0430 \u043B\u0438\u0448\u043D\u0438\u0439 \u0441\u0435\u0437\u043E\u043D"),
+      pilfer: k(0.25, 0, 3, 0.05, "\u0412\u043E\u043B\u044C\u043D\u0438\u0446\u0430: \u043C\u0435\u043B\u043A\u043E\u0435 \u0432\u043E\u0440\u043E\u0432\u0441\u0442\u0432\u043E \u0443\u043D\u043E\u0441\u0438\u0442 \u0441\u0435\u0440\u0435\u0431\u0440\u0430 \u0437\u0430 \u0441\u0435\u0437\u043E\u043D"),
+      brawl: k(0.2, 0, 3, 0.05, "\u0412\u043E\u043B\u044C\u043D\u0438\u0446\u0430 \u0438 \u0441\u043C\u0443\u0442\u0430: \u0434\u0440\u0430\u043A\u0438 \u2014 \u0434\u043E\u0432\u0435\u0440\u0438\u0435 \u043B\u044E\u0434\u0435\u0439 \u0437\u0430\u043C\u043A\u0430 \u0437\u0430 \u0441\u0435\u0437\u043E\u043D"),
+      robbery: k(0.6, 0, 3, 0.05, "\u0421\u043C\u0443\u0442\u0430: \u0440\u0430\u0437\u0431\u043E\u0439 \u0443\u043D\u043E\u0441\u0438\u0442 \u0441\u0435\u0440\u0435\u0431\u0440\u0430 \u0437\u0430 \u0441\u0435\u0437\u043E\u043D"),
+      kuptsySmuta: k(0.3, 0, 3, 0.05, "\u0421\u043C\u0443\u0442\u0430: \u043A\u0443\u043F\u0446\u044B \u043E\u0431\u044A\u0435\u0437\u0436\u0430\u044E\u0442 \u2014 \u0434\u043E\u0432\u0435\u0440\u0438\u0435 \u043A\u0443\u043F\u0446\u043E\u0432 \u0437\u0430 \u0441\u0435\u0437\u043E\u043D"),
+      lesRuka: k(0.2, 0, 3, 0.05, "\u0422\u0432\u0451\u0440\u0434\u0430\u044F \u0440\u0443\u043A\u0430: \u043B\u0435\u0441 \u0432\u043E\u0440\u0447\u0438\u0442 \u043D\u0430 \u0434\u043E\u0437\u043E\u0440\u044B \u2014 \u0434\u043E\u0432\u0435\u0440\u0438\u0435 \u043B\u0435\u0441\u0430 \u0437\u0430 \u0441\u0435\u0437\u043E\u043D"),
+      rotStrogost: k(0.1, 0, 2, 0.05, "\u0421\u0442\u0440\u043E\u0433\u043E\u0441\u0442\u044C: \u0433\u043D\u0438\u043B\u044C \u043A\u043E\u043F\u0438\u0442\u0441\u044F \u0437\u0430 \u0441\u0435\u0437\u043E\u043D"),
+      rotRuka: k(0.3, 0, 2, 0.05, "\u0422\u0432\u0451\u0440\u0434\u0430\u044F \u0440\u0443\u043A\u0430: \u0433\u043D\u0438\u043B\u044C \u043A\u043E\u043F\u0438\u0442\u0441\u044F \u0437\u0430 \u0441\u0435\u0437\u043E\u043D"),
+      rotSilver: k(1, 0, 5, 0.25, "\u0425\u0432\u0430\u0442\u043A\u0430 \u043E\u0441\u043B\u0430\u0431\u043B\u0430: \u0433\u043D\u0438\u043B\u044C \u0432\u0441\u043F\u043B\u044B\u0432\u0430\u0435\u0442 \u2014 \u0441\u0435\u0440\u0435\u0431\u0440\u0430 \u0438\u0437 \u043A\u0430\u0437\u043D\u044B \u0437\u0430 \u0435\u0434\u0438\u043D\u0438\u0446\u0443 \u0433\u043D\u0438\u043B\u0438"),
+      rotTrust: k(1, 0, 5, 0.25, "\u0425\u0432\u0430\u0442\u043A\u0430 \u043E\u0441\u043B\u0430\u0431\u043B\u0430: \u0434\u043E\u0432\u0435\u0440\u0438\u0435 \u043B\u044E\u0434\u0435\u0439 \u0437\u0430\u043C\u043A\u0430 \u0438 \u0434\u0435\u0440\u0435\u0432\u0435\u043D\u044C \u0437\u0430 \u0435\u0434\u0438\u043D\u0438\u0446\u0443 \u0433\u043D\u0438\u043B\u0438"),
+      strictFrom: k(9, 0, 15, 1, "\u0421\u043E\u0431\u044B\u0442\u0438\u044F \u0441\u0442\u0440\u043E\u0433\u043E\u0433\u043E \u043A\u0440\u0430\u044F \u043F\u0440\u0438\u0445\u043E\u0434\u044F\u0442 \u0441\u043E \u0441\u0442\u0443\u043F\u0435\u043D\u0438 (9 \u2014 \xAB\u0421\u0442\u0440\u043E\u0433\u043E\u0441\u0442\u044C\xBB)"),
+      strictWeight: k(2, 1, 6, 0.25, "\u0421\u043E\u0431\u044B\u0442\u0438\u044F \u0441\u0442\u0440\u043E\u0433\u043E\u0433\u043E \u043A\u0440\u0430\u044F \u043F\u0440\u0438 \u0442\u0432\u0451\u0440\u0434\u043E\u0439 \u0440\u0443\u043A\u0435 \u043F\u0440\u0438\u0445\u043E\u0434\u044F\u0442 \u0432\u043E \u0441\u0442\u043E\u043B\u044C\u043A\u043E \u0440\u0430\u0437 \u0447\u0430\u0449\u0435")
+    },
     // Генератор мира (задача И11а): состояния верхнего слоя, бюджет давления рассказчика, погода года, указы, веса событий совета по меткам.
     world: {
       on: k(1, 0, 1, 1, "\u041C\u0438\u0440: \u0433\u0435\u043D\u0435\u0440\u0430\u0442\u043E\u0440 \u0432\u043A\u043B\u044E\u0447\u0451\u043D (0 \u2014 \u0441\u043F\u043E\u043A\u043E\u0439\u043D\u044B\u0439 \u043C\u0438\u0440: \u043D\u0438 \u0441\u043E\u0441\u0442\u043E\u044F\u043D\u0438\u0439, \u043D\u0438 \u043F\u043E\u0433\u043E\u0434\u044B, \u043D\u0438 \u0443\u043A\u0430\u0437\u043E\u0432)"),
@@ -1273,6 +1337,79 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
     { id: "tovary", name: "\u0422\u043E\u0432\u0430\u0440\u0430\u043C\u0438 \u0441\u043E \u0441\u043A\u043B\u0430\u0434\u0430", what: "tovary", from: "\u0441\u043A\u043B\u0430\u0434", hurts: "\u043D\u0438\u043A\u043E\u043C\u0443, \u043A\u0440\u043E\u043C\u0435 \u0443\u043F\u0443\u0449\u0435\u043D\u043D\u043E\u0439 \u043F\u0440\u043E\u0434\u0430\u0436\u0438" }
   ];
 
+  // src/sim/order.ts
+  var ORDER_MAX = 15;
+  var STEPS = [
+    { id: "smuta", name: "\u0421\u043C\u0443\u0442\u0430", from: 0, to: 2, plus: "\u0432\u0441\u0451 \u0442\u0430\u0439\u043D\u043E\u0435 \u0432\u0441\u043F\u043B\u044B\u0432\u0430\u0435\u0442: \u043C\u043E\u043B\u0432\u0430 \u0433\u0440\u043E\u043C\u043A\u0430\u044F; \u0434\u0435\u0440\u0435\u0432\u043D\u044F\u043C \u0432\u043E\u043B\u044C\u043D\u043E; \u0442\u043E\u0440\u0433 \u0432\u043E\u043B\u044C\u043D\u044B\u0439", minus: "\u0440\u0430\u0437\u0431\u043E\u0439 \u0438 \u043A\u0440\u0430\u0436\u0438, \u043F\u043E\u0448\u043B\u0438\u043D \u043F\u043E\u0447\u0442\u0438 \u043D\u0435\u0442, \u043A\u0443\u043F\u0446\u044B \u043E\u0431\u044A\u0435\u0437\u0436\u0430\u044E\u0442" },
+    { id: "volnitsa", name: "\u0412\u043E\u043B\u044C\u043D\u0438\u0446\u0430", from: 3, to: 5, plus: "\u0434\u043E\u0432\u0435\u0440\u0438\u0435 \u0434\u0435\u0440\u0435\u0432\u0435\u043D\u044C \u0440\u0430\u0441\u0442\u0451\u0442 \u043B\u0435\u0433\u0447\u0435; \u0442\u043E\u0432\u0430\u0440\u044B \u0434\u043E\u0440\u043E\u0436\u0435; \u043C\u043E\u043B\u0432\u0430 \u043E\u0431\u0438\u043B\u044C\u043D\u0430\u044F", minus: "\u043C\u0435\u043B\u043A\u043E\u0435 \u0432\u043E\u0440\u043E\u0432\u0441\u0442\u0432\u043E; \u043F\u043E\u0448\u043B\u0438\u043D\u044B \u043D\u0438\u0436\u0435; \u0437\u0430\u0441\u0438\u0434\u0435\u0432\u0448\u0438\u0435\u0441\u044F \u043F\u043E\u0434\u0432\u043E\u0440\u043E\u0432\u044B\u0432\u0430\u044E\u0442 \u0447\u0430\u0449\u0435" },
+    { id: "tiho", name: "\u0422\u0438\u0445\u043E", from: 6, to: 8, plus: "\u0432\u0441\u0451 \u043F\u043E \u043E\u0431\u044B\u0447\u043D\u043E\u0439 \u0446\u0435\u043D\u0435", minus: "\u0437\u0430\u0441\u0442\u043E\u0439: \u0437\u0430\u0441\u0438\u0436\u0438\u0432\u0430\u044E\u0442\u0441\u044F \u0431\u044B\u0441\u0442\u0440\u0435\u0435; \u043D\u0438 \u0443\u0434\u0430\u0447, \u043D\u0438 \u0433\u0440\u043E\u043C\u043A\u0438\u0445 \u0441\u043E\u0431\u044B\u0442\u0438\u0439" },
+    { id: "strogost", name: "\u0421\u0442\u0440\u043E\u0433\u043E\u0441\u0442\u044C", from: 9, to: 11, plus: "\u043F\u043E\u0448\u043B\u0438\u043D\u044B \u0432\u044B\u0448\u0435; \u043A\u0440\u0430\u0436\u0438 \u043B\u043E\u0432\u044F\u0442; \u0434\u043E\u0437\u043E\u0440 \u043F\u0440\u0438\u043D\u043E\u0441\u0438\u0442 \u0443\u0434\u0430\u0447\u0438", minus: "\u0441\u0442\u0440\u0430\u0436\u0430 \u0434\u043E\u0440\u043E\u0436\u0435; \u0434\u043E\u0432\u0435\u0440\u0438\u0435 \u0434\u0435\u0440\u0435\u0432\u0435\u043D\u044C \u0440\u0430\u0441\u0442\u0451\u0442 \u043C\u0435\u0434\u043B\u0435\u043D\u043D\u0435\u0435; \u043C\u043E\u043B\u0432\u0430 \u0442\u0438\u0448\u0435; \u043A\u043E\u043F\u0438\u0442\u0441\u044F \u0433\u043D\u0438\u043B\u044C" },
+    { id: "ruka", name: "\u0422\u0432\u0451\u0440\u0434\u0430\u044F \u0440\u0443\u043A\u0430", from: 12, to: ORDER_MAX, plus: "\u043F\u043E\u0448\u043B\u0438\u043D\u044B \u0435\u0449\u0451 \u0432\u044B\u0448\u0435; \u043A\u0430\u0437\u043D\u043E\u043A\u0440\u0430\u0434\u0441\u0442\u0432\u043E \u043F\u043E\u0447\u0442\u0438 \u043D\u0435\u0432\u043E\u0437\u043C\u043E\u0436\u043D\u043E; \u0434\u043E\u0437\u043E\u0440 \u043F\u0440\u0438\u043D\u043E\u0441\u0438\u0442 \u0443\u0434\u0430\u0447\u0438 \u0447\u0430\u0441\u0442\u043E", minus: "\u0441\u0442\u0440\u0430\u0445 \u2014 \u043D\u0435 \u043B\u044E\u0431\u043E\u0432\u044C: \u0434\u0435\u0440\u0435\u0432\u043D\u0438 \u043D\u0435 \u0432\u044B\u0448\u0435 \xAB\u043B\u0430\u0434\u044F\u0442\xBB; \u043B\u044E\u0434\u0438 \u043C\u043E\u043B\u0447\u0430\u0442; \u043B\u0435\u0441 \u0432\u043E\u0440\u0447\u0438\u0442 \u043D\u0430 \u0434\u043E\u0437\u043E\u0440\u044B; \u0433\u043D\u0438\u043B\u044C \u043A\u043E\u043F\u0438\u0442\u0441\u044F \u0431\u044B\u0441\u0442\u0440\u043E" }
+  ];
+  var stepOf = (level) => STEPS.find((s) => level >= s.from && level <= s.to) ?? STEPS[STEPS.length - 1];
+  function gradeOf(level) {
+    const s = stepOf(level);
+    if (s.id === "tiho") return { k: 1, word: "\u043F\u043E\u043B\u043D\u0430\u044F" };
+    const depth = s.from > STEPS[2].to ? level - s.from : s.to - level;
+    return depth <= 0 ? { k: BALANCE.order.light, word: "\u043B\u0451\u0433\u043A\u0430\u044F" } : depth === 1 ? { k: 1, word: "\u043F\u043E\u043B\u043D\u0430\u044F" } : { k: BALANCE.order.deep, word: "\u0433\u043B\u0443\u0431\u043E\u043A\u0430\u044F" };
+  }
+  function orderMods(w) {
+    const O = BALANCE.order, level = w.order.level, id = stepOf(level).id, g = gradeOf(level).k;
+    const by = (v) => round2(1 + (v - 1) * g);
+    const free = id === "smuta" || id === "volnitsa", strict = id === "strogost" || id === "ruka";
+    return {
+      duty: by(id === "smuta" ? O.dutySmuta : id === "volnitsa" ? O.dutyVolnitsa : id === "strogost" ? O.dutyStrogost : id === "ruka" ? O.dutyRuka : 1),
+      price: by(free ? O.priceVolnitsa : 1),
+      villageGain: by(free ? O.trustVolnitsa : strict ? O.trustStrogost : 1),
+      villageCap: id === "ruka",
+      seen: by(free ? O.seenVolnitsa : id === "strogost" ? O.seenStrogost : id === "ruka" ? O.seenRuka : 1),
+      theft: by(id === "smuta" ? O.theftSmuta : id === "volnitsa" ? O.theftVolnitsa : id === "strogost" ? O.theftStrogost : id === "ruka" ? O.theftRuka : 1),
+      strictWeight: id === "ruka" ? O.strictWeight : 1
+    };
+  }
+  function orderNorm(w) {
+    const O = BALANCE.order, p = holder(w, "desyatnik"), parts = [];
+    let norm = O.base;
+    if (w.order.guard) {
+      norm += w.order.guard * O.guardStep;
+      parts.push(w.order.guard > 0 ? `\u0441\u0442\u0440\u0430\u0436\u0430 \u0437\u0430\u0442\u044F\u043D\u0443\u0442\u0430 \u043D\u0430 ${w.order.guard}` : `\u0441\u0442\u0440\u0430\u0436\u0430 \u0440\u0430\u0441\u043F\u0443\u0449\u0435\u043D\u0430 \u043D\u0430 ${-w.order.guard}`);
+    }
+    if (!p) {
+      norm -= O.noDesyatnik;
+      parts.push("\u0434\u0435\u0441\u044F\u0442\u043D\u0438\u043A\u0430 \u043D\u0435\u0442");
+    } else {
+      const lean = ((p.star.dolg + p.star.derzost) / 2 - p.star.zabota) / STAR_MAX, shift = round1(lean * O.desyatnik);
+      norm += shift;
+      if (shift >= 1) parts.push(`\u0434\u0435\u0441\u044F\u0442\u043D\u0438\u043A ${p.name} \u0434\u0435\u0440\u0436\u0438\u0442 \u0441\u0442\u0440\u043E\u0433\u043E`);
+      if (shift <= -1) parts.push(`\u0434\u0435\u0441\u044F\u0442\u043D\u0438\u043A ${p.name} \u0434\u0435\u0440\u0436\u0438\u0442 \u0432\u043E\u043B\u044C\u043D\u043E`);
+    }
+    if (w.eco?.course === "dorogi") {
+      norm += O.course;
+      parts.push("\u043A\u0443\u0440\u0441 \xAB\u041F\u043E\u0440\u044F\u0434\u043E\u043A \u043D\u0430 \u0434\u043E\u0440\u043E\u0433\u0430\u0445\xBB");
+    }
+    if (w.eco?.course === "polegche") {
+      norm -= O.course;
+      parts.push("\u043A\u0443\u0440\u0441 \xAB\u041B\u044E\u0434\u044F\u043C \u043F\u043E\u043B\u0435\u0433\u0447\u0435\xBB");
+    }
+    return { norm: Math.round(clamp(norm, 0, ORDER_MAX)), parts };
+  }
+  function guardCost(guard) {
+    const O = BALANCE.order;
+    return guard > 0 ? round2(O.guardCost * guard * (guard + 1) / 2) : round2(guard * O.guardSave);
+  }
+  var guardHands = (guard) => guard > 0 ? round2(guard * BALANCE.order.guardHands) : 0;
+  function setGuard(w, guard) {
+    const g = Math.round(clamp(guard, BALANCE.order.guardMin, BALANCE.order.guardMax));
+    if (g === w.order.guard) return false;
+    const was = w.order.guard;
+    w.order.guard = g;
+    const cost = guardCost(g);
+    const price = cost > 0 ? `${cost} \u0441\u0435\u0440\u0435\u0431\u0440\u0430 \u0438 ${guardHands(g)} \u0440\u0443\u043A \u0432 \u0434\u043E\u0437\u043E\u0440\u0430\u0445 \u043A\u0430\u0436\u0434\u044B\u0439 \u0441\u0435\u0437\u043E\u043D` : cost < 0 ? `\u043A\u0430\u0437\u043D\u0430 \u0441\u0431\u0435\u0440\u0435\u0433\u0430\u0435\u0442 ${-cost} \u0441\u0435\u0440\u0435\u0431\u0440\u0430 \u0437\u0430 \u0441\u0435\u0437\u043E\u043D` : "\u043F\u043E \u043E\u0431\u044B\u0447\u043D\u043E\u0439 \u0446\u0435\u043D\u0435";
+    w.log.push({ season: w.season, kind: "staff", title: "\u0421\u0442\u0440\u0430\u0436\u0430", lines: [`\u0421\u0435\u043D\u0435\u0448\u0430\u043B\u044C \u0432\u0435\u043B\u0435\u043B \u0441\u0442\u0440\u0430\u0436\u0435 ${g > was ? "\u0437\u0430\u0442\u044F\u043D\u0443\u0442\u044C" : "\u043E\u0442\u043F\u0443\u0441\u0442\u0438\u0442\u044C"}: ${price}. \u0428\u043A\u0430\u043B\u0430 \u043F\u043E\u0440\u044F\u0434\u043A\u0430 \u043F\u043E\u0439\u0434\u0451\u0442 \u043A \u043D\u043E\u0440\u043C\u0435 \u043F\u043E \u0448\u0430\u0433\u0443 \u0437\u0430 \u0441\u0435\u0437\u043E\u043D.`] });
+    return true;
+  }
+  var initOrder = () => ({ level: BALANCE.order.start, guard: 0, seen: 0, rot: 0, calm: 0, history: [], spent: 0 });
+
   // src/sim/economy/zones.ts
   var seasonKind = (season) => (season - 1) % 4;
   var AUTUMN = 2;
@@ -1290,7 +1427,9 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
   }
   function addTrust(w, side, d) {
     const max = BALANCE.economy.trust.max, was = w.factions[side];
-    w.factions[side] = round1(clamp(was + d, -max, max));
+    const village = side === "brod" || side === "opushka", O = village && d > 0 ? orderMods(w) : void 0;
+    const top = O?.villageCap ? Math.max(was, Math.floor(BALANCE.economy.trust.ally * 10 - 1) / 10) : max;
+    w.factions[side] = round1(clamp(was + d * (O?.villageGain ?? 1), -max, Math.min(max, top)));
     return round1(w.factions[side] - was);
   }
   function patienceWord(v) {
@@ -1976,7 +2115,7 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
     return out;
   }
   function fieldHands(w) {
-    const lost = Math.min(0, levers(w).hands) * BALANCE.economy.hand.hands;
+    const lost = Math.min(0, levers(w).hands) * BALANCE.economy.hand.hands - guardHands(w.order.guard);
     const h2 = handsNow(w), total = round1(Math.max(0, HANDS_FROM.reduce((s, f) => s + h2[f], 0) + lost));
     if (seasonKind(w.season) === WINTER) return { total, field: 0, free: total, build: 0 };
     const build = w.eco.course === "stroimsya" ? Math.min(total, BALANCE.economy.course.buildHands) : 0;
@@ -2002,8 +2141,9 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
     const L = levers(w), by = (lever) => Math.max(0, 1 + L[lever] * E.hand.flow);
     const sown = kind === SPRING ? fieldShare : e.sown;
     const M = worldModsFor(w);
+    const OM = orderMods(w), guard = guardCost(w.order.guard);
     const seasonPrice = [E.year.priceSpring, E.year.priceSummer, E.year.priceAutumn, E.year.priceWinter][kind];
-    const price = F.scale * F.price * seasonPrice * zoneMult(w, "kuptsy") * pisar.mult * (1 + courseStrength(w, "torguem")) * by("price") * M.price;
+    const price = F.scale * F.price * seasonPrice * zoneMult(w, "kuptsy") * pisar.mult * (1 + courseStrength(w, "torguem")) * by("price") * M.price * OM.price;
     if (stock.tovary > 0) {
       const sold = stock.tovary, how = pisar.note;
       if (price > 0) {
@@ -2013,7 +2153,7 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
     }
     const seasonDuty = [E.year.dutySpring, E.year.dutySummer, E.year.dutyAutumn, E.year.dutyWinter][kind];
     const levy = w.season < e.dutyCutUntil ? E.pay.levyDuty : 1;
-    const duties = F.scale * F.duties * seasonDuty * zoneMult(w, "kuptsy") * pisar.mult * (1 + courseStrength(w, "dorogi")) * levy * by("duties") * M.duty;
+    const duties = F.scale * F.duties * seasonDuty * zoneMult(w, "kuptsy") * pisar.mult * (1 + courseStrength(w, "dorogi")) * levy * by("duties") * M.duty * OM.duty;
     const dutyText = `\u043F\u043E\u0448\u043B\u0438\u043D\u044B${levy < 1 ? " (\u043D\u0438\u0436\u0435 \u043F\u043E\u0441\u043B\u0435 \u043E\u0441\u043E\u0431\u043E\u0433\u043E \u0441\u0431\u043E\u0440\u0430)" : ""}`;
     if (duties > 0) add("serebro", duties, dutyText, { side: "kuptsy", who: whoOf(pisar, "pisar"), how: pisar.note });
     else lines.push({ cat: "serebro", v: 0, text: "\u043F\u043E\u0448\u043B\u0438\u043D \u043D\u0435\u0442: \u043A\u0443\u043F\u0446\u044B \u043E\u0442\u043A\u0430\u0437\u044B\u0432\u0430\u044E\u0442", side: "kuptsy" });
@@ -2048,7 +2188,8 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
     const purse = L.silver * E.hand.silver;
     if (purse > 0) add("serebro", purse, "\u0434\u043E\u0440\u043E\u0436\u043D\u044B\u0439 \u0441\u0431\u043E\u0440", { side: "kuptsy" });
     if (purse < 0) add("serebro", -Math.min(stock.serebro, -purse), "\u043F\u0440\u043E\u0446\u0435\u043D\u0442\u044B \u043F\u043E \u0441\u0442\u0430\u0440\u044B\u043C \u0434\u043E\u043B\u0433\u0430\u043C");
-    spend("serebro", F.salary * (1 + courseStrength(w, "dorogi")) * by("salary"), "\u0436\u0430\u043B\u043E\u0432\u0430\u043D\u044C\u0435 \u0441\u0442\u0440\u0430\u0436\u0435 \u0438 \u0447\u0435\u043B\u044F\u0434\u0438", "zamok");
+    spend("serebro", Math.max(0, F.salary * (1 + courseStrength(w, "dorogi")) * by("salary") + Math.min(0, guard)), `\u0436\u0430\u043B\u043E\u0432\u0430\u043D\u044C\u0435 \u0441\u0442\u0440\u0430\u0436\u0435 \u0438 \u0447\u0435\u043B\u044F\u0434\u0438${guard < 0 ? " (\u0441\u0442\u0440\u0430\u0436\u0430 \u0440\u0430\u0441\u043F\u0443\u0449\u0435\u043D\u0430)" : ""}`, "zamok");
+    if (guard > 0) spend("serebro", guard, "\u0434\u043E\u0437\u043E\u0440\u044B: \u0441\u0442\u0440\u0430\u0436\u0430 \u0437\u0430\u0442\u044F\u043D\u0443\u0442\u0430", "zamok");
     const upkeep2 = (kind === WINTER ? F.upkeepWinter : F.upkeep) * by("upkeep");
     const feed = [["zamok", upkeep2 * F.castleShare, "\u043F\u0440\u043E\u043A\u043E\u0440\u043C \u0437\u0430\u043C\u043A\u0430"]];
     for (const v of VILLAGES) feed.push([v, upkeep2 * (1 - F.castleShare) / VILLAGES.length, "\u043F\u0440\u043E\u043A\u043E\u0440\u043C \u0440\u0430\u0431\u043E\u0442\u043D\u0438\u043A\u043E\u0432 \u043D\u0430 \u0431\u0430\u0440\u0449\u0438\u043D\u0435"]);
@@ -2759,6 +2900,61 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
         { id: "starye", text: "\u041E\u0441\u0442\u0430\u0432\u0438\u0442\u044C \u0441\u0442\u0430\u0440\u044B\u0435: \u043A\u0443\u043F\u0446\u044B \u043F\u0440\u0438\u0432\u044B\u043A\u043B\u0438", axes: ["obychai", "zabota"], effects: { kuptsy: 1, kazna: -1 }, careful: true }
       ]
     },
+    // --- строгий край порядка (И13): дозор приносит удачи; приходят только со ступени «Строгость» ---
+    {
+      id: "kaznokrad",
+      title: "\u041F\u043E\u0439\u043C\u0430\u043D \u043A\u0430\u0437\u043D\u043E\u043A\u0440\u0430\u0434",
+      tags: ["torg"],
+      strict: true,
+      text: "\u0414\u043E\u0437\u043E\u0440 \u0432\u0437\u044F\u043B \u043F\u0440\u0438\u043A\u0430\u0437\u0447\u0438\u043A\u0430 \u0441 \u0437\u0430\u043C\u043A\u043E\u0432\u044B\u043C \u0441\u0435\u0440\u0435\u0431\u0440\u043E\u043C \u0432 \u043F\u043E\u0434\u043A\u043B\u0430\u0434\u043A\u0435.",
+      posts: ["pisar", "desyatnik"],
+      options: [
+        { id: "vernut", text: "\u0421\u0435\u0440\u0435\u0431\u0440\u043E \u0432 \u043A\u0430\u0437\u043D\u0443, \u0432\u043E\u0440\u0430 \u2014 \u0437\u0430 \u0432\u043E\u0440\u043E\u0442\u0430", axes: ["dolg"], effects: { kazna: 2, zamok: -1 }, careful: true },
+        { id: "otkup", text: "\u041F\u0440\u043E\u0441\u0442\u0438\u0442\u044C \u0437\u0430 \u043F\u043E\u043B\u0446\u0435\u043D\u044B: \u043E\u043D \u0437\u043D\u0430\u0435\u0442 \u0432\u0441\u0435\u0445 \u043A\u0443\u043F\u0446\u043E\u0432", axes: ["vygoda"], effects: { kazna: 1, kuptsy: 1, poryadok: -1 } },
+        { id: "sud", text: "\u0421\u0443\u0434\u0438\u0442\u044C \u043F\u0440\u0438 \u0432\u0441\u0451\u043C \u043D\u0430\u0440\u043E\u0434\u0435", axes: ["obychai", "derzost"], effects: { poryadok: 1, derevni: 1, zamok: -1 }, risky: true }
+      ]
+    },
+    {
+      id: "otravitel",
+      title: "\u041E\u0442\u0440\u0430\u0432\u0438\u0442\u0435\u043B\u044C \u0441\u043A\u043E\u0442\u0430",
+      tags: ["golod", "vera"],
+      strict: true,
+      text: "\u0421\u0442\u0440\u0430\u0436\u0430 \u043D\u0430\u0448\u043B\u0430, \u043A\u0442\u043E \u0442\u0440\u0430\u0432\u0438\u043B \u043A\u043E\u043B\u043E\u0434\u0435\u0446 \u0443 \u0432\u044B\u043F\u0430\u0441\u0430.",
+      posts: ["starosta", "lesnichiy"],
+      village: "opushka",
+      options: [
+        { id: "derevne", text: "\u0412\u044B\u0434\u0430\u0442\u044C \u0434\u0435\u0440\u0435\u0432\u043D\u0435 \u043D\u0430 \u0435\u0451 \u0441\u0443\u0434", axes: ["obychai"], effects: { derevni: 2, poryadok: -1 }, risky: true },
+        { id: "zamok", text: "\u0421\u0443\u0434\u0438\u0442\u044C \u0432 \u0437\u0430\u043C\u043A\u0435 \u043F\u043E \u0437\u0430\u043A\u043E\u043D\u0443", axes: ["dolg"], effects: { poryadok: 1, derevni: 1 }, careful: true },
+        { id: "vira", text: "\u0412\u0437\u044F\u0442\u044C \u0432\u0438\u0440\u0443 \u0441\u0435\u0440\u0435\u0431\u0440\u043E\u043C \u0438 \u043E\u0442\u043F\u0443\u0441\u0442\u0438\u0442\u044C", axes: ["vygoda"], effects: { kazna: 1, derevni: -1 } }
+      ]
+    },
+    {
+      id: "logovo",
+      title: "\u041B\u043E\u0433\u043E\u0432\u043E \u0441 \u0434\u043E\u0431\u044B\u0447\u0435\u0439",
+      tags: ["voyna", "torg"],
+      strict: true,
+      text: "\u0414\u043E\u0437\u043E\u0440 \u043D\u0430\u043A\u0440\u044B\u043B \u0440\u0430\u0437\u0431\u043E\u0439\u043D\u0438\u0447\u044C\u0435 \u043B\u043E\u0433\u043E\u0432\u043E: \u0432 \u044F\u043C\u0435 \u0437\u0435\u0440\u043D\u043E \u0438 \u0441\u0435\u0440\u0435\u0431\u0440\u043E \u0441 \u043E\u0431\u043E\u0437\u043E\u0432.",
+      posts: ["desyatnik", "klyuchnik"],
+      options: [
+        { id: "zamku", text: "\u0412\u0441\u0451 \u043D\u0430\u0439\u0434\u0435\u043D\u043D\u043E\u0435 \u2014 \u0432 \u0437\u0430\u043C\u043E\u043A", axes: ["vygoda"], effects: { kazna: 1, pripasy: 2, kuptsy: -1 }, risky: true },
+        { id: "kuptsam", text: "\u0412\u0435\u0440\u043D\u0443\u0442\u044C \u043A\u0443\u043F\u0446\u0430\u043C \u0438\u0445 \u0434\u043E\u0431\u0440\u043E", axes: ["dolg"], effects: { kuptsy: 2, kazna: 1 }, careful: true },
+        { id: "derevnyam", text: "\u0420\u0430\u0437\u0434\u0430\u0442\u044C \u0437\u0435\u0440\u043D\u043E \u0434\u0435\u0440\u0435\u0432\u043D\u044F\u043C", axes: ["zabota"], effects: { derevni: 2, pripasy: 1 } }
+      ]
+    },
+    {
+      id: "dolzhnik",
+      title: "\u0411\u0435\u0433\u043B\u044B\u0439 \u0434\u043E\u043B\u0436\u043D\u0438\u043A",
+      tags: ["golod"],
+      strict: true,
+      text: "\u041F\u043E\u0434 \u0441\u0442\u0440\u0430\u0436\u0435\u0439 \u0432\u0435\u0440\u043D\u0443\u043B\u0441\u044F \u043C\u0443\u0436\u0438\u043A, \u0441\u0431\u0435\u0436\u0430\u0432\u0448\u0438\u0439 \u043E\u0442 \u0434\u043E\u043B\u0433\u0430 \u0442\u0440\u0438 \u0433\u043E\u0434\u0430 \u043D\u0430\u0437\u0430\u0434.",
+      posts: ["pisar", "starosta"],
+      village: "brod",
+      options: [
+        { id: "vzyskat", text: "\u0412\u0437\u044B\u0441\u043A\u0430\u0442\u044C \u0434\u043E\u043B\u0433 \u0441 \u043B\u0438\u0445\u0432\u043E\u0439", axes: ["vygoda"], effects: { kazna: 2, derevni: -1 }, risky: true },
+        { id: "barshchina", text: "\u041F\u0443\u0441\u0442\u044C \u043E\u0442\u0440\u0430\u0431\u043E\u0442\u0430\u0435\u0442 \u043D\u0430 \u0431\u0430\u0440\u0449\u0438\u043D\u0435", axes: ["dolg", "obychai"], effects: { pripasy: 1, zamok: 1 }, careful: true },
+        { id: "prostit", text: "\u041F\u0440\u043E\u0441\u0442\u0438\u0442\u044C \u2014 \u043F\u0443\u0441\u0442\u044C \u043F\u0430\u0448\u0435\u0442", axes: ["zabota"], effects: { derevni: 2 } }
+      ]
+    },
     // --- приключенцы (после открытия лабиринта) ---
     {
       id: "prikl_pyut",
@@ -3070,7 +3266,7 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
       p.choices[a]++;
       p.star[a] = round1(clamp(p.star[a] + BALANCE.star.drift, 0, STAR_MAX));
       const was = axisKnown(p, a);
-      p.know.seen[a]++;
+      p.know.seen[a] += orderMods(w).seen;
       if (!was && axisKnown(p, a)) lines.push(`\u{1F441} \u041D\u0430\u0441\u043C\u043E\u0442\u0440\u0435\u043B\u0438\u0441\u044C \u0432 \u0434\u0435\u043B\u0435: ${p.name}, ${AXIS_NAMES[a]} \u2014 ${axisWord(p.star[a])}.`);
     }
   }
@@ -3220,6 +3416,48 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
     recordChoice(w, win, wd.opt, lines);
     return applyEffects(w, ev, wd.opt, BALANCE.council.rivalGain * co, win, lines);
   }
+
+  // src/sim/order-season.ts
+  function orderSeason(w, lines) {
+    const O = BALANCE.order, o = w.order, was = o.level, wasStep = stepOf(was);
+    const steps = clamp(Math.trunc((w.resources.poryadok - o.seen) / O.pushStep), -O.pushMax, O.pushMax);
+    o.seen = round1(o.seen + steps * O.pushStep);
+    const norm = orderNorm(w).norm;
+    let level = clamp(was + steps, 0, ORDER_MAX);
+    if (level < norm) level++;
+    else if (level > norm) level--;
+    o.level = level;
+    const step = stepOf(level), g = gradeOf(level).k;
+    if (step.id !== wasStep.id) lines.push(`\u041F\u043E\u0440\u044F\u0434\u043E\u043A: \u0442\u0435\u043F\u0435\u0440\u044C \xAB${step.name}\xBB (\u0431\u044B\u043B\u043E \xAB${wasStep.name}\xBB). ${step.plus[0].toUpperCase()}${step.plus.slice(1)}; \u043D\u043E ${step.minus}.`);
+    if (step.id === "smuta") {
+      addLine(w, { cat: "serebro", v: -O.robbery * g, text: "\u0440\u0430\u0437\u0431\u043E\u0439 \u043D\u0430 \u0434\u043E\u0440\u043E\u0433\u0430\u0445: \u0441\u043C\u0443\u0442\u0430" });
+      addTrust(w, "kuptsy", -O.kuptsySmuta * g);
+    }
+    if (step.id === "volnitsa") addLine(w, { cat: "serebro", v: -O.pilfer * g, text: "\u043C\u0435\u043B\u043A\u043E\u0435 \u0432\u043E\u0440\u043E\u0432\u0441\u0442\u0432\u043E: \u0432\u043E\u043B\u044C\u043D\u0438\u0446\u0430" });
+    if (step.id === "volnitsa" || step.id === "smuta") addTrust(w, "zamok", -O.brawl * g);
+    if (step.id === "ruka") {
+      addTrust(w, "les", -O.lesRuka * g);
+      const cap = villageCap();
+      for (const v of VILLAGES) if (w.factions[v] > cap) w.factions[v] = cap;
+    }
+    if (step.id === "strogost") o.rot = round2(o.rot + O.rotStrogost * g);
+    if (step.id === "ruka") o.rot = round2(o.rot + O.rotRuka * g);
+    o.calm = step.id === "tiho" ? o.calm + 1 : 0;
+    if (o.calm && o.calm % O.stagnation === 0) {
+      for (const p of w.people) if (p.post) p.tenure++;
+    }
+    if (was >= STRICT_FROM() && level < STRICT_FROM() && o.rot > 0) {
+      const lost = -addLine(w, { cat: "serebro", v: -o.rot * O.rotSilver, text: "\u0432\u0441\u043F\u043B\u044B\u043B\u0430 \u0433\u043D\u0438\u043B\u044C: \u043F\u0440\u0438 \u0441\u0442\u0440\u043E\u0433\u043E\u0439 \u0440\u0443\u043A\u0435 \u0432\u043E\u0440\u043E\u0432\u0430\u043B\u0438 \u043C\u043E\u043B\u0447\u0430" });
+      addTrust(w, "zamok", -o.rot * O.rotTrust);
+      for (const v of VILLAGES) addTrust(w, v, -o.rot * O.rotTrust / VILLAGES.length);
+      lines.push(`\u26A0 \u0425\u0432\u0430\u0442\u043A\u0430 \u043E\u0441\u043B\u0430\u0431\u043B\u0430 \u2014 \u0432\u0441\u043F\u043B\u044B\u043B\u0430 \u0433\u043D\u0438\u043B\u044C: \u043F\u043E\u043A\u0430 \u0432\u0441\u0435 \u043C\u043E\u043B\u0447\u0430\u043B\u0438, \u0438\u0437 \u043A\u0430\u0437\u043D\u044B \u0443\u0442\u0435\u043A\u043B\u043E ${lost}; \u043B\u044E\u0434\u0438 \u0437\u0430\u043C\u043A\u0430 \u0438 \u0434\u0435\u0440\u0435\u0432\u043D\u0438 \u043F\u0440\u0438\u043F\u043E\u043C\u043D\u0438\u043B\u0438 \u043E\u0431\u0438\u0434\u044B.`);
+      o.rot = 0;
+    }
+    o.spent = round2(o.spent + Math.max(0, guardCost(o.guard)));
+    o.history.push(level);
+  }
+  var STRICT_FROM = () => stepOf(BALANCE.order.strictFrom).from;
+  var villageCap = () => Math.floor(BALANCE.economy.trust.ally * 10 - 1) / 10;
 
   // src/sim/world/apply.ts
   var seasonName = (n) => `${SEASON_NAMES[(n - 1) % SEASON_NAMES.length]}, \u0433\u043E\u0434 ${Math.floor((n - 1) / SEASON_NAMES.length) + 1}`;
@@ -3371,12 +3609,13 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
   var tagNames = (tags) => tags.map((t) => WORLD_TAG_NAMES[t]).join(", ");
 
   // src/sim/season.ts
-  var eventPool = (w) => EVENTS.filter((e) => !e.adventurers || w.labOpen);
+  var eventPool = (w) => EVENTS.filter((e) => (!e.adventurers || w.labOpen) && (!e.strict || w.order.level >= BALANCE.order.strictFrom));
   function pickDesk(w) {
     w.desk = { event: draw(w, eventPool(w), 1, true)[0].id };
   }
   function draw(w, pool, n, one = false) {
-    const weights2 = pool.map((e) => eventWeight(w.world.sim, e));
+    const strict = orderMods(w).strictWeight;
+    const weights2 = pool.map((e) => eventWeight(w.world.sim, e) * (e.strict ? strict : 1));
     if (weights2.every((x) => x === 1)) return one ? [w.rng.pick(pool)] : w.rng.shuffle(pool).slice(0, n);
     return pool.map((e, i) => ({ e, key: Math.pow(w.rng.next(), 1 / weights2[i]) })).sort((a, b) => b.key - a.key).slice(0, n).map((x) => x.e);
   }
@@ -3447,7 +3686,7 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
         p.exp = Math.min(p.exp + 1, BALANCE.exp.master);
         if (p.tenure === BALANCE.exp.settled) lines.push(`${p.name} \u043E\u0441\u0432\u043E\u0438\u043B${p.female ? "\u0430\u0441\u044C" : "\u0441\u044F"} \u043D\u0430 \u0434\u043E\u043B\u0436\u043D\u043E\u0441\u0442\u0438.`);
         if (p.tenure === BALANCE.exp.staleFrom) lines.push(`${p.name} \u0437\u0430\u0441\u0438\u0434\u0435\u043B${p.female ? "\u0430\u0441\u044C" : "\u0441\u044F"} \u043D\u0430 \u043C\u0435\u0441\u0442\u0435: \u043E\u0431\u0440\u043E\u0441 \u0441\u0432\u043E\u0438\u043C\u0438 \u043B\u044E\u0434\u044C\u043C\u0438 \u0438 \u0434\u0435\u043B\u0430\u0435\u0442 \u0432\u0441\u0451 \u0431\u043E\u043B\u044C\u0448\u0435 \u043F\u043E-\u0441\u0432\u043E\u0435\u043C\u0443.`);
-        if (isStale(p) && p.star.vygoda >= BALANCE.decide.staleGreedFrom && w.rng.chance(BALANCE.season.theftChance)) {
+        if (isStale(p) && p.star.vygoda >= BALANCE.decide.staleGreedFrom && w.rng.chance(BALANCE.season.theftChance * orderMods(w).theft)) {
           const hidden = p.post === "pisar";
           addLine(w, { cat: "serebro", v: -BALANCE.season.theft, text: "\u0443\u0442\u0435\u043A\u043B\u043E \u0438\u0437 \u043A\u0430\u0437\u043D\u044B", who: `${postName(p.post).toLowerCase()} ${p.name}`, how: "\u043F\u043E-\u0441\u0432\u043E\u0435\u043C\u0443", hidden });
           lines.push(hidden ? "\u0421\u0447\u0451\u0442 \u0441\u0435\u0440\u0435\u0431\u0440\u0430 \u043D\u0435 \u0441\u0445\u043E\u0434\u0438\u0442\u0441\u044F: \u0447\u0435\u0433\u043E-\u0442\u043E \u043D\u0435\u0434\u043E\u0441\u0442\u0430\u0451\u0442, \u0430 \u0432 \u043A\u043D\u0438\u0433\u0430\u0445 \u0447\u0438\u0441\u0442\u043E." : `\u0418\u0437 \u043A\u0430\u0437\u043D\u044B \u0447\u0442\u043E-\u0442\u043E \u0443\u0442\u0435\u043A\u0430\u0435\u0442 \u2014 \u0441\u043B\u0435\u0434\u044B \u0432\u0435\u0434\u0443\u0442 \u043A \u043B\u044E\u0434\u044F\u043C ${p.name}.`);
@@ -3468,6 +3707,7 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
       if (p.loyalty <= BALANCE.loyalty.bitter && w.rng.chance(BALANCE.loyalty.leaveChance)) lines.push(`\u26A0 ${p.name} \u043E\u0437\u043B\u043E\u0431\u043B\u0435\u043D${p.female ? "\u0430" : ""} \u0438 \u043F\u043E\u0434\u0443\u043C\u044B\u0432\u0430\u0435\u0442 \u0443\u0439\u0442\u0438.`);
     }
     economySeason(w, lines);
+    orderSeason(w, lines);
     decreesDue(w, lines);
     authoritySeason(w, lines);
     w.log.push({ season: w.season, kind: "season", title: `\u0418\u0442\u043E\u0433 \u0441\u0435\u0437\u043E\u043D\u0430 ${w.season}`, lines: lines.length ? lines : ["\u041D\u0438\u0447\u0435\u0433\u043E \u043E\u0441\u043E\u0431\u0435\u043D\u043D\u043E\u0433\u043E."] });
@@ -3487,6 +3727,7 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
       season: 1,
       factions: Object.fromEntries(SIDES.map((s) => [s, BALANCE.economy.start.trust])),
       resources: { poryadok: 0 },
+      order: initOrder(),
       eco: void 0,
       auth: initAuthority(),
       world: void 0,
@@ -4145,8 +4386,7 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
       const word = r === void 0 ? "\u0442\u0438\u0443\u043D\u0430 \u043D\u0435\u0442" : `\u0441 \u0442\u0438\u0443\u043D\u043E\u043C ${relWord(r)}${app.designer ? ` (${signed(r)})` : ""}`;
       return `<div class="elder" data-elder="${el.side}">\u0421\u0442\u0430\u0440\u043E\u0441\u0442\u0430 ${el.side === "brod" ? "\u0443 \u0431\u0440\u043E\u0434\u0430" : "\u0443 \u043E\u043F\u0443\u0448\u043A\u0438"}, ${esc(el.name)}: ${word}</div>`;
     }).join("");
-    const order = `<div class="side"><span><i>\u041F\u043E\u0440\u044F\u0434\u043E\u043A</i></span><span class="zone">${signed(app.w.resources.poryadok)}</span></div>`;
-    $("eco-sides").innerHTML = sides + order + elders;
+    $("eco-sides").innerHTML = sides + elders;
   }
   function renderEconomy() {
     renderCats();
@@ -4342,7 +4582,7 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
     return AXES.map((a) => {
       const known = axisKnown(p, a);
       const word = known ? axisWord(p.star[a]) : "?";
-      const seen = p.know.seen[a] ? `\u0432\u0438\u0434\u0435\u043B\u0438: ${p.know.seen[a]}` : "";
+      const seen = p.know.seen[a] ? `\u0432\u0438\u0434\u0435\u043B\u0438: ${String(Number(p.know.seen[a].toFixed(2))).replace(".", ",")}` : "";
       const real = app.designer ? ` <small>${p.star[a].toFixed(1)}</small>` : "";
       return `<div class="axis-row" data-axis="${a}" data-known="${known ? 1 : 0}">
       <span class="axis-name" style="color:${AXIS_COLOR[a]}">${AXIS_NAMES[a]}</span>
@@ -4539,6 +4779,31 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
     renderTape();
   }
 
+  // src/ui/council/view-order.ts
+  function renderOrder() {
+    const o = app.w.order, step = stepOf(o.level), grade = gradeOf(o.level), n = orderNorm(app.w), O = BALANCE.order;
+    const cells = Array.from({ length: ORDER_MAX + 1 }, (_, i) => {
+      const s = stepOf(i), cls = [`ord-${s.id}`, i === o.level ? "now" : "", i === n.norm ? "norm" : ""].filter(Boolean).join(" ");
+      return `<span class="${cls}" data-level="${i}" title="${s.name}${i === n.norm ? " \u2014 \u043D\u043E\u0440\u043C\u0430" : ""}">${i === o.level ? "\u25CF" : i === n.norm ? "\u25BE" : ""}</span>`;
+    }).join("");
+    const names = STEPS.map((s) => `<span class="${s.id === step.id ? "on" : ""}" style="flex:${s.to - s.from + 1}">${s.name}</span>`).join("");
+    const where = n.norm === o.level ? "\u0448\u043A\u0430\u043B\u0430 \u043D\u0430 \u043D\u043E\u0440\u043C\u0435" : `\u0442\u044F\u043D\u0435\u0442\u0441\u044F \u043A \u043D\u043E\u0440\u043C\u0435 \u2014 \u043A \xAB${stepOf(n.norm).name}\xBB, \u043F\u043E \u0448\u0430\u0433\u0443 \u0437\u0430 \u0441\u0435\u0437\u043E\u043D`;
+    const why = n.parts.length ? ` \u041D\u043E\u0440\u043C\u0443 \u0437\u0430\u0434\u0430\u044E\u0442: ${n.parts.join(", ")}.` : " \u041D\u043E\u0440\u043C\u0443 \u043D\u0438\u043A\u0442\u043E \u043D\u0435 \u0434\u0432\u0438\u0433\u0430\u0435\u0442: \u0441\u0442\u0440\u0430\u0436\u0430 \u043F\u043E \u043E\u0431\u044B\u0447\u043D\u043E\u0439 \u0446\u0435\u043D\u0435.";
+    const cost = guardCost(o.guard), up = guardCost(o.guard + 1) - cost;
+    const price = cost > 0 ? `\u0434\u043E\u0437\u043E\u0440\u044B \u0441\u0442\u043E\u044F\u0442 ${fmt(cost)} \u0441\u0435\u0440\u0435\u0431\u0440\u0430 \u0438 ${fmt(guardHands(o.guard))} \u0440\u0443\u043A \u0437\u0430 \u0441\u0435\u0437\u043E\u043D` : cost < 0 ? `\u043A\u0430\u0437\u043D\u0430 \u0441\u0431\u0435\u0440\u0435\u0433\u0430\u0435\u0442 ${fmt(-cost)} \u0441\u0435\u0440\u0435\u0431\u0440\u0430 \u0437\u0430 \u0441\u0435\u0437\u043E\u043D` : "\u0441\u0442\u0440\u0430\u0436\u0430 \u043F\u043E \u043E\u0431\u044B\u0447\u043D\u043E\u0439 \u0446\u0435\u043D\u0435";
+    const real = app.designer ? ` <small id="order-real">\u0448\u043A\u0430\u043B\u0430 ${o.level} \u0438\u0437 ${ORDER_MAX}, \u043D\u043E\u0440\u043C\u0430 ${n.norm}, \u0433\u043D\u0438\u043B\u044C ${fmt(o.rot)}, \u043F\u043E\u0448\u043B\u0438\u043D\u044B \xD7${fmt(orderMods(app.w).duty)}</small>` : "";
+    $("order").innerHTML = `<div class="ord-names">${names}</div><div class="ord-scale" id="order-scale">${cells}</div>
+    <p id="order-step"><b>${step.name}</b>${step.id === "tiho" ? "" : `, \u0433\u0440\u0430\u0434\u0430\u0446\u0438\u044F ${grade.word}`} \u2014 ${where}.${real}</p>
+    <p class="hint" id="order-effects">\u041F\u043B\u044E\u0441\u044B: ${esc(step.plus)}. \u041C\u0438\u043D\u0443\u0441\u044B: ${esc(step.minus)}.${esc(why)}</p>
+    <div class="ord-guard" id="order-guard"><span>\u0421\u0442\u0440\u0430\u0436\u0430: ${o.guard > 0 ? `\u0437\u0430\u0442\u044F\u043D\u0443\u0442\u0430 \u043D\u0430 ${o.guard}` : o.guard < 0 ? `\u0440\u0430\u0441\u043F\u0443\u0449\u0435\u043D\u0430 \u043D\u0430 ${-o.guard}` : "\u043A\u0430\u043A \u043E\u0431\u044B\u0447\u043D\u043E"} \u2014 ${price}</span>
+      <button data-guard="${o.guard - 1}" ${o.guard <= O.guardMin ? "disabled" : ""} title="\u041E\u0442\u043F\u0443\u0441\u0442\u0438\u0442\u044C \u043D\u0438\u0447\u0435\u0433\u043E \u043D\u0435 \u0441\u0442\u043E\u0438\u0442, \u043D\u043E \u043D\u0430\u043A\u043E\u043F\u043B\u0435\u043D\u043D\u0430\u044F \u0433\u043D\u0438\u043B\u044C \u0432\u0441\u043F\u043B\u044B\u0432\u0451\u0442">\u041E\u0442\u043F\u0443\u0441\u0442\u0438\u0442\u044C</button>
+      <button data-guard="${o.guard + 1}" ${o.guard >= O.guardMax ? "disabled" : ""} title="\u041A\u0430\u0436\u0434\u044B\u0439 \u0448\u0430\u0433 \u0434\u043E\u0440\u043E\u0436\u0435 \u043F\u0440\u0435\u0434\u044B\u0434\u0443\u0449\u0435\u0433\u043E">\u0417\u0430\u0442\u044F\u043D\u0443\u0442\u044C${o.guard >= 0 && o.guard < O.guardMax ? `: +${fmt(up)} \u0441\u0435\u0440\u0435\u0431\u0440\u0430 \u0437\u0430 \u0441\u0435\u0437\u043E\u043D` : ""}</button></div>`;
+    $("order").querySelectorAll("button[data-guard]").forEach((b) => b.addEventListener("click", () => {
+      setGuard(app.w, Number(b.dataset.guard));
+      app.render();
+    }));
+  }
+
   // src/ui/council/emu.ts
   var SECTION_NAMES = {
     star: "\u0417\u0432\u0435\u0437\u0434\u0430 \u0441\u043A\u043B\u043E\u043D\u043D\u043E\u0441\u0442\u0435\u0439",
@@ -4553,6 +4818,7 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
     economy: "\u0425\u043E\u0437\u044F\u0439\u0441\u0442\u0432\u043E \u0438 \u043F\u043E\u0434\u0430\u0442\u044C",
     authority: "\u0410\u0432\u0442\u043E\u0440\u0438\u0442\u0435\u0442",
     world: "\u041C\u0438\u0440 \u0432\u043E\u043A\u0440\u0443\u0433",
+    order: "\u041F\u043E\u0440\u044F\u0434\u043E\u043A",
     season: "\u0421\u0435\u0437\u043E\u043D",
     report: "\u0426\u0435\u043B\u0438 \u043E\u0442\u0447\u0451\u0442\u0430 \u043E\u0441\u0435\u0439"
   };
@@ -4664,6 +4930,7 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
     renderStatus();
     renderDesk();
     renderWorld();
+    renderOrder();
     renderCouncil();
     renderRelations();
     renderEconomy();

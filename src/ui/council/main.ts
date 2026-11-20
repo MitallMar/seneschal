@@ -11,6 +11,7 @@ import { renderDesk } from "./view-desk";
 import { renderPeople } from "./view-people";
 import { renderLog, renderStatus } from "./view-log";
 import { renderWorld } from "./view-world";
+import { renderOrder } from "./view-order";
 import { knobId, sets, active, changedKnobs, renderKnobs, setKnob, switchSet, dumpKnobs, toggleKnobs } from "./emu";
 
 function start() {
@@ -40,6 +41,7 @@ function render() {
   renderStatus();
   renderDesk();
   renderWorld();
+  renderOrder();
   renderCouncil();
   renderRelations();
   renderEconomy();

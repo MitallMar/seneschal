@@ -14,9 +14,12 @@ import { applyEffects, toneOf } from "./council/effects";
 import { runEvent } from "./council/council";
 import { lifeTraits } from "./council/traits";
 import { eventWeight } from "./world/gen";
+import { orderMods } from "./order";
+import { orderSeason } from "./order-season";
 import { worldArrive, decreesDue } from "./world/apply";
 
-const eventPool = (w: World) => EVENTS.filter((e) => !e.adventurers || w.labOpen);
+// События строгого края (казнокрад, логово…) приходят только со ступени «Строгость».
+const eventPool = (w: World) => EVENTS.filter((e) => (!e.adventurers || w.labOpen) && (!e.strict || w.order.level >= B.order.strictFrom));
 
 // Дело на столе: одно из событий будущего сезона Сенешаль видит заранее.
 export function pickDesk(w: World) {
@@ -25,7 +28,8 @@ export function pickDesk(w: World) {
 
 // Какие события придут: по весам меток мира. В спокойном мире веса равны — и выбор идёт прежним путём, той же случайностью.
 function draw(w: World, pool: GameEvent[], n: number, one = false): GameEvent[] {
-  const weights = pool.map((e) => eventWeight(w.world.sim, e));
+  const strict = orderMods(w).strictWeight;
+  const weights = pool.map((e) => eventWeight(w.world.sim, e) * (e.strict ? strict : 1));
   if (weights.every((x) => x === 1)) return one ? [w.rng.pick(pool)] : w.rng.shuffle(pool).slice(0, n);
   // взвешенный выбор без возврата: у каждого события свой бросок, тяжёлые чаще оказываются впереди
   return pool.map((e, i) => ({ e, key: Math.pow(w.rng.next(), 1 / weights[i]) })).sort((a, b) => b.key - a.key).slice(0, n).map((x) => x.e);
@@ -94,7 +98,7 @@ export function runSeason(w: World) {
 }
 
 export function runEvents(w: World, n: number) {
-  const pool = EVENTS.filter((e) => !e.adventurers || w.labOpen);
+  const pool = eventPool(w);
   for (let i = 0; i < n; i++) runEvent(w, w.rng.pick(pool));
 }
 
@@ -108,7 +112,7 @@ function upkeep(w: World) {
       p.exp = Math.min(p.exp + 1, B.exp.master);
       if (p.tenure === B.exp.settled) lines.push(`${p.name} освоил${p.female ? "ась" : "ся"} на должности.`);
       if (p.tenure === B.exp.staleFrom) lines.push(`${p.name} засидел${p.female ? "ась" : "ся"} на месте: оброс своими людьми и делает всё больше по-своему.`);
-      if (isStale(p) && p.star.vygoda >= B.decide.staleGreedFrom && w.rng.chance(B.season.theftChance)) {
+      if (isStale(p) && p.star.vygoda >= B.decide.staleGreedFrom && w.rng.chance(B.season.theftChance * orderMods(w).theft)) {
         // вороватый, который сам ведёт счёт серебру (писарь), прячет строку: пропажа видна только как «счёт не сходится»
         const hidden = p.post === "pisar";
         addLine(w, { cat: "serebro", v: -B.season.theft, text: "утекло из казны", who: `${postName(p.post).toLowerCase()} ${p.name}`, how: "по-своему", hidden });
@@ -130,6 +134,7 @@ function upkeep(w: World) {
     if (p.loyalty <= B.loyalty.bitter && w.rng.chance(B.loyalty.leaveChance)) lines.push(`⚠ ${p.name} озлоблен${p.female ? "а" : ""} и подумывает уйти.`);
   }
   economySeason(w, lines);
+  orderSeason(w, lines);
   decreesDue(w, lines);
   authoritySeason(w, lines);
   w.log.push({ season: w.season, kind: "season", title: `Итог сезона ${w.season}`, lines: lines.length ? lines : ["Ничего особенного."] });

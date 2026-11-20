@@ -16,6 +16,7 @@ import { newPreset } from "./presets";
 import { setCourse, setFloor, courseDef } from "./economy/doer";
 import { payTax, payOptions, taxLeft } from "./economy/pay";
 import { payDecree } from "./world/apply";
+import { setGuard } from "./order";
 import { seasonKind } from "./economy/zones";
 import { forecastFork } from "./economy/view";
 import { judge, feast, feastCost, feastsThisYear, authorityCap, complaintLeft, councilSteady, FEASTS } from "./authority";
@@ -37,6 +38,7 @@ export interface Habit {
   talkFirst?: "aspiration";                                // свободное дело — сначала на тех, чьё стремление неизвестно
   feast: false | "rich" | "after" | "winter";             // пир: когда запас вдвое выше черты; после закрытого урока, если авторитет не у потолка; зимой из остатка
   pay: "council" | "master" | "early" | "silver" | "hands" | "ahead"; // hands — только руками осенью, без автоплаты; ahead — без автоплаты, платит заранее с весны
+  guard?: number;   // стража: на сколько ступеней затянута (или распущена) с первого сезона
   //         // подать: совет сам; сам осенью и совет после жатвы; ещё и летом; только казной
   extra: PayId | null;                                     // чем добирает то, чего не хватит и после жатвы
   floors: "default" | "zero" | "double";
@@ -102,6 +104,9 @@ export const BOTS: Bot[] = [
   y("Х9б", "пир после закрытого урока, если авторитет не у потолка", "ловушка ли пиры или глупость бота", { feast: "after" }),
   y("Х9в", "пир зимой из остатка сверх черты", "ловушка ли пиры или глупость бота", { feast: "winter" }),
   y("Х16б", "нижние черты вдвое выше", "третья точка для нижних черт: ноль, умолчание, вдвое", { floors: "double" }),
+  y("Х18", "держит твёрдую руку: стража затянута до предела", "сколько стоит строгий край и что он даёт", { guard: 4 }),
+  y("Х18б", "держит строгость: стража затянута на одну ступень", "окупается ли умеренная строгость", { guard: 1 }),
+  y("Х19", "распустил стражу", "сколько стоит вольный край и что он даёт", { guard: -2 }),
   { id: "Н0", name: "«Наследство»: ничего не трогает", level: 4, habit: IDLE, preset: "nasledstvo" },
   { id: "Н1", name: "«Наследство»: Хозяин", level: 4, base: "Н0", asks: "что даёт игра руками, когда старт плохой", habit: MASTER, preset: "nasledstvo" },
   { id: "Н3", name: "«Наследство»: по настоящей годности", level: 4, base: "Н1", asks: "цена незнания людей при плохом старте", habit: { ...MASTER, place: "true" }, preset: "nasledstvo" },
@@ -273,6 +278,7 @@ function setup(w: World, h: Habit) {
   if (h.floors === "zero") { setFloor(w, "eda", 0); setFloor(w, "serebro", 0); }
   if (h.floors === "double") { setFloor(w, "eda", w.eco.floor.eda + w.eco.floor.eda); setFloor(w, "serebro", w.eco.floor.serebro + w.eco.floor.serebro); }
   if (h.pay === "silver" || h.pay === "hands" || h.pay === "ahead") w.eco.autoPay = false;
+  if (h.guard) setGuard(w, h.guard);
   place(w, h.place);
   const pair = h.dropRival ? rivals(w) : undefined;
   if (pair) { const out = pair[0].tenure <= pair[1].tenure ? pair[0] : pair[1]; assign(w, out.id, null); }

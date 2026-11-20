@@ -145,8 +145,7 @@ function renderSides() {
     const word = r === undefined ? "тиуна нет" : `с тиуном ${relWord(r)}${app.designer ? ` (${signed(r)})` : ""}`;
     return `<div class="elder" data-elder="${el.side}">Староста ${el.side === "brod" ? "у брода" : "у опушки"}, ${esc(el.name)}: ${word}</div>`;
   }).join("");
-  const order = `<div class="side"><span><i>Порядок</i></span><span class="zone">${signed(app.w.resources.poryadok)}</span></div>`;
-  $("eco-sides").innerHTML = sides + order + elders;
+  $("eco-sides").innerHTML = sides + elders;
 }
 
 export function renderEconomy() {

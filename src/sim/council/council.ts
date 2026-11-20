@@ -12,6 +12,7 @@ import { relWord, axisWord, axisKnown, traitLabel } from "./know";
 import { trace, resetTrace, underFloor, scoreOptions, decide } from "./decide";
 import { applyEffects, toneOf } from "./effects";
 import { gainTrait } from "./traits";
+import { orderMods } from "../order";
 
 export let outcome: Outcome = "alone";
 
@@ -28,7 +29,7 @@ function recordChoice(w: World, p: Person, opt: EventOption, lines: string[]) {
     p.choices[a]++;
     p.star[a] = round1(clamp(p.star[a] + B.star.drift, 0, STAR_MAX));
     const was = axisKnown(p, a);
-    p.know.seen[a]++;
+    p.know.seen[a] += orderMods(w).seen;   // молва: на вольном краю громче, на строгом тише
     if (!was && axisKnown(p, a)) lines.push(`👁 Насмотрелись в деле: ${p.name}, ${AXIS_NAMES[a]} — ${axisWord(p.star[a])}.`);
   }
 }

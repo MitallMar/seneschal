@@ -85,7 +85,8 @@ export interface World {
   labOpen: boolean;
   season: number;
   factions: Record<Side, number>;          // доверие сторон; зоны — economy.ts
-  resources: { poryadok: number };         // порядок пока копится числом (шкала строгости — задача И13)
+  resources: { poryadok: number };         // сумма толчков порядка от событий и решений: шкалу двигает её прирост за сезон (order.ts)
+  order: OrderState;                       // порядок: шкала строгости 0–15, стража, гниль
   eco: Economy;                            // хозяйство и подать: запасы, курс, ведомость, урок
   auth: AuthState;                         // авторитет: ведомость, жалобы на столе, пиры
   world: WorldGame;                        // мир вокруг: состояния верхнего слоя, погода года, указы Герцога
@@ -143,6 +144,13 @@ export interface Economy {
 }
 // Зона стороны по доверию: слово и пороги — economy.ts.
 export type Zone = "заодно" | "ладят" | "терпят" | "отказывают";
+
+// ---------- Порядок ----------
+
+// Шкала строгости: level 0–15 (пять ступеней по три градации). guard — стража: сколько ступеней затянуто (меньше нуля — распущено).
+// seen — какая часть суммы толчков уже учтена шкалой; rot — скрытая гниль строгого края; calm — сезонов подряд в «Тихо»;
+// history — ступень на конец каждого сезона (для отчётов); spent — серебра ушло на стражу за партию.
+export interface OrderState { level: number; guard: number; seen: number; rot: number; calm: number; history: number[]; spent: number }
 
 // ---------- Мир ----------
 

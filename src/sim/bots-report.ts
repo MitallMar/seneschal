@@ -10,6 +10,7 @@ import { BOTS, bot, playBot, type Bot, type BotRun } from "./bots";
 import { PRESETS } from "./presets";
 import { mean } from "./util";
 import { WORLD_STATES } from "../data/world";
+import { stepOf } from "./order";
 
 // Метрика партии: id, подпись для таблицы, сколько знаков после запятой, доля ли это (печатать процентами).
 // diag — замер, а не исход партии: в вердикт пары не идёт.
@@ -40,7 +41,8 @@ export const METRICS: MetricDef[] = [
   { id: "refuse", name: "сторон в «отказывают» к концу", digits: 2, group: "хозяйство" },
   { id: "eda", name: "еда к концу", digits: 1, group: "хозяйство" },
   { id: "serebro", name: "серебро к концу", digits: 1, group: "хозяйство" },
-  { id: "order", name: "порядок к концу", digits: 1, group: "хозяйство" },
+  { id: "order", name: "порядок к концу: сумма толчков от событий", digits: 1, group: "хозяйство" },
+  { id: "orderLevel", name: "шкала порядка к концу (0–15)", digits: 1, group: "хозяйство" },
   { id: "authority", name: "авторитет к концу", digits: 1, group: "авторитет" },
   { id: "atCap", name: "авторитет у потолка", digits: 0, pct: true, group: "авторитет" },
   { id: "weak", name: "авторитет ниже порога слабого слова", digits: 0, pct: true, group: "авторитет" },
@@ -64,6 +66,12 @@ export const METRICS: MetricDef[] = [
   { id: "shortTrust", name: "доверия ушло из-за недодач", digits: 2, group: "замеры", diag: true },
   { id: "talkedOut", name: "людей вне совета, с кем говорил Сенешаль", digits: 2, group: "замеры", diag: true },
   { id: "linksKnown", name: "людей, чьи связи известны к концу", digits: 2, group: "замеры", diag: true },
+  { id: "stepSmuta", name: "сезонов в «Смуте»", digits: 2, group: "замеры", diag: true },
+  { id: "stepVolnitsa", name: "сезонов в «Вольнице»", digits: 2, group: "замеры", diag: true },
+  { id: "stepTiho", name: "сезонов в «Тихо»", digits: 2, group: "замеры", diag: true },
+  { id: "stepStrogost", name: "сезонов в «Строгости»", digits: 2, group: "замеры", diag: true },
+  { id: "stepRuka", name: "сезонов при «Твёрдой руке»", digits: 2, group: "замеры", diag: true },
+  { id: "guardSpent", name: "серебра ушло на затянутую стражу", digits: 2, group: "замеры", diag: true },
   { id: "states", name: "состояний мира началось за партию", digits: 1, group: "мир", diag: true },
   { id: "bads", name: "…из них бед", digits: 1, group: "мир", diag: true },
   { id: "decrees", name: "указов за партию", digits: 2, group: "мир", diag: true },
@@ -103,6 +111,7 @@ export function metricsOf(run: BotRun): Metrics {
   const byCat = (cat: string) => all.reduce((s, d) => s + PAY.filter((p) => p.what === cat).reduce((x, p) => x + (d.by[p.id] ?? 0), 0), 0);
   const bad = g.harvests.map((h) => h < B.world.weather.poor);
   const inYears = (isBad: boolean, f: (y: number) => number) => bad.reduce((s, b, y) => s + (b === isBad ? f(y) : 0), 0);
+  const inStep = (id: string) => w.order.history.filter((l) => stepOf(l).id === id).length;
   const started = w.log.filter((e) => e.title === "Вести").flatMap((e) => e.lines);
   return {
     lead: share(own + foreign, ownAll + foreignAll), leadOwn: share(own, ownAll), leadForeign: share(foreign, foreignAll),
@@ -122,6 +131,8 @@ export function metricsOf(run: BotRun): Metrics {
     states: WORLD_STATES.reduce((s, d) => s + started.filter((l) => l.startsWith(`${d.name}.`)).length, 0),
     bads: WORLD_STATES.filter((d) => d.cost > 0).reduce((s, d) => s + started.filter((l) => l.startsWith(`${d.name}.`)).length, 0),
     talkedOut: w.people.filter((p) => !p.post && p.know.talks > 0).length, linksKnown: w.people.filter((p) => p.know.links).length,
+    orderLevel: w.order.level, guardSpent: w.order.spent,
+    stepSmuta: inStep("smuta"), stepVolnitsa: inStep("volnitsa"), stepTiho: inStep("tiho"), stepStrogost: inStep("strogost"), stepRuka: inStep("ruka"),
     decrees: all.length, decreesDone: g.past.filter((d) => d.closed !== "не закрыт").length,
     decreesCouncil: g.past.filter((d) => d.closed === "закрыт советом").length, decreesFailed: g.past.filter((d) => d.closed === "не закрыт").length,
     decreeLyudi: byCat("lyudi"), decreeEda: byCat("eda"), decreeSerebro: byCat("serebro"), decreeTovary: byCat("tovary"),
