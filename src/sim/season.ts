@@ -10,20 +10,25 @@ import { economySeason, rollForecast } from "./economy/season";
 import { addLine } from "./economy/ledger";
 import { mod, addRel } from "./council/people";
 import { scoreOptions } from "./council/decide";
-import { applyEffects, toneOf } from "./council/effects";
+import { applyEffects, toneOf, lastOpt, resetLastOpt } from "./council/effects";
 import { runEvent } from "./council/council";
 import { lifeTraits } from "./council/traits";
 import { eventWeight } from "./world/gen";
 import { orderMods } from "./order";
 import { orderSeason } from "./order-season";
 import { worldArrive, decreesDue } from "./world/apply";
+import { CRISIS_EVENTS } from "../data/fall";
+import { disgraced } from "./fall/base";
+import { crisisDef, crisisByEvent, resolveCrisis } from "./fall/crisis";
+import { fallSeason } from "./fall/under";
 
 // События строгого края (казнокрад, логово…) приходят только со ступени «Строгость».
 const eventPool = (w: World) => EVENTS.filter((e) => (!e.adventurers || w.labOpen) && (!e.strict || w.order.level >= B.order.strictFrom));
 
-// Дело на столе: одно из событий будущего сезона Сенешаль видит заранее.
+// Дело на столе: одно из событий будущего сезона Сенешаль видит заранее. Кризис стороны, что ждёт своего сезона, ложится на стол первым.
 export function pickDesk(w: World) {
-  w.desk = { event: draw(w, eventPool(w), 1, true)[0].id };
+  const crisis = w.fall.queue[0];
+  w.desk = { event: crisis ? crisisDef(crisis).event.id : draw(w, eventPool(w), 1, true)[0].id };
 }
 
 // Какие события придут: по весам меток мира. В спокойном мире веса равны — и выбор идёт прежним путём, той же случайностью.
@@ -37,7 +42,7 @@ function draw(w: World, pool: GameEvent[], n: number, one = false): GameEvent[] 
 
 // Что лежит на столе: событие, советник (держатель первой задетой должности, какая занята) и его мнение — что бы он выбрал сам.
 export function deskView(w: World): { ev: GameEvent; advisor?: Person; opinion?: EventOption; order?: EventOption } | undefined {
-  const ev = w.desk ? eventPool(w).find((e) => e.id === w.desk!.event) : undefined;
+  const ev = w.desk ? [...eventPool(w), ...CRISIS_EVENTS].find((e) => e.id === w.desk!.event) : undefined;
   if (!ev) return undefined;
   const advisor = ev.posts.map((post) => holder(w, post)).find((x): x is Person => !!x);
   const opinion = advisor ? scoreOptions(w, advisor, ev, false, true).reduce((a, b) => (b.base > a.base ? b : a)).opt : undefined;
@@ -86,12 +91,15 @@ export function runSeason(w: World) {
   const pool = eventPool(w);
   const desk = deskView(w);
   const rest = draw(w, pool.filter((e) => e !== desk?.ev), B.season.events - (desk ? 1 : 0));
-  if (desk?.order) runOrdered(w, desk.ev, desk.order);
-  else if (desk) runEvent(w, desk.ev);
+  resetLastOpt();
+  const entry = desk?.order ? runOrdered(w, desk.ev, desk.order) : desk ? runEvent(w, desk.ev) : undefined;
+  // кризис стороны разрешился: выход — тот вариант, что исполнили на деле
+  const crisis = desk ? crisisByEvent(desk.ev.id) : undefined;
+  if (crisis && entry) resolveCrisis(w, crisis, lastOpt, entry.lines);
   for (const ev of rest) runEvent(w, ev);
   upkeep(w);
   w.season++;
-  w.deedsLeft = B.season.deeds;
+  w.deedsLeft = disgraced(w) ? 0 : B.season.deeds;
   worldArrive(w);
   rollForecast(w);
   pickDesk(w);
@@ -136,6 +144,7 @@ function upkeep(w: World) {
   economySeason(w, lines);
   orderSeason(w, lines);
   decreesDue(w, lines);
+  fallSeason(w, lines);
   authoritySeason(w, lines);
   w.log.push({ season: w.season, kind: "season", title: `Итог сезона ${w.season}`, lines: lines.length ? lines : ["Ничего особенного."] });
 }

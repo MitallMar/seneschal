@@ -11,6 +11,7 @@ import { setCourse, setFloor, doer } from "../../sim/economy/doer";
 import type { LedgerLine } from "../../sim/state";
 import { relWord } from "../../sim/council/know";
 import { $, esc } from "../dom";
+import { crisisWord } from "./view-fall";
 import { app, SEASONS, seasonLabel, fmt, signed } from "./app";
 
 const BAR_MAX: Record<Category, number> = { lyudi: 8, eda: 8, tovary: 4, serebro: 8 };
@@ -117,7 +118,9 @@ function renderCourse() {
   const who = c ? [c.pro.length ? `совет чаще решает по: ${c.pro.map((a) => AXIS_NAMES[a]).join(", ")}` : "",
     c.contra.length ? `против: ${c.contra.map((a) => AXIS_NAMES[a]).join(", ")}` : ""].filter(Boolean).join("; ") : "";
   const doers = POSTS.map((d) => { const x = doer(app.w, d.id); return `${d.name}: ${x.note}${app.designer ? ` ×${fmt(x.mult)}${x.hand ? `, ${x.hand}` : ""}` : ""}`; }).join(" · ");
-  $("eco-course").innerHTML = `<div class="pay"><select id="course">${options}</select></div>
+  const baron = app.w.fall.under?.baron;
+  const under = baron ? `<p class="weak" id="course-under">Курс задаёт барон ${esc(baron.name)}. Склонить его можно разговором — личное дело на столе Сенешаля.</p>` : "";
+  $("eco-course").innerHTML = `<div class="pay"><select id="course" ${baron ? "disabled" : ""}>${options}</select></div>${under}
     <p class="hint" id="course-desc">${c ? `${esc(c.desc)}. ${who}. ${held}${e.shaky ? " · <b>шатание</b>: курс сменили слишком быстро" : ""}` : "Совет решает мелкие дела по своим склонностям."}</p>
     <p class="hint" id="doers">Исполняют: ${doers}</p>
     <div class="floors">
@@ -138,7 +141,9 @@ function renderSides() {
   const sides = SIDES.map((s) => {
     const z = zoneOf(app.w, s);
     const real = app.designer ? ` <small>${signed(app.w.factions[s])}</small>` : "";
-    return `<div class="side" data-side="${s}" title="${esc(SIDE_GIVES[s])}"><span>${SIDE_NAMES[s]}</span><span class="zone zone-${z}">${z}${real}</span></div>`;
+    const crisis = crisisWord(s);
+    return `<div class="side" data-side="${s}" title="${esc(SIDE_GIVES[s])}"><span>${SIDE_NAMES[s]}</span><span class="zone zone-${z}">${z}${real}</span></div>
+      ${crisis ? `<div class="side-crisis" data-side-crisis="${s}">${esc(crisis)}</div>` : ""}`;
   }).join("");
   const elders = app.w.eco.elders.map((el) => {
     const r = elderRel(app.w, el);
@@ -166,8 +171,10 @@ export function renderYear() {
     return `<tr data-cat="${cat}"><th>${CATEGORY_NAMES[cat]}</th><td>${fmt(e.stock[cat])}</td><td>${last}</td>
       <td><span class="fc-${f.word.replace(" ", "-")}">${f.word}</span> ${fmt(f.lo)}–${fmt(f.hi)}${exact}</td></tr>`;
   }).join("");
+  const u = app.w.fall.under;
+  const under = u ? `<p class="weak" id="year-under">Под чужой рукой: барон ${esc(u.baron.name)}, ему осталось не больше ${Math.ceil(u.armor)} сез.</p>` : "";
   const zones = SIDES.filter((s) => zoneOf(app.w, s) !== "ладят").map((s) => `${SIDE_NAMES[s].toLowerCase()} — ${zoneOf(app.w, s)}`).join("; ");
   $("year").innerHTML = `<table class="year"><tr><th></th><th>сейчас</th><th>прошлый сезон</th><th>к концу сезона</th></tr>${rows}</table>
     <p class="hint" id="year-tax">Урок ${fmt(t.due)} мер, внесено ${fmt(t.paid)}, осталось ${fmt(taxLeft(app.w))} · Герцог ${patienceWord(t.patience)} · авторитет ${fmt(app.w.authority)}</p>
-    <p class="hint" id="year-zones">Стороны: ${zones || "все ладят"}.</p>`;
+    <p class="hint" id="year-zones">Стороны: ${zones || "все ладят"}.</p>${under}`;
 }

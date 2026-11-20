@@ -4,6 +4,7 @@ import { BALANCE as B } from "../balance";
 import { clamp, round1 } from "../util";
 import type { World, Zone } from "../state";
 import { orderMods } from "../order";
+import { scarMult } from "../fall/base";
 
 export const seasonKind = (season: number) => (season - 1) % 4;   // 0 весна, 1 лето, 2 осень, 3 зима
 export const AUTUMN = 2, WINTER = 3, SUMMER = 1, SPRING = 0;
@@ -16,7 +17,8 @@ export function zoneWord(v: number): Zone {
 export const zoneOf = (w: World, side: Side): Zone => zoneWord(w.factions[side]);
 export function zoneMult(w: World, side: Side): number {
   const Z = B.economy.zone, z = zoneOf(w, side);
-  return z === "заодно" ? Z.ally : z === "ладят" ? Z.friendly : z === "терпят" ? Z.tolerate : Z.refuse;
+  // шрам кризиса: поток стороны ниже, пока не заживёт
+  return (z === "заодно" ? Z.ally : z === "ладят" ? Z.friendly : z === "терпят" ? Z.tolerate : Z.refuse) * scarMult(w, side);
 }
 export function addTrust(w: World, side: Side, d: number): number {
   const max = B.economy.trust.max, was = w.factions[side];

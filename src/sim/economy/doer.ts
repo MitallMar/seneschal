@@ -92,15 +92,18 @@ export function courseLean(w: World, axes: Axis[]): number {
   return share * B.economy.course.lean * (w.eco.courseSeasons >= 1 ? B.economy.course.inertia : 1);
 }
 
-export function setCourse(w: World, id: CourseId | null): void {
+// Под чужой рукой курс задаёт барон (byBaron): Сенешалю остаётся склонять его разговором. Возвращает false, если курс сменить нельзя.
+export function setCourse(w: World, id: CourseId | null, byBaron = false): boolean {
   const e = w.eco;
-  if (e.course === id) return;
+  if (w.fall.under && !byBaron) return false;
+  if (e.course === id) return true;
   e.shaky = e.course !== null && e.courseSeasons < B.economy.course.shaky;
   e.course = id; e.courseSeasons = 0;
   const c = courseDef(w);
   const lines = [c ? `Курс на сезон: «${c.name}» — ${c.desc}.` : "Курса нет: хозяйство идёт как заведено."];
   if (e.shaky) lines.push("Курс сменили слишком быстро — шатание: несогласные исполняют без огонька.");
-  w.log.push({ season: w.season, kind: "staff", title: "Курс", lines });
+  w.log.push({ season: w.season, kind: "staff", title: byBaron ? "Курс барона" : "Курс", lines });
+  return true;
 }
 export function setFloor(w: World, cat: "eda" | "serebro", v: number): void {
   w.eco.floor[cat] = round2(Math.max(0, Number(v) || 0));

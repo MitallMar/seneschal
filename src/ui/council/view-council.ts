@@ -4,14 +4,17 @@ import type { PostId } from "../../data/types";
 import { assign, assignCost, setHead } from "../../sim/council/staff";
 import { holder, getRel, isStale, fitness, topAxis, postName } from "../../sim/state";
 import { relWord, expWord, forecast, fitWord } from "../../sim/council/know";
+import { staffBlock } from "../../sim/fall/base";
 import { $, esc } from "../dom";
 import { app } from "./app";
 
 export function renderCouncil() {
+  const u = app.w.fall.under;
   const html = POSTS.map((def) => {
     const h = holder(app.w, def.id);
     const freeCost = h ? assignCost(app.w, h, null).cost : 0;
-    const empty = freeCost > app.w.authority ? `<option value="" disabled>— пусто — · −${freeCost} авт., не хватает</option>` : `<option value="">— пусто —</option>`;
+    const locked = h ? staffBlock(app.w, h, null) : undefined;
+    const empty = locked ? `<option value="" disabled>— пусто — · ${esc(locked)}</option>` : freeCost > app.w.authority ? `<option value="" disabled>— пусто — · −${freeCost} авт., не хватает</option>` : `<option value="">— пусто —</option>`;
     const opts = [empty]
       .concat(
         app.w.people.map((p) => {
@@ -22,7 +25,10 @@ export function renderCouncil() {
           if (p.post && p.post !== def.id) marks.push(`сейчас ${postName(p.post).toLowerCase()}`);
           marks.push(fitWord(p, def.id));
           if (app.designer) marks.push(`годн. ${fitness(p, def.id).toFixed(1)}`);
-          if (!sel) {
+          if (u?.retinue.includes(p.id)) marks.unshift("человек барона");
+          const block = sel ? undefined : staffBlock(app.w, p, def.id);
+          if (block) off = "disabled";
+          else if (!sel) {
             const c = assignCost(app.w, p, def.id).cost;
             if (c) marks.push(c > app.w.authority ? `−${c} авт., не хватает` : `−${c} авт.`);
             if (c > app.w.authority) off = "disabled";
@@ -36,6 +42,7 @@ export function renderCouncil() {
       badges.push(`<span class="badge">${expWord(h)} · ${h.tenure} сез.</span>`);
       if (isStale(h)) badges.push(`<span class="badge stale">засиделся</span>`);
       if (app.w.head === h.id) badges.push(`<span class="badge head">главный</span>`);
+      if (u?.retinue.includes(h.id)) badges.push(`<span class="badge stale" data-retinue="${h.id}">человек барона</span>`);
     }
     const headBtn = h && app.w.head !== h.id ? `<button data-head="${h.id}" style="padding:2px 8px;font-size:12px">сделать главным</button>` : "";
     const fc = h ? `<div class="forecast">${esc(h.name)}: ${forecast(h)}${app.designer ? ` · ведущая ось: ${AXIS_NAMES[topAxis(h.star)]}` : ""}</div>` : "";
@@ -45,7 +52,9 @@ export function renderCouncil() {
       <div class="post-row">${badges.join("")}</div>${fc}
     </div>`;
   }).join("");
-  $("council").innerHTML = html;
+  const consent = u ? `<p class="weak" id="council-under">${u.consent === app.w.season ? "Барон дал согласие на перестановки в этом сезоне; своих людей трогать не велел."
+    : "Под чужой рукой перестановки — только с согласия барона (личное дело на столе Сенешаля). Его людей не тронуть и с согласием."}</p>` : "";
+  $("council").innerHTML = consent + html;
   $("council").querySelectorAll<HTMLSelectElement>("select[data-post]").forEach((s) =>
     s.addEventListener("change", () => {
       const post = s.dataset.post as PostId;

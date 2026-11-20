@@ -1,6 +1,6 @@
 // Авторитет: откуда берётся и куда уходит (задача И15, замысел — docs/design/avtoritet.md). Без интерфейса.
 // Опора каждый сезон от состояния земли, прибавки и потери за поступки, потолок по статусу, ведомость прошлого сезона.
-// Порядок на опору пока не влияет (шкала строгости — И13); кризисы и возвращение из-под чужой руки — И14.
+// Под чужой рукой потолок ниже, а терпение Герцога опоры не касается (src/sim/fall/); строки кризисов, падения и возвращения — вид "fall".
 import { SIDES, SIDE_NAMES, CATEGORY_NAMES } from "../data/economy";
 import { BALANCE as B } from "./balance";
 import { round2 } from "./util";
@@ -11,7 +11,7 @@ import { addLine } from "./economy/ledger";
 
 export const AUTH_KIND_NAMES: Record<AuthKind, string> = {
   support: "опора", tax: "подать", judge: "суд лично", complaint: "брошенные жалобы", feast: "обычаи и пиры",
-  order: "приказы против совета", staff: "перестановки и наказы", burn: "сгорело сверх потолка",
+  order: "приказы против совета", staff: "перестановки и наказы", burn: "сгорело сверх потолка", fall: "кризисы, падение и возвращение",
 };
 export type FeastId = "prazdnik" | "pir";
 export const FEASTS: { id: FeastId; name: string; pay: "eda" | "serebro"; text: string }[] = [
@@ -20,11 +20,11 @@ export const FEASTS: { id: FeastId; name: string; pay: "eda" | "serebro"; text: 
 ];
 
 export function initAuthority(): AuthState {
-  const totals = { support: 0, tax: 0, judge: 0, complaint: 0, feast: 0, order: 0, staff: 0, burn: 0 };
+  const totals = { support: 0, tax: 0, judge: 0, complaint: 0, feast: 0, order: 0, staff: 0, burn: 0, fall: 0 };
   return { cur: [], last: null, lastSeason: 0, feasts: [], complaints: [], nextId: 1, totals };
 }
-// Потолок по статусу: пока один — Сенешаль на испытании. Излишек сверх потолка сгорает.
-export const authorityCap = (): number => B.authority.cap;
+// Потолок по статусу: Сенешаль на испытании; под чужой рукой — ниже. Излишек сверх потолка сгорает.
+export const authorityCap = (w: World): number => (w.fall.under ? B.fall.capUnder : B.authority.cap);
 
 // Авторитет ниже порога — слово Сенешаля весит меньше: каждая трата дороже на надбавку. Бесплатное остаётся бесплатным.
 export const authorityWeak = (w: World): boolean => w.authority < B.authority.weakBelow;
@@ -35,7 +35,7 @@ export const complaintLeft = (w: World, c: Complaint): number => c.season + B.au
 // Любое изменение авторитета идёт через эту функцию: строка в ведомость, излишек сверх потолка сгорает, ниже нуля авторитет не уходит.
 export function addAuthority(w: World, v: number, text: string, kind: AuthKind): number {
   if (!v) return 0;
-  const a = w.auth, cap = authorityCap(), next = round2(w.authority + v);
+  const a = w.auth, cap = authorityCap(w), next = round2(w.authority + v);
   a.cur.push({ v: round2(v), text, kind });
   a.totals[kind] = round2(a.totals[kind] + v);
   if (next > cap && v > 0) {
@@ -73,7 +73,8 @@ export function authoritySupport(w: World): { lines: AuthLine[]; total: number }
   if (friendly.length) lines.push({ v: round2(friendly.length * A.sideFriendly), text: `опора: ладят — ${names(friendly)}`, kind: "support" });
   const c = councilSteady(w);
   if (c.ok) lines.push({ v: A.council, text: `опора: совет — ${c.why}`, kind: "support" });
-  const duke = patienceWord(w.eco.tax.patience);
+  // под чужой рукой терпение Герцога — на бароне: Сенешалю оно ни опоры не даёт, ни отнимает
+  const duke = w.fall.under ? "ждёт" : patienceWord(w.eco.tax.patience);
   const dv = duke === "благоволит" ? A.dukeFavor : duke === "недоволен" ? -A.dukeDispleased : duke === "на исходе" ? -A.dukeEdge : 0;
   if (dv) lines.push({ v: dv, text: `опора: Герцог ${duke}`, kind: "support" });
   const sum = round2(lines.reduce((s, l) => s + l.v, 0));

@@ -5,6 +5,8 @@ import { LIFE_TRAITS, POSTS } from "../data/core";
 import { BALANCE as B } from "./balance";
 import { newWorld } from "./council/generate";
 import { holder, setRel, fitness, STAR_MAX, type World, type Person } from "./state";
+import { crisisDef } from "./fall/crisis";
+import { fallNow } from "./fall/under";
 
 export interface Preset { id: string; name: string; desc: string; apply: (w: World) => void }
 
@@ -56,6 +58,14 @@ export const PRESETS: Preset[] = [
     t.due = t.lesson + t.carried;
     t.patience = Math.max(0, B.economy.tax.displeased - 1);
   } },
+  { id: "krizis", name: "Кризис в деревне у брода", desc: "деревня у брода третий сезон отказывает: кризис лежит на столе Сенешаля, после него останется шрам", apply: (w) => {
+    w.factions.brod = B.economy.trust.refuse - 2;
+    w.eco.zoneWas.brod = "отказывают";
+    w.fall.refuse.brod = B.fall.refuseSeasons;
+    w.fall.queue = ["brod"];
+    w.desk = { event: crisisDef("brod").event.id };
+  } },
+  { id: "pod_rukoy", name: "Под чужой рукой", desc: "баронство отдано другому: барон со свитой в замке, курс задаёт он, перестановки — с его согласия", apply: (w) => { fallNow(w, "так начинается заготовка"); } },
   { id: "nasledstvo", name: "Наследство прежних баронов", desc: "совет собирали по родству и милости: на трёх должностях из пяти — люди не по годности", apply: (w) => {
     // должности по жребию (генератор мира, до первого хода): на каждую — наименее годный из тех, кто без должности
     // вместе с тем, что уже досталось от прежних баронов при создании партии, — три из пяти

@@ -9,6 +9,7 @@ import { addAuthority, priceOf, authorityWeak } from "../authority";
 import { addTrust } from "../economy/zones";
 import { addRel } from "./people";
 import { PATRON_SIDE } from "./generate";
+import { staffBlock } from "../fall/base";
 
 // Сняли посаженного: покровитель обижен — падает доверие стороны или отношение человека к Сенешалю; по уговору — мягче.
 function offendPatron(w: World, p: Person, post: PostId, agreed: boolean, lines: string[]) {
@@ -59,9 +60,11 @@ function removeCost(p: Person): { cost: number; why: string } {
 }
 
 // Возвращает false, если на перестановку не хватает авторитета: тогда ничего не меняется (остаётся медленный путь — уговорить).
+// Под чужой рукой — ещё и если барон не дал согласия или задет его человек (staffBlock).
 export function assign(w: World, personId: number, post: PostId | null): boolean {
   const p = w.people[personId];
   if (post && w.posts[post] === personId) return true;
+  if (staffBlock(w, p, post)) return false;
   const { cost, why } = assignCost(w, p, post);
   if (cost > w.authority) return false;
   addAuthority(w, -cost, `перестановка: ${why}`, "staff");

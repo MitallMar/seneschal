@@ -11,6 +11,7 @@ import { WEATHER_WORDS } from "../../data/world";
 import { weatherWord } from "../world/gen";
 import { worldModsFor, standOf } from "../world/answer";
 import { orderMods, guardCost, guardHands } from "../order";
+import { courtEats } from "../fall/base";
 
 // ---------- Люди: ёмкость на сезон ----------
 
@@ -122,6 +123,10 @@ export function planSeason(w: World): Plan {
   if (e.feedFirst === "derevni") feed.push(feed.shift()!);
   for (const [side, v, text] of feed) spend("eda", v, text, side);
   if (zoneOf(w, "les") === "отказывают") spend("eda", E.zone.lesHarm, "потравы и твари из леса", "les");
+  // под чужой рукой: двор барона ест из амбара и казны — что найдётся
+  const court = courtEats(w);
+  if (court.eda > 0 && stock.eda > 0) add("eda", -Math.min(stock.eda, court.eda), "стол барона и его свиты");
+  if (court.serebro > 0 && stock.serebro > 0) add("serebro", -Math.min(stock.serebro, court.serebro), "двор барона");
   if (kind === WINTER && stock.eda > 0) {
     const spoil = stock.eda * F.spoil * (1 - courseStrength(w, "stroimsya")) * by("spoil") / klyuch.mult;
     add("eda", -Math.min(stock.eda, spoil), "испорчено за зиму", { who: whoOf(klyuch, "klyuchnik"), how: klyuch.note });

@@ -21,7 +21,7 @@ export function renderDesk() {
   const now = a.cur.length ? `<div class="auth-ledger" id="auth-now"><b>В этом сезоне уже</b>${a.cur.map(authLine).join("")}</div>` : "";
   const weak = authorityWeak(app.w) ? `<p class="weak" id="auth-weak">Авторитет ниже ${B.authority.weakBelow}: слово весит меньше — каждая трата дороже на ${B.authority.weakExtra}.</p>` : "";
   const why = support.lines.map((l) => `${signed(l.v)} ${l.text.replace("опора: ", "")}`).join("; ") || "опоры нет";
-  $("auth").innerHTML = `<div id="auth-line">Авторитет <b>${fmt(app.w.authority)}</b> из ${fmt(authorityCap())} · опора за сезон <b>${signed(support.total) || "0"}</b></div>
+  $("auth").innerHTML = `<div id="auth-line">Авторитет <b>${fmt(app.w.authority)}</b> из ${fmt(authorityCap(app.w))} · опора за сезон <b>${signed(support.total) || "0"}</b></div>
     <p class="hint" id="auth-support">${esc(why)}. Сверх потолка авторитет сгорает, ниже нуля не уходит.</p>${weak}${now}${last}`;
 
   const d = deskView(app.w);

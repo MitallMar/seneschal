@@ -34,6 +34,7 @@ const SEEDS = ["замок", "лес", "герцог", "7", "осень-3", "x",
 function still(): void {
   setAt("world.chance", 0); setAt("world.budget.quiet", 24); setAt("world.weather.spread", 0); setAt("world.weather.heavy", 0);
   setAt("world.strength", 1);   // сила мира в тестах — единица: числа в данных читаются как есть
+  setAt("fall.on", 0);          // кризисы и падение — своя проверка (fall.test.ts): здесь они не мешают указам и весам событий
   setAt("world.answer.gain", 0); setAt("world.decree.extraTerm", 0);
   for (const key of ["villages", "decreeSize", "harvest", "forest"]) setAt(`world.answer.${key}`, 1);
   for (const key of ["termAdd", "villagesFood", "decreeDvor", "termDvor", "harvestSilver", "forestFood"]) setAt(`world.answer.${key}`, 0);

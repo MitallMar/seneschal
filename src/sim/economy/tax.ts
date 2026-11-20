@@ -8,6 +8,7 @@ import type { World } from "../state";
 import { zoneMult, patienceWord } from "./zones";
 import { taxLeft, payTax } from "./pay";
 import { worldModsFor } from "../world/answer";
+import { baronStep } from "../fall/base";
 
 export function lessonOf(year: number): number {
   return year <= B.economy.tax.trialYears ? B.economy.tax.trial : B.economy.tax.normal;
@@ -42,8 +43,17 @@ export function collect(w: World, lines: string[]): void {
     PROBE.autoPaid += auto;
     if (auto) lines.push(`Совет сам закрывает урок, не трогая нижних черт. ${sub.filter((x) => !x.startsWith("Осталось") && !x.startsWith("Урок")).join(" ")}`);
   }
-  const rest = taxLeft(w), closed = rest <= 0;
-  if (closed) {
+  const rest = taxLeft(w), closed = rest <= 0, u = w.fall.under;
+  if (u) {
+    // под чужой рукой подать и терпение Герцога — на бароне: недоимка приближает его падение (путь двора)
+    t.carried = closed ? 0 : round1(rest * (1 + T.arrears));
+    if (closed) lines.push(`📜 Сборщица податей приняла урок: ${t.paid} мер из ${t.due}. Урок закрыл барон ${u.baron.name} — руками Сенешаля.`);
+    else {
+      baronStep(w, "dvor", B.fall.stepArrears);
+      lines.push(`📜 Сборщица податей уехала с недобором: внесено ${t.paid} мер из ${t.due}; недоимка ${t.carried} ляжет на следующий год.`
+        + ` Отвечает барон ${u.baron.name}: Герцог им недоволен, его срок короче на ${B.fall.stepArrears} сез.`);
+    }
+  } else if (closed) {
     t.carried = 0;
     t.patience = round2(clamp(t.patience + (t.early ? T.early : T.onTime), 0, STAR_MAX));
     lines.push(`📜 Сборщица податей приняла урок${t.early ? " — внесён досрочно" : ""}: ${t.paid} мер из ${t.due}. Герцог ${patienceWord(t.patience)}.`);

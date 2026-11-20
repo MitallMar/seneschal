@@ -15,6 +15,7 @@ import { axisKnown } from "../council/know";
 import { addLine } from "../economy/ledger";
 import { standOf, wayOf, wayShare, worldModsFor, type Stand } from "./answer";
 import { HEAVY_YEARS } from "../../data/world";
+import { baronStep } from "../fall/base";
 import { initWorld, worldStep, worldMods, weatherWord, stateDef } from "./gen";
 
 const seasonName = (n: number) => `${SEASON_NAMES[(n - 1) % SEASON_NAMES.length]}, год ${Math.floor((n - 1) / SEASON_NAMES.length) + 1}`;
@@ -88,9 +89,15 @@ function finish(w: World, d: Decree, lines: string[]): void {
     d.closed = d.council > 0 ? "закрыт советом" : "закрыт";
     addTrust(w, "dvor", D.dvorGain);
     lines.push(`📯 Указ «${d.title}» исполнен: ${d.paid} мер из ${d.due}.`);
+  } else if (w.fall.under) {
+    // под чужой рукой за указ отвечает барон: неисполненный указ приближает его падение (путь двора)
+    d.closed = "не закрыт";
+    baronStep(w, "dvor", B.fall.stepDecree);
+    lines.push(`📯 Срок указа «${d.title}» вышел: исполнено ${d.paid} мер из ${d.due}. Отвечает барон ${w.fall.under.baron.name}: его срок короче на ${B.fall.stepDecree} сез.`);
   } else {
     const share = left / d.due;
     d.closed = "не закрыт";
+    if (d.levy) w.fall.levyFailed = true;
     t.patience = round2(clamp(t.patience - D.patience * share, 0, STAR_MAX));
     addTrust(w, "dvor", -D.dvor * share);
     addAuthority(w, -D.authority, `указ не исполнен: «${d.title}»`, "tax");

@@ -11,11 +11,16 @@ import { lower } from "./people";
 import { expWord } from "./know";
 import { competence } from "./decide";
 
+// Какой вариант исполнили последним: по нему кризис стороны узнаёт свой выход. Перед событием сбрасывается.
+export let lastOpt: string | undefined;
+export const resetLastOpt = (): void => { lastOpt = undefined; };
+
 // Последствия варианта. Доверие сторон: derevni — обеим деревням или той, что названа в событии. kazna и pripasy — запасы серебра и еды
 // со строкой в ведомости; ниже нуля запас не опускается, в запись идёт то, что вышло на деле.
 // plus — доля пользы: множитель только к плюсам и к отдаче вложения. Саботаж срывает дело, а цена (минусы, руки) платится целиком.
 export function applyEffects(w: World, ev: GameEvent, opt: EventOption, mult: number, doer: Person | undefined, lines: string[], plus = 1): Partial<Record<Effect, number>> {
   let k = mult;
+  lastOpt = opt.id;
   if (doer) k *= competence(doer);
   if (opt.careful) k *= B.exp.carefulGain;
   let failed = false;

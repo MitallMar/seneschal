@@ -3,7 +3,8 @@ import { test, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import { BALANCE, resetBalance, setAt } from "../src/sim/balance";
 import { newWorld } from "../src/sim/council/generate";
-import { runSeason } from "../src/sim/season";
+import { runSeason, deskView } from "../src/sim/season";
+import { scarOf } from "../src/sim/fall/base";
 import { runEvent } from "../src/sim/council/council";
 import { holder, getRel, isStale, fitness } from "../src/sim/state";
 import { EVENTS } from "../src/data/events";
@@ -18,8 +19,8 @@ import { dump } from "./_world";
 afterEach(() => resetBalance());
 const make = (id: string) => newPreset("заготовка", id);
 
-test("заготовки: десять ситуаций, id не повторяются, каждая детерминирована и играется двенадцать сезонов", () => {
-  assert.equal(PRESETS.length, 10);
+test("заготовки: двенадцать ситуаций, id не повторяются, каждая детерминирована и играется двенадцать сезонов", () => {
+  assert.equal(PRESETS.length, 12);
   assert.equal(new Set(PRESETS.map((p) => p.id)).size, PRESETS.length);
   for (const p of PRESETS) {
     const a = make(p.id), b = make(p.id);
@@ -93,4 +94,16 @@ test("заготовка «Наследство прежних баронов»:
     for (const post of changed) assert.ok(fitness(holder(w, post)!, post) < fitness(holder(plain, post)!, post), `${seed}, ${post}: держатель годен меньше`);
     assert.ok(w.head != null && w.people[w.head].post, "главный — из совета");
   }
+});
+
+test("заготовки падения: кризис в деревне лежит на столе и решается в первый же сезон; под чужой рукой — барон со свитой с первого хода", () => {
+  const k = make("krizis");
+  assert.equal(deskView(k)!.ev.id, "krizis_brod");
+  assert.equal(zoneOf(k, "brod"), "отказывают");
+  runSeason(k);
+  assert.equal(k.fall.crises[0].side, "brod");
+  assert.ok(scarOf(k, "brod"));
+  const u = make("pod_rukoy").fall.under!;
+  assert.ok(u && u.retinue.length >= BALANCE.fall.retinueMin);
+  assert.equal(u.armor, BALANCE.fall.armor);
 });

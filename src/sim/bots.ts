@@ -21,6 +21,8 @@ import { seasonKind } from "./economy/zones";
 import { forecastFork } from "./economy/view";
 import { judge, feast, feastCost, feastsThisYear, authorityCap, complaintLeft, councilSteady, FEASTS } from "./authority";
 import { PROBE, resetProbe, type Probe } from "./probe";
+import { CRISIS_SIDES } from "../data/fall";
+import { stir } from "./fall/under";
 
 const WINTER = 3;
 
@@ -39,6 +41,7 @@ export interface Habit {
   feast: false | "rich" | "after" | "winter";             // пир: когда запас вдвое выше черты; после закрытого урока, если авторитет не у потолка; зимой из остатка
   pay: "council" | "master" | "early" | "silver" | "hands" | "ahead"; // hands — только руками осенью, без автоплаты; ahead — без автоплаты, платит заранее с весны
   guard?: number;   // стража: на сколько ступеней затянута (или распущена) с первого сезона
+  under?: "stir" | "hinder";                               // под чужой рукой: раскачивает стороны против барона; не платит подать и указы барона
   //         // подать: совет сам; сам осенью и совет после жатвы; ещё и летом; только казной
   extra: PayId | null;                                     // чем добирает то, чего не хватит и после жатвы
   floors: "default" | "zero" | "double";
@@ -107,6 +110,8 @@ export const BOTS: Bot[] = [
   y("Х18", "держит твёрдую руку: стража затянута до предела", "сколько стоит строгий край и что он даёт", { guard: 4 }),
   y("Х18б", "держит строгость: стража затянута на одну ступень", "окупается ли умеренная строгость", { guard: 1 }),
   y("Х19", "распустил стражу", "сколько стоит вольный край и что он даёт", { guard: -2 }),
+  y("Х20", "под чужой рукой раскачивает стороны против барона", "путь земли: быстрее ли возвращение и сколько стоит опала", { under: "stir" }),
+  y("Х21", "под чужой рукой не платит подать барона", "путь двора: быстрее ли возвращение и что остаётся от хозяйства", { under: "hinder" }),
   { id: "Н0", name: "«Наследство»: ничего не трогает", level: 4, habit: IDLE, preset: "nasledstvo" },
   { id: "Н1", name: "«Наследство»: Хозяин", level: 4, base: "Н0", asks: "что даёт игра руками, когда старт плохой", habit: MASTER, preset: "nasledstvo" },
   { id: "Н3", name: "«Наследство»: по настоящей годности", level: 4, base: "Н1", asks: "цена незнания людей при плохом старте", habit: { ...MASTER, place: "true" }, preset: "nasledstvo" },
@@ -223,7 +228,7 @@ function deeds(w: World, h: Habit) {
   if (h.feast === "rich") {
     const f = FEASTS.find((q) => w.eco.stock[q.pay] > Math.max(w.eco.floor[q.pay], B.economy.flow.upkeep) * B.bots.feastOver);
     if (f) feast(w, f.id);
-  } else if (h.feast === "after" && taxLeft(w) <= 0 && w.authority <= authorityCap() - B.bots.feastOver && feastsThisYear(w) === 0) {
+  } else if (h.feast === "after" && taxLeft(w) <= 0 && w.authority <= authorityCap(w) - B.bots.feastOver && feastsThisYear(w) === 0) {
     const f = FEASTS.find(spareFor);
     if (f) feast(w, f.id);
   } else if (h.feast === "winter" && seasonKind(w.season) === WINTER && feastsThisYear(w) === 0) {
@@ -258,6 +263,8 @@ function decrees(w: World, h: Habit) {
     payDecree(w, d.id, "tovary", e.stock.tovary / R.tovary);
     if (h.extra) payDecree(w, d.id, h.extra, d.due);
   }
+  // внеочередной сбор — не обычный указ: не закрыть — падение. Плательщик закрывает его сразу и запасом ниже нижних черт
+  for (const d of w.world.decrees.filter((x) => x.levy)) for (const way of ["serebro", "tovary", "eda"] as const) payDecree(w, d.id, way, d.due);
 }
 function pay(w: World, h: Habit) {
   const kind = seasonKind(w.season), autumn = kind === 2;
@@ -292,8 +299,11 @@ function turn(w: World, h: Habit, n: number) {
   if (!h.active) return;
   if (n > 0 && seasonKind(w.season) === 0) { place(w, h.place); chooseHead(w, h.head); }
   if (h.stale !== "keep") removeStale(w, h.stale);
+  // под чужой рукой: путь земли — раскачать сторону, которой до отказа ближе всех; путь двора — подать и указы барона не платить
+  if (h.under === "stir" && w.fall.under) stir(w, CRISIS_SIDES.reduce((a, b) => (w.factions[b] < w.factions[a] ? b : a)));
+  if (h.under === "hinder") w.eco.autoPay = !w.fall.under;
   deeds(w, h);
-  pay(w, h);
+  if (h.under !== "hinder" || !w.fall.under) pay(w, h);
 }
 
 // Бот «Случайный»: на каждое действие — случайный выбор из доступного, своим генератором.

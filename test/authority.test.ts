@@ -89,7 +89,7 @@ test("сезон: опора приходит в авторитет, ведом�
 
 test("потолок: излишек сгорает, и это видно в ведомости", () => {
   const w = calm();
-  assert.equal(authorityCap(), A.cap);
+  assert.equal(authorityCap(w), A.cap);
   w.authority = A.cap - 0.5;
   addAuthority(w, 2, "проба", "feast");
   assert.equal(w.authority, A.cap);
@@ -355,7 +355,7 @@ test("партия с действиями игрока детерминиров
       if (w.auth.complaints[0]) judge(w, w.auth.complaints[0].id);
       if (s === 4) persuade(w, holder(w, "pisar")!.id);
       runSeason(w);
-      assert.ok(w.authority <= authorityCap(), `сезон ${s}: ${w.authority}`);
+      assert.ok(w.authority <= authorityCap(w), `сезон ${s}: ${w.authority}`);
     }
     return w;
   };

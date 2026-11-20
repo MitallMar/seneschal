@@ -288,3 +288,12 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
 .ord-scale span.now { outline: 2px solid var(--ink); }
 .ord-guard { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 13px; }
 .ord-guard button { padding: 2px 10px; font-size: 13px; }
+
+/* Кризисы сторон и «под чужой рукой» (И14) */
+#fall h3 { margin: 10px 0 4px; }
+.crisis { font-size: 13px; padding: 2px 0; }
+.crisis.now { color: var(--bad); }
+.under { border: 1px solid var(--bad); border-radius: 6px; padding: 6px 10px; margin: 8px 0; }
+.under h3 { margin: 0 0 4px; color: var(--bad); }
+.under p { margin: 4px 0; font-size: 13px; }
+.eco-sides .side-crisis { font-size: 12px; color: var(--bad); padding: 0 0 3px; }
