@@ -33,6 +33,7 @@ const SEEDS = ["замок", "лес", "герцог", "7", "осень-3", "x",
 // И без ответа совета: сила держателей и способы почерка проверяются отдельно, остальные тесты считают беду как есть.
 function still(): void {
   setAt("world.chance", 0); setAt("world.budget.quiet", 24); setAt("world.weather.spread", 0); setAt("world.weather.heavy", 0);
+  setAt("world.strength", 1);   // сила мира в тестах — единица: числа в данных читаются как есть
   setAt("world.answer.gain", 0); setAt("world.decree.extraTerm", 0);
   for (const key of ["villages", "decreeSize", "harvest", "forest"]) setAt(`world.answer.${key}`, 1);
   for (const key of ["termAdd", "villagesFood", "decreeDvor", "termDvor", "harvestSilver", "forestFood"]) setAt(`world.answer.${key}`, 0);
@@ -178,7 +179,7 @@ test("хозяйство под миром: недород режет жатву
     if (id) put(w, id);
     return planSeason(w).lines.find((l) => l.text.startsWith(part))!.v;
   };
-  assert.ok(Math.abs(first("voyna_yug", "пошлины") / first(undefined, "пошлины") - 0.8) < 0.02);
+  assert.ok(Math.abs(first("voyna_yug", "пошлины") / first(undefined, "пошлины") - 0.8) < 0.05);   // пошлины за сезон малы и округлены до сотых
   assert.ok(Math.abs(first("tihiy_les", "шкуры") / first(undefined, "шкуры") - 1.25) < 0.02);
   // урок: объявляют зимой с надбавкой войны
   const w = newWorld("хозяйство");
@@ -326,6 +327,7 @@ test("что видит игрок и отчёт ботов: строка «чт
 // Только мир без своей воли: ответ совета оставлен как в игре.
 function quiet(): void {
   setAt("world.chance", 0); setAt("world.budget.quiet", 24); setAt("world.weather.spread", 0); setAt("world.weather.heavy", 0);
+  setAt("world.strength", 1);   // сила мира в тестах — единица: числа в данных читаются как есть
 }
 const native = (post: PostId) => POSTS.find((d) => d.id === post)!.axes;
 const foreign = (post: PostId) => AXES.filter((a) => !native(post).includes(a)).slice(0, 2);
