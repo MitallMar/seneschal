@@ -5,7 +5,7 @@ import type { PayId } from "../../data/types";
 import { BALANCE as B } from "../../sim/balance";
 import type { WorldNews } from "../../sim/state";
 import { worldTape, weatherWord } from "../../sim/world/gen";
-import { worldView, decreeOptions, decreeLeft, payDecree, tagNames } from "../../sim/world/apply";
+import { worldView, decreeOptions, decreeLeft, decreeCouncilCan, payDecree, tagNames } from "../../sim/world/apply";
 import { $, esc } from "../dom";
 import { app, seasonLabel, fmt } from "./app";
 
@@ -19,6 +19,10 @@ function renderDecrees() {
   const list = app.w.world.decrees.map((d) => {
     const left = decreeLeft(d), last = d.until <= app.w.season;
     const what = d.accepts.map((c) => CATEGORY_NAMES[c].toLowerCase()).join(" или ");
+    // предупреждение заранее: по нынешним запасам совет сам указ не закроет — решать игроку
+    const can = decreeCouncilCan(app.w, d), short = can < left;
+    const why = app.w.eco.autoPay ? `сверх нижних черт у него хватает на ${fmt(can)} из ${fmt(left)} мер` : "указы совету не оставлены";
+    const warn = short || !app.w.eco.autoPay ? `<p class="weak decree-warn" data-short="${d.id}">Совет сам этот указ не исполнит: ${why}. Закрыть его — решение Сенешаля.</p>` : "";
     const opts = decreeOptions(app.w, d).map((o) => {
       const m = Math.min(o.max, left), units = fmt(m * o.rate);
       const label = o.blocked ? `${o.def.name}: ${o.blocked}` : `${o.def.name}: ${fmt(m)} мер за ${units} (${CATEGORY_NAMES[o.def.what].toLowerCase()}). Больно ${o.def.hurts}`;
@@ -26,7 +30,7 @@ function renderDecrees() {
     }).join("");
     return `<div class="decree" data-decree-id="${d.id}">
       <b>${esc(d.title)}</b>: осталось <b class="decree-left">${fmt(left)}</b> из ${fmt(d.due)} мер (${what}) · ${last ? "срок — этот сезон" : `срок — ${seasonLabel(d.until)}`}
-      <p class="desk-text">${esc(d.text)}</p><p class="hint decree-note">Встречал ${esc(d.note)}.</p><div class="desk-opts">${opts}</div></div>`;
+      <p class="desk-text">${esc(d.text)}</p><p class="hint decree-note">Встречал ${esc(d.note)}.</p>${warn}<div class="desk-opts">${opts}</div></div>`;
   }).join("");
   const auto = app.w.eco.autoPay ? "совет исполнит его сам в последний сезон срока, не трогая нижних черт" : "совету это не оставлено";
   const D = B.world.decree;

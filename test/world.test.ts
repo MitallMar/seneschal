@@ -20,7 +20,7 @@ import { setFloor, doer } from "../src/sim/economy/doer";
 import { standOf, wayOf, waysOf, softenOf } from "../src/sim/world/answer";
 import { fix } from "./_world";
 import { initWorld, worldStep, worldTape, worldMods, eventWeight, weatherWord, decreeMeasures } from "../src/sim/world/gen";
-import { decreeOptions, payDecree, decreeLeft, worldView } from "../src/sim/world/apply";
+import { decreeOptions, payDecree, decreeLeft, decreeCouncilCan, worldView } from "../src/sim/world/apply";
 import { metricsOf } from "../src/sim/bots-report";
 import { bot, playBot } from "../src/sim/bots";
 
@@ -275,6 +275,8 @@ test("совет исполняет указ сам, как подать: зап
   const y = newWorld("указ");
   setFloor(y, "eda", 50);
   const z = decreeNext(y, "neurozhay", 0);
+  assert.equal(decreeCouncilCan(y, z), 0, "заранее видно: сверх черты совету платить нечем");
+  assert.equal(decreeCouncilCan(w, d), 0, "исполненный указ — закрывать нечего");
   while (y.world.decrees.length) runSeason(y);
   assert.equal(z.closed, "не закрыт");
   assert.equal(z.paid, 0);

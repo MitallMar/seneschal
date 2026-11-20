@@ -131,6 +131,20 @@ function autoPayDecree(w: World, d: Decree, lines: string[]): number {
   return round1(paid);
 }
 
+// Сколько мер указа совет закрыл бы сам прямо сейчас: запасом сверх нижних черт, людей — вольными и рекрутами деревень (стражей — при почерке десятника).
+// Меньше остатка — совет указ не исполнит, и это видно на столе заранее: решать игроку.
+export function decreeCouncilCan(w: World, d: Decree): number {
+  const e = w.eco, R = B.economy.rate, opts = decreeOptions(w, d), max = (way: PayId) => opts.find((o) => o.def.id === way)?.max ?? 0;
+  let can = 0;
+  for (const cat of d.accepts) {
+    if (cat === "eda") can += Math.max(0, (e.stock.eda - e.floor.eda) / R.eda);
+    else if (cat === "serebro") can += Math.max(0, (e.stock.serebro - e.floor.serebro) / R.serebro);
+    else if (cat === "tovary") can += e.stock.tovary / R.tovary;
+    else can += max("volnye") + max("rekruty_brod") + max("rekruty_opushka") + (wayOf(w, "castleRecruits") ? max("rekruty_zamok") : 0);
+  }
+  return round1(Math.min(decreeLeft(d), can));
+}
+
 // Конец сезона: у кого вышел срок — совет закрывает сам (если ему это оставлено), остаток бьёт по терпению Герцога и двору.
 export function decreesDue(w: World, lines: string[]): void {
   if (seasonKind(w.season) === AUTUMN) {

@@ -174,17 +174,17 @@ if (!brief && !onlyPair && idle) {
   }
   console.log(`\n=== Цель 5. Лучший и худший совет: внесено подати, мер за акт (разброс по семенам у «Ничего не трогает» — ${f1(idle.sd.paid)}) ===`);
   console.log(`  ${"обычная партия, совет сам".padEnd(44)} ${f1(idle.mean.paid)}`);
-  const rows: [string, number, number, number][] = [];
+  const rows: [string, number, number, number, number[]][] = [];
   for (const p of r.presets.filter((x) => ["vragi", "novichki", "nasledstvo", "glavny"].includes(x.variant.preset ?? ""))) {
     const d = p.diffs.find((x) => x.id === "paid")!;
-    rows.push([p.variant.name, d.diff, d.se, d.z]);
+    rows.push([p.variant.name, d.diff, d.se, d.z, p.runs.map((x) => x.paid)]);
   }
   for (const id of ["master", "Х3"]) {
     const s = of(id);
     if (!s) continue;
     const d = s.runs.map((x, i) => x.paid - idle.runs[i].paid), m = d.reduce((a, b) => a + b, 0) / d.length;
     const se = Math.sqrt(d.reduce((a, b) => a + (b - m) ** 2, 0) / Math.max(1, d.length - 1) / d.length);
-    rows.push([`«${s.bot.name}»`, m, se, se ? m / se : 0]);
+    rows.push([`«${s.bot.name}»`, m, se, se ? m / se : 0, s.runs.map((x) => x.paid)]);
   }
   rows.sort((a, b) => a[1] - b[1]);
   for (const [name, diff, se] of rows) {
@@ -193,6 +193,13 @@ if (!brief && !onlyPair && idle) {
   if (rows.length > 1) {
     const gap = rows[rows.length - 1][1] - rows[0][1];
     console.log(`  от худшего до лучшего: ${f1(gap)} меры — ${(gap / idle.sd.paid).toFixed(2).replace(".", ",")} разброса по семенам`);
+    // мерка цели 5 (И22): попарно по семенам — тот же мир, разные советы; общий разброс партий в неё не входит
+    const worst = rows[0], best = rows[rows.length - 1];
+    const d = best[4].map((x, i) => x - worst[4][i]), n = d.length, m = d.reduce((a, b) => a + b, 0) / n;
+    const sdev = Math.sqrt(d.reduce((a, b) => a + (b - m) ** 2, 0) / Math.max(1, n - 1)), se = sdev / Math.sqrt(n);
+    const ahead = d.filter((x) => x > 0).length / n, behind = d.filter((x) => x < 0).length / n;
+    console.log(`  попарно по семенам, ${best[0]} против ${worst[0]}: ${m > 0 ? "+" : ""}${f1(m)} ±${f1(2 * se)} меры · ${(se ? m / se : 0).toFixed(1).replace(".", ",")} ошибки`
+      + ` · лучший впереди в ${pct(ahead)} партий, позади в ${pct(behind)} · разброс разницы ${f1(sdev)}`);
   }
   // Мир вокруг (И11а): давление за акт, указы и чем закрыты, плохие по погоде годы
   const W = BALANCE.world, f2 = (v: number) => v.toFixed(2).replace(".", ",");
