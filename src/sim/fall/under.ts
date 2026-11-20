@@ -70,8 +70,9 @@ export function fallNow(w: World, why: string, lines: string[] = []): Under {
   const out = [`Герцог отдал баронство другому: ${why}. Новый барон — ${baron.name}, ${baron.who}; по натуре ${baron.nature.toLowerCase()}.`,
     "Сенешаль остаётся сенешалем: ключи, архивы и хозяйство на нём — без него барон не справится."];
   // свита: кто ещё не приходил; каждый берёт должность, к которой годен больше всего
-  const names = new Set(w.people.map((p) => p.name)), fresh = RETINUE.filter((r) => !names.has(r.name));
+  const fresh = RETINUE.slice(f.retinueUsed);
   const count = Math.min(fresh.length, w.rng.int(F.retinueMin, Math.max(F.retinueMin, F.retinueMax)));
+  f.retinueUsed += count;
   for (const r of fresh.slice(0, count)) {
     const p = stranger(w, r, baron), taken = u.retinue.map((id) => w.people[id].post);
     const post = POSTS.filter((d) => !taken.includes(d.id)).reduce((a, b) => (fitness(p, b.id) > fitness(p, a.id) ? b : a)).id;
@@ -110,17 +111,31 @@ export function fallNow(w: World, why: string, lines: string[] = []): Under {
 // Сколько сезонов Сенешаль уже под чужой рукой (на конец текущего сезона).
 export const underSeasons = (w: World): number => (w.fall.under ? w.season - w.fall.under.since + 1 : 0);
 
-// Барон пал: свита уходит с должностей, согнанные возвращаются, курс снова за Сенешалем. Цена — по тому, сколько длилось и как вернулся.
-export function comeBack(w: World, lines: string[] = []): BackHow {
-  const F = B.fall, f = w.fall, u = f.under!, seasons = underSeasons(w);
-  const own = u.steps.dvor + u.steps.zemlya;
-  const how: BackHow = own >= F.ownSteps && own > 0 ? (u.steps.dvor >= u.steps.zemlya ? "dvor" : "zemlya") : "bronya";
-  const out = [`Барон ${u.baron.name} пал: ${BACK_NAMES[how]}. Под чужой рукой прошло ${seasons} сез.`];
-  for (const id of u.retinue) {
+// Свита уходит вместе с бароном: пришлые всегда в хвосте списка людей, поэтому номера остальных не сдвигаются.
+// Вместе с ними уходит всё, что на них ссылалось: отношения, жалобы, черты с целью, записи у старост.
+function retinueLeaves(w: World, ids: number[]): void {
+  const gone = new Set(ids);
+  for (const id of ids) {
     const p = w.people[id];
-    if (p.post) { w.posts[p.post] = null; p.post = undefined; p.tenure = 0; p.exp = 0; p.order = undefined; }
+    if (p.post) w.posts[p.post] = null;
     if (w.head === id) w.head = null;
   }
+  w.people = w.people.filter((p) => !gone.has(p.id));
+  for (const key of [...w.rel.keys()]) if (key.split("|").some((x) => gone.has(Number(x)))) w.rel.delete(key);
+  w.auth.complaints = w.auth.complaints.filter((c) => !gone.has(c.from) && !gone.has(c.on));
+  w.legacy = w.legacy.filter((l) => l.person == null || !gone.has(l.person));
+  for (const p of w.people) p.gained = p.gained.filter((g) => g.target == null || !gone.has(g.target));
+  for (const el of w.eco.elders) el.rel.length = w.people.length;
+}
+
+// Барон пал: свита уходит с ним, согнанные возвращаются, курс снова за Сенешалем. Цена — по тому, сколько длилось и как вернулся.
+export function comeBack(w: World, lines: string[] = []): BackHow {
+  const F = B.fall, f = w.fall, u = f.under!, seasons = underSeasons(w);
+  // путь земли — заслуга Сенешаля; путь двора — барон не справился сам; иначе его выжил лес
+  const by = (v: number) => v > 0 && v >= F.ownSteps;
+  const how: BackHow = by(u.steps.zemlya) ? "zemlya" : by(u.steps.dvor) ? "dvor" : "bronya";
+  const out = [`Барон ${u.baron.name} пал: ${BACK_NAMES[how]}. Под чужой рукой прошло ${seasons} сез.`];
+  retinueLeaves(w, u.retinue);
   const backNames: string[] = [];
   for (const d of u.displaced) {
     const p = w.people[d.person];
@@ -129,7 +144,7 @@ export function comeBack(w: World, lines: string[] = []): BackHow {
     if (d.legacy) w.legacy.push(d.legacy);
     backNames.push(p.name);
   }
-  if (u.retinue.length) out.push(`Люди барона остались без должностей${backNames.length ? `; на свои места вернулись: ${backNames.join(", ")}` : ""}.`);
+  if (u.retinue.length) out.push(`Люди барона ушли вместе с ним${backNames.length ? `; на свои места вернулись: ${backNames.join(", ")}` : ""}.`);
   // что барон успел сломать: чем дольше, тем дороже
   const ruin = round1(F.ruin * Math.min(seasons, F.ruinMax));
   if (ruin > 0) {
@@ -141,10 +156,10 @@ export function comeBack(w: World, lines: string[] = []): BackHow {
   if (how === "bronya") {
     addAuthority(w, -F.backArmor, "вернулся, дождавшись леса: «тот, за кого лес»", "fall");
     out.push(`Сенешаль ничего не сделал сам: о нём говорят как о том, за кого лес. Авторитет −${F.backArmor}.`);
-  } else {
-    addAuthority(w, F.backOwn, "вернулся своими силами", "fall");
+  } else if (how === "zemlya") {
+    addAuthority(w, F.backOwn, "вернулся своими силами: земля не приняла барона", "fall");
     out.push(`Вернулся своими силами — значит, сильный. Авторитет +${F.backOwn}.`);
-  }
+  } else out.push("Барон не справился сам: заслуги Сенешаля в этом не видят, но и лесу не приписывают.");
   w.eco.tax.patience = Math.max(w.eco.tax.patience, B.economy.tax.waits);
   w.eco.course = null; w.eco.courseSeasons = 0; w.eco.shaky = false;
   out.push("Герцог ждёт. Курс снова задаёт Сенешаль.");

@@ -235,7 +235,7 @@ if (!brief && !onlyPair && idle) {
       + ` · внеочередных сборов ${f2(x.levies)}, не закрыто ${f2(x.levyFailed)}`);
     console.log(`    почему: терпение исчерпано ${pct(x.whyPatience)} · сбор не закрыт ${pct(x.whyLevy)} · недоимка с кризисом ${pct(x.whyArrears)} · два кризиса сразу ${pct(x.whyDouble)}`);
     if (fallen.length) console.log(`    у павших: сезон падения ${f1(avg((q) => q.fallAt))} · под чужой рукой ${f1(avg((q) => q.underSeasons))} сез. до конца партии`
-      + ` · вернулись своими силами ${pct(avg((q) => q.backOwn))}, дождались леса ${pct(avg((q) => q.backArmor))}, ещё под рукой ${pct(avg((q) => q.stillUnder))}`
+      + ` · вернулись своими силами ${pct(avg((q) => q.backOwn))}, барон не справился сам ${pct(avg((q) => q.backDvor))}, дождались леса ${pct(avg((q) => q.backArmor))}, ещё под рукой ${pct(avg((q) => q.stillUnder))}`
       + ` · опал ${f2(avg((q) => q.disgraces))} · авторитет к концу ${f1(avg((q) => q.authority))} · внесено ${f1(avg((q) => q.paid))} мер`);
   }
   if (W.on) {
