@@ -9,7 +9,7 @@ import { newWorld } from "../src/sim/council/generate";
 import { runSeason } from "../src/sim/season";
 import { runEvent } from "../src/sim/council/council";
 import { assign } from "../src/sim/council/staff";
-import { talk, nextTalk } from "../src/sim/council/talk";
+import { talk, nextTalk, linksOf, linksText } from "../src/sim/council/talk";
 import { holder, getRel, setRel, topAxis, type Person, type World } from "../src/sim/state";
 import { axisKnown, axisWord, fitWord, headOpinion, rumorCheck, forecast, traitLabel } from "../src/sim/council/know";
 import { gainTrait, breakdown } from "../src/sim/council/traits";
@@ -21,7 +21,7 @@ const said = (lines: string[], part: string) => lines.some((l) => l.includes(par
 const free = (w: World) => w.people.filter((p) => !p.post);
 const keyTrait = (id: string) => TRAITS.find((t) => t.id === id)!;
 const has = (p: Person, id: string) => p.gained.some((g) => g.trait.id === id);
-const lastLog = (w: World) => w.log.at(-1)!;
+const lastLog = (w: World) => w.log.filter((e) => e.kind !== "info" || e.title !== "Вести").at(-1)!;   // вести мира идут своей записью после итога сезона
 const flat = (p: Person) => { for (const a of AXES) p.star[a] = 5; return p; };
 
 afterEach(() => resetBalance());
@@ -114,10 +114,13 @@ test("разговоры открывают по порядку: стремле�
   assert.deepEqual([p.know.trait, p.know.aspiration, p.know.axes], [true, true, true]);
   assert.ok(said(lastLog(w).lines, `«${p.trait.name}»`));
   runSeason(w);
+  assert.equal(nextTalk(p), "связи");
+  assert.equal(talk(w, p.id), true);
+  assert.ok(p.know.links && said(lastLog(w).lines, "Связи:"));
   assert.equal(nextTalk(p), null);
-  assert.equal(talk(w, p.id), false);
-  assert.equal(w.deedsLeft, BALANCE.season.deeds);
-  assert.equal(p.know.talks, 3);
+  assert.equal(talk(w, p.id), false, "больше говорить не о чем: личное дело не тратится");
+  assert.equal(w.deedsLeft, BALANCE.season.deeds - 1);
+  assert.equal(p.know.talks, 4);
 });
 
 test("слова склонностей переключаются на порогах-ручках", () => {
@@ -144,7 +147,7 @@ test("нажитую до начала партии черту открывае�
   assert.equal(nextTalk(p), "черты", "после стремления и склонностей — нажитая черта");
   talk(w, p.id);
   assert.ok(p.gained[0].known && said(lastLog(w).lines, "Мастер своего дела"));
-  assert.equal(nextTalk(p), null);
+  assert.equal(nextTalk(p), "связи");
 });
 
 // ---------- наблюдение ----------
@@ -193,7 +196,7 @@ test("скрытую черту разговор не открывает", () =>
     assert.equal(talk(w, p.id), true);
     assert.deepEqual([p.know.trait, p.know.traitAsked, p.know.axes], [false, true, true]);
     assert.ok(said(lastLog(w).lines, "выдаст только поступок") && said(lastLog(w).lines, "Склонности:"), "«молчит» — тем же разговором, что склонности: личное дело не пропало");
-    assert.equal(nextTalk(p), null);
+    assert.equal(nextTalk(p), "связи");
   }
 });
 
@@ -204,7 +207,7 @@ test("скрытный, чьё стремление уже известно: п�
   assert.equal(talk(w, p.id), true);
   assert.ok(said(lastLog(w).lines, "выдаст только поступок") && said(lastLog(w).lines, "Склонности:"));
   assert.ok(p.know.axes && !p.know.trait);
-  assert.equal(nextTalk(p), null);
+  assert.equal(nextTalk(p), "связи");
 });
 
 test("скрытая приобретённая черта: сразу не видна, разговор её не открывает, выдаёт поступок", () => {
@@ -221,7 +224,7 @@ test("скрытая приобретённая черта: сразу не ви
     assert.equal(nextTalk(a), "стремление", "разговор о чертах её не предлагает");
     talk(w, a.id); talk(w, a.id);
     assert.equal(a.gained[0].known, false, "разговоры её не открыли");
-    assert.equal(nextTalk(a), null);
+    assert.equal(nextTalk(a), "связи");
     setAt("council.compromiseChance", 0);
     setAt("traits.bypassChance", 1);
     const e = runEvent(w, event("plotina"));
@@ -520,3 +523,27 @@ test("прогон 30 сезонов: черт не больше предела,
     assert.ok(w.log.every((e) => e.lines.every((l) => !/undefined|NaN|[{}]/.test(l))), `${seed}: мусор в летописи`);
   }
 });
+
+test("разговор открывает связи: покровителя, с кем ладит и на кого в обиде — последней темой; в деле их не увидеть", () => {
+  const w = newWorld("замок");
+  const [a, b, c] = w.people.filter((p) => !p.post);
+  setRel(w, a.id, b.id, BALANCE.rel.friendly + 1);
+  setRel(w, a.id, c.id, BALANCE.rel.rival - 1);
+  assert.equal(a.know.links, false);
+  for (let i = 0; i < 12; i++) runSeason(w);
+  assert.equal(a.know.links, false, "вне совета человека в деле не видно: ни склонностей, ни связей");
+  assert.ok(Object.values(a.know.seen).every((v) => v === 0), "кто не решает дела, за тем не наблюдают");
+  setRel(w, a.id, b.id, BALANCE.rel.friendly + 1);
+  setRel(w, a.id, c.id, BALANCE.rel.rival - 1);
+  w.deedsLeft = 9;
+  const topics: string[] = [];
+  while (nextTalk(a)) { topics.push(nextTalk(a)!); talk(w, a.id); }
+  assert.equal(topics.at(-1), "связи");
+  assert.ok(a.know.links && said(lastLog(w).lines, "Связи:") && said(lastLog(w).lines, b.name) && said(lastLog(w).lines, c.name), lastLog(w).lines.join(" | "));
+  const x = linksOf(w, a);
+  assert.ok(x.friends.includes(b) && x.foes.includes(c));
+  // у посаженного прежним бароном виден покровитель
+  const heir = w.legacy.length ? holder(w, w.legacy[0].post)! : undefined;
+  if (heir) assert.ok(linksOf(w, heir).patron && linksText(w, heir).length > 5);
+});
+

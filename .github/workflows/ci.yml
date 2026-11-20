@@ -58,8 +58,10 @@ jobs:
       - name: Прототип в браузере (npm run e2e)
         run: npm run e2e
 
+      # Снимки — не проверка: если их не удалось выгрузить (например, кончилась квота хранилища артефактов), прогон остаётся зелёным.
       - name: Снимки экранов
         if: always()
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: snimki-ekranov

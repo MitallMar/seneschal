@@ -7,7 +7,7 @@ import { STAR_MAX } from "../state";
 import type { World } from "../state";
 import { zoneMult, patienceWord } from "./zones";
 import { taxLeft, payTax } from "./pay";
-import { worldMods } from "../world/gen";
+import { worldModsFor } from "../world/answer";
 
 export function lessonOf(year: number): number {
   return year <= B.economy.tax.trialYears ? B.economy.tax.trial : B.economy.tax.normal;
@@ -16,7 +16,7 @@ export function newTaxYear(w: World): string {
   const t = w.eco.tax;
   t.year++;
   // мир вокруг: война даёт надбавку к уроку, свадьба в доме Герцога — послабление
-  const add = worldMods(w.world.sim).lesson;
+  const add = worldModsFor(w).lesson;
   t.lesson = round1(Math.max(0, lessonOf(t.year) + add));
   t.due = round1(t.lesson + t.carried);
   t.paid = 0; t.early = false; t.by = {};

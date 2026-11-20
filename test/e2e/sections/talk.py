@@ -22,7 +22,7 @@ async def s_talk(br, errs):
     await pg.click(btn)
     st = await status(pg); cards = await pg.evaluate(CARDS); card = me(cards); log = await pg.evaluate(LOG)
     ok('третий разговор открыл ключевую черту', card['traitKnown'] and 'Ключевая черта: «' + card['trait'] + '»' in log, log[:200])
-    ok('рассказывать больше нечего: кнопка говорит об этом', card['talkText'] == 'Всё рассказал' and not card['talk'])
+    ok('осталась последняя тема — связи, но личные дела кончились', card['talkText'] == 'Поговорить: связи' and not card['talk'])
     ok('личные дела кончились: кнопки «Поговорить» выключены у всех', st['deeds'] == 0 and not any(c['talk'] for c in cards), st)
     council = await pg.evaluate(COUNCIL)
     mine = [o['text'] for c in council for o in c['options'] if o['value'] == who['id']]
@@ -42,5 +42,8 @@ async def s_talk(br, errs):
 
     await pg.click('#season')
     st = await status(pg); cards = await pg.evaluate(CARDS)
-    ok('новый сезон вернул три личных дела; с кем не договорили — кнопка снова включена', st['deeds'] == 3
-       and not me(cards)['talk'] and all(c['talk'] for c in cards if c['id'] != who['id']), st)
+    ok('новый сезон вернул три личных дела; с кем не договорили — кнопка снова включена', st['deeds'] == 3 and all(c['talk'] for c in cards), st)
+    await pg.click(btn)
+    card = me(await pg.evaluate(CARDS)); log = await pg.evaluate(LOG)
+    ok('четвёртый разговор открыл связи: строка в летописи и на карточке', 'Связи:' in log and await pg.evaluate(f"()=>!!document.querySelector('.links[data-links=\"{who['id']}\"]')"))
+    ok('рассказывать больше нечего: кнопка говорит об этом', card['talkText'] == 'Всё рассказал' and not card['talk'])
