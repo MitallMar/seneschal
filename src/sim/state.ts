@@ -152,7 +152,7 @@ export interface WorldEcho { state: string; echo: number; at: number; strength: 
 // Весть сезона: что случилось в каком слое. state и echo — откуда она; measures — размер указа в мерах.
 export interface WorldNews {
   season: number; layer: WorldLayer; kind: "start" | "end" | "weather" | "echo" | "decree"; tone: "bad" | "good" | "neutral"; text: string;
-  state?: string; echo?: number; strength?: number; measures?: number;
+  state?: string; echo?: number; strength?: number; measures?: number; term?: number;
 }
 // Генератор мира: своя случайность (от семени партии), от совета не зависит — поэтому ленту можно считать и без партии.
 export interface WorldSim {
@@ -164,12 +164,14 @@ export interface WorldSim {
   lastBad: number;           // в каком сезоне началась последняя беда
   decreeFree: number;        // с какого сезона может прийти следующий указ
   weather: number;           // погода года: множитель урожая
+  heavy: string;             // тяжёлый год: id из HEAVY_YEARS или пусто
   news: WorldNews[];         // вести текущего сезона
 }
 // Указ Герцога: счёт в мерах, как урок подати. council — сколько мер закрыл совет сам; closed — чем кончилось.
 export interface Decree {
   id: number; def: string; state: string; title: string; text: string; accepts: Category[];
   due: number; paid: number; by: Partial<Record<PayId, number>>; council: number;
+  post: PostId; note: string;   // ответственная должность и как её держатель встретил указ — словами
   issued: number; until: number; closed?: "закрыт" | "закрыт советом" | "не закрыт";
 }
 // harvests — множитель урожая каждого прожитого года (погода и состояния мира на осень): по нему отчёты отличают плохие годы.

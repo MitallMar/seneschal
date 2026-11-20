@@ -1,16 +1,20 @@
 // Мир в партии: вести сезона доходят до баронства — местные отголоски бьют по сторонам и запасам, указы ложатся на стол Сенешаля.
 // Сам генератор — gen.ts: он партии не знает. Здесь всё, что меняет партию; указ закрывается теми же способами «чем и с кого», что подать.
-import type { PayId, WorldTag } from "../../data/types";
+import type { PayId, WorldTag, Effect } from "../../data/types";
 import { CATEGORY_NAMES, SEASON_NAMES, VILLAGES } from "../../data/economy";
 import { WORLD_TAG_NAMES, WEATHER_WORDS } from "../../data/world";
 import { BALANCE as B } from "../balance";
 import { clamp, round1, round2 } from "../util";
-import { STAR_MAX } from "../state";
+import { STAR_MAX, postName } from "../state";
 import type { World, Decree } from "../state";
 import { addTrust, patienceWord, seasonKind, AUTUMN } from "../economy/zones";
 import { payOptions, payTax, billLeft, type PayOption } from "../economy/pay";
 import { addAuthority } from "../authority";
 import { applyDirect } from "../council/effects";
+import { axisKnown } from "../council/know";
+import { addLine } from "../economy/ledger";
+import { standOf, wayOf, wayShare, worldModsFor, type Stand } from "./answer";
+import { HEAVY_YEARS } from "../../data/world";
 import { initWorld, worldStep, worldMods, weatherWord, stateDef } from "./gen";
 
 const seasonName = (n: number) => `${SEASON_NAMES[(n - 1) % SEASON_NAMES.length]}, год ${Math.floor((n - 1) / SEASON_NAMES.length) + 1}`;
@@ -20,18 +24,41 @@ function deliver(w: World): void {
   const g = w.world, lines: string[] = [];
   for (const n of g.sim.news) {
     if (n.kind === "decree") {
-      const def = stateDef(n.state!).echoes![n.echo!].decree!;
+      // указ встречает ответственная должность: сильный держатель выторговывает меньше, слабый — получает больше; почерк писаря даёт скидку или отсрочку
+      const echo = stateDef(n.state!).echoes![n.echo!], def = echo.decree!, post = echo.post ?? stateDef(n.state!).post;
+      const stand = standOf(w, post), size = wayOf(w, "decreeSize"), late = wayOf(w, "decreeTerm"), X = B.world.answer;
+      const due = round1(Math.max(X.min, stand.k * wayShare(size, X.decreeSize)) * n.measures!);
+      const term = n.term! + (late ? X.termAdd : 0);
+      if (size) addTrust(w, "dvor", -X.decreeDvor * size.weight);
+      if (late) addTrust(w, "dvor", -X.termDvor * late.weight);
+      const ways = [size, late].filter((x) => x && axisKnown(x.p, x.answer.axis)).map((x) => `${x!.p.name}: «${x!.answer.name}» — ${x!.answer.good}; ${x!.answer.price}`);
+      const note = `${stand.text}${due !== n.measures ? ` (${n.measures} → ${due} мер)` : ""}${ways.length ? `. ${ways.join(". ")}` : ""}`;
       const d: Decree = {
         id: g.nextId++, def: def.id, state: n.state!, title: def.title, text: def.text, accepts: def.accepts,
-        due: n.measures!, paid: 0, by: {}, council: 0, issued: w.season, until: w.season + def.term - 1,
+        due, paid: 0, by: {}, council: 0, post, note, issued: w.season, until: w.season + term - 1,
       };
       g.decrees.push(d);
       const what = d.accepts.map((c) => CATEGORY_NAMES[c].toLowerCase()).join(" или ");
-      lines.push(`📯 ${n.text} ${d.title}: ${d.due} мер (${what}), срок — до конца сезона «${seasonName(d.until)}».`);
+      lines.push(`📯 ${n.text} ${d.title}: ${d.due} мер (${what}), срок — до конца сезона «${seasonName(d.until)}». Встречал ${note}.`);
     } else if (n.kind === "echo") {
-      const def = stateDef(n.state!).echoes![n.echo!];
-      applyDirect(w, def.effects ?? {}, B.world.effect * n.strength! * B.world.strength, `вести: ${def.text.charAt(0).toLowerCase()}${def.text.slice(1)}`, def.village);
-      lines.push(n.text);
+      // местный отголосок: потери умножает сила ответственного; почерк тиуна бережёт деревни, лесничего — смягчает беды леса; прибавки идут как есть
+      const def = stateDef(n.state!).echoes![n.echo!], post = def.post ?? stateDef(n.state!).post, X = B.world.answer;
+      const stand = standOf(w, post), mercy = wayOf(w, "villages"), rites = post === "lesnichiy" ? wayOf(w, "forest") : undefined;
+      const scaled: Partial<Record<Effect, number>> = {};
+      let lost = false, spared = false;
+      for (const [key, v] of Object.entries(def.effects ?? {}) as [Effect, number][]) {
+        const soft = key === "derevni" ? wayShare(mercy, X.villages) : 1;
+        scaled[key] = v < 0 ? v * stand.k * soft * wayShare(rites, X.forest) : v;
+        lost = lost || v < 0;
+        spared = spared || (v < 0 && key === "derevni" && !!mercy);
+      }
+      const text = `вести: ${def.text.charAt(0).toLowerCase()}${def.text.slice(1)}`;
+      applyDirect(w, scaled, B.world.effect * n.strength! * B.world.strength, text, def.village);
+      if (spared) addLine(w, { cat: "eda", v: -X.villagesFood * mercy!.weight, text: "пострадавшим из амбара", who: `${postName(mercy!.p.post!).toLowerCase()} ${mercy!.p.name}` });
+      if (lost && rites) addLine(w, { cat: "eda", v: -X.forestFood * rites.weight, text: "дары лесу", who: `${postName(rites.p.post!).toLowerCase()} ${rites.p.name}` });
+      const ways = [spared ? mercy : undefined, lost ? rites : undefined].filter((x) => x && axisKnown(x.p, x.answer.axis))
+        .map((x) => ` ${x!.p.name}: «${x!.answer.name}» — ${x!.answer.good}; ${x!.answer.price}.`).join("");
+      lines.push(lost ? `${n.text} Отвечал ${stand.text}.${ways}` : n.text);
     } else lines.push(n.text);
   }
   if (lines.length) w.log.push({ season: w.season, kind: "info", title: "Вести", lines });
@@ -95,6 +122,8 @@ function autoPayDecree(w: World, d: Decree, lines: string[]): number {
     else if (cat === "serebro") pay("serebro", (e.stock.serebro - e.floor.serebro) / R.serebro);
     else if (cat === "tovary") pay("tovary", e.stock.tovary / R.tovary);
     else {
+      // почерк десятника по Долгу: людей даёт стража и челядь, деревенских не трогают
+      if (wayOf(w, "castleRecruits")) pay("rekruty_zamok", decreeLeft(d));
       pay("volnye", decreeLeft(d));
       for (const v of [...VILLAGES].sort((a, b) => w.factions[b] - w.factions[a])) pay(v === "brod" ? "rekruty_brod" : "rekruty_opushka", decreeLeft(d));
     }
@@ -104,7 +133,12 @@ function autoPayDecree(w: World, d: Decree, lines: string[]): number {
 
 // Конец сезона: у кого вышел срок — совет закрывает сам (если ему это оставлено), остаток бьёт по терпению Герцога и двору.
 export function decreesDue(w: World, lines: string[]): void {
-  if (seasonKind(w.season) === AUTUMN) w.world.harvests.push(worldMods(w.world.sim).harvest);
+  if (seasonKind(w.season) === AUTUMN) {
+    const raw = worldMods(w.world.sim).harvest, stock = wayOf(w, "harvest");
+    w.world.harvests.push(raw);
+    // «Запас впрок» сработал в худой год — ключник закупал за серебро
+    if (stock && raw < 1) addLine(w, { cat: "serebro", v: -B.world.answer.harvestSilver * stock.weight, text: "запас впрок на худой год", who: `ключник ${stock.p.name}` });
+  }
   for (const d of w.world.decrees.filter((x) => x.until <= w.season)) {
     if (decreeLeft(d) > 0 && w.eco.autoPay) {
       const sub: string[] = [];
@@ -120,18 +154,21 @@ export function decreesDue(w: World, lines: string[]): void {
 
 export interface WorldView {
   weather: string;                                                   // погода года словом
-  states: { id: string; name: string; text: string; tags: WorldTag[]; since: number; until: number; strength: number; bad: boolean }[];
+  states: { id: string; name: string; text: string; tags: WorldTag[]; since: number; until: number; strength: number; bad: boolean; stand?: Stand }[];
+  heavy: string;                                                     // тяжёлый год: «засуха», «градобой» или пусто
+  tiun?: Stand;                                                      // кто отвечает за худую погоду и как справляется
   line: string;                                                      // строка «что в мире»
   mods: ReturnType<typeof worldMods>;
 }
 export function worldView(w: World): WorldView {
-  const ws = w.world.sim, mods = worldMods(ws);
+  const ws = w.world.sim, mods = worldModsFor(w);
   const states = ws.active.map((a) => {
-    const d = stateDef(a.id);
-    return { id: a.id, name: d.name, text: d.text, tags: d.tags, since: a.from, until: a.until, strength: a.strength, bad: d.cost > 0 };
+    const d = stateDef(a.id), bad = d.cost > 0;
+    return { id: a.id, name: d.name, text: d.text, tags: d.tags, since: a.from, until: a.until, strength: a.strength, bad, stand: bad ? standOf(w, d.post) : undefined };
   });
-  const weather = WEATHER_WORDS[weatherWord(mods.harvest)];
+  const heavy = HEAVY_YEARS.find((x) => x.id === ws.heavy)?.name ?? "";
+  const weather = heavy || WEATHER_WORDS[weatherWord(mods.harvest)];
   const names = states.map((s) => s.name.toLowerCase()).join("; ");
-  return { weather, states, mods, line: B.world.on ? `${weather}${names ? `; ${names}` : "; в герцогстве тихо"}` : "тихо" };
+  return { weather, states, mods, heavy, tiun: B.world.on && ws.weather < 1 ? standOf(w, "starosta") : undefined, line: B.world.on ? `${weather}${names ? `; ${names}` : "; в герцогстве тихо"}` : "тихо" };
 }
 export const tagNames = (tags: WorldTag[]): string => tags.map((t) => WORLD_TAG_NAMES[t]).join(", ");

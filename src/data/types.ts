@@ -193,12 +193,18 @@ export interface WorldShift { harvest?: number; price?: number; duty?: number; f
 // Указ: разовое требование Герцога. accepts — чем его можно закрыть (категории способов «чем и с кого»), term — сколько сезонов на это дано.
 export interface DecreeDef { id: string; title: string; text: string; accepts: Category[]; measures: number; term: number }
 // Отголосок: приходит вниз с задержкой после начала состояния. Либо указ (слой баронства), либо местное последствие (слой места).
-export interface EchoDef { delay: [number, number]; text: string; decree?: DecreeDef; effects?: Partial<Record<Effect, number>>; village?: Village }
+// post — чья сфера отвечает за этот отголосок или указ (нет — должность состояния).
+export interface EchoDef { delay: [number, number]; text: string; decree?: DecreeDef; effects?: Partial<Record<Effect, number>>; village?: Village; post?: PostId }
 // Состояние верхнего слоя: длится seasons сезонов. cost — давление: беда стоит бюджета рассказчика, благо (cost ≤ 0) — нет.
 // tags — события совета с такой меткой приходят чаще; mutes — с такой меткой реже.
 export interface WorldStateDef {
   id: string; name: string; text: string; end: string;
+  post: PostId;           // ответственная должность: сила её держателя смягчает или усиливает беду (задача И21)
   tags: WorldTag[]; mutes?: WorldTag[];
   seasons: [number, number]; weight: number; cost: number;
   shift?: WorldShift; echoes?: EchoDef[];
 }
+
+// Способ ответа на беду: почерк ответственной должности (задача И21). kind — что именно он меняет; правила — src/sim/world/answer.ts, числа — world.answer.
+export type AnswerKind = "villages" | "castleRecruits" | "decreeSize" | "decreeTerm" | "harvest" | "forest";
+export interface Answer { post: PostId; axis: Axis; kind: AnswerKind; name: string; good: string; price: string }

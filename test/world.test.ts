@@ -2,6 +2,9 @@
 // детерминизм и независимость от совета, бюджет давления, сдвиги хозяйства, веса событий совета, указы и их цена.
 import { test, afterEach } from "node:test";
 import assert from "node:assert/strict";
+import type { Axis, PostId } from "../src/data/types";
+import { AXES, POSTS } from "../src/data/core";
+import { ANSWERS } from "../src/data/answers";
 import { EVENTS } from "../src/data/events";
 import { PAY, SIDES } from "../src/data/economy";
 import { WORLD_STATES, WORLD_TAGS } from "../src/data/world";
@@ -9,10 +12,13 @@ import { BALANCE, resetBalance, setAt } from "../src/sim/balance";
 import { newWorld } from "../src/sim/council/generate";
 import { runSeason } from "../src/sim/season";
 import { assign } from "../src/sim/council/staff";
+import { holder } from "../src/sim/state";
 import type { World } from "../src/sim/state";
 import { planSeason } from "../src/sim/economy/plan";
 import { payTax, payOptions } from "../src/sim/economy/pay";
-import { setFloor } from "../src/sim/economy/doer";
+import { setFloor, doer } from "../src/sim/economy/doer";
+import { standOf, wayOf, waysOf, softenOf } from "../src/sim/world/answer";
+import { fix } from "./_world";
 import { initWorld, worldStep, worldTape, worldMods, eventWeight, weatherWord, decreeMeasures } from "../src/sim/world/gen";
 import { decreeOptions, payDecree, decreeLeft, worldView } from "../src/sim/world/apply";
 import { metricsOf } from "../src/sim/bots-report";
@@ -24,8 +30,12 @@ const W = BALANCE.world;
 const event = (id: string) => EVENTS.find((e) => e.id === id)!;
 const SEEDS = ["замок", "лес", "герцог", "7", "осень-3", "x", "Ведана", "test"];
 // Мир без своей воли: новых состояний нет, погода ровная — в партии только то, что поставил тест.
+// И без ответа совета: сила держателей и способы почерка проверяются отдельно, остальные тесты считают беду как есть.
 function still(): void {
-  setAt("world.chance", 0); setAt("world.budget.quiet", 24); setAt("world.weather.spread", 0);
+  setAt("world.chance", 0); setAt("world.budget.quiet", 24); setAt("world.weather.spread", 0); setAt("world.weather.heavy", 0);
+  setAt("world.answer.gain", 0); setAt("world.decree.extraTerm", 0);
+  for (const key of ["villages", "decreeSize", "harvest", "forest"]) setAt(`world.answer.${key}`, 1);
+  for (const key of ["termAdd", "villagesFood", "decreeDvor", "termDvor", "harvestSilver", "forestFood"]) setAt(`world.answer.${key}`, 0);
 }
 const put = (w: World, id: string, strength = 1, seasons = 8) => w.world.sim.active.push({ id, from: w.season, until: w.season + seasons, strength });
 // Указ придёт в начале следующего сезона: отголосок echo состояния id.
@@ -124,10 +134,12 @@ test("бюджет давления: беды не идут подряд и не
 
 test("акт: множитель давления к актам 2 и 3 даёт больше бед", () => {
   const isBad = (id: string) => WORLD_STATES.find((s) => s.id === id)!.cost > 0;
-  const count = () => SEEDS.reduce((s, seed) => s + worldTape(seed, 60).flatMap((r) => r.news).filter((n) => n.kind === "start" && isBad(n.state!)).length, 0);
-  const act1 = count();
+  // давление — сумма цен начавшихся бед: при большем бюджете рассказчик берёт беды тяжелее
+  const cost = (id: string) => WORLD_STATES.find((s) => s.id === id)!.cost;
+  const pressure = () => SEEDS.reduce((s, seed) => s + worldTape(seed, 60).flatMap((r) => r.news).filter((n) => n.kind === "start" && isBad(n.state!)).reduce((x, n) => x + cost(n.state!), 0), 0);
+  const act1 = pressure();
   setAt("world.act", 2.5);
-  assert.ok(count() > act1, "при большем множителе акта бед больше");
+  assert.ok(pressure() > act1, "при большем множителе акта давления больше");
 });
 
 test("сдвиги хозяйства: состояние умножает потоки по своей силе, погода — урожай; общая сила и выключатель действуют сразу", () => {
@@ -279,7 +291,7 @@ test("указы не идут подряд: следующий ждёт сро�
   ws.queue.push({ state: "voyna_yug", echo: 0, at: 2, strength: 1 }, { state: "voyna_yug", echo: 1, at: 2, strength: 1 });
   const seasons: number[] = [];
   for (let s = 2; s <= 12; s++) if (worldStep(ws, s).some((n) => n.kind === "decree")) seasons.push(s);
-  assert.deepEqual(seasons, [2, 2 + 2 + W.decree.gap], "второй указ пришёл после срока первого и передышки");
+  assert.deepEqual(seasons, [2, 2 + 2 + W.decree.extraTerm + W.decree.gap], "второй указ пришёл после срока первого и передышки");
 });
 
 test("отголосок места: бьёт по названной деревне и запасу, строка идёт в летопись и ведомость", () => {
@@ -307,4 +319,146 @@ test("что видит игрок и отчёт ботов: строка «чт
   const m = metricsOf(playBot("бот-3", bot("master")));
   for (const id of ["states", "bads", "decrees", "decreesDone", "decreesFailed", "decreeLyudi", "badYears", "closedBad", "shortBad"]) assert.ok(Number.isFinite(m[id]) && m[id] >= 0, id);
   assert.equal(m.badYears + 0, playBot("бот-3", bot("master")).w.world.harvests.filter((h) => h < W.weather.poor).length);
+});
+
+// ---------- Ответ совета на беду (И21) ----------
+
+// Только мир без своей воли: ответ совета оставлен как в игре.
+function quiet(): void {
+  setAt("world.chance", 0); setAt("world.budget.quiet", 24); setAt("world.weather.spread", 0); setAt("world.weather.heavy", 0);
+}
+const native = (post: PostId) => POSTS.find((d) => d.id === post)!.axes;
+const foreign = (post: PostId) => AXES.filter((a) => !native(post).includes(a)).slice(0, 2);
+
+test("ответ на беду: годный держатель смягчает потерю, негодный усиливает, пустая должность — хуже всего", () => {
+  quiet();
+  const A = W.answer;
+  const w = newWorld("ответ");
+  const tiun = fix(holder(w, "starosta")!, native("starosta"));
+  tiun.loyalty = 5;
+  const strong = standOf(w, "starosta");
+  assert.ok(strong.k < 1 && strong.k >= A.min && strong.word === "смягчил" && strong.text.includes(tiun.name), JSON.stringify(strong));
+  fix(tiun, foreign("starosta")); tiun.exp = 0; tiun.loyalty = -5;
+  const weak = standOf(w, "starosta");
+  assert.ok(weak.k > 1 && weak.k <= A.max && weak.word === "усугубил", JSON.stringify(weak));
+  assign(w, tiun.id, null);
+  const none = standOf(w, "starosta");
+  assert.ok(none.k === A.max && none.word === "должность пуста" && none.k >= weak.k);
+  // недород: потеря урожая идёт через тиуна
+  const harvest = (set: (x: World) => void) => { const x = newWorld("ответ"); put(x, "neurozhay"); set(x); return softenOf(x).state(WORLD_STATES.find((s) => s.id === "neurozhay")!, "harvest"); };
+  const good = harvest((x) => { fix(holder(x, "starosta")!, native("starosta")).loyalty = 5; fix(holder(x, "klyuchnik")!, ["dolg"]); });
+  const bad = harvest((x) => { const p = fix(holder(x, "starosta")!, foreign("starosta")); p.exp = 0; p.loyalty = -5; fix(holder(x, "klyuchnik")!, ["dolg"]); });
+  assert.ok(good < 1 && bad > 1, `${good} и ${bad}`);
+  setAt("world.answer.gain", 0);
+  assert.equal(standOf(newWorld("ответ"), "pisar").k, 1, "без ручки силы ответа держатель беду не меняет");
+});
+
+test("ответ на беду доходит до хозяйства и вестей: урожай в недород, размер указа, местный отголосок", () => {
+  quiet();
+  const crop = (strong: boolean) => {
+    const w = newWorld("ответ");
+    const p = fix(holder(w, "starosta")!, strong ? native("starosta") : foreign("starosta"));
+    if (!strong) { p.exp = 0; p.loyalty = -5; } else p.loyalty = 5;
+    fix(holder(w, "klyuchnik")!, ["dolg"]);
+    put(w, "neurozhay");
+    w.season = 3;
+    const plan = planSeason(w), line = plan.lines.find((l) => l.text.startsWith("урожай"))!;
+    return { v: plan.lines.filter((l) => l.text.startsWith("урожай")).reduce((s, l) => s + l.v, 0) / doer(w, "starosta").mult, text: line.text };
+  };
+  const a = crop(true), b = crop(false);
+  assert.ok(a.v > b.v * 1.1, `урожай на единицу силы тиуна: ${a.v} у годного против ${b.v} у негодного`);
+  assert.ok(a.text.includes("смягчил") && b.text.includes("усугубил"), `${a.text} | ${b.text}`);
+  // указ о наборе встречает десятник
+  const due = (strong: boolean) => {
+    const w = newWorld("ответ");
+    const p = fix(holder(w, "desyatnik")!, strong ? native("desyatnik") : foreign("desyatnik"));
+    if (!strong) { p.exp = 0; p.loyalty = -5; } else p.loyalty = 5;
+    fix(holder(w, "pisar")!, ["dolg"]);
+    return decreeNext(w, "voyna_yug", 0);
+  };
+  const easy = due(true), hard = due(false);
+  assert.ok(easy.due < decreeMeasures(2, 1) && hard.due > decreeMeasures(2, 1), `${easy.due} и ${hard.due}`);
+  assert.ok(easy.post === "desyatnik" && easy.note.includes("смягчил") && hard.note.includes("усугубил"));
+  // срок указа: два-три сезона
+  assert.equal(easy.until - easy.issued + 1, 2 + W.decree.extraTerm);
+  for (const s of WORLD_STATES) for (const e of s.echoes ?? []) if (e.decree) assert.ok([2, 3].includes(e.decree.term + W.decree.extraTerm), `${e.decree.id}: срок ${e.decree.term + W.decree.extraTerm}`);
+});
+
+test("способы ответа по почерку: у каждого своя польза и своя цена", () => {
+  quiet();
+  setAt("world.answer.gain", 0);   // сила держателя выключена: видно только способ
+  assert.equal(ANSWERS.length, 6);
+  for (const a of ANSWERS) assert.ok(POSTS.some((d) => d.id === a.post) && AXES.includes(a.axis) && a.name && a.good && a.price, a.kind);
+  const A = W.answer;
+  // ключник с Обычаем: недород бьёт по урожаю слабее, осенью платит серебром
+  const w = newWorld("способ");
+  fix(holder(w, "klyuchnik")!, ["obychai"]);
+  assert.equal(wayOf(w, "harvest")!.weight, 1);
+  assert.equal(waysOf(holder(w, "klyuchnik")!)[0].answer.kind, "harvest");
+  put(w, "neurozhay");
+  assert.equal(softenOf(w).state(WORLD_STATES.find((s) => s.id === "neurozhay")!, "harvest"), A.harvest);
+  fix(holder(w, "klyuchnik")!, ["dolg"]);
+  assert.equal(wayOf(w, "harvest"), undefined);
+  // писарь с Выгодой: указ меньше, двор недоволен; с Обычаем — сезон сверху
+  const decree = (axis: Axis) => {
+    const x = newWorld("способ");
+    fix(holder(x, "pisar")!, [axis]);
+    const dvor = x.factions.dvor;
+    const d = decreeNext(x, "mor", 0);
+    return { d, lost: dvor - x.factions.dvor };
+  };
+  const plain = decree("dolg"), cheap = decree("vygoda"), late = decree("obychai");
+  assert.ok(Math.abs(cheap.d.due - plain.d.due * A.decreeSize) <= 0.1, `${cheap.d.due} против ${plain.d.due}`);
+  assert.ok(cheap.lost > plain.lost + 0.1, "торг с двором стоит его доверия");
+  assert.equal(late.d.until, plain.d.until + A.termAdd);
+  assert.ok(late.lost > plain.lost);
+  // тиун с Заботой: деревня теряет доверия вдвое меньше, пострадавших кормят из амбара
+  const village = (axis: Axis) => {
+    const x = newWorld("способ");
+    fix(holder(x, "starosta")!, [axis]);
+    put(x, "voyna_yug");
+    x.world.sim.queue.push({ state: "voyna_yug", echo: 2, at: x.season + 1, strength: 1 });
+    const brod = x.factions.brod;
+    runSeason(x);
+    return { fed: x.eco.cur.some((l) => l.text === "пострадавшим из амбара"), brod };
+  };
+  const hard = village("dolg"), soft = village("zabota");
+  assert.ok(soft.fed && !hard.fed);
+  // десятник с Долгом: указ о людях совет закрывает стражей и челядью
+  const recruits = (axis: Axis) => {
+    const x = newWorld("способ");
+    fix(holder(x, "desyatnik")!, [axis]);
+    const d = decreeNext(x, "voyna_yug", 0);
+    while (x.world.decrees.length) runSeason(x);
+    return d;
+  };
+  assert.ok((recruits("dolg").by.rekruty_zamok ?? 0) > 0 && !recruits("zabota").by.rekruty_zamok);
+  // лесничий с Обычаем: беды леса мягче
+  const y = newWorld("способ");
+  fix(holder(y, "lesnichiy")!, ["obychai"]);
+  assert.equal(softenOf(y).state(WORLD_STATES.find((s) => s.id === "tvari")!, "forest"), A.forest);
+});
+
+test("погода: редкий тяжёлый год — засуха или градобой, урожай ×0,6–0,7; обычные годы в прежних краях", () => {
+  let heavy = 0, years = 0;
+  for (const seed of [...SEEDS, "а", "б", "в", "г", "д", "е", "ж", "з"]) {
+    const ws = initWorld(seed);
+    for (let s = 1; s <= 160; s++) {
+      if (s > 1) worldStep(ws, s);
+      if ((s - 1) % 4) continue;
+      years++;
+      if (ws.heavy) {
+        heavy++;
+        assert.ok(ws.weather >= W.weather.heavyMin && ws.weather <= W.weather.heavyMax, `${seed}: тяжёлый год ×${ws.weather}`);
+        assert.ok(ws.news.some((n) => n.kind === "weather" && /Засуха|Градобой/.test(n.text)));
+      } else assert.ok(ws.weather >= W.weather.min && ws.weather <= W.weather.max);
+    }
+  }
+  assert.ok(heavy / years > W.weather.heavy / 2 && heavy / years < W.weather.heavy * 2, `тяжёлых лет ${heavy} из ${years}`);
+  setAt("world.weather.heavy", 1);
+  const w = newWorld("замок");
+  assert.ok(["засуха", "градобой"].includes(worldView(w).heavy) && worldView(w).line.startsWith(worldView(w).heavy));
+  assert.ok(worldView(w).tiun, "за худую погоду отвечает тиун");
+  setAt("world.weather.heavy", 0);
+  assert.equal(worldView(newWorld("замок")).heavy, "");
 });

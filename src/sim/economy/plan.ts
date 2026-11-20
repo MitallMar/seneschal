@@ -8,7 +8,8 @@ import type { World, LedgerLine } from "../state";
 import { seasonKind, AUTUMN, WINTER, SUMMER, SPRING, zoneOf, zoneMult } from "./zones";
 import { courseStrength, doer, levers, whoOf } from "./doer";
 import { WEATHER_WORDS } from "../../data/world";
-import { worldMods, weatherWord } from "../world/gen";
+import { weatherWord } from "../world/gen";
+import { worldModsFor, standOf } from "../world/answer";
 
 // ---------- Люди: ёмкость на сезон ----------
 
@@ -59,7 +60,7 @@ export function planSeason(w: World): Plan {
   const L = levers(w), by = (lever: Lever) => Math.max(0, 1 + L[lever] * E.hand.flow);
   const sown = kind === SPRING ? fieldShare : e.sown;
   // мир вокруг: погода года и состояния герцогства сдвигают потоки
-  const M = worldMods(w.world.sim);
+  const M = worldModsFor(w);
 
   // товары, что лежали на складе, уходят купцам
   const seasonPrice = [E.year.priceSpring, E.year.priceSummer, E.year.priceAutumn, E.year.priceWinter][kind];
@@ -97,7 +98,7 @@ export function planSeason(w: World): Plan {
       const crop = F.scale * (F.harvest / VILLAGES.length) * z * tiun.mult * sown * fieldShare * by("harvest") * M.harvest;
       harvest += crop;
       const field = sown < 1 || fieldShare < 1 ? ` (посеяно ${Math.round(sown * 100)}%, сжато ${Math.round(fieldShare * 100)}%)` : "";
-      const sky = M.harvest !== 1 ? `, ${WEATHER_WORDS[weatherWord(M.harvest)]}` : "";
+      const sky = M.harvest !== 1 ? `, ${WEATHER_WORDS[weatherWord(M.harvest)]}${M.harvest < 1 ? `: ${standOf(w, "starosta").text}` : ""}` : "";
       add("eda", crop, `урожай${field}${sky}`, { side: v, who, how: tiun.note });
       add("serebro", F.scale * F.quitrentSilver * share * z * tiun.mult * quit * by("quitrent") * by("quitrentSilver"), "оброк серебром", { side: v, who, how });
       add("tovary", F.scale * F.quitrentGoods * share * z * tiun.mult * quit * by("quitrent"), "оброк товарами", { side: v, who, how });

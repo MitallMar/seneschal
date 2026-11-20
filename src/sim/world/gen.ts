@@ -3,7 +3,7 @@
 // Три слоя: мир и герцогство (состояния на годы), баронство (погода года, указы), место (отголоски; события совета взвешиваются по меткам).
 // Рассказчик держит бюджет давления: беда стоит бюджета, после беды — передышка, а долгой тишины не бывает.
 import type { GameEvent, WorldShift, WorldStateDef } from "../../data/types";
-import { WORLD_STATES, WEATHER_WORDS } from "../../data/world";
+import { WORLD_STATES, WEATHER_WORDS, HEAVY_YEARS } from "../../data/world";
 import { BALANCE as B } from "../balance";
 import { Rng } from "../rng";
 import { clamp, round1, round2 } from "../util";
@@ -16,14 +16,21 @@ const isBad = (d: WorldStateDef) => d.cost > 0;
 // Погода года: множитель урожая, один на год. Тянется весной; состояния мира умножают его уже в worldMods.
 function rollWeather(ws: WorldSim): void {
   const W = B.world.weather;
-  ws.weather = round2(clamp(1 + ws.rng.gauss() * W.spread, W.min, W.max));
+  // редкий тяжёлый год — засуха или градобой; иначе обычный разброс
+  ws.heavy = ws.rng.chance(W.heavy) ? ws.rng.pick(HEAVY_YEARS).id : "";
+  const plain = round2(clamp(1 + ws.rng.gauss() * W.spread, W.min, W.max));
+  ws.weather = ws.heavy ? round2(ws.rng.range(W.heavyMin, W.heavyMax)) : plain;
+  if (ws.heavy) {
+    ws.news.push({ season: ws.season, layer: "baronstvo", kind: "weather", tone: "bad", text: HEAVY_YEARS.find((x) => x.id === ws.heavy)!.text });
+    return;
+  }
   const m = worldMods(ws).harvest, word = weatherWord(m);
   const text = { bad: "Год обещает недород: поля дадут заметно меньше.", poor: "Год обещает быть скудным.", plain: "Год обещает быть обычным.", good: "Год обещает быть урожайным." }[word];
   ws.news.push({ season: ws.season, layer: "baronstvo", kind: "weather", tone: word === "bad" || word === "poor" ? "bad" : word === "good" ? "good" : "neutral", text });
 }
 
 export function initWorld(seed: string): WorldSim {
-  const ws: WorldSim = { rng: new Rng(`${seed}|мир`), season: 1, active: [], queue: [], budget: B.world.budget.start, lastBad: 0, decreeFree: 0, weather: 1, news: [] };
+  const ws: WorldSim = { rng: new Rng(`${seed}|мир`), season: 1, active: [], queue: [], budget: B.world.budget.start, lastBad: 0, decreeFree: 0, weather: 1, heavy: "", news: [] };
   if (B.world.on) rollWeather(ws);
   return ws;
 }
@@ -31,16 +38,24 @@ export function initWorld(seed: string): WorldSim {
 // Сила состояния на деле: своя (разброс при рождении) на общую ручку.
 const power = (a: { strength: number }) => a.strength * B.world.strength;
 
+// Чем совет отвечает на беду: во сколько раз меняется потеря от сдвига состояния (по ключу потока) и от плохой погоды. Без ответа — единицы.
+export interface Soften { state: (d: WorldStateDef, key: keyof WorldShift) => number; weather: number }
 // Что мир сейчас делает с хозяйством: множители потоков и надбавка к уроку подати в мерах.
-export function worldMods(ws: WorldSim): Required<WorldShift> {
+// soft — ответ совета (src/sim/world/answer.ts): он меняет только потери, прибавки идут как есть.
+export function worldMods(ws: WorldSim, soft?: Soften): Required<WorldShift> {
   const out = { harvest: 1, price: 1, duty: 1, forest: 1, lesson: 0 };
   if (!B.world.on) return out;
-  out.harvest = ws.weather;
+  out.harvest = ws.weather < 1 ? 1 - (1 - ws.weather) * (soft?.weather ?? 1) : ws.weather;
   for (const a of ws.active) {
-    const sh = stateDef(a.id).shift;
+    const d = stateDef(a.id), sh = d.shift;
     if (!sh) continue;
-    for (const key of ["harvest", "price", "duty", "forest"] as const) if (sh[key] !== undefined) out[key] *= Math.max(0, 1 + (sh[key]! - 1) * power(a));
-    out.lesson += (sh.lesson ?? 0) * power(a);
+    for (const key of ["harvest", "price", "duty", "forest"] as const) {
+      if (sh[key] === undefined) continue;
+      const loss = sh[key]! < 1 ? soft?.state(d, key) ?? 1 : 1;
+      out[key] *= Math.max(0, 1 + (sh[key]! - 1) * power(a) * loss);
+    }
+    const lesson = (sh.lesson ?? 0) * power(a);
+    out.lesson += lesson > 0 ? lesson * (soft?.state(d, "lesson") ?? 1) : lesson;
   }
   for (const key of ["harvest", "price", "duty", "forest"] as const) out[key] = round2(out[key]);
   out.lesson = round1(out.lesson);
@@ -121,8 +136,9 @@ export function worldStep(ws: WorldSim, season: number): WorldNews[] {
       if (season < ws.decreeFree) { e.at = ws.decreeFree; continue; }
       const measures = decreeMeasures(def.decree.measures, e.strength);
       if (measures > 0) {
-        ws.decreeFree = season + def.decree.term + W.decree.gap;
-        ws.news.push({ season, layer: "baronstvo", kind: "decree", tone: "bad", text: def.text, state: e.state, echo: e.echo, strength: e.strength, measures });
+        const term = def.decree.term + W.decree.extraTerm;
+        ws.decreeFree = season + term + W.decree.gap;
+        ws.news.push({ season, layer: "baronstvo", kind: "decree", tone: "bad", text: def.text, state: e.state, echo: e.echo, strength: e.strength, measures, term });
       }
     } else {
       const sum = Object.values(def.effects ?? {}).reduce((s, v) => s + v!, 0);

@@ -21,7 +21,7 @@ const said = (lines: string[], part: string) => lines.some((l) => l.includes(par
 const free = (w: World) => w.people.filter((p) => !p.post);
 const keyTrait = (id: string) => TRAITS.find((t) => t.id === id)!;
 const has = (p: Person, id: string) => p.gained.some((g) => g.trait.id === id);
-const lastLog = (w: World) => w.log.at(-1)!;
+const lastLog = (w: World) => w.log.filter((e) => e.kind !== "info" || e.title !== "Вести").at(-1)!;   // вести мира идут своей записью после итога сезона
 const flat = (p: Person) => { for (const a of AXES) p.star[a] = 5; return p; };
 
 afterEach(() => resetBalance());
