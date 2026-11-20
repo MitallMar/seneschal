@@ -216,7 +216,7 @@ if (!brief && !onlyPair && idle) {
   }
   // Порядок (И13): где шкала проводит партию и сколько стоит держать её на краю
   console.log("\n=== Порядок: сезонов на каждой ступени за партию и цена краёв ===");
-  for (const id of ["idle", "master", "Х18б", "Х18", "Х22", "Х19"]) {
+  for (const id of ["idle", "master", "Х18б", "Х18", "Х22", "Х23", "Х19"]) {
     const s = of(id);
     if (!s) continue;
     const x = s.mean;
