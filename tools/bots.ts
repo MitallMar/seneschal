@@ -214,6 +214,16 @@ if (!brief && !onlyPair && idle) {
     if (good) console.log(`    плохих по погоде лет ${f2(x.badYears)} из ${years}: уроков закрыто на такой год ${per(x.closedBad, x.badYears)} против ${per(x.closedGood, years - x.badYears)} в прочие;`
       + ` сезонов с недодачей на год ${per(x.shortBad, x.badYears)} против ${per(x.shortGood, years - x.badYears)}`);
   }
+  // Порядок (И13): где шкала проводит партию и сколько стоит держать её на краю
+  console.log("\n=== Порядок: сезонов на каждой ступени за партию и цена краёв ===");
+  for (const id of ["idle", "master", "Х18б", "Х18", "Х19"]) {
+    const s = of(id);
+    if (!s) continue;
+    const x = s.mean;
+    console.log(`  ${s.bot.name.padEnd(58)} смута ${f1(x.stepSmuta)} · вольница ${f1(x.stepVolnitsa)} · тихо ${f1(x.stepTiho)} · строгость ${f1(x.stepStrogost)} · твёрдая рука ${f1(x.stepRuka)}`);
+    console.log(`    ${"".padEnd(56)} на стражу ${f1(x.guardSpent)} серебра · внесено ${f1(x.paid)} мер · все уроки ${pct(x.closedAll)} · недодач ${f1(x.shortages)}`
+      + ` · доверие сторон ${f1(x.trust)} · авторитет ${f1(x.authority)}`);
+  }
   if (W.on) {
     const G = W.goal, bear = idle.mean.closedAll, dec = idle.mean.decrees, mark = (ok: boolean) => (ok ? "в коридоре" : "⚠ мимо");
     console.log(`  Цель: «Ничего не трогает» закрывает все три урока в ${G.bearMin * 100}–${G.bearMax * 100}% партий — ${pct(bear)}, ${mark(bear >= G.bearMin && bear <= G.bearMax)}.`);

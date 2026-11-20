@@ -22,7 +22,7 @@ import common
 from common import SECTIONS, NOW, DIST, SHOTS, CHROME, VIEW, ok
 
 # Разделы в порядке показа (--list): каждый — файл sections/имя.py.
-ORDER = ['base', 'staff', 'talk', 'designer', 'know', 'economy', 'authority', 'emu', 'natura', 'lab', 'world']
+ORDER = ['base', 'staff', 'talk', 'designer', 'know', 'economy', 'authority', 'emu', 'natura', 'lab', 'world', 'order']
 for key in ORDER: importlib.import_module('sections.' + key)
 E2E = Path(__file__).resolve().parent
 
