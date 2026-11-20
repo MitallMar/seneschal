@@ -14,6 +14,7 @@ import { initEconomy } from "../economy/season";
 import { gender, addStar, noAxes } from "./people";
 import { pickDesk } from "../season";
 import { initWorldGame, worldAnnounce } from "../world/apply";
+import { initOrder } from "../order";
 
 export function newWorld(seed: string, labOpen = false): World {
   const rng = new Rng(seed);
@@ -22,7 +23,7 @@ export function newWorld(seed: string, labOpen = false): World {
     posts: { starosta: null, desyatnik: null, klyuchnik: null, pisar: null, lesnichiy: null },
     head: null, labOpen, season: 1,
     factions: Object.fromEntries(SIDES.map((s) => [s, B.economy.start.trust])) as Record<Side, number>,
-    resources: { poryadok: 0 }, eco: undefined as unknown as Economy, auth: initAuthority(), world: undefined as unknown as WorldGame, desk: null,
+    resources: { poryadok: 0 }, order: initOrder(), eco: undefined as unknown as Economy, auth: initAuthority(), world: undefined as unknown as WorldGame, desk: null,
     authority: B.staff.authorityStart, deedsLeft: B.season.deeds, legacy: [], log: [],
   };
 

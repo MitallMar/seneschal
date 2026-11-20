@@ -115,6 +115,7 @@ export interface GameEvent {
   posts: PostId[];        // одна или две сферы
   adventurers?: boolean;  // только когда открыт лабиринт
   village?: Village;      // последствие derevni бьёт только по этой деревне; нет — по обеим
+  strict?: boolean;       // событие строгого края: приходит только при порядке от ступени «Строгость» (ручка order.strictFrom)
   tags: WorldTag[];       // метки мира: при состоянии мира с такой меткой событие приходит чаще, при глушащем её — реже
   options: EventOption[];
 }

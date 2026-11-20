@@ -272,3 +272,19 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
 .stand, .links { font-size: 13px; color: var(--muted); }
 .stand.good { color: var(--good); }
 .stand.bad { color: var(--bad); }
+
+/* Порядок: шкала двумя цветами от нейтральной середины — тёплый край вольность, холодный строгость (не «хорошо ↔ плохо») */
+.eco-order { margin-top: 12px; }
+.ord-names { display: flex; font-size: 12px; color: var(--muted); }
+.ord-names span { text-align: center; }
+.ord-names span.on { color: var(--ink); font-weight: bold; }
+.ord-scale { display: flex; gap: 2px; margin: 2px 0 6px; }
+.ord-scale span { flex: 1; height: 18px; border-radius: 3px; text-align: center; font-size: 12px; line-height: 18px; color: #fff; }
+.ord-smuta { background: #b5651d; }
+.ord-volnitsa { background: #d9a05b; }
+.ord-tiho { background: #cfc6b4; }
+.ord-strogost { background: #7f9bb8; }
+.ord-ruka { background: #3f5f86; }
+.ord-scale span.now { outline: 2px solid var(--ink); }
+.ord-guard { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 13px; }
+.ord-guard button { padding: 2px 10px; font-size: 13px; }

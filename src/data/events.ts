@@ -280,6 +280,39 @@ export const EVENTS: GameEvent[] = [
       { id: "starye", text: "Оставить старые: купцы привыкли", axes: ["obychai", "zabota"], effects: { kuptsy: 1, kazna: -1 }, careful: true },
     ],
   },
+  // --- строгий край порядка (И13): дозор приносит удачи; приходят только со ступени «Строгость» ---
+  {
+    id: "kaznokrad", title: "Пойман казнокрад", tags: ["torg"], strict: true, text: "Дозор взял приказчика с замковым серебром в подкладке.", posts: ["pisar", "desyatnik"],
+    options: [
+      { id: "vernut", text: "Серебро в казну, вора — за ворота", axes: ["dolg"], effects: { kazna: 2, zamok: -1 }, careful: true },
+      { id: "otkup", text: "Простить за полцены: он знает всех купцов", axes: ["vygoda"], effects: { kazna: 1, kuptsy: 1, poryadok: -1 } },
+      { id: "sud", text: "Судить при всём народе", axes: ["obychai", "derzost"], effects: { poryadok: 1, derevni: 1, zamok: -1 }, risky: true },
+    ],
+  },
+  {
+    id: "otravitel", title: "Отравитель скота", tags: ["golod", "vera"], strict: true, text: "Стража нашла, кто травил колодец у выпаса.", posts: ["starosta", "lesnichiy"], village: "opushka",
+    options: [
+      { id: "derevne", text: "Выдать деревне на её суд", axes: ["obychai"], effects: { derevni: 2, poryadok: -1 }, risky: true },
+      { id: "zamok", text: "Судить в замке по закону", axes: ["dolg"], effects: { poryadok: 1, derevni: 1 }, careful: true },
+      { id: "vira", text: "Взять виру серебром и отпустить", axes: ["vygoda"], effects: { kazna: 1, derevni: -1 } },
+    ],
+  },
+  {
+    id: "logovo", title: "Логово с добычей", tags: ["voyna", "torg"], strict: true, text: "Дозор накрыл разбойничье логово: в яме зерно и серебро с обозов.", posts: ["desyatnik", "klyuchnik"],
+    options: [
+      { id: "zamku", text: "Всё найденное — в замок", axes: ["vygoda"], effects: { kazna: 1, pripasy: 2, kuptsy: -1 }, risky: true },
+      { id: "kuptsam", text: "Вернуть купцам их добро", axes: ["dolg"], effects: { kuptsy: 2, kazna: 1 }, careful: true },
+      { id: "derevnyam", text: "Раздать зерно деревням", axes: ["zabota"], effects: { derevni: 2, pripasy: 1 } },
+    ],
+  },
+  {
+    id: "dolzhnik", title: "Беглый должник", tags: ["golod"], strict: true, text: "Под стражей вернулся мужик, сбежавший от долга три года назад.", posts: ["pisar", "starosta"], village: "brod",
+    options: [
+      { id: "vzyskat", text: "Взыскать долг с лихвой", axes: ["vygoda"], effects: { kazna: 2, derevni: -1 }, risky: true },
+      { id: "barshchina", text: "Пусть отработает на барщине", axes: ["dolg", "obychai"], effects: { pripasy: 1, zamok: 1 }, careful: true },
+      { id: "prostit", text: "Простить — пусть пашет", axes: ["zabota"], effects: { derevni: 2 } },
+    ],
+  },
   // --- приключенцы (после открытия лабиринта) ---
   {
     id: "prikl_pyut", title: "Приключенцы гуляют", tags: ["voyna"], text: "Отряд перед спуском третий день пьёт в корчме и задирает местных.", posts: ["desyatnik", "starosta"], adventurers: true,

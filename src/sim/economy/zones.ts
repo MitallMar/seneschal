@@ -3,6 +3,7 @@ import type { Side } from "../../data/types";
 import { BALANCE as B } from "../balance";
 import { clamp, round1 } from "../util";
 import type { World, Zone } from "../state";
+import { orderMods } from "../order";
 
 export const seasonKind = (season: number) => (season - 1) % 4;   // 0 весна, 1 лето, 2 осень, 3 зима
 export const AUTUMN = 2, WINTER = 3, SUMMER = 1, SPRING = 0;
@@ -19,7 +20,10 @@ export function zoneMult(w: World, side: Side): number {
 }
 export function addTrust(w: World, side: Side, d: number): number {
   const max = B.economy.trust.max, was = w.factions[side];
-  w.factions[side] = round1(clamp(was + d, -max, max));
+  // порядок: на вольном краю доверие деревень растёт легче, на строгом — медленнее; при твёрдой руке деревни не выше «ладят»
+  const village = side === "brod" || side === "opushka", O = village && d > 0 ? orderMods(w) : undefined;
+  const top = O?.villageCap ? Math.max(was, Math.floor(B.economy.trust.ally * 10 - 1) / 10) : max;
+  w.factions[side] = round1(clamp(was + d * (O?.villageGain ?? 1), -max, Math.min(max, top)));
   return round1(w.factions[side] - was);
 }
 export function patienceWord(v: number): "благоволит" | "ждёт" | "недоволен" | "на исходе" {

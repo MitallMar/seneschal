@@ -15,8 +15,8 @@ const event = (id: string) => EVENTS.find((e) => e.id === id)!;
 const said = (lines: string[], part: string) => lines.some((l) => l.includes(part));
 const open = (seed = "исходы"): World => { const w = newWorld(seed); w.eco.floor = { eda: 0, serebro: 0 }; w.eco.stock = { eda: 9, tovary: 0, serebro: 9 }; return w; };
 
-test("дела двух сфер: не меньше трети и не больше половины событий без приключенцев", () => {
-  const plain = EVENTS.filter((e) => !e.adventurers), two = plain.filter((e) => e.posts.length === 2);
+test("дела двух сфер: не меньше трети и не больше половины обычных событий (без приключенцев и удач строгого края)", () => {
+  const plain = EVENTS.filter((e) => !e.adventurers && !e.strict), two = plain.filter((e) => e.posts.length === 2);
   assert.ok(two.length / plain.length >= 1 / 3 && two.length / plain.length <= 0.5, `${two.length} из ${plain.length}`);
   const pairs = new Set(two.map((e) => [...e.posts].sort().join("+")));
   assert.equal(pairs.size, 10, "есть дело на каждую пару должностей");

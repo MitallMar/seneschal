@@ -48,7 +48,8 @@ export function axisRows(p: Person): string {
   return AXES.map((a) => {
     const known = axisKnown(p, a);
     const word = known ? axisWord(p.star[a]) : "?";
-    const seen = p.know.seen[a] ? `видели: ${p.know.seen[a]}` : "";
+    // молва на вольном краю громче, на строгом тише: решение в деле может считаться не за единицу
+    const seen = p.know.seen[a] ? `видели: ${String(Number(p.know.seen[a].toFixed(2))).replace(".", ",")}` : "";
     const real = app.designer ? ` <small>${p.star[a].toFixed(1)}</small>` : "";
     return `<div class="axis-row" data-axis="${a}" data-known="${known ? 1 : 0}">
       <span class="axis-name" style="color:${AXIS_COLOR[a]}">${AXIS_NAMES[a]}</span>

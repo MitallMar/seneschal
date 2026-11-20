@@ -10,6 +10,7 @@ import { courseStrength, doer, levers, whoOf } from "./doer";
 import { WEATHER_WORDS } from "../../data/world";
 import { weatherWord } from "../world/gen";
 import { worldModsFor, standOf } from "../world/answer";
+import { orderMods, guardCost, guardHands } from "../order";
 
 // ---------- Люди: ёмкость на сезон ----------
 
@@ -24,7 +25,7 @@ export function handsNow(w: World): Record<HandsFrom, number> {
 // Куда идут руки в этот сезон: поле берёт своё первым (зимой стоит), курс «Строимся» снимает руки с поля.
 export function fieldHands(w: World): { total: number; field: number; free: number; build: number } {
   // почерк: расчистка новых полей и раненые в стычках отнимают руки
-  const lost = Math.min(0, levers(w).hands) * B.economy.hand.hands;
+  const lost = Math.min(0, levers(w).hands) * B.economy.hand.hands - guardHands(w.order.guard);
   const h = handsNow(w), total = round1(Math.max(0, HANDS_FROM.reduce((s, f) => s + h[f], 0) + lost));
   if (seasonKind(w.season) === WINTER) return { total, field: 0, free: total, build: 0 };
   const build = w.eco.course === "stroimsya" ? Math.min(total, B.economy.course.buildHands) : 0;
@@ -61,10 +62,12 @@ export function planSeason(w: World): Plan {
   const sown = kind === SPRING ? fieldShare : e.sown;
   // мир вокруг: погода года и состояния герцогства сдвигают потоки
   const M = worldModsFor(w);
+  // порядок: ступень шкалы двигает пошлины и цену товаров, стража стоит серебра и рук
+  const OM = orderMods(w), guard = guardCost(w.order.guard);
 
   // товары, что лежали на складе, уходят купцам
   const seasonPrice = [E.year.priceSpring, E.year.priceSummer, E.year.priceAutumn, E.year.priceWinter][kind];
-  const price = F.scale * F.price * seasonPrice * zoneMult(w, "kuptsy") * pisar.mult * (1 + courseStrength(w, "torguem")) * by("price") * M.price;
+  const price = F.scale * F.price * seasonPrice * zoneMult(w, "kuptsy") * pisar.mult * (1 + courseStrength(w, "torguem")) * by("price") * M.price * OM.price;
   if (stock.tovary > 0) {
     const sold = stock.tovary, how = pisar.note;
     if (price > 0) {
@@ -75,7 +78,7 @@ export function planSeason(w: World): Plan {
   // пошлины
   const seasonDuty = [E.year.dutySpring, E.year.dutySummer, E.year.dutyAutumn, E.year.dutyWinter][kind];
   const levy = w.season < e.dutyCutUntil ? E.pay.levyDuty : 1;
-  const duties = F.scale * F.duties * seasonDuty * zoneMult(w, "kuptsy") * pisar.mult * (1 + courseStrength(w, "dorogi")) * levy * by("duties") * M.duty;
+  const duties = F.scale * F.duties * seasonDuty * zoneMult(w, "kuptsy") * pisar.mult * (1 + courseStrength(w, "dorogi")) * levy * by("duties") * M.duty * OM.duty;
   const dutyText = `пошлины${levy < 1 ? " (ниже после особого сбора)" : ""}`;
   if (duties > 0) add("serebro", duties, dutyText, { side: "kuptsy", who: whoOf(pisar, "pisar"), how: pisar.note });
   else lines.push({ cat: "serebro", v: 0, text: "пошлин нет: купцы отказывают", side: "kuptsy" });
@@ -111,7 +114,8 @@ export function planSeason(w: World): Plan {
   const purse = L.silver * E.hand.silver;
   if (purse > 0) add("serebro", purse, "дорожный сбор", { side: "kuptsy" });
   if (purse < 0) add("serebro", -Math.min(stock.serebro, -purse), "проценты по старым долгам");
-  spend("serebro", F.salary * (1 + courseStrength(w, "dorogi")) * by("salary"), "жалованье страже и челяди", "zamok");
+  spend("serebro", Math.max(0, F.salary * (1 + courseStrength(w, "dorogi")) * by("salary") + Math.min(0, guard)), `жалованье страже и челяди${guard < 0 ? " (стража распущена)" : ""}`, "zamok");
+  if (guard > 0) spend("serebro", guard, "дозоры: стража затянута", "zamok");
   const upkeep = (kind === WINTER ? F.upkeepWinter : F.upkeep) * by("upkeep");
   const feed: [Side, number, string][] = [["zamok", upkeep * F.castleShare, "прокорм замка"]];
   for (const v of VILLAGES) feed.push([v, (upkeep * (1 - F.castleShare)) / VILLAGES.length, "прокорм работников на барщине"]);
