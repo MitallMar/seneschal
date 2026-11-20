@@ -149,7 +149,8 @@ export function botStats(b: Bot, seeds = B.bots.seeds, seasons = B.bots.seasons,
 }
 
 export interface PairDiff { id: string; diff: number; se: number; z: number; luck: number; own?: boolean }
-export interface PairStats { base: Bot; variant: Bot; n: number; diffs: PairDiff[]; verdict: "пустое" | "слабо" | "расходится"; top: PairDiff[] }
+// runs — партии варианта по семенам: по ним отчёт сравнивает варианты между собой попарно.
+export interface PairStats { base: Bot; variant: Bot; n: number; diffs: PairDiff[]; verdict: "пустое" | "слабо" | "расходится"; top: PairDiff[]; runs: Metrics[] }
 // Пара: разница «партия к партии» на одних семенах. z — разница в стандартных ошибках; luck — разброс базы по семенам.
 // Ни одна метрика не дотянула до B.bots.weak ошибок — решение пустое; до B.bots.strong — расходится слабо.
 export function pairStats(base: BotStats, variant: BotStats, only?: boolean[]): PairStats {
@@ -167,7 +168,7 @@ export function pairStats(base: BotStats, variant: BotStats, only?: boolean[]): 
   // разошедшиеся метрики — по силе: разница в долях разброса базы по семенам
   const force = (d: PairDiff) => (d.luck > 0 ? Math.abs(d.diff) / d.luck : Math.abs(d.diff));
   const top = diffs.filter((d) => Math.abs(d.z) >= B.bots.weak).sort((x, y) => force(y) - force(x));
-  return { base: base.bot, variant: variant.bot, n: idx.length, diffs, verdict, top };
+  return { base: base.bot, variant: variant.bot, n: idx.length, diffs, verdict, top, runs: variant.runs };
 }
 
 export interface BotsReport { seeds: number; seasons: number; lab: boolean; stats: BotStats[]; pairs: PairStats[]; presets: PairStats[] }
