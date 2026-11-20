@@ -43,6 +43,9 @@ export const METRICS: MetricDef[] = [
   { id: "serebro", name: "серебро к концу", digits: 1, group: "хозяйство" },
   { id: "order", name: "порядок к концу: сумма толчков от событий", digits: 1, group: "хозяйство" },
   { id: "orderLevel", name: "шкала порядка к концу (0–15)", digits: 1, group: "хозяйство" },
+  { id: "fell", name: "партий с падением", digits: 0, pct: true, group: "хозяйство" },
+  { id: "underSeasons", name: "сезонов под чужой рукой", digits: 2, group: "хозяйство" },
+  { id: "crises", name: "кризисов сторон за партию", digits: 2, group: "хозяйство" },
   { id: "authority", name: "авторитет к концу", digits: 1, group: "авторитет" },
   { id: "atCap", name: "авторитет у потолка", digits: 0, pct: true, group: "авторитет" },
   { id: "weak", name: "авторитет ниже порога слабого слова", digits: 0, pct: true, group: "авторитет" },
@@ -72,6 +75,17 @@ export const METRICS: MetricDef[] = [
   { id: "stepStrogost", name: "сезонов в «Строгости»", digits: 2, group: "замеры", diag: true },
   { id: "stepRuka", name: "сезонов при «Твёрдой руке»", digits: 2, group: "замеры", diag: true },
   { id: "guardSpent", name: "серебра ушло на затянутую стражу", digits: 2, group: "замеры", diag: true },
+  { id: "fallAt", name: "сезон первого падения (0 — не падал)", digits: 1, group: "замеры", diag: true },
+  { id: "whyPatience", name: "пал: терпение Герцога исчерпано", digits: 0, pct: true, group: "замеры", diag: true },
+  { id: "whyLevy", name: "пал: внеочередной сбор не закрыт", digits: 0, pct: true, group: "замеры", diag: true },
+  { id: "whyArrears", name: "пал: недоимка вместе с кризисом", digits: 0, pct: true, group: "замеры", diag: true },
+  { id: "whyDouble", name: "пал: два кризиса сразу", digits: 0, pct: true, group: "замеры", diag: true },
+  { id: "levies", name: "внеочередных сборов за партию", digits: 2, group: "замеры", diag: true },
+  { id: "levyFailed", name: "…не закрыто", digits: 2, group: "замеры", diag: true },
+  { id: "backOwn", name: "вернулся своими силами", digits: 0, pct: true, group: "замеры", diag: true },
+  { id: "backArmor", name: "вернулся, дождавшись леса", digits: 0, pct: true, group: "замеры", diag: true },
+  { id: "stillUnder", name: "под чужой рукой к концу партии", digits: 0, pct: true, group: "замеры", diag: true },
+  { id: "disgraces", name: "опал за партию", digits: 2, group: "замеры", diag: true },
   { id: "states", name: "состояний мира началось за партию", digits: 1, group: "мир", diag: true },
   { id: "bads", name: "…из них бед", digits: 1, group: "мир", diag: true },
   { id: "decrees", name: "указов за партию", digits: 2, group: "мир", diag: true },
@@ -107,7 +121,10 @@ export function metricsOf(run: BotRun): Metrics {
   for (const p of council) for (const q of council) if (p.id < q.id && getRel(w, p.id, q.id) <= B.rel.enemy) enemies++;
   const years = t.history.length;
   // мир: указы и чем закрыты; плохие по погоде годы — урожай ниже порога «скудный год»
-  const g = w.world, all = [...g.past, ...g.decrees];
+  // внеочередной сбор лежит среди указов, но считается отдельно: это не давление мира, а цена недоимки
+  const g = w.world, every = [...g.past, ...g.decrees], all = every.filter((d) => !d.levy), past = g.past.filter((d) => !d.levy), levies = every.filter((d) => d.levy);
+  const f = w.fall, first = f.falls[0], why = (text: string) => (first?.why.startsWith(text) ? 1 : 0);
+  const under = f.falls.reduce((s, x) => s + ((x.back ?? w.season - 1) - x.season), 0);
   const byCat = (cat: string) => all.reduce((s, d) => s + PAY.filter((p) => p.what === cat).reduce((x, p) => x + (d.by[p.id] ?? 0), 0), 0);
   const bad = g.harvests.map((h) => h < B.world.weather.poor);
   const inYears = (isBad: boolean, f: (y: number) => number) => bad.reduce((s, b, y) => s + (b === isBad ? f(y) : 0), 0);
@@ -123,7 +140,7 @@ export function metricsOf(run: BotRun): Metrics {
     paid: t.history.reduce((s, y) => s + y.paid, 0), carried: t.carried, shortages: w.eco.shortages, patience: t.patience,
     edge: patienceWord(t.patience) === "на исходе" ? 1 : 0, trust: mean(SIDES.map((s) => w.factions[s])),
     refuse: SIDES.filter((s) => zoneOf(w, s) === "отказывают").length, eda: w.eco.stock.eda, serebro: w.eco.stock.serebro, order: w.resources.poryadok,
-    authority: w.authority, atCap: w.authority >= authorityCap() ? 1 : 0, weak: w.authority < B.authority.weakBelow ? 1 : 0,
+    authority: w.authority, atCap: w.authority >= authorityCap(w) ? 1 : 0, weak: w.authority < B.authority.weakBelow ? 1 : 0,
     orderFit: run.probe.order.fit, orderWorked: run.probe.order.worked, orderAlready: run.probe.order.already,
     orderDeaf: run.probe.order.deaf, orderWeak: run.probe.order.weak, autoPaid: run.probe.autoPaid, aspAt: run.aspAt,
     year1: t.history[0]?.closed ? 1 : 0, year2: t.history[1]?.closed ? 1 : 0, year3: t.history[2]?.closed ? 1 : 0,
@@ -133,8 +150,13 @@ export function metricsOf(run: BotRun): Metrics {
     talkedOut: w.people.filter((p) => !p.post && p.know.talks > 0).length, linksKnown: w.people.filter((p) => p.know.links).length,
     orderLevel: w.order.level, guardSpent: w.order.spent,
     stepSmuta: inStep("smuta"), stepVolnitsa: inStep("volnitsa"), stepTiho: inStep("tiho"), stepStrogost: inStep("strogost"), stepRuka: inStep("ruka"),
-    decrees: all.length, decreesDone: g.past.filter((d) => d.closed !== "не закрыт").length,
-    decreesCouncil: g.past.filter((d) => d.closed === "закрыт советом").length, decreesFailed: g.past.filter((d) => d.closed === "не закрыт").length,
+    decrees: all.length, decreesDone: past.filter((d) => d.closed !== "не закрыт").length,
+    decreesCouncil: past.filter((d) => d.closed === "закрыт советом").length, decreesFailed: past.filter((d) => d.closed === "не закрыт").length,
+    fell: first ? 1 : 0, underSeasons: under, crises: f.crises.length, fallAt: first?.season ?? 0,
+    whyPatience: why("терпение"), whyLevy: why("внеочередной"), whyArrears: why("недоимка"), whyDouble: why("два кризиса"),
+    levies: levies.length, levyFailed: levies.filter((d) => d.closed === "не закрыт").length,
+    backOwn: f.falls.some((x) => x.how === "dvor" || x.how === "zemlya") ? 1 : 0, backArmor: f.falls.some((x) => x.how === "bronya") ? 1 : 0,
+    stillUnder: f.under ? 1 : 0, disgraces: w.log.filter((e) => e.title === "Против барона" && e.lines.some((l) => l.startsWith("⚠"))).length,
     decreeLyudi: byCat("lyudi"), decreeEda: byCat("eda"), decreeSerebro: byCat("serebro"), decreeTovary: byCat("tovary"),
     badYears: bad.filter(Boolean).length,
     closedBad: inYears(true, (y) => (t.history[y]?.closed ? 1 : 0)), closedGood: inYears(false, (y) => (t.history[y]?.closed ? 1 : 0)),

@@ -57,7 +57,7 @@ function printBot(s: BotStats, ids: string[]) {
   }
 }
 const ALL = METRICS.filter((m) => !m.diag).map((m) => m.id);
-const KEY = ["leadOwn", "leadForeign", "disputes", "hostile", "complaints", "calm", "closed", "closedAll", "shortages", "patience", "refuse", "authority", "atCap", "spent", "burned"];
+const KEY = ["leadOwn", "leadForeign", "disputes", "hostile", "complaints", "calm", "closed", "closedAll", "shortages", "patience", "refuse", "fell", "authority", "atCap", "spent", "burned"];
 
 console.log(`Боты: ${r.seeds} семян × ${r.seasons} сезонов, лабиринт ${r.lab ? "открыт" : "закрыт"}. Пары сравниваются по семенам попарно.`);
 console.log(`Пара «пустая», если ни одна метрика не разошлась больше чем на ${BALANCE.bots.weak} стандартные ошибки; «слабо» — меньше ${BALANCE.bots.strong}.\n`);
@@ -223,6 +223,20 @@ if (!brief && !onlyPair && idle) {
     console.log(`  ${s.bot.name.padEnd(58)} смута ${f1(x.stepSmuta)} · вольница ${f1(x.stepVolnitsa)} · тихо ${f1(x.stepTiho)} · строгость ${f1(x.stepStrogost)} · твёрдая рука ${f1(x.stepRuka)}`);
     console.log(`    ${"".padEnd(56)} на стражу ${f1(x.guardSpent)} серебра · внесено ${f1(x.paid)} мер · все уроки ${pct(x.closedAll)} · недодач ${f1(x.shortages)}`
       + ` · доверие сторон ${f1(x.trust)} · авторитет ${f1(x.authority)}`);
+  }
+  // Кризисы и падение (И14): как часто, когда и почему баронство отдают другому, сколько длится «под чужой рукой» и как возвращаются
+  console.log(`\n=== Кризисы и падение: ${BALANCE.fall.on ? `партия ${r.seasons} сезонов, броня ${BALANCE.fall.armor}` : "выключены"} ===`);
+  for (const id of ["idle", "master", "Х20", "Х21"]) {
+    const s = of(id);
+    if (!s) continue;
+    const x = s.mean, fallen = s.runs.filter((q) => q.fell), n = Math.max(1, fallen.length), avg = (f: (q: typeof x) => number) => fallen.reduce((a, q) => a + f(q), 0) / n;
+    const byYear = [1, 2, 3].map((y) => fallen.filter((q) => Math.ceil(q.fallAt / 4) === y).length / s.runs.length);
+    console.log(`  ${s.bot.name}: пало ${pct(x.fell)} партий (год 1 — ${pct(byYear[0])}, год 2 — ${pct(byYear[1])}, год 3 — ${pct(byYear[2])}) · кризисов сторон ${f2(x.crises)} за партию`
+      + ` · внеочередных сборов ${f2(x.levies)}, не закрыто ${f2(x.levyFailed)}`);
+    console.log(`    почему: терпение исчерпано ${pct(x.whyPatience)} · сбор не закрыт ${pct(x.whyLevy)} · недоимка с кризисом ${pct(x.whyArrears)} · два кризиса сразу ${pct(x.whyDouble)}`);
+    if (fallen.length) console.log(`    у павших: сезон падения ${f1(avg((q) => q.fallAt))} · под чужой рукой ${f1(avg((q) => q.underSeasons))} сез. до конца партии`
+      + ` · вернулись своими силами ${pct(avg((q) => q.backOwn))}, дождались леса ${pct(avg((q) => q.backArmor))}, ещё под рукой ${pct(avg((q) => q.stillUnder))}`
+      + ` · опал ${f2(avg((q) => q.disgraces))} · авторитет к концу ${f1(avg((q) => q.authority))} · внесено ${f1(avg((q) => q.paid))} мер`);
   }
   if (W.on) {
     const G = W.goal, bear = idle.mean.closedAll, dec = idle.mean.decrees, mark = (ok: boolean) => (ok ? "в коридоре" : "⚠ мимо");

@@ -28,9 +28,10 @@ function renderDecrees() {
       const label = o.blocked ? `${o.def.name}: ${o.blocked}` : `${o.def.name}: ${fmt(m)} мер за ${units} (${CATEGORY_NAMES[o.def.what].toLowerCase()}). Больно ${o.def.hurts}`;
       return `<button data-decree="${d.id}" data-way="${o.def.id}" data-max="${m}" ${m <= 0 ? "disabled" : ""}>${esc(label)}</button>`;
     }).join("");
+    const levy = d.levy ? `<p class="weak decree-levy" data-levy="${d.id}">Внеочередной сбор: не закрыть к сроку — баронство отдадут другому.</p>` : "";
     return `<div class="decree" data-decree-id="${d.id}">
       <b>${esc(d.title)}</b>: осталось <b class="decree-left">${fmt(left)}</b> из ${fmt(d.due)} мер (${what}) · ${last ? "срок — этот сезон" : `срок — ${seasonLabel(d.until)}`}
-      <p class="desk-text">${esc(d.text)}</p><p class="hint decree-note">Встречал ${esc(d.note)}.</p>${warn}<div class="desk-opts">${opts}</div></div>`;
+      <p class="desk-text">${esc(d.text)}</p><p class="hint decree-note">Встречал ${esc(d.note)}.</p>${levy}${warn}<div class="desk-opts">${opts}</div></div>`;
   }).join("");
   const auto = app.w.eco.autoPay ? "совет исполнит его сам в последний сезон срока, не трогая нижних черт" : "совету это не оставлено";
   const D = B.world.decree;

@@ -59,7 +59,7 @@ export function economyMetrics(seeds: number, seasons: number, payer: Bot = PAYE
     carried: round2(mean(worlds.map((w) => w.eco.tax.carried))),
     authority: {
       mean: round2(mean(worlds.map((w) => w.authority))), min: Math.min(...worlds.map((w) => w.authority)), max: Math.max(...worlds.map((w) => w.authority)),
-      atCap: share((w) => w.authority >= authorityCap()), low: share((w) => w.authority <= B.staff.authorityStart / 2),
+      atCap: share((w) => w.authority >= authorityCap(w)), low: share((w) => w.authority <= B.staff.authorityStart / 2),
       by: Object.fromEntries(KINDS.map((k) => [k, round2(mean(worlds.map((w) => w.auth.totals[k])))])) as Record<AuthKind, number>,
     },
   };

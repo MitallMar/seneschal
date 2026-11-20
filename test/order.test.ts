@@ -24,6 +24,7 @@ const O = BALANCE.order;
 // Десятник без уклона: норму двигают только стража и курс.
 function level(seed = "порядок"): World {
   setAt("world.on", 0);
+  setAt("fall.on", 0);   // кризисы и падение — своя проверка (fall.test.ts)
   const w = newWorld(seed);
   fix(holder(w, "desyatnik")!, ["vygoda"]);
   return w;

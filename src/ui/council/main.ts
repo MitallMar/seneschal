@@ -12,6 +12,7 @@ import { renderPeople } from "./view-people";
 import { renderLog, renderStatus } from "./view-log";
 import { renderWorld } from "./view-world";
 import { renderOrder } from "./view-order";
+import { renderFall } from "./view-fall";
 import { knobId, sets, active, changedKnobs, renderKnobs, setKnob, switchSet, dumpKnobs, toggleKnobs } from "./emu";
 
 function start() {
@@ -40,6 +41,7 @@ const seasons = (n: number) => { for (let i = 0; i < n; i++) runSeason(app.w); r
 function render() {
   renderStatus();
   renderDesk();
+  renderFall();
   renderWorld();
   renderOrder();
   renderCouncil();

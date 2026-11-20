@@ -52,7 +52,8 @@ async def s_know(br, errs):
     ok('за четыре с лишним года люди нажили черты: метки на карточках, записи в летописи и биографии', len(grown) >= 2 and '✦ Новая черта:' in log
        and all(c['bio'] >= 6 + len(c['gained']) for c in grown), [(c['name'], c['gained'], c['bio']) for c in cards])
     ok('приобретённых черт у человека не больше трёх, должностные не в счёт', all(len([g for g in c['gained'] if g not in POST_TRAITS]) <= 3 for c in cards))
-    ok('должностные черты — только у тех, кто на должности', all(c['onPost'] for c in cards if any(g in POST_TRAITS for g in c['gained'])),
+    # согнанные свитой барона носят должностную черту ещё пару сезонов, как любой снятый: после падения проверка не о них
+    ok('должностные черты — только у тех, кто на должности', 'Падение: под чужой рукой' in log or all(c['onPost'] for c in cards if any(g in POST_TRAITS for g in c['gained'])),
        [(c['name'], c['gained']) for c in cards if not c['onPost']])
     ok('мусора в летописи нет', not re.search(r'undefined|NaN|\{|\}', log))
     await pg.check('#designer')

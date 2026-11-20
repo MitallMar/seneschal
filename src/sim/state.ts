@@ -1,6 +1,7 @@
 // Состояние партии и чтение из него: типы World, Person и всего, что в них лежит (хозяйство, авторитет), шкалы и простые вопросы к состоянию.
 // Правил здесь нет: совет, хозяйство и авторитет берут состояние отсюда и не тянут ради него друг друга.
 import type { Axis, Star, PostId, Side, Village, Stock, Category, HandsFrom, CourseId, PayId, Effect, Trait, Mark, AspirationDef, WorldLayer } from "../data/types";
+import type { FallPath, BackHow } from "../data/fall";
 import { AXES, POSTS } from "../data/core";
 import { BALANCE as B } from "./balance";
 import type { Rng } from "./rng";
@@ -90,6 +91,7 @@ export interface World {
   eco: Economy;                            // хозяйство и подать: запасы, курс, ведомость, урок
   auth: AuthState;                         // авторитет: ведомость, жалобы на столе, пиры
   world: WorldGame;                        // мир вокруг: состояния верхнего слоя, погода года, указы Герцога
+  fall: FallState;                         // кризисы сторон и падение «под чужой рукой»
   desk: Desk | null;                       // дело на столе: событие будущего сезона, по которому Сенешаль может отдать приказ
   authority: number;
   deedsLeft: number;
@@ -182,13 +184,37 @@ export interface Decree {
   due: number; paid: number; by: Partial<Record<PayId, number>>; council: number;
   post: PostId; note: string;   // ответственная должность и как её держатель встретил указ — словами
   issued: number; until: number; closed?: "закрыт" | "закрыт советом" | "не закрыт";
+  levy?: boolean;               // внеочередной сбор: не закрыт к сроку — падение
 }
 // harvests — множитель урожая каждого прожитого года (погода и состояния мира на осень): по нему отчёты отличают плохие годы.
 export interface WorldGame { sim: WorldSim; decrees: Decree[]; past: Decree[]; nextId: number; harvests: number[] }
 
+// ---------- Кризисы сторон и падение ----------
+
+// Кризис стороны: когда случился, каким выходом кончился (пусто — делом никто не занялся), до какого сезона (не включая) держится шрам.
+export interface Crisis { side: Side; season: number; exit: string; scarUntil: number; under: boolean }
+// Новый барон: своя натура и звезда — по ней он выбирает курс. def — id из BARONS.
+export interface Baron { def: string; name: string; female: boolean; age: number; who: string; nature: string; star: Star }
+// Человек, которого свита барона согнала с должности: вернётся на неё, когда барон падёт.
+export interface Displaced { person: number; post: PostId; tenure: number; exp: number; legacy?: Legacy }
+// Под чужой рукой. armor — броня: сколько сезонов барон ещё продержится; steps — сколько брони сняли пути двора и земли;
+// consent — в каком сезоне барон дал согласие на перестановки; jump — акт кончился, остаток заберёт прыжок.
+export interface Under {
+  since: number; why: string; baron: Baron; armor: number; steps: Record<FallPath, number>;
+  retinue: number[]; displaced: Displaced[]; consent: number; jump: boolean;
+}
+// Одно падение: когда и почему; back — в каком сезоне вернулся и как пал барон.
+export interface FallRecord { season: number; why: string; back?: number; how?: BackHow }
+// refuse — сколько сезонов подряд сторона «отказывает»; queue — кризисы, что ждут своего сезона (первый ляжет на стол Сенешаля);
+// levyAt — когда объявляли последний внеочередной сбор; levyFailed — сбор не закрыт к сроку; disgrace — до какого сезона (включая) длится опала.
+export interface FallState {
+  refuse: Partial<Record<Side, number>>; queue: Side[]; crises: Crisis[];
+  levyAt: number; levyFailed: boolean; under: Under | null; falls: FallRecord[]; disgrace: number;
+}
+
 // ---------- Авторитет ----------
 
-export type AuthKind = "support" | "tax" | "judge" | "complaint" | "feast" | "order" | "staff" | "burn";
+export type AuthKind = "support" | "tax" | "judge" | "complaint" | "feast" | "order" | "staff" | "burn" | "fall";
 export interface AuthLine { v: number; text: string; kind: AuthKind }
 // Жалоба — дело на столе Сенешаля: from жалуется на on. Ждёт год; не разобрал — авторитет падает, жалоба уходит.
 export interface Complaint { id: number; from: number; on: number; season: number }

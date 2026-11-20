@@ -2,6 +2,7 @@
 import { FACTION_NAMES, RESOURCE_NAMES } from "../../data/core";
 import type { Effect } from "../../data/types";
 import { authorityCap } from "../../sim/authority";
+import { disgraced } from "../../sim/fall/base";
 import { $, esc } from "../dom";
 import { app, seasonLabel } from "./app";
 
@@ -29,5 +30,7 @@ export function renderLog() {
 }
 
 export function renderStatus() {
-  $("status").innerHTML = `Сейчас: <b>${seasonLabel(app.w.season)}</b> · Авторитет: <b>${app.w.authority}</b> · Личных дел: <b>${app.w.deedsLeft}</b> · Потолок авторитета: ${authorityCap()}`;
+  const u = app.w.fall.under, out = disgraced(app.w) ? ", опала" : "";
+  const under = u ? ` · <b id="status-under">Под чужой рукой: барон ${esc(u.baron.name)}${out}</b>` : "";
+  $("status").innerHTML = `Сейчас: <b>${seasonLabel(app.w.season)}</b> · Авторитет: <b>${app.w.authority}</b> · Личных дел: <b>${app.w.deedsLeft}</b> · Потолок авторитета: ${authorityCap(app.w)}${under}`;
 }
