@@ -1,5 +1,6 @@
 // Стороны и зоны: слово и множитель потока по доверию стороны, терпение Герцога словом, время года.
-import type { Side } from "../../data/types";
+import type { Side, Village } from "../../data/types";
+import { VILLAGES } from "../../data/economy";
 import { BALANCE as B } from "../balance";
 import { clamp, round1 } from "../util";
 import type { World, Zone } from "../state";
@@ -27,6 +28,12 @@ export function addTrust(w: World, side: Side, d: number): number {
   const top = O?.villageCap ? Math.max(was, Math.floor(B.economy.trust.ally * 10 - 1) / 10) : max;
   w.factions[side] = round1(clamp(was + d * (O?.villageGain ?? 1), -max, Math.min(max, top)));
   return round1(w.factions[side] - was);
+}
+// Последствие «деревни» из события, вложения или вестей: названной деревне — целиком, общее — каждой из двух её долю (ручка trust.both).
+export function addVillages(w: World, v: number, village?: Village): void {
+  const T = B.economy.trust;
+  if (village) addTrust(w, village, v * T.event);
+  else for (const side of VILLAGES) addTrust(w, side, v * T.event * T.both);
 }
 export function patienceWord(v: number): "благоволит" | "ждёт" | "недоволен" | "на исходе" {
   const T = B.economy.tax;

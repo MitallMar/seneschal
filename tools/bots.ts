@@ -216,13 +216,13 @@ if (!brief && !onlyPair && idle) {
   }
   // Порядок (И13): где шкала проводит партию и сколько стоит держать её на краю
   console.log("\n=== Порядок: сезонов на каждой ступени за партию и цена краёв ===");
-  for (const id of ["idle", "master", "Х18б", "Х18", "Х19"]) {
+  for (const id of ["idle", "master", "Х18б", "Х18", "Х22", "Х19"]) {
     const s = of(id);
     if (!s) continue;
     const x = s.mean;
     console.log(`  ${s.bot.name.padEnd(58)} смута ${f1(x.stepSmuta)} · вольница ${f1(x.stepVolnitsa)} · тихо ${f1(x.stepTiho)} · строгость ${f1(x.stepStrogost)} · твёрдая рука ${f1(x.stepRuka)}`);
     console.log(`    ${"".padEnd(56)} на стражу ${f1(x.guardSpent)} серебра · внесено ${f1(x.paid)} мер · все уроки ${pct(x.closedAll)} · недодач ${f1(x.shortages)}`
-      + ` · доверие сторон ${f1(x.trust)} · авторитет ${f1(x.authority)}`);
+      + ` · доверие сторон ${f1(x.trust)} · авторитет ${f1(x.authority)} · гниль всплыла ${f2(x.rots)} раз · серебро к концу ${f1(x.serebro)}`);
   }
   // Кризисы и падение (И14): как часто, когда и почему баронство отдают другому, сколько длится «под чужой рукой» и как возвращаются
   console.log(`\n=== Кризисы и падение: ${BALANCE.fall.on ? `партия ${r.seasons} сезонов, броня ${BALANCE.fall.armor}` : "выключены"} ===`);
