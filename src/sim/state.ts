@@ -210,6 +210,7 @@ export interface FallRecord { season: number; why: string; back?: number; how?: 
 export interface FallState {
   refuse: Partial<Record<Side, number>>; queue: Side[]; crises: Crisis[];
   levyAt: number; levyFailed: boolean; under: Under | null; falls: FallRecord[]; disgrace: number;
+  retinueUsed: number;   // сколько людей из заготовленной свиты уже приходило: второй барон приводит других
 }
 
 // ---------- Авторитет ----------

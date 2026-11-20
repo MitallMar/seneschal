@@ -7,7 +7,7 @@ import { round2 } from "../util";
 import type { World, Person, FallState, Under, Crisis } from "../state";
 
 export function initFall(): FallState {
-  return { refuse: {}, queue: [], crises: [], levyAt: 0, levyFailed: false, under: null, falls: [], disgrace: 0 };
+  return { refuse: {}, queue: [], crises: [], levyAt: 0, levyFailed: false, under: null, falls: [], disgrace: 0, retinueUsed: 0 };
 }
 
 export const underHand = (w: World): Under | null => w.fall.under;

@@ -191,8 +191,11 @@ test("падение: новый барон со своей натурой и з
   assert.equal(w.fall.falls.length, 1);
   assert.equal(w.log[w.log.length - 1].title, "Падение: под чужой рукой");
   // второй раз — человек двора: проситель уже пал
+  const first = u.retinue.map((id) => w.people[id].name);
   comeBack(w);
-  assert.equal(fallNow(w, "снова").baron.def, "dvor");
+  const again = fallNow(w, "снова");
+  assert.equal(again.baron.def, "dvor");
+  assert.ok(again.retinue.length > 0 && again.retinue.every((id) => !first.includes(w.people[id].name)), "второй барон приводит других людей");
 });
 
 test("под чужой рукой: потолок авторитета ниже, двор барона ест, подать и терпение Герцога — на бароне", () => {
@@ -241,7 +244,7 @@ test("перестановки под чужой рукой: только с с�
 
 test("броня: если ничего не делать, лес выживает барона за восемь сезонов; согнанные возвращаются, авторитет ниже", () => {
   const w = rich(calm()), posts = { ...w.posts }, legacy = w.legacy.length;
-  const u = fallNow(w, "проверка"), retinue = [...u.retinue];
+  const people = w.people.length, u = fallNow(w, "проверка"), names = u.retinue.map((id) => w.people[id].name);
   for (let i = 0; i < F.armor - 1; i++) { rich(w); runSeason(w); assert.ok(w.fall.under, `сезон ${i + 1}: барон ещё держится`); }
   assert.equal(underSeasons(w), F.armor - 1, "в тесте падение — в начале сезона: счёт идёт со следующего");
   const before = w.authority;
@@ -251,7 +254,10 @@ test("броня: если ничего не делать, лес выживае
   assert.deepEqual([rec.how, rec.back], ["bronya", w.season - 1]);
   assert.deepEqual(w.posts, posts, "согнанные вернулись на свои места");
   assert.equal(w.legacy.length, legacy);
-  for (const id of retinue) assert.equal(w.people[id].post, undefined, "люди барона остались без должностей");
+  assert.equal(w.people.length, people, "люди барона ушли вместе с ним");
+  assert.ok(!w.people.some((p) => names.includes(p.name)) && w.people.every((p, i) => p.id === i));
+  assert.ok([...w.rel.keys()].every((key) => key.split("|").every((x) => Number(x) < people)), "отношений с ушедшими не осталось");
+  assert.ok(w.eco.elders.every((el) => el.rel.length === people));
   assert.equal(w.eco.course, null);
   assert.ok(w.eco.tax.patience >= BALANCE.economy.tax.waits, "Герцог ждёт");
   assert.equal(authorityCap(w), BALANCE.authority.cap);
@@ -260,7 +266,7 @@ test("броня: если ничего не делать, лес выживае
   assert.ok(setCourse(w, "polegche"), "курс снова за Сенешалем");
 });
 
-test("пути падения барона: кризис стороны и недоимка снимают броню; вернулся своими силами — авторитет растёт, а цена — по сроку", () => {
+test("пути падения барона: кризис стороны и недоимка снимают броню; своими силами — только путь земли, авторитет растёт; цена — по сроку", () => {
   const w = rich(calm()), u = fallNow(w, "проверка");
   refusing(w, "kuptsy", F.refuseSeasons);
   assert.equal(deskView(w)!.ev.id, "krizis_kuptsy");
@@ -275,10 +281,16 @@ test("пути падения барона: кризис стороны и не�
   assert.equal(w.authority, Math.min(BALANCE.authority.cap, a + F.backOwn));
   assert.equal(w.factions.brod, Math.round((trust.brod - F.ruin * seasons) * 10) / 10, "что барон успел сломать: чем дольше, тем дороже");
   assert.equal(w.factions.les, trust.les, "лес и двор барон не трогал");
-  // путь двора: недоимки важнее кризиса
+  // путь двора: барон не справился сам — авторитет Сенешаля не растёт и не падает
   const x = rich(calm("двор")), ux = fallNow(x, "проверка");
   ux.steps.dvor = F.ownSteps; ux.steps.zemlya = 0;
+  const ax = x.authority;
   assert.equal(comeBack(x), "dvor");
+  assert.equal(x.authority, ax);
+  // оба пути сразу — засчитана земля
+  const z = rich(calm("оба")), uz = fallNow(z, "проверка");
+  uz.steps.dvor = F.stepArrears * 2; uz.steps.zemlya = F.stepCrisis;
+  assert.equal(comeBack(z), "zemlya");
   // ничего не сделано — броня
   const y = rich(calm("броня"));
   fallNow(y, "проверка");
