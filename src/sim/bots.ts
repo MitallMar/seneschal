@@ -61,7 +61,8 @@ const IDLE: Habit = {
   judge: false, command: false, talk: false, feast: false, pay: "council", extra: null, floors: "default",
 };
 const LEFT: Habit = { ...IDLE, head: "best", course: "kopim" };
-const MASTER: Habit = { ...IDLE, head: "best", place: "seen", course: "trial", active: true, judge: true, command: true, talk: true, pay: "master" };
+// Расстановку «Хозяин» не трогает (решение автора 21.11.2026): искатель показал, что перестановки по видимой годности проигрывают; прежняя привычка — Х24.
+const MASTER: Habit = { ...IDLE, head: "best", place: "start", course: "trial", active: true, judge: true, command: true, talk: true, pay: "master" };
 
 const o = (id: string, name: string, asks: string, habit: Partial<Habit>, more: Partial<Bot> = {}): Bot => ({ id, name, level: 2, base: "left", asks, habit: { ...LEFT, ...habit }, ...more });
 const x = (id: string, name: string, asks: string, habit: Partial<Habit>, own?: string[]): Bot => ({ id, name, level: 3, base: "master", asks, habit: { ...MASTER, ...habit }, own });
@@ -113,6 +114,7 @@ export const BOTS: Bot[] = [
   y("Х18б", "держит строгость: стража затянута на одну ступень", "окупается ли умеренная строгость", { guard: 1 }),
   y("Х19", "распустил стражу", "сколько стоит вольный край и что он даёт", { guard: -2 }),
   y("Х22", "затягивает стражу к сбору подати и отпускает на зиму", "строгий край «под задачу»: успевает ли шкала, сколько стоит и больно ли сходить", { guardCycle: true }),
+  y("Х24", "расставляет по видимой годности", "прежняя привычка «Хозяина»: окупаются ли перестановки по тому, что видно", { place: "seen" }),
   y("Х23", "два года держит твёрдую руку, потом отпускает", "гниль: больно ли сходить со строгого края", { guardHold: 8 }),
   y("Х20", "под чужой рукой раскачивает стороны против барона", "путь земли: быстрее ли возвращение и сколько стоит опала", { under: "stir" }),
   y("Х21", "под чужой рукой не платит подать барона", "путь двора: быстрее ли возвращение и что остаётся от хозяйства", { under: "hinder" }),
