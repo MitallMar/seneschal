@@ -68,6 +68,19 @@ test("перестановка: снять против воли стоит ав
   assert.equal(cost(16), 5);
 });
 
+test("перестановка: с желанной должности снять дороже во столько раз, сколько задаёт ручка; по умолчанию — как всех", () => {
+  const cost = (desired: boolean) => {
+    const w = newWorld("стаж"), p = holder(w, "klyuchnik")!;
+    p.tenure = 8;
+    p.aspiration = desired ? { id: "post_klyuchnik", text: "хочет держать ключи замка", post: "klyuchnik" } : undefined;
+    return assignCost(w, p, null);
+  };
+  assert.equal(cost(true).cost, cost(false).cost, "ручка по умолчанию — единица");
+  setAt("staff.removeDesired", 2);
+  assert.equal(cost(true).cost, cost(false).cost * 2);
+  assert.ok(cost(true).why.includes("место желанное") && !cost(false).why.includes("желанное"));
+});
+
 test("перестановка: занять чужую должность — платишь за снятие держателя; снятый обижен и теряет половину опыта", () => {
   const w = newWorld("замена");
   const old = holder(w, "desyatnik")!;

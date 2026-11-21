@@ -55,8 +55,10 @@ export function assignCost(w: World, p: Person, post: PostId | null): { cost: nu
 
 function removeCost(p: Person): { cost: number; why: string } {
   if (!p.post || p.agreed) return { cost: 0, why: "" };
-  const cost = B.staff.removeBase + Math.floor(p.tenure / B.staff.removePerSeasons);
-  return { cost, why: `снять ${p.name} против воли (${p.tenure} сез. на месте) — ${cost}` };
+  // кто сидит на желанной должности, держится за неё крепче: снять его дороже
+  const desired = p.aspiration?.post === p.post;
+  const cost = Math.ceil((B.staff.removeBase + Math.floor(p.tenure / B.staff.removePerSeasons)) * (desired ? B.staff.removeDesired : 1));
+  return { cost, why: `снять ${p.name} против воли (${p.tenure} сез. на месте${desired ? ", место желанное" : ""}) — ${cost}` };
 }
 
 // Возвращает false, если на перестановку не хватает авторитета: тогда ничего не меняется (остаётся медленный путь — уговорить).
