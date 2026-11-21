@@ -369,6 +369,8 @@ test("детерминизм и боты: одна партия — одно п�
     assert.equal(m.whyPatience + m.whyLevy + m.whyArrears + m.whyDouble, 1, "у падения одна причина");
   }
   assert.ok(idle.filter((m) => !m.fell).every((m) => m.fallAt === 0 && m.underSeasons === 0));
+  // привычки под рукой проверяются там, где падают часто: Герцог с первого дня почти потерял терпение
+  setAt("economy.start.patience", BALANCE.economy.tax.arrearsPatience);
   const stirred = runs("Х20"), master = runs("master");
   assert.ok(stirred.some((r) => r.w.log.some((e) => e.title === "Против барона")), "Х20 под чужой рукой раскачивает стороны");
   assert.ok(master.every((r) => !r.w.log.some((e) => e.title === "Против барона")));
