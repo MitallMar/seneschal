@@ -28,9 +28,9 @@ const WINTER = 3;
 
 // Привычка: что бот делает до первого сезона и каждый сезон.
 export interface Habit {
-  head: "keep" | "best" | "worst" | "none";               // главный: как на старте, самый признанный, наименее признанный, никого
+  head: "keep" | "best" | "worst" | "none" | "senior";    // главный: как на старте, самый признанный, наименее признанный, никого, дольше всех на должности
   place: "start" | "seen" | "aspiration" | "true" | "known";        // расстановка: как на старте, по видимой годности, по стремлениям, по настоящей годности
-  course: "none" | "kopim" | "trial" | "flip";             // курс: нет, «Копим к подати» всегда, «Копим» в годы испытания, новый каждый сезон
+  course: "none" | "trial" | "flip" | CourseId;            // курс: нет, «Копим» в годы испытания, новый каждый сезон, любой один курс всю партию
   mandate: false | "course" | "weak" | "all" | "fixed";    // наказ: главному по оси курса; главному по его слабейшей оси; каждому против курса; главному по оси «Копим» без курса
   //                                        // наказ главному по оси курса
   dropRival: boolean;                                      // одного из пары соперников снять до первого сезона
@@ -121,6 +121,7 @@ export const BOTS: Bot[] = [
   { id: "Н3", name: "«Наследство»: по настоящей годности", level: 4, base: "Н1", asks: "цена незнания людей при плохом старте", habit: { ...MASTER, place: "true" }, preset: "nasledstvo" },
   { id: "Н10", name: "«Наследство»: не говорит ни с кем", level: 4, base: "Н1", asks: "окупаются ли разговоры при плохом старте", habit: { ...MASTER, talk: false }, preset: "nasledstvo" },
 ];
+export const MASTER_HABIT: Habit = MASTER;
 export const bot = (id: string): Bot => {
   const b = BOTS.find((q) => q.id === id);
   if (!b) throw new Error(`Нет бота ${id}`);
@@ -186,7 +187,8 @@ function chooseHead(w: World, how: Habit["head"]) {
   const c = council(w);
   if (how === "keep" || !c.length) return;
   if (how === "none") { if (w.head != null) setHead(w, null); return; }
-  const pick = c.reduce((a, b) => {
+  // senior — дольше всех на должности: стаж виден на экране, и в споре он сильнее
+  const pick = how === "senior" ? c.reduce((a, b) => (b.tenure > a.tenure ? b : a)) : c.reduce((a, b) => {
     const ra = recognised(w, a), rb = recognised(w, b);
     return (how === "best" ? rb > ra : rb < ra) ? b : a;
   });
@@ -194,7 +196,7 @@ function chooseHead(w: World, how: Habit["head"]) {
 }
 function chooseCourse(w: World, how: Habit["course"], n: number) {
   const trial = w.eco.tax.year <= B.economy.tax.trialYears;
-  const want: CourseId | null = how === "kopim" || (how === "trial" && trial) ? "kopim" : how === "flip" ? COURSES[n % COURSES.length].id : null;
+  const want: CourseId | null = how === "trial" ? (trial ? "kopim" : null) : how === "flip" ? COURSES[n % COURSES.length].id : how === "none" ? null : how;
   if (w.eco.course !== want) setCourse(w, want);
 }
 // Наказ. course — главному по первой склонности курса (курса нет — наказа нет); fixed — главному по первой склонности «Копим к подати», хотя курса нет;

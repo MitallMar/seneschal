@@ -168,10 +168,11 @@ export function metricsOf(run: BotRun): Metrics {
 }
 
 export interface BotStats { bot: Bot; n: number; mean: Metrics; sd: Metrics; runs: Metrics[] }
-const seedName = (i: number) => `бот-${i + 1}`;
+export const seedName = (i: number) => `бот-${i + 1}`;
 // Сто партий одного бота: средние по метрикам и разброс по семенам. Доли по ведущей склонности считаются по всем решениям разом.
-export function botStats(b: Bot, seeds = B.bots.seeds, seasons = B.bots.seasons, lab = false): BotStats {
-  const runs = Array.from({ length: seeds }, (_, i) => playBot(seedName(i), b, seasons, lab));
+// from — с какого по счёту семени начать: искатель подтверждает находки на семенах, которых не видел при отборе.
+export function botStats(b: Bot, seeds = B.bots.seeds, seasons = B.bots.seasons, lab = false, from = 0): BotStats {
+  const runs = Array.from({ length: seeds }, (_, i) => playBot(seedName(from + i), b, seasons, lab));
   const ms = runs.map(metricsOf), ids = Object.keys(ms[0] ?? {});
   const m = Object.fromEntries(ids.map((id) => [id, mean(ms.map((x) => x[id]))]));
   const sum = (id: string) => ms.reduce((s, x) => s + x[id], 0);
