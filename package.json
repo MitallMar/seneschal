@@ -17,6 +17,7 @@
     "health": "tsx tools/health.ts",
     "economy": "tsx tools/economy.ts",
     "bots": "tsx tools/bots.ts",
+    "seek": "tsx tools/seek.ts",
     "balance": "tsx tools/bots.ts --brief"
   },
   "devDependencies": {
