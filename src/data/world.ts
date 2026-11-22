@@ -19,7 +19,8 @@ export const WORLD_STATES: WorldStateDef[] = [
     echoes: [
       { post: "desyatnik", delay: [1, 3], text: "Гонец привёз указ о наборе.", decree: { id: "nabor", title: "Указ о наборе", text: "Герцог требует людей в полки.", accepts: ["lyudi"], measures: 2, term: 2 } },
       { post: "desyatnik", delay: [4, 7], text: "Полк идёт на юг через баронство.", decree: { id: "postoy", title: "Постой войска", text: "Полк встаёт на постой: кормить его велено барону.", accepts: ["eda", "serebro"], measures: 2, term: 1 } },
-      { post: "starosta", delay: [3, 6], text: "К броду вышли беженцы с юга: делятся последним.", effects: { derevni: -1, pripasy: -1 }, village: "brod" },
+      { post: "starosta", delay: [3, 6], text: "К броду вышли беженцы с юга: делятся последним.", effects: { derevni: -1, pripasy: -1 }, village: "brod",
+        free: { text: "С беженцами к броду пришли лихие люди: при вольнице их некому остановить.", effects: { derevni: -2, pripasy: -1, poryadok: -1 } } },
     ],
   },
   {
@@ -28,7 +29,8 @@ export const WORLD_STATES: WorldStateDef[] = [
     tags: ["voyna"], seasons: [4, 6], weight: 3, cost: 3, shift: { duty: 0.9, lesson: 0.5 },
     echoes: [
       { post: "desyatnik", delay: [1, 2], text: "Герцог собирает ополчение против мятежника.", decree: { id: "opolchenie", title: "Ополчение против мятежника", text: "Герцог требует ополченцев на сезон-другой.", accepts: ["lyudi"], measures: 1, term: 2 } },
-      { post: "desyatnik", delay: [2, 4], text: "Через земли прошла шайка дезертиров: в деревнях недосчитались добра.", effects: { poryadok: -1, derevni: -1 } },
+      { post: "desyatnik", delay: [2, 4], text: "Через земли прошла шайка дезертиров: в деревнях недосчитались добра.", effects: { poryadok: -1, derevni: -1 },
+        strict: { text: "Шайку дезертиров дозор перехватил на тракте: добро вернули хозяевам.", effects: { poryadok: 1, derevni: 1 } } },
     ],
   },
   {
@@ -46,7 +48,8 @@ export const WORLD_STATES: WorldStateDef[] = [
     tags: ["golod", "vera"], mutes: ["torg"], seasons: [3, 5], weight: 2, cost: 4, shift: { duty: 0.7, price: 0.85 },
     echoes: [
       { delay: [1, 2], text: "Двор требует серебра на заставы и лекарей.", decree: { id: "zastavy", title: "Сбор на заставы", text: "Герцог требует серебра на карантинные заставы.", accepts: ["serebro", "tovary"], measures: 1.5, term: 2 } },
-      { delay: [2, 4], text: "Обоз с тракта завернули у заставы: купцы в убытке.", effects: { kuptsy: -1 } },
+      { delay: [2, 4], text: "Обоз с тракта завернули у заставы: купцы в убытке.", effects: { kuptsy: -1 },
+        strict: { text: "Заставы стоят крепко, но обозы идут под охраной стражи: купцы это оценили.", effects: { kuptsy: 1 } } },
     ],
   },
   {
@@ -61,7 +64,8 @@ export const WORLD_STATES: WorldStateDef[] = [
     tags: ["les"], seasons: [3, 6], weight: 3, cost: 3, shift: { forest: 0.6 },
     echoes: [
       { delay: [1, 3], text: "Твари вышли к выпасу у опушки.", effects: { les: -1, pripasy: -1 }, village: "opushka" },
-      { delay: [3, 5], text: "Охотники не вернулись из леса: в деревне у опушки ропот.", effects: { derevni: -1, poryadok: -1 }, village: "opushka" },
+      { delay: [3, 5], text: "Охотники не вернулись из леса: в деревне у опушки ропот.", effects: { derevni: -1, poryadok: -1 }, village: "opushka",
+        strict: { text: "Дозор вывел охотников из леса: в деревне у опушки благодарят стражу.", effects: { derevni: 1 } } },
     ],
   },
   {
@@ -77,14 +81,17 @@ export const WORLD_STATES: WorldStateDef[] = [
     id: "poshlina_gertsoga", name: "Новая пошлина Герцога", text: "Герцог обложил тракт новой пошлиной: купцы ищут обходные пути.", end: "Пошлину на тракте отменили.",
     post: "pisar",
     tags: ["torg"], seasons: [4, 8], weight: 3, cost: 2, shift: { price: 0.8, duty: 0.85 },
-    echoes: [{ delay: [1, 3], text: "Купцы пожаловались на поборы и свернули обоз.", effects: { kuptsy: -1 } }],
+    echoes: [{ delay: [1, 3], text: "Купцы пожаловались на поборы и свернули обоз.", effects: { kuptsy: -1 },
+      free: { text: "Купцы пошли в обход застав лесными тропами: мимо казны, зато охотно.", effects: { kuptsy: 1, kazna: -1 } } }],
   },
   // --- блага: бюджета не стоят ---
   {
     id: "yarmarka_god", name: "Ярмарочный год", text: "В городе большая ярмарка: купцы едут со всех сторон и берут всё.", end: "Ярмарочный год кончился.",
     post: "pisar",
     tags: ["torg"], seasons: [4, 4], weight: 3, cost: 0, shift: { price: 1.25, duty: 1.2 },
-    echoes: [{ delay: [1, 2], text: "Проезжие купцы хвалят здешний торг.", effects: { kuptsy: 1 } }],
+    echoes: [{ delay: [1, 2], text: "Проезжие купцы хвалят здешний торг.", effects: { kuptsy: 1 },
+      strict: { text: "Проезжие купцы хвалят безопасный тракт: твёрдая рука им по душе.", effects: { kuptsy: 2 } },
+      free: { text: "На ярмарочном тракте шалят: проезжих купцов пощипали.", effects: { kuptsy: -1, poryadok: -1 } } }],
   },
   {
     id: "dobryy_god", name: "Добрые годы", text: "Тёплые вёсны и тихие осени: по всему герцогству закрома полны.", end: "Добрые годы позади.",

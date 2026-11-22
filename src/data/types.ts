@@ -195,7 +195,12 @@ export interface WorldShift { harvest?: number; price?: number; duty?: number; f
 export interface DecreeDef { id: string; title: string; text: string; accepts: Category[]; measures: number; term: number }
 // Отголосок: приходит вниз с задержкой после начала состояния. Либо указ (слой баронства), либо местное последствие (слой места).
 // post — чья сфера отвечает за этот отголосок или указ (нет — должность состояния).
-export interface EchoDef { delay: [number, number]; text: string; decree?: DecreeDef; effects?: Partial<Record<Effect, number>>; village?: Village; post?: PostId }
+// strict и free — как тот же отголосок приходит на строгом краю порядка (Строгость, Твёрдая рука) и на вольном (Вольница, Смута): задача И11б.
+export interface EchoAlt { text: string; effects: Partial<Record<Effect, number>> }
+export interface EchoDef {
+  delay: [number, number]; text: string; decree?: DecreeDef; effects?: Partial<Record<Effect, number>>; village?: Village; post?: PostId;
+  strict?: EchoAlt; free?: EchoAlt;
+}
 // Состояние верхнего слоя: длится seasons сезонов. cost — давление: беда стоит бюджета рассказчика, благо (cost ≤ 0) — нет.
 // tags — события совета с такой меткой приходят чаще; mutes — с такой меткой реже.
 export interface WorldStateDef {

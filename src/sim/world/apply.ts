@@ -15,25 +15,35 @@ import { axisKnown } from "../council/know";
 import { addLine } from "../economy/ledger";
 import { standOf, wayOf, wayShare, worldModsFor, type Stand } from "./answer";
 import { HEAVY_YEARS } from "../../data/world";
-import { baronStep } from "../fall/base";
+import { baronStep, crisisNow } from "../fall/base";
+import { stepOf } from "../order";
 import { initWorld, worldStep, worldMods, weatherWord, stateDef } from "./gen";
 
 const seasonName = (n: number) => `${SEASON_NAMES[(n - 1) % SEASON_NAMES.length]}, год ${Math.floor((n - 1) / SEASON_NAMES.length) + 1}`;
 
+// Край порядка, на котором сейчас стоит шкала: по нему отголосок приходит в строгом или вольном виде (И11б).
+export function orderEdge(w: World): "strict" | "free" | undefined {
+  const id = stepOf(w.order.level).id;
+  return id === "strogost" || id === "ruka" ? "strict" : id === "volnitsa" || id === "smuta" ? "free" : undefined;
+}
+// Передышка: пока идёт кризис стороны или Сенешаль под чужой рукой, рассказчик давит слабее.
+export const pressureEase = (w: World): number => (B.fall.on && (crisisNow(w) || !!w.fall.under) ? B.world.ease : 1);
+
 // Вести сезона — в летопись и в партию: местный отголосок применяется, указ ложится на стол.
 function deliver(w: World): void {
-  const g = w.world, lines: string[] = [];
+  const g = w.world, lines: string[] = [], ease = pressureEase(w), edge = orderEdge(w);
   for (const n of g.sim.news) {
     if (n.kind === "decree") {
       // указ встречает ответственная должность: сильный держатель выторговывает меньше, слабый — получает больше; почерк писаря даёт скидку или отсрочку
       const echo = stateDef(n.state!).echoes![n.echo!], def = echo.decree!, post = echo.post ?? stateDef(n.state!).post;
       const stand = standOf(w, post), size = wayOf(w, "decreeSize"), late = wayOf(w, "decreeTerm"), X = B.world.answer;
-      const due = round1(Math.max(X.min, stand.k * wayShare(size, X.decreeSize)) * n.measures!);
+      const due = round1(Math.max(X.min, stand.k * wayShare(size, X.decreeSize)) * n.measures! * ease);
       const term = n.term! + (late ? X.termAdd : 0);
       if (size) addTrust(w, "dvor", -X.decreeDvor * size.weight);
       if (late) addTrust(w, "dvor", -X.termDvor * late.weight);
       const ways = [size, late].filter((x) => x && axisKnown(x.p, x.answer.axis)).map((x) => `${x!.p.name}: «${x!.answer.name}» — ${x!.answer.good}; ${x!.answer.price}`);
-      const note = `${stand.text}${due !== n.measures ? ` (${n.measures} → ${due} мер)` : ""}${ways.length ? `. ${ways.join(". ")}` : ""}`;
+      const eased = ease < 1 ? ". Двор знает, что в баронстве неспокойно, и спрашивает меньше" : "";
+      const note = `${stand.text}${due !== n.measures ? ` (${n.measures} → ${due} мер)` : ""}${ways.length ? `. ${ways.join(". ")}` : ""}${eased}`;
       const d: Decree = {
         id: g.nextId++, def: def.id, state: n.state!, title: def.title, text: def.text, accepts: def.accepts,
         due, paid: 0, by: {}, council: 0, post, note, issued: w.season, until: w.season + term - 1,
@@ -45,21 +55,26 @@ function deliver(w: World): void {
       // местный отголосок: потери умножает сила ответственного; почерк тиуна бережёт деревни, лесничего — смягчает беды леса; прибавки идут как есть
       const def = stateDef(n.state!).echoes![n.echo!], post = def.post ?? stateDef(n.state!).post, X = B.world.answer;
       const stand = standOf(w, post), mercy = wayOf(w, "villages"), rites = post === "lesnichiy" ? wayOf(w, "forest") : undefined;
+      // порядок: на краю шкалы отголосок приходит в своём виде; без особого вида — дела стражи на строгом краю легче, на вольном тяжелее
+      const alt = edge ? def[edge] : undefined, body = alt?.text ?? n.text;
+      const guard = !alt && post === "desyatnik" ? (edge === "strict" ? B.world.guardStrict : edge === "free" ? B.world.guardFree : 1) : 1;
       const scaled: Partial<Record<Effect, number>> = {};
       let lost = false, spared = false;
-      for (const [key, v] of Object.entries(def.effects ?? {}) as [Effect, number][]) {
+      for (const [key, v] of Object.entries(alt?.effects ?? def.effects ?? {}) as [Effect, number][]) {
         const soft = key === "derevni" ? wayShare(mercy, X.villages) : 1;
-        scaled[key] = v < 0 ? v * stand.k * soft * wayShare(rites, X.forest) : v;
+        scaled[key] = v < 0 ? v * stand.k * soft * wayShare(rites, X.forest) * guard * ease : v;
         lost = lost || v < 0;
         spared = spared || (v < 0 && key === "derevni" && !!mercy);
       }
-      const text = `вести: ${def.text.charAt(0).toLowerCase()}${def.text.slice(1)}`;
+      const text = `вести: ${body.charAt(0).toLowerCase()}${body.slice(1)}`;
       applyDirect(w, scaled, B.world.effect * n.strength! * B.world.strength, text, def.village);
       if (spared) addLine(w, { cat: "eda", v: -X.villagesFood * mercy!.weight, text: "пострадавшим из амбара", who: `${postName(mercy!.p.post!).toLowerCase()} ${mercy!.p.name}` });
       if (lost && rites) addLine(w, { cat: "eda", v: -X.forestFood * rites.weight, text: "дары лесу", who: `${postName(rites.p.post!).toLowerCase()} ${rites.p.name}` });
       const ways = [spared ? mercy : undefined, lost ? rites : undefined].filter((x) => x && axisKnown(x.p, x.answer.axis))
         .map((x) => ` ${x!.p.name}: «${x!.answer.name}» — ${x!.answer.good}; ${x!.answer.price}.`).join("");
-      lines.push(lost ? `${n.text} Отвечал ${stand.text}.${ways}` : n.text);
+      const why = [alt ? (edge === "strict" ? "порядок строгий" : "порядок вольный") : guard < 1 ? "порядок строгий: стража справилась легче" : guard > 1 ? "порядок вольный: стражи не хватило" : "",
+        ease < 1 && lost ? "в баронстве и так неспокойно — беда прошла стороной" : ""].filter(Boolean).join("; ");
+      lines.push(`${lost ? `${body} Отвечал ${stand.text}.${ways}` : body}${why ? ` (${why[0].toUpperCase()}${why.slice(1)}.)` : ""}`);
     } else lines.push(n.text);
   }
   if (lines.length) w.log.push({ season: w.season, kind: "info", title: "Вести", lines });

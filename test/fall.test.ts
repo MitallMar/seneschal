@@ -2,7 +2,7 @@
 // причины падения, барон и свита, пути его падения, броня, возвращение, личные дела при бароне, опала.
 import { test, afterEach } from "node:test";
 import assert from "node:assert/strict";
-import { CRISES, CRISIS_SIDES, RETINUE } from "../src/data/fall";
+import { CRISES, CRISIS_SIDES, STIR_SIDES, RETINUE } from "../src/data/fall";
 import { NATURES } from "../src/data/natura";
 import { COURSES } from "../src/data/economy";
 import { BALANCE, resetBalance, setAt } from "../src/sim/balance";
@@ -38,9 +38,10 @@ function refusing(w: World, side: (typeof CRISIS_SIDES)[number], n: number) {
 // Сытая казна: недоимки и сборы партии не мешают.
 const rich = (w: World) => { w.eco.stock = { eda: 30, tovary: 0, serebro: 30 }; return w; };
 
-test("данные: кризис есть у деревень, купцов и людей замка; у каждого выхода свой шрам; лес и двор отложены", () => {
+test("данные: кризис есть у всех шести сторон; у каждого выхода свой шрам; раскачать можно только стороны внутри баронства", () => {
   assert.deepEqual(CRISES.map((c) => c.side), CRISIS_SIDES);
-  assert.deepEqual(CRISIS_SIDES, ["brod", "opushka", "kuptsy", "zamok"]);
+  assert.deepEqual(CRISIS_SIDES, ["brod", "opushka", "kuptsy", "zamok", "les", "dvor"]);
+  assert.deepEqual(STIR_SIDES, ["brod", "opushka", "kuptsy", "zamok"]);
   for (const c of CRISES) {
     assert.ok(c.event.options.length >= 2 && c.event.options.length <= 3, c.event.id);
     assert.deepEqual(Object.keys(c.exits).sort(), c.event.options.map((o) => o.id).sort(), "у каждого варианта — свой выход");
@@ -97,6 +98,29 @@ test("выходы: договор с гильдией режет пошлины
   resolveCrisis(w, crisisDef("zamok"), undefined, []);
   assert.equal(w.fall.crises[2].scarUntil - w.season - 1, scarSeasons(false));
   assert.equal(w.factions.kuptsy, trust + F.emptyTrust);
+});
+
+test("кризисы леса и двора (И11б): нашествие тварей режет дары леса, «помощник» от Герцога — терпение уходит быстрее; о любом кризисе узнают при дворе", () => {
+  const w = rich(calm());
+  refusing(w, "les", F.refuseSeasons);
+  assert.equal(deskView(w)!.ev.id, "krizis_les");
+  const mult = zoneMult(w, "les");
+  refuse(w, "les"); runSeason(w);
+  assert.equal(w.fall.crises[0].side, "les");
+  assert.ok(scarOf(w, "les") && zoneMult(w, "les") < 1);
+  assert.equal(mult, 0, "пока лес отказывал, даров не было вовсе");
+  // двор: выход «принять помощника» стоит авторитета и оставляет полный шрам
+  const x = rich(calm("двор")), a = x.authority, before = zoneMult(x, "dvor");
+  resolveCrisis(x, crisisDef("dvor"), "prinyat", []);
+  assert.equal(x.authority, a + crisisDef("dvor").exits.prinyat.authority!);
+  assert.equal(zoneMult(x, "dvor"), before * F.scarMult, "соглядатай: двор считается хуже расположенным");
+  assert.equal(x.fall.crises[0].scarUntil - x.season - 1, scarSeasons(false));
+  // малое колесо отдаёт назад: кризис деревни роняет доверие двора, кризис самого двора — нет
+  const y = rich(calm("эхо")), dvor = y.factions.dvor;
+  resolveCrisis(y, crisisDef("brod"), "ustupit", []);
+  assert.equal(y.factions.dvor, dvor - F.crisisDvor);
+  resolveCrisis(y, crisisDef("dvor"), "otkup", []);
+  assert.equal(y.factions.dvor, dvor - F.crisisDvor, "кризис самого двора его доверие вторым разом не роняет");
 });
 
 test("приказ Сенешаля решает кризис: исполнен приказанный выход", () => {

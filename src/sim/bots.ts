@@ -21,7 +21,7 @@ import { seasonKind } from "./economy/zones";
 import { forecastFork } from "./economy/view";
 import { judge, feast, feastCost, feastsThisYear, authorityCap, complaintLeft, councilSteady, FEASTS } from "./authority";
 import { PROBE, resetProbe, type Probe } from "./probe";
-import { CRISIS_SIDES } from "../data/fall";
+import { STIR_SIDES } from "../data/fall";
 import { stir } from "./fall/under";
 
 const WINTER = 3;
@@ -310,7 +310,7 @@ function turn(w: World, h: Habit, n: number) {
   if (h.guardHold) setGuard(w, n < h.guardHold ? B.order.guardMax : 0);
   if (h.guardCycle) setGuard(w, seasonKind(w.season) === WINTER ? 0 : B.order.guardMax);
   // под чужой рукой: путь земли — раскачать сторону, которой до отказа ближе всех; путь двора — подать и указы барона не платить
-  if (h.under === "stir" && w.fall.under) stir(w, CRISIS_SIDES.reduce((a, b) => (w.factions[b] < w.factions[a] ? b : a)));
+  if (h.under === "stir" && w.fall.under) stir(w, STIR_SIDES.reduce((a, b) => (w.factions[b] < w.factions[a] ? b : a)));
   if (h.under === "hinder") w.eco.autoPay = !w.fall.under;
   deeds(w, h);
   if (h.under !== "hinder" || !w.fall.under) pay(w, h);
