@@ -223,6 +223,6 @@ test("почерк доходит до потоков и доверия: заб�
     return { quit, trust: w.factions.brod };
   };
   const soft = year("zabota"), hard = year("dolg");
-  assert.ok(hard.quit > soft.quit * 1.1, `оброк (при том что заботливый тиун годнее): Долг ${hard.quit} против Заботы ${soft.quit}`);
+  assert.ok(hard.quit > soft.quit, `оброк (при том что заботливый тиун годнее, а годность с ×0,6 у негодного весит больше): Долг ${hard.quit} против Заботы ${soft.quit}`);
   assert.ok(soft.trust > hard.trust, `доверие деревни: Забота ${soft.trust} против Долга ${hard.trust}`);
 });

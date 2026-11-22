@@ -169,7 +169,8 @@ test("наказ сработал: послушному наказ меняет 
 
 test("новые привычки делают заявленное: наказы, стремления через разговор, плата без автоплаты, пиры, двойные черты", () => {
   const run = (id: string, seed = "перепроверка") => playBot(seed, bot(id));
-  const orders = (id: string) => run(id, "перепроверка").w.people.filter((p) => p.order).map((p) => p.order);
+  // наказы смотрим после первого сезона: позже партия может уйти под чужую руку, а там курс задаёт барон
+  const orders = (id: string) => playBot("перепроверка", bot(id), 1).w.people.filter((p) => p.order).map((p) => p.order);
   assert.equal(orders("О5в").length, 5, "наказ каждому в совете");
   assert.ok(orders("О5в").every((a) => a === "zabota"), "против курса «Копим» — Забота");
   const weak = playBot("перепроверка", bot("О5б"), 1).w, head = weak.people[weak.head!];

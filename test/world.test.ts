@@ -202,11 +202,14 @@ test("метки: в войну чаще приходят дела с метко
   setAt("world.tags.less", 1);
   assert.equal(eventWeight(w.world.sim, event("yarmarka")), W.tags.min, "вес не уходит ниже предела");
   resetBalance(); still();
+  // по нескольким семенам разом: на одной партии доля гуляет сильнее, чем её сдвигает война
   const share = (war: boolean) => {
-    const x = newWorld("метки");
-    if (war) put(x, "voyna_yug", 1, 40);
-    for (let s = 0; s < 30; s++) runSeason(x);
-    const titles = x.log.filter((e) => e.kind === "event").map((e) => e.title.replace(" — по приказу", ""));
+    const titles = ["метки", "метки-2", "метки-3", "метки-4"].flatMap((seed) => {
+      const x = newWorld(seed);
+      if (war) put(x, "voyna_yug", 1, 40);
+      for (let s = 0; s < 30; s++) runSeason(x);
+      return x.log.filter((e) => e.kind === "event").map((e) => e.title.replace(" — по приказу", ""));
+    });
     return titles.filter((t) => EVENTS.find((e) => e.title === t)!.tags.includes("voyna")).length / titles.length;
   };
   assert.ok(share(true) > share(false) * 1.4, `доля военных дел: ${share(true)} в войну против ${share(false)}`);
