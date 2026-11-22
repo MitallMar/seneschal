@@ -3,7 +3,7 @@
 import type { CourseId, Side, Star } from "../../data/types";
 import { AXES, OPPOSED, POSTS, TRAITS, ASPIRATIONS } from "../../data/core";
 import { COURSES, SIDE_NAMES } from "../../data/economy";
-import { BARONS, RETINUE, CRISIS_SIDES, BACK_NAMES, type BackHow, type RetinueEntry } from "../../data/fall";
+import { BARONS, RETINUE, STIR_SIDES, BACK_NAMES, type BackHow, type RetinueEntry } from "../../data/fall";
 import { NATURES } from "../../data/natura";
 import { BALANCE as B } from "../balance";
 import { clamp, round1, round2, mean } from "../util";
@@ -148,7 +148,7 @@ export function comeBack(w: World, lines: string[] = []): BackHow {
   // что барон успел сломать: чем дольше, тем дороже
   const ruin = round1(F.ruin * Math.min(seasons, F.ruinMax));
   if (ruin > 0) {
-    for (const s of CRISIS_SIDES) addTrust(w, s, -ruin);
+    for (const s of STIR_SIDES) addTrust(w, s, -ruin);
     out.push(`Барон успел наломать: доверие деревень, купцов и людей замка −${ruin}.`);
   }
   f.under = null;
@@ -224,7 +224,7 @@ export function askConsent(w: World): boolean {
 // Раскачать сторону против барона — личное дело: её доверие падает (страдает и своя земля). Барон заметит — опала.
 export function stir(w: World, side: Side): boolean {
   const F = B.fall, u = w.fall.under;
-  if (!u || w.deedsLeft <= 0 || !CRISIS_SIDES.includes(side)) return false;
+  if (!u || w.deedsLeft <= 0 || !STIR_SIDES.includes(side)) return false;
   w.deedsLeft--;
   const lost = -addTrust(w, side, -F.stir);
   const lines = [`Сенешаль тихо раскачивает сторону «${SIDE_NAMES[side]}» против барона: доверие −${lost}.`];

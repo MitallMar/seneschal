@@ -20,7 +20,8 @@ import { setFloor, doer } from "../src/sim/economy/doer";
 import { standOf, wayOf, waysOf, softenOf } from "../src/sim/world/answer";
 import { fix } from "./_world";
 import { initWorld, worldStep, worldTape, worldMods, eventWeight, weatherWord, decreeMeasures } from "../src/sim/world/gen";
-import { decreeOptions, payDecree, decreeLeft, decreeCouncilCan, worldView } from "../src/sim/world/apply";
+import { decreeOptions, payDecree, decreeLeft, decreeCouncilCan, worldView, orderEdge, pressureEase } from "../src/sim/world/apply";
+import { setGuard } from "../src/sim/order";
 import { metricsOf } from "../src/sim/bots-report";
 import { bot, playBot } from "../src/sim/bots";
 
@@ -313,6 +314,72 @@ test("отголосок места: бьёт по названной дерев
   assert.ok(Math.abs(w.factions.opushka - opushka) < Math.abs(w.factions.brod - brod), "деревня у опушки — нет");
   assert.ok(w.eco.cur.some((l) => l.text.startsWith("вести:") && l.cat === "eda" && l.v < 0));
   for (const s of SIDES) assert.ok(Number.isFinite(w.factions[s]));
+});
+
+test("порядок как условие отголоска (И11б): на строгом краю дезертиров перехватывает дозор, на вольном беженцы приводят лихих людей", () => {
+  still();
+  const echo = (state: string, i: number, level: number, guard: number) => {
+    const w = newWorld("край");
+    w.order.level = level; setGuard(w, guard);
+    put(w, state);
+    w.world.sim.queue.push({ state, echo: i, at: w.season + 1, strength: 1 });
+    const before = { ...w.factions }, order = w.resources.poryadok;
+    runSeason(w);
+    const line = w.log.filter((e) => e.title === "Вести").flatMap((e) => e.lines).find((l) => l.includes("орядок") || l.includes("дезертир") || l.includes("беженц"))!;
+    return { w, edge: orderEdge(w), line, brod: w.factions.brod - before.brod, order: w.resources.poryadok - order };
+  };
+  const calm = echo("myatezh", 1, 7, 0), strict = echo("myatezh", 1, 13, 4);
+  assert.equal(calm.edge, undefined);
+  assert.equal(strict.edge, "strict");
+  assert.ok(calm.line.includes("шайка дезертиров") && strict.line.includes("дозор перехватил"), strict.line);
+  assert.ok(strict.line.includes("Порядок строгий"));
+  assert.ok(strict.order > calm.order, "на строгом краю порядок от той же вести растёт, а не падает");
+  const quiet = echo("voyna_yug", 2, 7, 0), free = echo("voyna_yug", 2, 3, -2);
+  assert.equal(free.edge, "free");
+  assert.ok(free.line.includes("лихие люди") && free.line.includes("Порядок вольный"), free.line);
+  assert.ok(free.brod < quiet.brod, "на вольном краю та же беда бьёт сильнее");
+  for (const s of WORLD_STATES) for (const e of s.echoes ?? []) for (const alt of [e.strict, e.free]) {
+    if (alt) assert.ok(e.effects && alt.text && Object.keys(alt.effects).length, `${s.id}: особый вид — только у местного отголоска`);
+  }
+  assert.ok(WORLD_STATES.flatMap((s) => s.echoes ?? []).filter((e) => e.strict).length >= 3, "положительные события твёрдой руки есть");
+  assert.ok(WORLD_STATES.flatMap((s) => s.echoes ?? []).filter((e) => e.free).length >= 2);
+});
+
+test("дела стражи без особого вида: на строгом краю потеря меньше, на вольном больше", () => {
+  still();
+  setAt("world.answer.gain", 0);
+  const def = WORLD_STATES.find((s) => s.id === "myatezh")!.echoes![1];
+  const loss = (level: number, guard: number) => {
+    const w = newWorld("стража");
+    w.order.level = level; setGuard(w, guard);
+    put(w, "myatezh");
+    w.world.sim.queue.push({ state: "myatezh", echo: 1, at: w.season + 1, strength: 1 });
+    const brod = w.factions.brod;
+    const saved = def.strict;
+    delete def.strict;   // без особого вида остаётся только множитель края
+    try { runSeason(w); } finally { def.strict = saved; }
+    return brod - w.factions.brod;
+  };
+  assert.ok(loss(13, 4) < loss(7, 0) && loss(7, 0) < loss(3, -2), `${loss(13, 4)} < ${loss(7, 0)} < ${loss(3, -2)}`);
+});
+
+test("передышка (И11б): пока идёт кризис стороны или Сенешаль под чужой рукой, отголоски бьют слабее, а указы приходят меньше", () => {
+  still();
+  setAt("fall.on", 1);
+  const run = (crisis: boolean) => {
+    const w = newWorld("передышка");
+    w.eco.stock = { eda: 30, tovary: 0, serebro: 30 }; w.eco.tax.patience = 9;
+    if (crisis) w.fall.crises.push({ side: "kuptsy", season: 1, exit: "", scarUntil: 99, under: false });
+    const d = decreeNext(w, "voyna_yug", 0);
+    return { w, due: d.due, note: d.note };
+  };
+  const plain = run(false), eased = run(true);
+  assert.equal(pressureEase(plain.w), 1);
+  assert.equal(pressureEase(eased.w), W.ease);
+  assert.equal(eased.due, Math.round(plain.due * W.ease * 10) / 10);
+  assert.ok(eased.note.includes("спрашивает меньше") && !plain.note.includes("спрашивает меньше"));
+  setAt("fall.on", 0);
+  assert.equal(pressureEase(eased.w), 1, "без кризисов и падения передышки нет");
 });
 
 test("что видит игрок и отчёт ботов: строка «что в мире», метрики указов и плохих лет", () => {

@@ -1,7 +1,7 @@
 // Кризисы сторон и «под чужой рукой» на столе Сенешаля: счёт отказов и шрамы, барон, его срок и личные дела при нём.
 import { AXES, AXIS_NAMES } from "../../data/core";
 import { COURSES, SIDE_NAMES } from "../../data/economy";
-import { CRISIS_SIDES, BACK_NAMES } from "../../data/fall";
+import { CRISIS_SIDES, STIR_SIDES, BACK_NAMES } from "../../data/fall";
 import type { CourseId, Side } from "../../data/types";
 import { BALANCE as B } from "../../sim/balance";
 import { zoneOf, patienceWord } from "../../sim/economy/zones";
@@ -39,7 +39,7 @@ function underHtml(): string {
     const chance = app.designer ? `, шанс ${Math.round(swayChance(w, c.id) * 100)}%` : "";
     return `<option value="${c.id}" ${c.id === swayPick ? "selected" : ""}>${c.name} — ${lean(c.id)}${chance}</option>`;
   }).join("");
-  const stirs = CRISIS_SIDES.map((s) => `<button data-stir="${s}" ${noDeeds ? "disabled" : ""}>${SIDE_NAMES[s]} (${zoneOf(w, s)})</button>`).join("");
+  const stirs = STIR_SIDES.map((s) => `<button data-stir="${s}" ${noDeeds ? "disabled" : ""}>${SIDE_NAMES[s]} (${zoneOf(w, s)})</button>`).join("");
   return `<div class="under" id="under">
     <h3>Под чужой рукой</h3>
     <p id="baron">Барон <b>${esc(b.name)}</b>, ${esc(b.who)}; по натуре ${esc(b.nature.toLowerCase())}.${star}</p>

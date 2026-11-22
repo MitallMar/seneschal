@@ -2,8 +2,10 @@
 // их выходы и шрамы, новый барон, его свита и внеочередной сбор. Правила — src/sim/fall/, числа — раздел fall в src/sim/balance.ts.
 import type { Category, GameEvent, Side } from "./types";
 
-// Стороны, у которых бывает кризис. Лес и двор отложены до И11б (решение автора 20.11.2026).
-export const CRISIS_SIDES: Side[] = ["brod", "opushka", "kuptsy", "zamok"];
+// Стороны, у которых бывает кризис: с И11б — все шесть.
+export const CRISIS_SIDES: Side[] = ["brod", "opushka", "kuptsy", "zamok", "les", "dvor"];
+// Кого Сенешаль может раскачать против барона и кому барон успевает навредить: стороны внутри баронства.
+export const STIR_SIDES: Side[] = ["brod", "opushka", "kuptsy", "zamok"];
 
 // Выход из кризиса: насколько тяжёл шрам и что выход значит сверх обычных последствий события.
 // scar: light — шрам короче (ручка fall.scarLight). authority — что выход делает с авторитетом Сенешаля. dutyCut — пошлины год ниже.
@@ -53,6 +55,32 @@ export const CRISES: CrisisDef[] = [
       ],
     },
     exits: { zhalovanye: { scar: "light" }, slovo: { scar: "light", authority: -1.5 }, nabor: { scar: "full" } },
+  },
+  {
+    side: "les", scar: "лес подступил к опушке: даров и товаров леса меньше",
+    event: {
+      id: "krizis_les", title: "Кризис: нашествие тварей", tags: ["les"], posts: ["lesnichiy", "desyatnik"], village: "opushka",
+      text: "Лес третий сезон закрыт для людей. Теперь твари вышли из чащи: выпасы у опушки пусты, по ночам воют у самых дворов.",
+      options: [
+        { id: "zhertva", text: "Принести жертву по старому договору", axes: ["obychai"], effects: { les: 6, pripasy: -1.5 } },
+        { id: "pohod", text: "Идти в лес с оружием", axes: ["derzost", "dolg"], effects: { les: 2, poryadok: 2 }, hands: 1, risky: true },
+        { id: "otstupit", text: "Отступить с опушки: отдать лесу выпасы", axes: ["zabota"], effects: { les: 4, derevni: -2 } },
+      ],
+    },
+    exits: { zhertva: { scar: "light" }, pohod: { scar: "full" }, otstupit: { scar: "light" } },
+  },
+  {
+    side: "dvor", scar: "соглядатай двора в замке: Герцог узнаёт о каждой недоимке и теряет терпение быстрее",
+    event: {
+      id: "krizis_dvor", title: "Кризис: Герцог присылает «помощника»", tags: [], posts: ["pisar", "klyuchnik"],
+      text: "Двор третий сезон не отвечает на письма. Теперь от Герцога едет человек «в помощь Сенешалю» — с правом смотреть книги и писать ко двору.",
+      options: [
+        { id: "prinyat", text: "Принять помощника и открыть ему книги", axes: ["dolg"], effects: { dvor: 6 } },
+        { id: "otkup", text: "Откупиться: дары двору, а помощника — назад", axes: ["vygoda"], effects: { dvor: 5, kazna: -2 } },
+        { id: "poehat", text: "Самим ехать ко двору объясняться", axes: ["derzost", "obychai"], effects: { dvor: 4, kazna: -0.5 }, hands: 1, risky: true },
+      ],
+    },
+    exits: { prinyat: { scar: "full", authority: -1.5 }, otkup: { scar: "light" }, poehat: { scar: "light" } },
   },
 ];
 export const CRISIS_EVENTS: GameEvent[] = CRISES.map((c) => c.event);

@@ -44,6 +44,8 @@ export function resolveCrisis(w: World, def: CrisisDef, optId: string | undefine
     for (const s of CRISIS_SIDES) if (s !== def.side) addTrust(w, s, F.emptyTrust);
     lines.push("Кризис прошёл сам, как сумел: остальные стороны это видели и запомнили.");
   }
+  // малое колесо отдаёт назад: о смуте в баронстве узнают при дворе
+  if (def.side !== "dvor" && F.crisisDvor > 0) { addTrust(w, "dvor", -F.crisisDvor); lines.push("При дворе узнали о смуте в баронстве: двор доверяет меньше."); }
   if (w.factions[def.side] < F.afterTrust) w.factions[def.side] = F.afterTrust;
   f.queue = f.queue.filter((s) => s !== def.side);
   f.refuse[def.side] = 0;
