@@ -2,8 +2,11 @@
 """Автоматическая проверка нового текста мира (ноль токенов).
 Пример: python3 tools/proverka.py teksty/80.md [--limit 3000]
 Ищет: объём сверх лимита; годы позже 3265; слова из tools/zapret.txt;
-имена из текста, которые уже есть в tablicy/imena.md (показывает, кто это, где и когда, — решать писателю)."""
-import sys, re, os, argparse
+имена из текста, которые уже есть в tablicy/imena.md (показывает, кто это, где и когда, — решать писателю).
+Имена сверяются по каждому слову с заглавной буквы из колонки «Имя» (не только по первому), с отбросом
+окончания: «Колодезный двор», «Нечай Сплавщик», «Тавен» найдутся и в формах «Сплавщика», «Тавена»."""
+import sys, re, os, argparse, signal
+signal.signal(signal.SIGPIPE, signal.SIG_DFL)
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 p = argparse.ArgumentParser(); p.add_argument('fajl'); p.add_argument('--limit', type=int, default=3000)
 a = p.parse_args()
@@ -18,19 +21,32 @@ for line in open(os.path.join(ROOT, 'tools', 'zapret.txt'), encoding='utf-8'):
     w = line.strip()
     if w and not w.startswith('#') and w.lower() in low:
         print(f"Запретное слово/оборот: «{w}»")
+OK = 'аяуюеиыоёйьэ'
+def osnova(w):
+    w = w.lower().replace('ё', 'е')
+    while len(w) > 4 and w[-1] in OK:
+        w = w[:-1]
+    return w
 names = {}
 for line in open(os.path.join(ROOT, 'tablicy', 'imena.md'), encoding='utf-8'):
     if not line.startswith('- '): continue
     c = line[2:].split(' | ')
     if len(c) < 4: continue
-    first = re.split(r"[ ,/(«]", c[0].strip())[0]
-    if len(first) > 2: names.setdefault(first, []).append(f"{c[0].strip()} — {c[2].strip()}, {c[3].strip()}")
+    for w in re.findall(r"[А-ЯЁ][а-яё]{2,}", c[0]):
+        names.setdefault(osnova(w), []).append(f"{c[0].strip()} — {c[2].strip()}, {c[3].strip()}")
 caps = {}
 for m in re.finditer(r"(?<![.!?…]\s)(?<!^)\b([А-ЯЁ][а-яё]{2,})", body):
     caps.setdefault(m.group(1), 0); caps[m.group(1)] += 1
-hits = [(w, names[w]) for w in sorted(caps) if w in names]
+hits, seen = [], set()
+for w in sorted(caps):
+    o = osnova(w)
+    if o in names and o not in seen:
+        seen.add(o); hits.append((w, names[o]))
 if hits:
     print("\nИмена, которые уже есть в tablicy/imena.md (проверь место и поколение):")
     for w, rows in hits:
         print(f"  {w}: " + " ‖ ".join(rows[:3]) + (" ‖ …" if len(rows) > 3 else ""))
+sklad = sorted({osnova(w).capitalize() + '…' for w in caps if re.search(r"[аеэоя][йи][рвсл][аэоыуи]?[а-яё]?$", w.lower()) and len(w) <= 7})
+if sklad:
+    print("\nИмена склада «-ай-/-ей-/-эй-» (у писателей к ним склонность — не злоупотреблять):", ', '.join(sklad))
 print("\nГотово.")

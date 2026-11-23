@@ -95,6 +95,16 @@ def main():
             while j < len(L) and not L[j].startswith(('спорят:', 'тексты:', '### ')) and L[j].strip():
                 j += 1
             L.insert(j, stroka if stroka.startswith('- ') else '- ' + stroka)
+            # номер текста — в строку «тексты:» этой записи
+            k = j + 1
+            while k < len(L) and L[k].strip() and not L[k].startswith('### '):
+                if L[k].startswith('тексты:'):
+                    if not re.search(rf'\b{n}\b', L[k]):
+                        L[k] = L[k].rstrip() + f', {n}'
+                    break
+                k += 1
+            else:
+                L.insert(k, f'тексты: № {n}')
         else:
             L += ['', head, f'ключи: {zap}', stroka if stroka.startswith('- ') else '- ' + stroka, f'тексты: № {n}']
         open(P(put), 'w', encoding='utf-8').write('\n'.join(L) + '\n')
@@ -104,5 +114,8 @@ def main():
     open(P('tablicy', 'zacepki.md'), 'w', encoding='utf-8').write('\n'.join(zac) + '\n')
     open(P('teksty', 'README.md'), 'w', encoding='utf-8').write(readme + '\n')
     print('Влито:', ', '.join(f'{k} — {v}' for k, v in cnt.items()))
+    # карта лора — заново, по обновлённым справочникам
+    import subprocess
+    subprocess.run([sys.executable, P('tools', 'karta.py')], check=False)
 
 main()
