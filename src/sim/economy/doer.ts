@@ -15,11 +15,18 @@ export type How = "с огоньком" | "как велено" | "без ого
 // stale — засиделся: опыт мастерский и выше, почерк вдвое сильнее, курс его не зажигает.
 export interface Doer { p?: Person; mult: number; how: How; note: string; mastery: number; exp: number; mood: number; stale?: boolean; hand: string }
 // Мастерство: годность к должности, переведённая в множитель потока.
-export function mastery(p: Person, post: PostId): { mult: number; word: "негоден" | "годен" | "прирождённый" } {
-  const D = B.economy.doer, t = clamp((fitness(p, post) - D.masteryFrom) / Math.max(1, D.masteryTo - D.masteryFrom), 0, 1);
-  const mult = round2(D.masteryMin + (D.masteryMax - D.masteryMin) * t);
+// share — та же годность долей от «негоден» (0) до «прирождённый» (1): по ней считается и скорость освоения.
+export function mastery(p: Person, post: PostId): { mult: number; share: number; word: "негоден" | "годен" | "прирождённый" } {
+  const D = B.economy.doer, share = clamp((fitness(p, post) - D.masteryFrom) / Math.max(1, D.masteryTo - D.masteryFrom), 0, 1);
+  const mult = round2(D.masteryMin + (D.masteryMax - D.masteryMin) * share);
   const third = (D.masteryMax - D.masteryMin) / 3;
-  return { mult, word: mult < D.masteryMin + third ? "негоден" : mult > D.masteryMax - third ? "прирождённый" : "годен" };
+  return { mult, share, word: mult < D.masteryMin + third ? "негоден" : mult > D.masteryMax - third ? "прирождённый" : "годен" };
+}
+// Опыт за сезон на должности: годный осваивается быстрее негодного.
+export const expGain = (p: Person, post: PostId): number => round2(B.exp.gainUnfit + (B.exp.gainBorn - B.exp.gainUnfit) * mastery(p, post).share);
+// Штраф негодного словами — для ведомости: на сколько слабее идёт его дело.
+export function unfitNote(m: { mult: number; word: string }): string {
+  return m.word === "негоден" && m.mult < 1 ? `негоден — дело идёт на ${Math.round((1 - m.mult) * 100)}% слабее` : m.word;
 }
 function expOf(p: Person): { mult: number; word: string } {
   const D = B.economy.doer;
@@ -40,7 +47,7 @@ export function doer(w: World, post: PostId): Doer {
   // почерк в ведомость не идёт: он выдал бы склонности, которых Сенешаль ещё не знает
   const hand = mine.length ? `почерк${isStale(p) ? " вдвое сильнее" : ""} — ${mine.join(", с оттенком: ")}` : "";
   const stale = isStale(p);
-  const made = (how: How, mood: number): Doer => ({ p, mult: round2(m.mult * x.mult * mood), how, note: `${m.word}, ${x.word}, ${how}`, mastery: m.mult, exp: x.mult, mood, stale, hand });
+  const made = (how: How, mood: number): Doer => ({ p, mult: round2(m.mult * x.mult * mood), how, note: `${unfitNote(m)}, ${x.word}, ${how}`, mastery: m.mult, exp: x.mult, mood, stale, hand });
   let score = 0;
   if (p.loyalty >= B.loyalty.trusts) score++;
   if (p.loyalty <= B.loyalty.unhappy) score--;

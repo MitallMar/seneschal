@@ -2,12 +2,13 @@
 import type { GameEvent, EventOption } from "../data/types";
 import { EVENTS } from "../data/events";
 import { BALANCE as B } from "./balance";
-import { clamp, round1 } from "./util";
+import { clamp, round1, round2 } from "./util";
 import { REL_MAX, isStale, postName, holder } from "./state";
 import type { Person, LogEntry, World } from "./state";
 import { addAuthority, authoritySeason } from "./authority";
 import { economySeason, rollForecast } from "./economy/season";
 import { addLine } from "./economy/ledger";
+import { expGain } from "./economy/doer";
 import { mod, addRel } from "./council/people";
 import { scoreOptions } from "./council/decide";
 import { applyEffects, toneOf, lastOpt, resetLastOpt } from "./council/effects";
@@ -117,8 +118,9 @@ function upkeep(w: World) {
   for (const p of w.people) {
     if (p.post) {
       p.tenure++;
-      p.exp = Math.min(p.exp + 1, B.exp.master);
-      if (p.tenure === B.exp.settled) lines.push(`${p.name} освоил${p.female ? "ась" : "ся"} на должности.`);
+      const was = p.exp;
+      p.exp = Math.min(round2(p.exp + expGain(p, p.post)), B.exp.master);
+      if (was < B.exp.settled && p.exp >= B.exp.settled) lines.push(`${p.name} освоил${p.female ? "ась" : "ся"} на должности.`);
       if (p.tenure === B.exp.staleFrom) lines.push(`${p.name} засидел${p.female ? "ась" : "ся"} на месте: оброс своими людьми и делает всё больше по-своему.`);
       if (isStale(p) && p.star.vygoda >= B.decide.staleGreedFrom && w.rng.chance(B.season.theftChance * orderMods(w).theft)) {
         // вороватый, который сам ведёт счёт серебру (писарь), прячет строку: пропажа видна только как «счёт не сходится»

@@ -33,7 +33,7 @@ test("весна: товары уходят купцам, пошлины, жал
   assert.deepEqual(l.after, w.eco.stock);
   const duty = line(w, "пошлины")!;
   assert.deepEqual([duty.v, duty.side], [0.5, "kuptsy"]);
-  assert.ok(/^(негоден|годен|прирождённый), мастер, как велено/.test(duty.how!), `в ведомости — из чего сложилась сила: ${duty.how}`);
+  assert.ok(/^(негоден[^,]*|годен|прирождённый), мастер, как велено/.test(duty.how!), `в ведомости — из чего сложилась сила: ${duty.how}`);
   assert.ok(duty.who!.includes(holder(w, "pisar")!.name), "ответственный назван");
   assert.equal(line(w, "жалованье")!.v, -E.flow.salary);
   assert.equal(ledgerOf(l, "eda").lines.reduce((s, x) => s + x.v, 0), -E.flow.upkeep);
