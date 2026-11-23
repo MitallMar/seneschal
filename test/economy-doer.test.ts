@@ -9,9 +9,10 @@ import { newWorld } from "../src/sim/council/generate";
 import { runEvent } from "../src/sim/council/council";
 import { assign } from "../src/sim/council/staff";
 import { holder } from "../src/sim/state";
-import { doer, setCourse, courseStrength, mastery, handsOf, handText, levers } from "../src/sim/economy/doer";
+import { doer, setCourse, courseStrength, mastery, expGain, handsOf, handText, levers } from "../src/sim/economy/doer";
 import { fieldHands, planSeason } from "../src/sim/economy/plan";
 import { economySeason, elderSaw } from "../src/sim/economy/season";
+import { runSeason } from "../src/sim/season";
 import { elderRel } from "../src/sim/economy/view";
 import { fix } from "./_world";
 import { E, event, calm, noHead, noHand, pass, zoneAt } from "./_economy";
@@ -143,12 +144,28 @@ test("староста деревни: решения тиуна по его д�
 
 // ---------- сила потока: мастерство × опыт × настрой (lyudi-i-ishody.md, 2.1) ----------
 
+test("освоение: годный набирает опыт на должности быстрее негодного, и замена из годного раньше перестаёт быть новичком", () => {
+  const w = newWorld("освоение");
+  const born = fix(holder(w, "starosta")!, ["zabota", "obychai"]), unfit = fix(holder(w, "pisar")!, ["zabota", "obychai"]);
+  unfit.mark = undefined; unfit.aspiration = undefined;
+  assert.equal(mastery(unfit, "pisar").word, "негоден");
+  assert.deepEqual([expGain(born, "starosta"), expGain(unfit, "pisar")], [BALANCE.exp.gainBorn, BALANCE.exp.gainUnfit]);
+  assert.ok(BALANCE.exp.gainBorn > BALANCE.exp.gainUnfit, "по умолчанию годный осваивается быстрее");
+  for (const p of [born, unfit]) { p.exp = 0; p.tenure = 0; }
+  runSeason(w); runSeason(w);
+  assert.deepEqual([born.exp, unfit.exp], [Math.min(2 * BALANCE.exp.gainBorn, BALANCE.exp.master), 2 * BALANCE.exp.gainUnfit]);
+  assert.ok(born.exp >= BALANCE.exp.settled && unfit.exp < BALANCE.exp.settled, "прирождённый за два сезона освоился, негодный — ещё новичок");
+  assert.ok(w.log.some((e) => e.lines.some((l) => l.startsWith(`${born.name} освоил`))), "в летописи — когда освоился");
+  for (let i = 0; i < 40; i++) runSeason(w);
+  assert.equal(born.post === "starosta" ? born.exp : BALANCE.exp.master, BALANCE.exp.master, "опыт не растёт выше потолка");
+});
+
 test("сила потока: мастерство по годности, опыт и настрой перемножаются; в ведомости видно, из чего она сложилась", () => {
   noHand(); noHead();
   const w = newWorld("сила");
   const p = fix(holder(w, "starosta")!, ["zabota", "obychai"]);   // годность тиуна — Забота и Обычай: прирождённый
   p.loyalty = 0;
-  assert.deepEqual(mastery(p, "starosta"), { mult: E.doer.masteryMax, word: "прирождённый" });
+  assert.deepEqual(mastery(p, "starosta"), { mult: E.doer.masteryMax, share: 1, word: "прирождённый" });
   let d = doer(w, "starosta");
   assert.deepEqual([d.mastery, d.exp, d.mood, d.note], [E.doer.masteryMax, E.doer.expMaster, E.doer.plain, "прирождённый, мастер, как велено"]);
   assert.equal(d.hand, "почерк — Забота, с оттенком: Обычай");
@@ -159,7 +176,7 @@ test("сила потока: мастерство по годности, опы�
   assert.equal(doer(w, "starosta").exp, E.doer.expSettled);
   fix(p, ["derzost", "vygoda"]).loyalty = BALANCE.loyalty.unhappy;      // чужие склонности и недоволен
   d = doer(w, "starosta");
-  assert.deepEqual([d.mastery, d.note], [E.doer.masteryMin, "негоден, мастер, без огонька"]);
+  assert.deepEqual([d.mastery, d.note], [E.doer.masteryMin, `негоден — дело идёт на ${Math.round((1 - E.doer.masteryMin) * 100)}% слабее, мастер, без огонька`]);
   const worst = E.doer.masteryMin * E.doer.expNovice * E.doer.dull, best = E.doer.masteryMax * E.doer.expMaster * E.doer.fire;
   assert.ok(worst < 0.62 && best > 1.45, `размах от ${worst.toFixed(2)} до ${best.toFixed(2)}`);
   // годный тиун даёт больше урожая, чем негодный, при прочих равных
