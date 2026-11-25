@@ -1,18 +1,21 @@
 // Портрет человека по Концепту 3 (задача И27а): чего хочет, что его удерживает, чем его взять, что помнит, как говорит, с кем ладит, чем виден.
-// Складывается из признаков по правилу по умолчанию (src/data/portrait.ts) и особенного его черт. Замысел — docs/design/cherty-dannye.md, разделы 1–2.
+// Складывается из признаков по правилу по умолчанию (src/data/portrait.ts), происхождения и особенного его черт. Замысел — docs/design/cherty-dannye.md, разделы 1–2.
+// Происхождение ложится поверх признаков и под чертами — как слабая черта (задача И27д; natura.md, раздел 9, ответы автора по И27в).
 // Случайности нет: один и тот же человек — один и тот же портрет. Стоит отдельно от совета, числа — natura.portrait в balance.ts.
 import type {
   Sign, BagTrait, Rarity, Vis, Want, Hold, Approach, MemKey, Bias, Channel, LinkKey, TraitThread, TraitDeed, TraitHolder, TraitTraces, TraitIf, TraitNoteKey,
 } from "../data/types";
 import { SIGNS } from "../data/natura";
 import { POLE_RULES, WANTS, HOLDS, APPROACHES, MEM_KEYS, LINK_GROUPS, POLE_PEOPLE, type PoleRule, type MemScale } from "../data/portrait";
-import { ALLOYS, type AlloyDef } from "../data/origins";
+import { ALLOYS, type AlloyDef, type OriginDef } from "../data/origins";
 import { BALANCE as B } from "./balance";
 import { round2 } from "./util";
-import type { NaturaPerson } from "./natura";
+import { originById, isSeneschal, type NaturaPerson } from "./natura";
 
-// Откуда строка портрета: от признака (from — имя полюса) или от черты (from — имя черты).
-export interface Src { from: string; trait: boolean }
+// Откуда строка портрета: от признака (from — имя полюса), от черты (from — имя черты) или от происхождения (origin; from — его имя).
+export interface Src { from: string; trait: boolean; origin?: boolean }
+// Происхождение для портрета. noStrangers — «чужие» происхождения не применяются: так у Сенешаля.
+export interface PortraitOrigin { origin: OriginDef; noStrangers?: boolean }
 // Слагаемое числа: кто и сколько добавил.
 export interface Part extends Src { v: number }
 // from — чей это след: имя полюса признака или черты.
@@ -28,7 +31,7 @@ export interface Portrait {
   links: { ladit: LinkKey[]; neLadit: LinkKey[]; start: number; notes: string[] };
   traces: { ten: number; tenSfery: number; yasnost: number; razgovor: number; chuzhie?: TraitTraces["chuzhie"]; lines: PortraitTrace[] };
   ifs: (TraitIf & { from: string })[];          // поправки с оговоркой: в числа выше не входят
-  threads: (TraitThread & { from: string })[];
+  threads: (TraitThread & { from: string; origin?: boolean })[]; // origin — нить от происхождения: к ней человек склонен
   deed: (TraitDeed & { from: string })[];
   holder: (TraitHolder & { from: string })[];
   likho: number;                                // прикрытие лиху от пороков и от засидевшегося с нечистой совестью
@@ -101,7 +104,8 @@ export function alloysOf(signs: Record<Sign, number>, traits: BagTrait[] = []): 
 }
 // Портрет по признакам и чертам. Черты — в порядке появления у человека: последняя нажита позже всех.
 // Особенность сплава ложится поверх всего — как у черты, нажитой последней.
-export function portraitOf(signs: Record<Sign, number>, own: BagTrait[] = []): Portrait {
+// Происхождение — поверх признаков и под чертами: желания и удержки складываются со всеми, а где оно спорит с чертой («ладит / не ладит»), верна черта.
+export function portraitOf(signs: Record<Sign, number>, own: BagTrait[] = [], whence?: PortraitOrigin): Portrait {
   const P = B.natura.portrait, poles = polesOf(signs), notable = poles.filter((p) => isNotable(p.v));
   const alloys = alloysOf(signs, own);
   const traits: BagTrait[] = [...own, ...alloys.map((a): BagTrait => ({
@@ -145,9 +149,18 @@ export function portraitOf(signs: Record<Sign, number>, own: BagTrait[] = []): P
   // пристрастие доклада: у самого сильного из заметных полюсов, у которых оно есть
   const biased = notable.find((p) => p.rule.bias && (!p.rule.biasStrong || isStrong(p.v)));
   let bias: Bias = biased?.rule.bias ?? "bez", biasSrc: Src | null = biased ? { from: biased.name, trait: false } : null, biasRank = -1;
-  // особенное черт поверх признаков
   const top = Number.MAX_SAFE_INTEGER, said: { text: string; src: Src }[] = [];
   const ifs: Portrait["ifs"] = [], threads: Portrait["threads"] = [], deed: Portrait["deed"] = [], holder: Portrait["holder"] = [], notes: Portrait["notes"] = [];
+  // происхождение: сильнее любого признака, слабее любой черты
+  if (whence) {
+    const o = whence.origin, src: Src = { from: o.name, trait: false, origin: true }, force = top - traits.length - 1;
+    for (const k of o.wants) add(wants, from.wants, k, P.originForce, src);
+    for (const k of o.holds ?? []) add(holds, from.holds, k, P.originForce, src);
+    links.put(o.ladit, false, force, src);
+    if (!whence.noStrangers) links.put(o.neLadit, true, force, src);
+    for (const nit of o.threads) threads.push({ nit, kak: "tolkaet", from: o.name, origin: true });
+  }
+  // особенное черт поверх признаков и происхождения
   traits.forEach((t, i) => {
     const src: Src = { from: t.name, trait: true }, force = top - traits.length + i;
     for (const x of WANTS) add(wants, from.wants, x.id, t.wants?.[x.id], src);
@@ -196,5 +209,5 @@ export function portraitOf(signs: Record<Sign, number>, own: BagTrait[] = []): P
     },
   };
 }
-// Портрет человека из генератора натуры.
-export const portrait = (p: NaturaPerson): Portrait => portraitOf(p.signs, p.traits);
+// Портрет человека из генератора натуры. В счёт идёт настоящее происхождение: у человека с тайной — то, кем он был, а не кем зовётся на людях.
+export const portrait = (p: NaturaPerson): Portrait => portraitOf(p.signs, p.traits, { origin: originById(p.origin), noStrangers: isSeneschal(p) });

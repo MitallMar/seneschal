@@ -55,6 +55,8 @@ export const NATURES: NatureDef[] = [
   nat("znakhar", "Ведун", { vera: 3, lyubopytstvo: 3, obshchitelnost: -3 }),
   nat("vyskochka", "Выскочка", { chestolyubie: 3, terpenie: -3, chestnost: -3 }),
   nat("sobiratel", "Собиратель", { terpenie: 3, poryadok: 3, shchedrost: -3 }),
+  // И27д: тихий человек, довольный своим — натура с довольством малым в ядре
+  nat("domosed", "Домосед", { chestolyubie: -3, terpenie: 3, privyazannost: 3 }),
 ];
 
 // Мешок. kind: born — врождённая (склад человека), life — нажитая (до игры, в событиях предыстории, или в игре), perk — умение.

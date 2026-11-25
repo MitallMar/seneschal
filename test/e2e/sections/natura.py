@@ -10,14 +10,15 @@ async def s_natura(br, errs):
     await pg.wait_for_selector('#metric-cards .card')
     n = lambda sel: pg.evaluate("s=>document.querySelectorAll(s).length", sel)
     m = await pg.evaluate("()=>window.__emu.metrics()")
-    ok('эмулятор открылся: 600 рероллов, девять карточек метрик, предупреждений нет', 'эмулятор натуры' in await pg.title()
-       and await pg.evaluate("()=>window.__emu.people()") == 600 and await n('#metric-cards .card') == 9 and await n('#metric-cards .card.bad') == 0
+    ok('эмулятор открылся: 1000 рероллов, девять карточек метрик, предупреждений нет', 'эмулятор натуры' in await pg.title()
+       and await pg.evaluate("()=>window.__emu.people()") == 1000 and await n('#metric-cards .card') == 9 and await n('#metric-cards .card.bad') == 0
        and 'Предупреждений нет' in await pg.inner_text('#warnings'), await pg.inner_text('#warnings'))
     ok('метрики в целях: рероллы не похожи, натура читается по признакам, нажитого больше половины', m['jaccard'] <= 0.5 and m['signNn'] >= 0.7
        and 0.2 <= m['nn'] <= 0.6 and m['lifeShare'] >= 0.6 and m['kinds']['life'] > m['kinds']['born'], (m['jaccard'], m['nn'], m['signNn'], m['kinds']))
-    ok('графики: строка на каждую черту мешка и на каждую натуру, тепловые карты 30 натур', await n('#chart-traits .track') == BAG - BAG_SENESCHAL
-       and await n('#chart-natures .track') == 90 and await n('#heat-signs tr') == 31 and await n('#heat-axes tr') == 31 and await n('#heat-signs td.core') == 90)
-    ok('таблицы наполнения: 30 натур, весь мешок, 12 признаков, черты и должности совета', await n('#table-natures tr') == 31 and await n('#table-bag tr') == BAG + 1
+    ok('графики: строка на каждую черту мешка и на каждую натуру, тепловые карты всех натур', await n('#chart-traits .track') == BAG - BAG_SENESCHAL
+       and await n('#chart-natures .track') == NATURES * 3 and await n('#heat-signs tr') == NATURES + 1 and await n('#heat-axes tr') == NATURES + 1
+       and await n('#heat-signs td.core') == NATURES * 3)
+    ok('таблицы наполнения: все натуры, весь мешок, 12 признаков, черты и должности совета', await n('#table-natures tr') == NATURES + 1 and await n('#table-bag tr') == BAG + 1
        and await n('#table-signs tr') == 13 and await n('#table-key tr') == 11 and await n('#table-life tr') >= 12 and await n('#table-posts tr') == 6)
     ok('человек: кусты у врождённых якорей и у дальнего, у каждой черты подписано происхождение; двенадцать рероллов', await n('#person-view .bush') >= 2
        and await n('#person-view .trait') >= 3 and 'до игры:' in await pg.inner_text('#person-view') and 'врождённая' in await pg.inner_text('#person-view')
@@ -34,10 +35,10 @@ async def s_natura(br, errs):
        rows[:10] == ['Хочет', 'Удерживает', 'Подход: работает', 'Подход: не действует', 'Память', 'Говорит', 'Доклад', 'Ладит', 'Не ладит', 'Следы']
        and all(r in ('При условии', 'Нити', 'Дело', 'Лихо', 'Сплав', 'Откуда и чей') for r in rows[10:]), rows)
     marks = await n('#portrait .by-trait')
-    from_traits = sum(1 for l in pt['traces']['lines'] if l['trait']) + len(pt['threads']) + len(pt['ifs']) + len(pt['deed'])
-    ok('портрет: у строки видно, откуда она — от черты (метка с именем) или от признака; ниже — особенное каждой черты с видимостью и действием',
+    from_traits = sum(1 for l in pt['traces']['lines'] if l['trait']) + sum(1 for t in pt['threads'] if not t.get('origin')) + len(pt['ifs']) + len(pt['deed'])
+    ok('портрет: у строки видно, откуда она — от черты (метка с именем), от происхождения или от признака; ниже — особенное каждой черты с видимостью и действием',
        marks >= from_traits > 0 and await n('#portrait-traits .tnote') == await n('#person-view .trait') and await n('#portrait-traits .tnote .tag.role') == await n('#portrait-traits .tnote')
-       and all(('от черты' in t.lower() or 'от признака' in t or 'Из чего' in t) for t in await pg.evaluate("()=>[...document.querySelectorAll('#portrait .prow .tag[title]')].map(x=>x.title)")),
+       and all(('от черты' in t.lower() or 'от признака' in t or 'от происхождения' in t.lower() or 'Из чего' in t) for t in await pg.evaluate("()=>[...document.querySelectorAll('#portrait .prow .tag[title]')].map(x=>x.title)")),
        (marks, from_traits))
     ok('портрет торгаша: выгода работает, желание денег названо словом, доклад с пристрастием, у следа подписана видимость',
        'vygoda' in pt['approach']['da'] and pt['wants']['dengi'] > 0.5 and 'деньги — ' in ptext and 'сильнее' in ptext and 'выгода' in ptext
@@ -51,6 +52,10 @@ async def s_natura(br, errs):
     await pg.evaluate("()=>window.__emu.setKnob('natura.portrait.notable', 2)")
     ok('портрет: последняя строка — «Откуда и чей»: происхождение с мерой', rows[-1] == 'Откуда и чей' and await n('#origin-name') == 1
        and 'мера —' in await pg.inner_text('#portrait') and 'откуда:' in await pg.inner_text('#person-view'), rows[-1])
+    by_origin = lambda q: [x for parts in list(q['by']['wants'].values()) + list(q['by']['holds'].values()) for x in parts if x.get('origin')]
+    whose = await pg.inner_text('#origin-name')
+    ok('происхождение идёт в портрет как слабая черта: +1 желанию, и у слагаемого видно, что оно от происхождения',
+       len(by_origin(pt2)) >= 1 and all(x['v'] == 1 and x['from'] == whose and not x['trait'] for x in by_origin(pt2)), (whose, by_origin(pt2)))
     await pg.click('#seneschal')
     sen = await pg.inner_text('#person-view')
     sp = await pg.evaluate("()=>window.__emu.portrait()")
@@ -58,6 +63,11 @@ async def s_natura(br, errs):
        and all(x in sen for x in ('Золотое правило', 'Крепкая основа', 'Мечта о дороге', 'Мешок Сенешаля')) and await n('#person-view .bush.sen .trait') in (6, 7, 8)
        and any(x['from'] == 'Золотое правило' for x in sp['by']['holds']['sovest']) and any(x['from'] == 'Мечта о дороге' for x in sp['by']['wants']['novoe'])
        and await pg.evaluate("()=>document.getElementById('age').disabled") and await pg.inner_text('#seneschal') == 'Обычный человек', await n('#person-view .bush.sen .trait'))
+    sen_origin = await pg.inner_text('#origin-name')
+    ok('у Сенешаля подписано происхождение — одно из четырёх — и рамка; мера — служба; в портрете оно тоже есть',
+       sen_origin in ('Из служилого рода', 'Второй сын из тесного домена', 'Храмовый выученик', 'Горожанин из Ваделы')
+       and 'назначен палатой управителем, выслужился' in sen and 'служба' in sen and 'мера — служба' in await pg.inner_text('#portrait')
+       and len(by_origin(sp)) >= 1 and all(x['from'] == sen_origin for x in by_origin(sp)), sen_origin)
     await pg.click('#seneschal')
     ok('вторая кнопка возвращает обычного человека', await n('#is-seneschal') == 0 and await pg.inner_text('#seneschal') == 'Сенешаль' and 'Торгаш' in await pg.inner_text('#person-view'))
     await pg.select_option('#age', '18'); young = await n('#person-view .trait')
@@ -97,6 +107,15 @@ async def s_natura(br, errs):
     await pg.click('#reset')
     await pg.select_option('#rolls', '300')
     ok('число рероллов меняется', await pg.evaluate("()=>window.__emu.people()") == 300)
+    fon = (await pg.evaluate("()=>window.__emu.metrics()"))['origins']
+    await pg.select_option('#place', 'priyom')
+    came = (await pg.evaluate("()=>window.__emu.metrics()"))['origins']
+    ok('место «приём пришлых»: только беглые, вторые сыновья, бывалые и пришлые на льготу', await n('#place option') == 4 and 'приём пришлых' in await pg.inner_text('#state')
+       and came['starozhil'] == 0 and came['iz_chelyadi'] == 0 and came['vtoroy_syn'] > fon['vtoroy_syn'] and fon['starozhil'] > 0, came)
+    await pg.select_option('#place', 'derevnya')
+    village = (await pg.evaluate("()=>window.__emu.metrics()"))['origins']
+    ok('место «деревня»: старожилов больше, чем на общем фоне', village['starozhil'] > fon['starozhil'] * 1.5, (fon['starozhil'], village['starozhil']))
+    await pg.select_option('#place', 'fon')
     await shot(pg, 'natura')
     game = await open_game(br, errs)
     ok('с прототипа совета есть ссылка на эмулятор', await game.get_attribute('#to-emu', 'href') == 'natura.html')

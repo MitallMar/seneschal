@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import type { Sign, BagTrait, SignVec } from "../src/data/types";
 import { TRAITS } from "../src/data/core";
 import { SIGNS, NATURES, BAG, SENESCHAL } from "../src/data/natura";
-import { ALLOYS, ORIGINS, MERA_NAMES, HIDDEN_ORIGINS } from "../src/data/origins";
+import { ALLOYS, ORIGINS, MERA_NAMES, HIDDEN_ORIGINS, ORIGIN_PLACES, SENESCHAL_ORIGIN, type OriginPlace } from "../src/data/origins";
 import { NAMES_PEOPLE } from "../src/data/names";
 import { TRAITS_C3, COUNCIL_TO_BAG } from "../src/data/traits-c3";
 import {
@@ -13,7 +13,7 @@ import {
 } from "../src/data/portrait";
 import { BALANCE, resetBalance, setAt } from "../src/sim/balance";
 import { Rng } from "../src/sim/rng";
-import { growPerson, growSeneschal, rollPerson, growLife, originById, type NaturaPerson } from "../src/sim/natura";
+import { growPerson, growSeneschal, rollPerson, growLife, originById, placeWeight, type NaturaPerson } from "../src/sim/natura";
 import { rollAll, metricsOf } from "../src/sim/natura-report";
 import { portraitOf, portrait, alloysOf, polesOf, traitVis, strengthWord, linkName, isNotable, isStrong } from "../src/sim/portrait";
 
@@ -26,7 +26,7 @@ const trait = (id: string, extra: Partial<BagTrait> = {}): BagTrait => ({
 
 test("словарь: размеры как в cherty-dannye.md, id не повторяются, у каждого слово для экрана", () => {
   assert.deepEqual([WANTS, HOLDS, APPROACHES, MEM_KEYS, BIASES, CHANNELS, LINK_GROUPS, HOLDER_ROLES].map((x) => x.length), [7, 4, 21, 11, 8, 8, 13, 12]);
-  assert.deepEqual([THREADS.filter((t) => !t.proposed).length, THREADS.filter((t) => t.proposed).length, MEM_SCALES.length], [24, 3, 3]);
+  assert.deepEqual([THREADS.filter((t) => !t.proposed).length, THREADS.filter((t) => t.proposed).length, MEM_SCALES.length], [26, 1, 3]);
   for (const list of [WANTS, HOLDS, APPROACHES, MEM_KEYS, BIASES, CHANNELS, LINK_GROUPS, HOLDER_ROLES, THREADS]) {
     assert.equal(new Set(list.map((x) => x.id)).size, list.length);
     for (const x of list) assert.ok(/^[a-z_]+$/.test(x.id) && x.name && x.desc, x.id);
@@ -161,7 +161,7 @@ test("один и тот же человек — один и тот же пор�
   for (const n of NATURES) {
     const a = growPerson(new Rng(`портрет-${n.id}`), n), b = growPerson(new Rng(`портрет-${n.id}`), n);
     assert.deepEqual(portrait(a), portrait(b), n.id);
-    assert.deepEqual(portrait(a), portraitOf(a.signs, a.traits));
+    assert.deepEqual(portrait(a), portraitOf(a.signs, a.traits, { origin: originById(a.origin) }));
     const p = portrait(a), poles = polesOf(a.signs);
     assert.ok(poles.every((x, i) => i === 0 || x.v <= poles[i - 1].v), "полюса — от сильного к слабому");
     assert.ok(poles.filter((x) => isNotable(x.v)).length >= 1, `${n.id}: заметных полюсов нет`);
@@ -441,7 +441,8 @@ test("каталог нитей: имя «ребёнок на стороне», 
   assert.deepEqual([thread("krov").name, thread("krov").desc], ["ребёнок на стороне", "мать просит → растёт → узнают"]);
   assert.match(thread("proshloe").desc, /«лучшие дни».*признать/);
   assert.deepEqual([thread("vina").name, thread("vina").proposed, thread("draka").proposed, thread("sabotazh").proposed], ["скрытая вина", undefined, undefined, undefined]);
-  assert.deepEqual(THREADS.filter((t) => t.proposed).map((t) => t.id), ["rodnya", "rebyonok", "son"]);
+  // пачки 1–3 каталога приняты; «ребёнок растёт» — пачка 4, ещё предложение
+  assert.deepEqual(THREADS.filter((t) => t.proposed).map((t) => t.id), ["rebyonok"]);
   assert.deepEqual([role("svidetel").name, role("svidetel").likho], ["свидетель", undefined]);
   // «Знавал лучшие дни» — только до игры; «Скрывает вину» — в игре, по поступку
   const was = bag("luchshie_dni"), guilt = bag("skryvaet_vinu");
@@ -494,4 +495,103 @@ test("сплав в портрете: имя, особенность и то, ч
   const miser = portraitOf(signs({ shchedrost: -2 }), [bag("chtit_primety"), bag("zhaleet_ubogikh")]);
   assert.ok(miser.approach.net.includes("prosba") && miser.approach.da.includes("obychay"), "сплав ложится поверх черт: просьба людей не действует");
   assert.deepEqual(portraitOf(signs({ zhestkost: 3 })).alloys, []);
+});
+
+// ---------- ответы автора по И27в (задача И27д; natura.md, раздел 9; koncept-3.md, 13.1) ----------
+
+test("происхождение в портрете: желания и удержки +1, свои и чужие — в «ладит / не ладит», нити — в нити; при споре верна черта", () => {
+  const rod = originById("sluzhily_rod"), gorod = originById("iz_vadely"), byvaly = originById("byvaly");
+  // служилый род: почёт и правило по единице, служилые — свои; у строк видно, что они от происхождения
+  const p = portraitOf(zero, [], { origin: rod });
+  assert.deepEqual([p.wants.pochet, p.holds.pravilo, p.links.ladit], [1, 1, ["sluzhilye"]]);
+  assert.deepEqual([p.by.wants.pochet, p.by.links.sluzhilye], [[{ from: rod.name, trait: false, origin: true, v: 1 }], { from: rod.name, trait: false, origin: true }]);
+  // складывается с чертой и с признаком: «Знавал лучшие дни» тоже даёт почёт
+  assert.equal(portraitOf(zero, [bag("luchshie_dni")], { origin: rod }).wants.pochet, 2);
+  // сила — ручка
+  setAt("natura.portrait.originForce", 0.5);
+  assert.equal(portraitOf(zero, [], { origin: rod }).wants.pochet, 0.5);
+  resetBalance();
+  // нити происхождения — «склонен»: с пометой, откуда
+  assert.deepEqual(portraitOf(zero, [], { origin: byvaly }).threads, [{ nit: "draka", kak: "tolkaet", from: byvaly.name, origin: true }]);
+  // поверх признаков: гордый не ладит со служилыми? нет такого правила — берём то, что есть: у горожанина деревни чужие, палата и купцы свои
+  const town = portraitOf(zero, [], { origin: gorod });
+  assert.deepEqual([town.links.ladit, town.links.neLadit], [["palata", "kuptsy"], ["derevni"]]);
+  // спор с признаком: происхождение сильнее; спор с чертой: верна черта
+  const pole = POLE_RULES.find((r) => r.neLadit?.includes("palata") || r.ladit?.includes("derevni"));
+  const against = trait("ladit_s_derevney", { links: { ladit: ["derevni"] } });
+  const fixed = portraitOf(zero, [against], { origin: gorod });
+  assert.ok(fixed.links.ladit.includes("derevni") && !fixed.links.neLadit.includes("derevni"), "черта перекрывает происхождение");
+  assert.deepEqual(fixed.by.links.derevni, { from: against.name, trait: true });
+  if (pole) {
+    const signs = { ...zero, [pole.sign]: pole.plus ? 5 : -5 }, got = portraitOf(signs, [], { origin: gorod });
+    assert.ok(got.links.ladit.includes("palata") && got.links.neLadit.includes("derevni"), "происхождение перекрывает признак");
+  }
+  // «чужие» можно не применять — так у Сенешаля
+  assert.deepEqual(portraitOf(zero, [], { origin: gorod, noStrangers: true }).links.neLadit, []);
+  // без происхождения портрет прежний
+  assert.deepEqual(portraitOf(zero, []).threads, []);
+});
+
+test("портрет человека с тайной считается по настоящему происхождению, а не по тому, кем он зовётся", () => {
+  const all = Array.from({ length: 3000 }, (_, i) => growPerson(new Rng(`беглый-${i}`), NATURES[i % NATURES.length], { age: 60 }));
+  const hidden = all.filter((p) => p.origin !== p.originShown);
+  assert.ok(hidden.length >= 10);
+  for (const p of hidden) {
+    const real = originById(p.origin), got = portrait(p);
+    assert.deepEqual(got, portraitOf(p.signs, p.traits, { origin: real }));
+    for (const nit of real.threads) assert.ok(got.threads.some((t) => t.nit === nit && t.origin && t.from === real.name));
+  }
+});
+
+test("доли по месту: в деревне чаще старожилы и пришлые, в замке — челядь, сироты и служилые, на приёме — только пришлые", () => {
+  assert.deepEqual(ORIGIN_PLACES.map((x) => x.id), ["fon", "derevnya", "zamok", "priyom"]);
+  for (const at of ORIGIN_PLACES) for (const id of [...(at.often ?? []), ...(at.seldom ?? []), ...(at.only ?? [])]) originById(id);
+  const share = (place?: OriginPlace) => metricsOf(Array.from({ length: 1200 }, (_, i) => rollPerson(`место-${i}`, NATURES[i % NATURES.length], undefined, place))).origins;
+  const fon = share(), village = share("derevnya"), castle = share("zamok");
+  // общий фон — прежние доли: место по умолчанию ничего не меняет
+  assert.deepEqual(fon, share("fon"));
+  assert.ok(village.starozhil > fon.starozhil * 1.5 && village.prishly_na_lgotu > fon.prishly_na_lgotu * 1.5, JSON.stringify(village));
+  assert.ok(village.sluzhily_rod < fon.sluzhily_rod && village.iz_chelyadi < fon.iz_chelyadi);
+  assert.ok(castle.iz_chelyadi > fon.iz_chelyadi * 1.5 && castle.zamkovy_sirota > fon.zamkovy_sirota * 1.5 && castle.sluzhily_rod > fon.sluzhily_rod * 1.5, JSON.stringify(castle));
+  assert.ok(castle.starozhil < fon.starozhil);
+  // полукровка и тулл — исключительные везде
+  for (const s of [village, castle]) assert.ok(s.polukrovka < 0.04 && s.tull < 0.04, JSON.stringify(s));
+  // приём пришлых: настоящее происхождение — одно из четырёх или тайное прошлое; на людях — всегда одно из четырёх
+  const four = ORIGIN_PLACES.find((x) => x.id === "priyom")!.only!;
+  const came = Array.from({ length: 1500 }, (_, i) => growPerson(new Rng(`приём-${i}`), NATURES[i % NATURES.length], { age: 60, place: "priyom" }));
+  assert.ok(came.every((p) => four.includes(p.originShown)), "на людях — пришлый");
+  assert.ok(came.every((p) => four.includes(p.origin) || p.traits.some((t) => t.id === "luchshie_dni")), "настоящее — пришлый или «лучшие дни»");
+  assert.ok(four.every((id) => came.some((p) => p.origin === id)), "встречаются все четыре");
+  // веса места — ручки
+  assert.equal(placeWeight(originById("starozhil"), "derevnya"), BALANCE.natura.placeOften);
+  assert.equal(placeWeight(originById("sluzhily_rod"), "derevnya"), BALANCE.natura.placeSeldom);
+  assert.equal(placeWeight(originById("starozhil"), "priyom"), 0);
+  setAt("natura.placeOften", 1); setAt("natura.placeSeldom", 1);
+  for (const o of ORIGINS) assert.equal(placeWeight(o, "zamok"), placeWeight(o, "fon"), o.id);
+});
+
+test("натура с довольством малым в ядре: «Сыт краюхой» и «Знает свой шесток» выпадают не как исключительные", () => {
+  const quiet = NATURES.find((n) => n.id === "domosed")!;
+  assert.deepEqual([quiet.name, quiet.core.chestolyubie, Object.keys(quiet.core).length], ["Домосед", -3, 3]);
+  const people = rollAll(1000, "натура"), has = (id: string) => people.filter((p) => p.traits.some((t) => t.id === id)).length;
+  // до новой натуры было 3–6 на тысячу — на грани покрытия
+  assert.ok(has("syt_krayukhoy") >= 8 && has("znaet_shestok") >= 8, `«Сыт краюхой» ${has("syt_krayukhoy")}, «Знает свой шесток» ${has("znaet_shestok")} на тысячу`);
+  const own = people.filter((p) => p.nature === quiet);
+  assert.ok(own.filter((p) => p.traits.some((t) => ["syt_krayukhoy", "znaet_shestok"].includes(t.id))).length / own.length > 0.3, "у Домоседа — у многих");
+});
+
+test("откуда Сенешаль: одно из четырёх происхождений поровну, тайного прошлого нет, «чужие» не применяются", () => {
+  assert.deepEqual([SENESCHAL_ORIGIN.ids, SENESCHAL_ORIGIN.mera], [["sluzhily_rod", "vtoroy_syn", "khramovy_vyuchenik", "iz_vadely"], "sluzhba"]);
+  const all = Array.from({ length: 400 }, (_, i) => growSeneschal(`откуда-${i}`, NATURES[i % NATURES.length]));
+  for (const id of SENESCHAL_ORIGIN.ids) {
+    const n = all.filter((s) => s.origin === id).length;
+    assert.ok(n > 70 && n < 130, `${id}: ${n} из 400`);
+  }
+  assert.ok(all.every((s) => s.origin === s.originShown && SENESCHAL_ORIGIN.ids.includes(s.origin)));
+  assert.ok(all.every((s) => !s.traits.some((t) => HIDDEN_ORIGINS.some((r) => r.trait === t.id))), "ни беглого, ни «лучших дней»");
+  // горожанин из Ваделы: у людей деревни чужие, у Сенешаля — нет; свои и желания — как у людей
+  const town = all.find((s) => s.origin === "iz_vadely")!, got = portrait(town);
+  assert.equal(got.by.links.derevni?.origin, undefined);
+  assert.ok(got.by.wants.dengi.some((x) => x.origin) && got.by.wants.novoe.some((x) => x.origin));
+  assert.deepEqual(got, portraitOf(town.signs, town.traits, { origin: originById("iz_vadely"), noStrangers: true }));
 });

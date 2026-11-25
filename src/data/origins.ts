@@ -127,3 +127,30 @@ export const HIDDEN_ORIGINS: HiddenOrigin[] = [
   { trait: "luchshie_dni", real: ["sluzhily_rod", "iz_vadely", "byvaly"], simple: true },
   { trait: "beglyy_pod_imenem", real: ["beglyy_s_zakata"] },
 ];
+
+// ---------- Доли по месту (задача И27д; natura.md, раздел 9, ответы автора по И27в) ----------
+// Где человек взялся: от места зависит, какое происхождение встречается чаще. often — чаще (ручка natura.placeOften), seldom — реже (natura.placeSeldom),
+// only — других здесь не бывает. Редкость происхождения действует везде: полукровка и тулл остаются исключительными.
+export type OriginPlace = "fon" | "derevnya" | "zamok" | "priyom";
+export interface OriginPlaceDef { id: OriginPlace; name: string; desc: string; often?: string[]; seldom?: string[]; only?: string[] }
+export const ORIGIN_PLACES: OriginPlaceDef[] = [
+  { id: "fon", name: "общий фон", desc: "все происхождения — по своей редкости" },
+  {
+    id: "derevnya", name: "деревня", desc: "чаще старожилы и пришлые на льготу; замковые, служилые и городские — редкость",
+    often: ["starozhil", "prishly_na_lgotu"], seldom: ["iz_chelyadi", "zamkovy_sirota", "sluzhily_rod", "khramovy_vyuchenik", "iz_vadely"],
+  },
+  {
+    id: "zamok", name: "замок", desc: "чаще челядь, замковые сироты и служилые; деревенские сидельцы — редкость",
+    often: ["iz_chelyadi", "zamkovy_sirota", "sluzhily_rod"], seldom: ["starozhil", "prishly_na_lgotu", "beglyy_s_zakata"],
+  },
+  {
+    id: "priyom", name: "приём пришлых", desc: "только беглые с заката, вторые сыновья, бывалые и пришлые на льготу",
+    only: ["beglyy_s_zakata", "vtoroy_syn", "byvaly", "prishly_na_lgotu"],
+  },
+];
+
+// ---------- Откуда Сенешаль (koncept-3.md, 13.1): рамка задана сюжетом, оттенок даёт генератор ----------
+// Одно из четырёх происхождений поровну. Мера у него всегда служба; «чужие» происхождения к нему не применяются: годы управителем перекрывают, кем он был.
+export const SENESCHAL_ORIGIN: { ids: string[]; mera: Mera; frame: string } = {
+  ids: ["sluzhily_rod", "vtoroy_syn", "khramovy_vyuchenik", "iz_vadely"], mera: "sluzhba", frame: "назначен палатой управителем, выслужился",
+};

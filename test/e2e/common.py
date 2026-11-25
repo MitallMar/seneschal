@@ -10,6 +10,7 @@ DIST = ROOT / 'dist' / 'index.html'
 PAGE = DIST.as_uri()
 BAG = 188                                              # черт и перков в мешке натуры (src/data/natura.ts)
 BAG_SENESCHAL = 15                                     # из них — мешок Сенешаля: людям не выпадают
+NATURES = 31                                           # натур в генераторе (src/data/natura.ts)
 EMU = (ROOT / 'dist' / 'natura.html').as_uri()           # эмулятор натуры — вторая собранная страница
 CHROME = os.environ.get('CHROME', '/usr/bin/google-chrome')
 SHOTS = ROOT / 'test' / 'e2e' / 'shots'

@@ -3,6 +3,7 @@
 import type { Axis, Sign, SignVec, BagTrait, Star } from "../../data/types";
 import { AXES, AXIS_NAMES } from "../../data/core";
 import { SIGNS } from "../../data/natura";
+import type { OriginPlace } from "../../data/origins";
 import { BACKSTORY } from "../../data/backstory";
 import { type NaturaPerson } from "../../sim/natura";
 import { type NaturaMetrics } from "../../sim/natura-report";
@@ -21,6 +22,8 @@ export const app: { people: NaturaPerson[]; m: NaturaMetrics; hm: HealthMetrics;
 };
 
 export const val = (id: string) => ($(id) as HTMLInputElement | HTMLSelectElement).value;
+// Место из шапки страницы: где люди взялись.
+export const place = () => val("place") as OriginPlace;
 export const pct = (v: number) => `${Math.round(v * 100)}%`;
 export const f1 = (v: number) => v.toFixed(1).replace(".", ",");
 export const f2 = (v: number) => v.toFixed(2).replace(".", ",");

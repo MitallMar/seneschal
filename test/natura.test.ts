@@ -22,9 +22,9 @@ const each = (fn: (p: NaturaPerson, at: string) => void, rolls = 300) => rollAll
 
 // ---------- данные ----------
 
-test("данные натуры: 12 признаков, 30 натур с ядром и точками кристаллизации, мешок больше сотни черт и перков", () => {
+test("данные натуры: 12 признаков, 31 натура с ядром и точками кристаллизации, мешок больше сотни черт и перков", () => {
   assert.equal(SIGNS.length, 12);
-  assert.equal(NATURES.length, 30);
+  assert.equal(NATURES.length, 31);
   assert.ok(BAG.length >= 120);
   const dup = (xs: string[]) => xs.filter((x, i) => xs.indexOf(x) !== i);
   assert.deepEqual(dup(SIGNS.map((s) => s.id)), []);
