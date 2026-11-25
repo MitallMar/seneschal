@@ -48,10 +48,9 @@ async def s_natura(br, errs):
     m3 = await pg.evaluate("()=>window.__emu.metrics()")
     ok('«Сброс» возвращает ручки и те же числа', await n('#knobs .knob.changed') == 0 and m3['jaccard'] == m['jaccard'] and m3['nn'] == m['nn'])
     h = await pg.evaluate("()=>window.__emu.health()")
-    # цель «выбывших 15–30%» назначена под прежний срок жизни и ждёт решения автора (zdorovye.md): её карточка красная, предупреждение одно
     bad0 = await n('#health-cards .card.bad')
-    ok('здоровье: девять карточек, красная одна — «выбыло за партию»; половина доживает до 60–67 лет, до 80 — не больше 5%', await n('#health-cards .card') == 9 and bad0 == 1
-       and 'косит' in await pg.inner_text('#health-warnings') and await n('#health-warnings .warn') == 1
+    ok('здоровье: девять карточек без красных, предупреждений нет, за партию выбывает 50–65%; половина доживает до 60–67 лет, до 80 — не больше 5%', await n('#health-cards .card') == 9 and bad0 == 0
+       and 'Предупреждений нет' in await pg.inner_text('#health-warnings') and 0.5 <= h['removed'] <= 0.65
        and 60 <= h['life']['median'] <= 67 and 0 < h['life']['reachLate'] <= 0.05, (h['removed'], h['life']['median'], h['life']['reachLate'], bad0))
     ok('здоровье: графики, лента двадцати лет человека, семьи в партии, таблица из 21 черты', await n('#chart-curve polyline') == 1 and await n('#chart-life rect') >= 8
        and await n('#chart-causes .track') == 4 and await n('#health-person .strip i') == 80 and await n('#health-party tr') == 11 and await n('#table-health tr') == 22)
