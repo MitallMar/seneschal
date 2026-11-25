@@ -47,6 +47,7 @@
 | Портрет по Концепту 3: поля черты, словарь, правило «признак → поля», особенное черт | `cherty-dannye.md`, `natura.md` | `src/data/portrait.ts`, `src/sim/portrait.ts`, `src/data/traits-c3.ts`, `src/data/types.ts`, `src/ui/natura/view-portrait.ts`, `src/data/natura.ts`, `src/data/origins.ts` | «Портрет по Концепту 3» |
 | Здоровье: крепость, черты здоровья, сезонная проверка | `zdorovye.md` | `src/data/health.ts`, `src/sim/health.ts` | «Здоровье» |
 | Имена: мешки, генератор имени, тёзки, склад имён | `imena.md` | `src/data/names.ts`, `src/sim/names.ts`, `src/data/core.ts`, `test/e2e/common.py` | «Имена» |
+| Колода событий: карточка, первая пачка, слова «кому по душе» → метки словаря | `koloda.md` | `src/data/deck.ts`, `src/data/portrait.ts` | «Колода событий» |
 | Эмулятор натуры: графики, таблицы, панель ручек | — | `src/ui/natura/` (панели `view-*.ts`, `app.ts`, `main.ts`), `src/ui/natura.html`, `src/ui/natura.css`, `src/sim/natura-report.ts` | «Эмулятор натуры» |
 | Прогон без экрана, сводка по партии | — | `tools/headless.ts` | «Прогон без экрана, сводка по партии» |
 | Сборка страниц (каждая — один HTML) | — | `tools/build.mjs` | «Сборка страниц» |
