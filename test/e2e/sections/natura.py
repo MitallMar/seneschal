@@ -27,6 +27,20 @@ async def s_natura(br, errs):
     ok('«Реролл» даёт другого человека той же натуры', await pg.inner_html('#person-view') != before and 'Служилый' in await pg.inner_text('#person-view'))
     await pg.select_option('#nature', 'torgash')
     ok('выбор натуры: человек другой натуры', 'Торгаш' in await pg.inner_text('#person-view'))
+    pt = await pg.evaluate("()=>window.__emu.portrait()")
+    rows = await pg.evaluate("()=>[...document.querySelectorAll('#portrait .prow .ptitle')].map(x=>x.textContent)")
+    ptext = await pg.inner_text('#portrait')
+    ok('портрет: десять строк — хочет, удерживает, подход, память, голос, доклад, связи, следы', rows == ['Хочет', 'Удерживает', 'Подход: работает', 'Подход: не действует', 'Память',
+       'Говорит', 'Доклад', 'Ладит', 'Не ладит', 'Следы'], rows)
+    ok('портрет торгаша: выгода работает, желание денег названо словом, доклад с пристрастием, у следа подписана видимость',
+       'vygoda' in pt['approach']['da'] and pt['wants']['dengi'] > 0.5 and 'деньги — ' in ptext and 'сильнее' in ptext and 'выгода' in ptext
+       and (pt['voice']['bias'] == 'bez' or 'без пристрастия' not in ptext) and len(pt['voice']['manners']) >= 1
+       and await n('#portrait .trace') == len(pt['traces']['lines']) and ('со временем' in ptext or 'явная' in ptext or not pt['traces']['lines']), (pt['wants'], pt['approach'], pt['voice']))
+    await pg.evaluate("()=>window.__emu.setKnob('natura.portrait.notable', 5)")
+    pt2 = await pg.evaluate("()=>window.__emu.portrait()")
+    ok('ручка порога действует: при пороге 5 списков по признакам нет, числа остаются', pt2['approach']['da'] == [] and pt2['traces']['lines'] == []
+       and pt2['wants']['dengi'] == pt['wants']['dengi'] and 'как у всех' not in (await pg.inner_text('#portrait')).split('Удерживает')[0], pt2['approach'])
+    await pg.evaluate("()=>window.__emu.setKnob('natura.portrait.notable', 2)")
     await pg.select_option('#age', '18'); young = await n('#person-view .trait')
     await pg.select_option('#age', '70'); old = await n('#person-view .trait')
     ok('возраст: у старого черт больше, чем у только что повзрослевшего', '70 лет' in await pg.inner_text('#person-view') and old > young, (young, old))

@@ -144,8 +144,67 @@ export type BagTrigger = "habit" | "post" | "rel" | "break" | "deed";
 export type Rarity = "common" | "rare" | "exceptional";
 export type BagSource = "birth" | "backstory" | "life" | "post";
 
+// ---------- Черты под Концепт 3 (задача И27а; словарь полей — docs/design/cherty-dannye.md, раздел 1) ----------
+// Слова для экрана и правило по умолчанию — src/data/portrait.ts, расчёт портрета — src/sim/portrait.ts.
+
+// Видимость черты и следа: явная — при знакомстве; со временем — по поступкам за несколько месяцев; скрытая — только через след или раскрытие.
+export type Vis = "yavnaya" | "so_vremenem" | "skrytaya";
+// Желания — что тянет человека к варианту; удержки — что удерживает от него.
+export type Want = "dengi" | "pochet" | "pokoy" | "blizkie" | "mesto" | "chistaya_sovest" | "novoe";
+export type Hold = "sovest" | "strakh" | "vernost" | "pravilo";
+// Подход — чем человека взять.
+export type Approach =
+  | "pochtit" | "zashchita" | "dar" | "vygoda" | "vyzov" | "obychay" | "dovod" | "novoe_delo" | "sila" | "prosba" | "cherez_blizkikh"
+  | "dolzhnost" | "ostavit" | "s_glazu_na_glaz" | "kryuchok" | "vremya" | "stydit" | "zastolye" | "delo" | "ustav" | "volya";
+// Что человек помнит особо или прощает легко.
+export type MemKey = "unizhenie" | "dolg" | "proval" | "obida_svoim" | "grekh" | "pomekha" | "slovo" | "nakazanie" | "starina" | "milost" | "zasluga";
+// Пристрастие доклада: как человек искажает то, что докладывает. Одно на человека.
+export type Bias = "bez" | "sgushchaet" | "preumenshaet" | "priukrashivaet" | "pryachet" | "vygorazhivaet" | "chernit" | "znameniya";
+// Канал следа: откуда Сенешаль узнаёт.
+export type Channel = "vid" | "molva" | "ushi" | "prisutstvie" | "doklad" | "vedomost" | "zhaloba" | "mesto";
+// Связи: с группой людей или с людьми полюса признака («chestolyubie+» — честолюбивые, «chestnost-» — лукавые).
+export type LinkGroup =
+  | "palata" | "lesnye" | "byvalye" | "prishlye" | "khram" | "starozhily" | "derevni" | "chelyad" | "sluzhilye" | "kuptsy" | "sosedi" | "rodnya" | "likhie";
+export type PoleKey = `${Sign}+` | `${Sign}-`;
+export type LinkKey = LinkGroup | PoleKey;
+// Нити — линии судьбы; id предварительные, каталог со ступенями придёт отдельным материалом.
+export type ThreadId =
+  | "dengi" | "dolg" | "azart" | "pyanstvo" | "lyubov" | "krov" | "proshloe" | "soglyadatay" | "posuly" | "mest" | "khvor" | "nedosmotr" | "metka"
+  | "podsidet" | "uyti" | "nadel" | "svadba" | "gramota" | "propavshiy" | "svoy_dvor" | "obet" | "draka" | "sabotazh" | "rodnya" | "rebyonok" | "son";
+export type ThreadHow = "otkryvaet" | "tolkaet" | "tormozit" | "stupen";
+// Кто держит порок или тайну: роль-слот, генератор подставит человека.
+export type HolderRole =
+  | "skupshchik" | "zaimodavets" | "korchmar" | "dayushchiy" | "zakazchik" | "ishchushchiy" | "stary_tovarishch" | "vozhak" | "mat_rebyonka" | "donoschitsa" | "muzh";
+
+export interface TraitApproach { da?: Approach[]; net?: Approach[]; note?: string }
+export interface TraitMemory { obida?: number; srok?: number; dobro?: number; pomnit?: MemKey[]; proshchaet?: MemKey[] }
+export interface TraitVoice { manner?: string; bias?: Bias; note?: string }
+export interface TraitThread { nit: ThreadId; kak: ThreadHow; uDrugogo?: boolean }
+export interface TraitLinks { ladit?: LinkKey[]; neLadit?: LinkKey[]; start?: number }
+export interface TraceLine { gde: Channel; text: string }
+export interface TraitTraces { ten?: number; tenSfery?: number; yasnost?: number; chuzhie?: "boltaet" | "uznayot" | "molchit"; razgovor?: number; lines?: TraceLine[] }
+export interface TraitDeed { gde: string; sila: number }
+export interface TraitHolder { role: HolderRole; likho?: boolean }
+// Особенное черты — то, чего не дают её признаки. Пустое поле значит «как по признакам» (правило по умолчанию, cherty-dannye.md, раздел 2).
+// Числа: +1 — столько, сколько даёт признак 2,5; +2 — признак на краю шкалы; −1 и −2 — так же вниз.
+export interface TraitC3 {
+  vis?: Vis;                // видимость; не задана — «скрытая» у черты с hidden, иначе «явная» (до И27б)
+  wants?: Partial<Record<Want, number>>;
+  holds?: Partial<Record<Hold, number>>;
+  sluchay?: number;         // доля случайности в выборе
+  approach?: TraitApproach;
+  memory?: TraitMemory;
+  voice?: TraitVoice;
+  threads?: TraitThread[];
+  links?: TraitLinks;
+  traces?: TraitTraces;
+  deed?: TraitDeed[];       // действие на силу дела: где и насколько
+  holder?: TraitHolder[];   // кто держит
+  likho?: number;           // плюс — порок даёт лиху прикрытие
+}
+
 // Черта или перк из мешка. Вектор по признакам — 1–3 ненулевых значения.
-export interface BagTrait {
+export interface BagTrait extends TraitC3 {
   id: string;
   name: string;
   desc: string;
