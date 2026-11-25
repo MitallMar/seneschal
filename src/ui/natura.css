@@ -107,3 +107,7 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
 .ptitle { color: var(--muted); }
 .trace { margin: 1px 0; }
 @media (max-width: 700px) { .prow { grid-template-columns: 1fr; } }
+.by-trait { margin-left: 5px; font-size: 11px; color: #6b4f86; white-space: nowrap; }
+.tag .by-trait { opacity: .85; }
+.tnote { padding: 3px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
+.tnote .muted { margin-left: 8px; }
