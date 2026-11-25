@@ -26,7 +26,8 @@ const trait = (id: string, extra: Partial<BagTrait> = {}): BagTrait => ({
 
 test("словарь: размеры как в cherty-dannye.md, id не повторяются, у каждого слово для экрана", () => {
   assert.deepEqual([WANTS, HOLDS, APPROACHES, MEM_KEYS, BIASES, CHANNELS, LINK_GROUPS, HOLDER_ROLES].map((x) => x.length), [7, 4, 21, 11, 8, 8, 13, 12]);
-  assert.deepEqual([THREADS.filter((t) => !t.proposed).length, THREADS.filter((t) => t.proposed).length, MEM_SCALES.length], [26, 1, 3]);
+  // каталог нитей принят целиком: тридцать нитей, предложенных нет
+  assert.deepEqual([THREADS.length, THREADS.some((t) => "proposed" in t), MEM_SCALES.length], [30, false, 3]);
   for (const list of [WANTS, HOLDS, APPROACHES, MEM_KEYS, BIASES, CHANNELS, LINK_GROUPS, HOLDER_ROLES, THREADS]) {
     assert.equal(new Set(list.map((x) => x.id)).size, list.length);
     for (const x of list) assert.ok(/^[a-z_]+$/.test(x.id) && x.name && x.desc, x.id);
@@ -440,9 +441,7 @@ test("каталог нитей: имя «ребёнок на стороне», 
   const thread = (id: string) => THREADS.find((t) => t.id === id)!, role = (id: string) => HOLDER_ROLES.find((r) => r.id === id)!;
   assert.deepEqual([thread("krov").name, thread("krov").desc], ["ребёнок на стороне", "мать просит → растёт → узнают"]);
   assert.match(thread("proshloe").desc, /«лучшие дни».*признать/);
-  assert.deepEqual([thread("vina").name, thread("vina").proposed, thread("draka").proposed, thread("sabotazh").proposed], ["скрытая вина", undefined, undefined, undefined]);
-  // пачки 1–3 каталога приняты; «ребёнок растёт» — пачка 4, ещё предложение
-  assert.deepEqual(THREADS.filter((t) => t.proposed).map((t) => t.id), ["rebyonok"]);
+  assert.equal(thread("vina").name, "скрытая вина");
   assert.deepEqual([role("svidetel").name, role("svidetel").likho], ["свидетель", undefined]);
   // «Знавал лучшие дни» — только до игры; «Скрывает вину» — в игре, по поступку
   const was = bag("luchshie_dni"), guilt = bag("skryvaet_vinu");
@@ -595,3 +594,27 @@ test("откуда Сенешаль: одно из четырёх происхо
   assert.ok(got.by.wants.dengi.some((x) => x.origin) && got.by.wants.novoe.some((x) => x.origin));
   assert.deepEqual(got, portraitOf(town.signs, town.traits, { origin: originById("iz_vadely"), noStrangers: true }));
 });
+
+// ---------- три добрые нити и связи черт (задача И27е; niti.md, 5.8–5.10 и 7.4; cherty-dannye.md, 1.6) ----------
+
+test("добрые нити «своё дело», «доброе имя», «вернулся»: есть в словаре, черты их открывают, толкают и тормозят", () => {
+  const thread = (id: string) => THREADS.find((t) => t.id === id)!;
+  assert.deepEqual(["svoe_delo", "dobroe_imya", "vernulsya"].map((id) => thread(id).name), ["своё дело", "доброе имя", "вернулся"]);
+  assert.match(thread("svoe_delo").desc, /новое место или ступень места/);
+  assert.match(thread("vernulsya").desc, /двойник «уйти»/);
+  // кто как связан с нитью: id черт — по именам из таблицы cherty-dannye.md, 1.6
+  const linked = (nit: string, kak: string) => BAG.filter((t) => t.threads?.some((x) => x.nit === nit && x.kak === kak)).map((t) => t.id).sort();
+  assert.deepEqual(linked("svoe_delo", "otkryvaet"), ["bortnik", "chuet_vygodu", "kuznets", "nabil_ruku", "plotnik", "torgovaya_khvatka", "znaet_vodu"]);
+  assert.deepEqual([linked("svoe_delo", "tolkaet"), linked("svoe_delo", "tormozit")], [["prodast_i_kupit", "razzhilsya"], ["kak_dedy", "lezheboka"]]);
+  assert.deepEqual(linked("dobroe_imya", "otkryvaet"), ["derzhit_slovo", "poslednyuyu_rubakhu", "zhaleet_ubogikh"]);
+  assert.deepEqual([linked("dobroe_imya", "tolkaet"), linked("dobroe_imya", "tormozit")], [["golos", "kak_na_dukhu", "khlebosol", "mirit"], ["khvastun", "nazhil_vragov", "vral"]]);
+  // «вернулся» открывается развязками других нитей, а не чертами; у оставшихся его толкают «Помнит родство» и «За семью горой» — нить у другого
+  assert.deepEqual([linked("vernulsya", "otkryvaet"), linked("vernulsya", "tolkaet")], [[], ["pomnit_rodstvo", "za_semyu_goroy"]]);
+  for (const id of ["pomnit_rodstvo", "za_semyu_goroy"]) assert.ok(bag(id).threads!.find((x) => x.nit === "vernulsya")!.uDrugogo, id);
+  // прежние связи на месте, новая — рядом: «Лежебока» по-прежнему открывает «недосмотр»
+  assert.deepEqual(bag("lezheboka").threads, [{ nit: "nedosmotr", kak: "otkryvaet" }, { nit: "svoe_delo", kak: "tormozit" }]);
+  // у каждой ссылки черты на нить нить есть в словаре; связь доходит до портрета
+  for (const t of BAG) for (const x of t.threads ?? []) assert.ok(THREADS.some((q) => q.id === x.nit), `${t.id}: нить ${x.nit}`);
+  assert.ok(portraitOf(zero, [bag("kuznets")]).threads.some((x) => x.nit === "svoe_delo" && x.kak === "otkryvaet"));
+});
+
