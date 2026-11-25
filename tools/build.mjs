@@ -4,7 +4,7 @@ import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 
 const PAGES = [
   { entry: "src/ui/council/main.ts", html: "src/ui/index.html", css: "src/ui/style.css", out: "dist/index.html" },
-  { entry: "src/ui/natura.ts", html: "src/ui/natura.html", css: "src/ui/natura.css", out: "dist/natura.html" },
+  { entry: "src/ui/natura/main.ts", html: "src/ui/natura.html", css: "src/ui/natura.css", out: "dist/natura.html" },
 ];
 mkdirSync("dist", { recursive: true });
 for (const page of PAGES) {

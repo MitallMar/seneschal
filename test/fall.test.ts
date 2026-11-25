@@ -2,7 +2,9 @@
 // причины падения, барон и свита, пути его падения, броня, возвращение, личные дела при бароне, опала.
 import { test, afterEach } from "node:test";
 import assert from "node:assert/strict";
-import { CRISES, CRISIS_SIDES, STIR_SIDES, RETINUE } from "../src/data/fall";
+import { readFileSync } from "node:fs";
+import { AXES } from "../src/data/core";
+import { CRISES, CRISIS_SIDES, STIR_SIDES, RETINUE, BARONS } from "../src/data/fall";
 import { NATURES } from "../src/data/natura";
 import { COURSES } from "../src/data/economy";
 import { BALANCE, resetBalance, setAt } from "../src/sim/balance";
@@ -185,6 +187,22 @@ test("причины падения: терпение исчерпано; нед
   refuse(z, "zamok"); runSeason(z);   // осень: кризис на столе, сборщица уезжает с недобором
   assert.ok(z.fall.under);
   assert.equal(z.fall.falls[0].why, "недоимка вместе с кризисом стороны");
+});
+
+test("бароны: натура и склонности заданы данными под образ — генератор натуры их не растит, курс следует из склонностей", () => {
+  for (const b of BARONS) {
+    assert.ok(NATURES.some((n) => n.name === b.nature), `${b.name}: натура ${b.nature} есть среди натур`);
+    assert.deepEqual(Object.keys(b.star).sort(), [...AXES].sort());
+    assert.ok(AXES.every((a) => Number.isInteger(b.star[a]) && b.star[a] >= 0 && b.star[a] <= 10), `${b.name}: склонности в шкале звезды`);
+  }
+  const course = (i: number) => baronCourse({ ...BARONS[i], def: BARONS[i].id });
+  assert.deepEqual([BARONS[0].name, course(0), BARONS[1].name, course(1)], ["Ратша", "kopim", "Доброгнева", "dorogi"]);
+  // один и тот же барон в любой партии: мешок черт и семя на него не влияют
+  const a = fallNow(rich(calm()), "проверка").baron, b = fallNow(rich(newWorld("другое семя")), "проверка").baron;
+  assert.deepEqual([a.nature, a.star], [b.nature, b.star]);
+  assert.deepEqual([a.nature, a.star], [BARONS[0].nature, BARONS[0].star]);
+  const src = readFileSync(new URL("../src/sim/fall/under.ts", import.meta.url), "utf8");
+  assert.ok(!/natura/.test(src), "падение не зовёт генератор натуры");
 });
 
 test("падение: новый барон со своей натурой и звездой, свита на должностях, согнанные — за Сенешаля, курс задаёт барон", () => {

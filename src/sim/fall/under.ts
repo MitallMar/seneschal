@@ -4,7 +4,6 @@ import type { CourseId, Side, Star } from "../../data/types";
 import { AXES, OPPOSED, POSTS, TRAITS, ASPIRATIONS } from "../../data/core";
 import { COURSES, SIDE_NAMES } from "../../data/economy";
 import { BARONS, RETINUE, STIR_SIDES, BACK_NAMES, type BackHow, type RetinueEntry } from "../../data/fall";
-import { NATURES } from "../../data/natura";
 import { BALANCE as B } from "../balance";
 import { clamp, round1, round2, mean } from "../util";
 import { STAR_MAX, REL_MAX, relKey, topAxis, fitness, postName } from "../state";
@@ -13,7 +12,6 @@ import { addAuthority } from "../authority";
 import { addTrust } from "../economy/zones";
 import { setCourse } from "../economy/doer";
 import { addRel, noAxes } from "../council/people";
-import { rollPerson } from "../natura";
 import { crisisNow } from "./base";
 import { crisisTick, maybeLevy, arrearsNow } from "./crisis";
 
@@ -64,8 +62,7 @@ function stranger(w: World, r: RetinueEntry, baron: Baron): Person {
 // Падение: баронство отдано другому. Барон приводит свиту, сгоняет людей с должностей, задаёт курс; авторитет Сенешаля ограничен.
 export function fallNow(w: World, why: string, lines: string[] = []): Under {
   const F = B.fall, f = w.fall, n = f.falls.length, entry = BARONS[Math.min(n, BARONS.length - 1)];
-  const nature = w.rng.pick(NATURES), np = rollPerson(`${w.seed}|барон|${n}`, nature, entry.age);
-  const baron: Baron = { def: entry.id, name: entry.name, female: entry.female, age: entry.age, who: entry.who, nature: nature.name, star: { ...np.star } };
+  const baron: Baron = { def: entry.id, name: entry.name, female: entry.female, age: entry.age, who: entry.who, nature: entry.nature, star: { ...entry.star } };
   const u: Under = { since: w.season + 1, why, baron, armor: F.armor, steps: { dvor: 0, zemlya: 0 }, retinue: [], displaced: [], consent: 0, jump: false };
   const out = [`Герцог отдал баронство другому: ${why}. Новый барон — ${baron.name}, ${baron.who}; по натуре ${baron.nature.toLowerCase()}.`,
     "Сенешаль остаётся сенешалем: ключи, архивы и хозяйство на нём — без него барон не справится."];
