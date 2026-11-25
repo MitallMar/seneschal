@@ -39,8 +39,9 @@ test("ступени: у каждой нити 4–5; у ступени — им
   }
   const steps = THREAD_DEFS.flatMap((t) => t.steps);
   assert.equal(steps.length, 120);
-  // что происходит на ступени, сказано у всех, кроме последней ступени «уйти»: там говорит само имя — «Уходит»
-  assert.deepEqual(THREAD_DEFS.flatMap((t) => t.steps.filter((x) => !x.text).map((x) => `${t.id}: ${x.name}`)), ["uyti: Уходит"]);
+  // что происходит на ступени, сказано у всех
+  assert.deepEqual(THREAD_DEFS.flatMap((t) => t.steps.filter((x) => !x.text).map((x) => `${t.id}: ${x.name}`)), []);
+  assert.match(threadDef("uyti").steps[3].text, /^Двор снимается/);
   assert.ok(steps.filter((s) => s.up).length >= 110 && steps.filter((s) => s.stop).length >= 80);
   // что сделано, то сделано: первую кражу не отменить, а «не остановиться» можно шагнуть назад
   assert.deepEqual(threadDef("dengi").steps.map((s) => [s.name, s.down?.est]), [["Соблазн", false], ["Первая кража", false], ["Привычка", false], ["Не остановиться", true]]);
@@ -162,21 +163,13 @@ test("переходы ведут на нить словаря и сходятс
     for (const x of t.from) isThread(t, x.nit, "входит из");
   }
   for (const r of THREAD_MAP) for (const id of [...r.from, ...r.to]) assert.ok(NITI.includes(id), `карта: нить ${id}`);
-  assert.equal(THREAD_MAP.length, 71);
+  assert.equal(THREAD_MAP.length, 88);
   const map = new Set(THREAD_MAP.flatMap((r) => r.from.flatMap((a) => r.to.map((b) => edge(a, b)))));
   const links = new Set(THREAD_DEFS.flatMap((t) => [...t.to.map((x) => edge(t.id, x.nit)), ...t.from.map((x) => edge(x.nit, t.id))]));
-  const endings = new Set(THREAD_DEFS.flatMap((t) => t.endings.flatMap((e) => (e.next ?? []).map((n) => edge(t.id, n)))));
-  // каждая строка карты есть в записях: в «Связях» той или другой нити или в развязке
-  assert.deepEqual([...map].filter((k) => !links.has(k) && !endings.has(k)), []);
-  // эти два перехода карты в «Связях» не названы — только в развязке «выгнать»
-  assert.deepEqual([...map].filter((k) => !links.has(k)), ["rodnya→mest", "rodnya→sabotazh"]);
-  // расхождения — вопрос автору (niti.md, раздел 9): эти переходы названы в «Связях» записей, а в карте их нет. Список не растёт молча
-  const QUESTION = [
-    "draka→uyti", "krov→draka", "krov→dengi", "dolg→soglyadatay", "sabotazh→podsidet", "pyanstvo→podsidet", "svadba→draka", "uyti→propavshiy", "metka→rebyonok",
-    "nadel→svoe_delo", "svoy_dvor→svoe_delo", "rebyonok→svoe_delo", "proshloe→svoe_delo", "vernulsya→dobroe_imya", "proshloe→dobroe_imya", "vernulsya→proshloe",
-    "vernulsya→khvor", "vernulsya→dolg",
-  ];
-  assert.deepEqual([...links].filter((k) => !map.has(k)).sort(), [...QUESTION].sort());
+  // карта и «Связи» записей сходятся в обе стороны (ответы автора 26.11.2026): каждый переход карты назван в «Связях», и наоборот
+  assert.deepEqual([...map].filter((k) => !links.has(k)), []);
+  assert.deepEqual([...links].filter((k) => !map.has(k)), []);
+  assert.deepEqual(threadDef("rodnya").to.map((x) => x.nit), ["mest", "sabotazh"]);
   // «у другого»: нить открывается не у человека, а у того, кого он задел
   assert.deepEqual(THREAD_DEFS.flatMap((t) => t.to.filter((x) => x.uDrugogo).map((x) => edge(t.id, x.nit))),
     ["dolg→dolg", "posuly→mest", "draka→mest", "krov→mest", "dobroe_imya→podsidet"]);
@@ -184,3 +177,15 @@ test("переходы ведут на нить словаря и сходятс
   const last = THREAD_MAP.at(-1)!;
   assert.deepEqual([last.to, last.from.length], [["uyti"], 15]);
 });
+
+test("черта, которую каталог называет у нити, связана с этой нитью в мешке — и так же: открывает, толкает или тормозит", () => {
+  const bag = (id: string) => BAG.find((x) => x.id === id)!;
+  const HOW = { opens: "otkryvaet", pushes: "tolkaet", brakes: "tormozit" } as const;
+  for (const t of THREAD_DEFS) for (const k of ["opens", "pushes", "brakes"] as const) for (const id of t.start[k]) {
+    assert.equal(bag(id).threads?.find((x) => x.nit === t.id)?.kak, HOW[k], `${bag(id).name} и нить ${t.id}: в каталоге — ${HOW[k]}`);
+  }
+  // «Мирит враждующих» — не тормоз своей нити: рядом с ним драка и месть чаще кончаются мировой — нить у другого
+  assert.deepEqual(bag("mirit").threads?.filter((x) => x.kak === "tormozit"), [{ nit: "draka", kak: "tormozit", uDrugogo: true }, { nit: "mest", kak: "tormozit", uDrugogo: true }]);
+  assert.ok(bag("stal_nabozhen").threads?.some((x) => x.nit === "dengi" && x.kak === "tormozit") && bag("svoikh_ne_sdayot").threads?.some((x) => x.nit === "vina" && x.kak === "tolkaet"));
+});
+
