@@ -157,12 +157,10 @@ test("прожить партию: детерминизм, счёт сезоно
   assert.ok(old.deadAt !== undefined && BALANCE.health.lifeMax - 5 + old.deadAt / 4 < BALANCE.health.lifeMax + 60);
 });
 
-test("метрики здоровья: на трёх тысячах людей цели срока жизни выполнены; выбывших больше прежней цели — вопрос автору", () => {
+test("метрики здоровья: на трёх тысячах людей цели выполнены, предупреждений нет", () => {
   const m = healthMetrics(3000), G = BALANCE.health.goal;
-  // цель «выбывших 15–30%» назначена под прежнюю шкалу возраста и по решению И24 не подгонялась: при сроке жизни около 80 лет выбывает больше (zdorovye.md, вопрос автору)
-  const warnings = healthWarnings(m);
-  assert.ok(warnings.length === 1 && warnings[0].startsWith("людей косит слишком быстро"), warnings.join("; "));
-  assert.ok(m.offShare >= G.offMin && m.offShare <= G.offMax, `в постели ${m.offShare}`);
+  assert.deepEqual(healthWarnings(m), []);
+  assert.ok(m.removed >= G.removedMin && m.removed <= G.removedMax && m.offShare >= G.offMin && m.offShare <= G.offMax, `выбыло ${m.removed}, в постели ${m.offShare}`);
   assert.ok(m.life.median >= G.medianLife && m.life.median <= 67 && m.life.reachElder >= G.reachElder && m.life.reachLate <= G.lateMax && m.life.reachLate > 0, JSON.stringify(m.life));
   assert.ok(m.byAge[0].from === BALANCE.health.ageMin && m.causes["болезнь"] + m.causes["рана"] < 0.06, "смерть не от старости редка");
   assert.ok(m.dead < m.removed && m.causes["здоровье"] > 0 && m.causes["болезнь"] > 0);
