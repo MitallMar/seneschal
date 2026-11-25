@@ -78,11 +78,12 @@ export function illChance(h: Health, age: number, season: number): number {
   const winter = season % SEASONS_IN_YEAR === WINTER ? B.health.winterMult * m.winter : 1;
   return clamp(B.health.illBase * m.risk * weak * winter, 0, 1);
 }
-// Шанс умереть от старости в этот сезон: ноль до глубокой старости, дальше растёт к пределу жизни.
+// Шанс умереть от старости в этот сезон: ноль до старости; в старости понемногу растёт до oldDeath к глубокой старости, а с неё круто растёт к пределу жизни.
 export function ageDeathChance(h: Health, age: number): number {
-  const span = Math.max(1, B.health.lifeMax - B.health.elderFrom);
-  const x = (Math.max(0, age - B.health.elderFrom) / span) * healthMods(h).aging;
-  return clamp(x * x * B.health.ageDeathMax, 0, 1);
+  const H = B.health, aging = healthMods(h).aging;
+  const early = clamp((age - H.oldFrom) / Math.max(1, H.elderFrom - H.oldFrom), 0, 1) * H.oldDeath * aging;
+  const x = (Math.max(0, age - H.elderFrom) / Math.max(1, H.lifeMax - H.elderFrom)) * aging;
+  return clamp(early + x * x * H.ageDeathMax, 0, 1);
 }
 
 function gain(rng: Rng, h: Health, cause: HealthCause, ev: (kind: HealthEventKind, text: string, trait?: string) => void, onlyBad = false) {

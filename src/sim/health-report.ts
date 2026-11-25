@@ -20,7 +20,7 @@ export interface HealthMetrics {
   badBorn: number;                       // доля людей с дурной чертой здоровья с рождения (врождённой или наследственной)
   traitShare: Record<string, number>;    // по id черты: у какой доли людей она есть к концу партии
   kinShare: { withKin: number; base: number }; // наследственная черта: у родни того, у кого она есть, и в среднем
-  life: { median: number; reachElder: number; reachMax: number; hist: { age: number; share: number }[]; medianHealthy: number; medianBad: number }; // срок жизни взрослого
+  life: { median: number; reachElder: number; reachLate: number; reachMax: number; hist: { age: number; share: number }[]; medianHealthy: number; medianBad: number }; // срок жизни взрослого
 }
 
 const median = (xs: number[]) => { const a = [...xs].sort((x, y) => x - y); return a.length ? a[Math.floor(a.length / 2)] : 0; };
@@ -88,6 +88,7 @@ export function healthMetrics(people: number, seed = "здоровье"): Health
     kinShare,
     life: {
       median: Math.round(median(ages)), reachElder: round3(ages.filter((a) => a >= B.health.elderFrom).length / Math.max(1, people)),
+      reachLate: round3(ages.filter((x) => x >= B.health.goal.lateAge).length / Math.max(1, people)),
       reachMax: round3(ages.filter((a) => a >= B.health.lifeMax - 10).length / Math.max(1, people)), hist,
       medianHealthy: Math.round(median(lives.filter((l) => !l.bad).map((l) => l.age))), medianBad: Math.round(median(lives.filter((l) => l.bad).map((l) => l.age))),
     },
@@ -104,6 +105,7 @@ export function healthWarnings(m: HealthMetrics): string[] {
   if (m.offShare > G.offMax) out.push(`болеют слишком часто: в постели ${m.offShare} сезонов при цели не больше ${G.offMax}`);
   if (m.life.median < G.medianLife) out.push(`живут мало: половина доживает до ${m.life.median} при цели не меньше ${G.medianLife}`);
   if (m.life.reachElder < G.reachElder) out.push(`до глубокой старости доживает ${m.life.reachElder} при цели не меньше ${G.reachElder}`);
+  if (m.life.reachLate > G.lateMax) out.push(`слишком многие доживают до ${G.lateAge}: ${m.life.reachLate} при цели не больше ${G.lateMax}`);
   if (m.badBorn < G.badBornMin) out.push(`все одинаково здоровы: дурная черта с рождения у ${m.badBorn} при цели не меньше ${G.badBornMin}`);
   if (m.badBorn > G.badBornMax) out.push(`слишком много больных с рождения: ${m.badBorn} при цели не больше ${G.badBornMax}`);
   const never = HEALTH_TRAITS.filter((t) => !m.traitShare[t.id]).map((t) => t.name);

@@ -96,10 +96,10 @@ test("детерминизм: одно семя — тот же человек �
 
 test("три происхождения: врождённых одна-две, нажитых до игры тем больше, чем старше человек", () => {
   const N = BALANCE.natura;
-  assert.deepEqual([30, 54, 55, 80, 130, 200].map(beforeCount), [2, 2, 3, 4, 6, 6]);
+  assert.deepEqual([18, 27, 28, 40, 58, 80].map(beforeCount), [2, 2, 3, 4, 6, 6]);
   assert.equal(beforeCount(10), N.beforeMin, "моложе взрослого — как у только что повзрослевшего");
   for (const n of NATURES) {
-    for (const age of [30, 60, 120]) {
+    for (const age of [18, 40, 65]) {
       const p = growPerson(new Rng(`${n.id}-${age}`), n, { age });
       const born = p.traits.filter((t) => t.kind === "born"), life = p.traits.filter((t) => t.kind === "life");
       assert.equal(p.age, age);
@@ -111,7 +111,7 @@ test("три происхождения: врождённых одна-две, �
       for (const t of life) assert.ok(BACKSTORY.some((ev) => ev.id === p.via[t.id]), `${t.id}: нажитая до игры черта пришла из события предыстории`);
     }
   }
-  const young = rollAll(300, "молодые").filter((p) => p.age < 60), old = rollAll(300, "молодые").filter((p) => p.age > 120);
+  const young = rollAll(300, "молодые").filter((p) => p.age < 28), old = rollAll(300, "молодые").filter((p) => p.age > 58);
   const avg = (ps: NaturaPerson[]) => ps.reduce((s, p) => s + p.traits.length, 0) / ps.length;
   assert.ok(avg(old) > avg(young) + 2, `старые ${avg(old)}, молодые ${avg(young)}`);
 });

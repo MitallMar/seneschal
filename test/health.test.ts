@@ -64,14 +64,14 @@ test("наследственность: черта идёт по семье, у 
 
 test("крепость: черты сдвигают её, в старости она убывает, «Род долгожителей» стареет медленнее", () => {
   const H = BALANCE.health;
-  assert.equal(krepostNow(plain(6), 50), 6);
-  assert.equal(krepostNow(plain(6, ["khily"]), 50), 4);
-  assert.equal(krepostNow(plain(6, ["krepok"]), 50), 7);
+  assert.equal(krepostNow(plain(6), 40), 6);
+  assert.equal(krepostNow(plain(6, ["khily"]), 40), 4);
+  assert.equal(krepostNow(plain(6, ["krepok"]), 40), 7);
   assert.equal(krepostNow(plain(6), H.oldFrom + H.agingStep * 2), 4, "две единицы за два шага старости");
-  assert.ok(krepostNow(plain(6, ["dolgozhiteli"]), 170) > krepostNow(plain(6), 170) && krepostNow(plain(6, ["rano_stareyut"]), 170) < krepostNow(plain(6), 170));
-  assert.equal(krepostNow(plain(1, ["khily", "dryakhleet"]), 190), 0, "ниже нуля не падает");
+  assert.ok(krepostNow(plain(6, ["dolgozhiteli"]), 70) > krepostNow(plain(6), 70) && krepostNow(plain(6, ["rano_stareyut"]), 70) < krepostNow(plain(6), 70));
+  assert.equal(krepostNow(plain(1, ["khily", "dryakhleet"]), 80), 0, "ниже нуля не падает");
   const vice: Health = { ...plain(6), vices: ["charka"] };
-  assert.equal(krepostNow(vice, 50), 5, "нажитая черта натуры сказывается на здоровье");
+  assert.equal(krepostNow(vice, 40), 5, "нажитая черта натуры сказывается на здоровье");
   assert.equal(healthMods(vice).risk, NATURA_HEALTH.charka.risk);
   assert.deepEqual(birthHealth(new Rng("п"), undefined, ["charka", "derzhit_slovo"]).vices, ["charka"], "берутся только черты, влияющие на здоровье");
 });
@@ -89,13 +89,15 @@ test("шанс заболеть: зимой выше, у слабого выше
   assert.equal(illChance(h, 50, 0), 0.1);
 });
 
-test("смерть от старости: до глубокой старости её нет, к пределу жизни шанс растёт", () => {
-  const H = BALANCE.health, h = plain();
-  assert.equal(ageDeathChance(h, H.elderFrom), 0);
-  assert.equal(ageDeathChance(h, 100), 0);
-  assert.equal(ageDeathChance(h, H.lifeMax), H.ageDeathMax);
-  assert.ok(ageDeathChance(h, 180) > 0 && ageDeathChance(h, 180) < ageDeathChance(h, 195));
-  assert.ok(ageDeathChance(plain(6, ["dolgozhiteli"]), 190) < ageDeathChance(h, 190));
+test("смерть от старости: до старости её нет, в старости шанс мал и растёт, к пределу жизни — круто", () => {
+  const H = BALANCE.health, h = plain(), mid = (H.oldFrom + H.elderFrom) / 2;
+  assert.equal(ageDeathChance(h, H.oldFrom), 0);
+  assert.equal(ageDeathChance(h, 30), 0);
+  assert.ok(ageDeathChance(h, mid) > 0 && ageDeathChance(h, mid) < H.oldDeath, "в обычной старости шанс растёт от нуля");
+  assert.equal(ageDeathChance(h, H.elderFrom), H.oldDeath);
+  assert.ok(Math.abs(ageDeathChance(h, H.lifeMax) - (H.oldDeath + H.ageDeathMax)) < 1e-9);
+  assert.ok(ageDeathChance(h, 70) < ageDeathChance(h, 80) && ageDeathChance(h, 80) - ageDeathChance(h, 70) > ageDeathChance(h, 70) - ageDeathChance(h, 60), "после глубокой старости растёт круче");
+  assert.ok(ageDeathChance(plain(6, ["dolgozhiteli"]), 78) < ageDeathChance(h, 78));
 });
 
 test("сезонная проверка: слёг — сезон в постели, тяжёлая болезнь — дольше и может оставить след или убить", () => {
@@ -144,22 +146,25 @@ test("рана оставляет след; когда крепость пада
 
 test("прожить партию: детерминизм, счёт сезонов в постели, старики выбывают чаще зрелых", () => {
   const run = (seed: string, age: number) => { const h = birthHealth(new Rng(seed)); return { l: liveThrough(new Rng(`${seed}-ж`), h, age, 80), h }; };
-  assert.deepEqual(run("а", 60), run("а", 60));
+  assert.deepEqual(run("а", 40), run("а", 40));
   const removed = (age: number) => Array.from({ length: 600 }, (_, i) => run(`ч${i}`, age)).filter((r) => r.l.removedAt !== undefined).length / 600;
-  assert.ok(removed(140) > removed(50) + 0.15, `в 140 лет ${removed(140)}, в 50 — ${removed(50)}`);
-  const r = run("б", 60);
+  assert.ok(removed(60) > removed(25) + 0.15, `в 60 лет ${removed(60)}, в 25 — ${removed(25)}`);
+  const r = run("б", 40);
   assert.equal(r.l.offSeasons <= r.l.lived && r.l.lived <= 80, true);
   if (r.l.removedAt !== undefined) assert.notEqual(r.h.state, "ok");
   // до предела жизни не доживает никто
-  const old = liveThrough(new Rng("предел"), plain(9), 195, 400);
-  assert.ok(old.deadAt !== undefined && 195 + old.deadAt / 4 < BALANCE.health.lifeMax + 60);
+  const old = liveThrough(new Rng("предел"), plain(9), BALANCE.health.lifeMax - 5, 400);
+  assert.ok(old.deadAt !== undefined && BALANCE.health.lifeMax - 5 + old.deadAt / 4 < BALANCE.health.lifeMax + 60);
 });
 
-test("метрики здоровья: на трёх тысячах людей цели выполнены, предупреждений нет", () => {
+test("метрики здоровья: на трёх тысячах людей цели срока жизни выполнены; выбывших больше прежней цели — вопрос автору", () => {
   const m = healthMetrics(3000), G = BALANCE.health.goal;
-  assert.deepEqual(healthWarnings(m), []);
-  assert.ok(m.removed >= G.removedMin && m.removed <= G.removedMax && m.offShare >= G.offMin && m.offShare <= G.offMax, `выбыло ${m.removed}, в постели ${m.offShare}`);
-  assert.ok(m.life.median >= G.medianLife && m.life.reachElder >= G.reachElder && m.life.median < BALANCE.health.lifeMax, JSON.stringify(m.life.median));
+  // цель «выбывших 15–30%» назначена под прежнюю шкалу возраста и по решению И24 не подгонялась: при сроке жизни около 80 лет выбывает больше (zdorovye.md, вопрос автору)
+  const warnings = healthWarnings(m);
+  assert.ok(warnings.length === 1 && warnings[0].startsWith("людей косит слишком быстро"), warnings.join("; "));
+  assert.ok(m.offShare >= G.offMin && m.offShare <= G.offMax, `в постели ${m.offShare}`);
+  assert.ok(m.life.median >= G.medianLife && m.life.median <= 67 && m.life.reachElder >= G.reachElder && m.life.reachLate <= G.lateMax && m.life.reachLate > 0, JSON.stringify(m.life));
+  assert.ok(m.byAge[0].from === BALANCE.health.ageMin && m.causes["болезнь"] + m.causes["рана"] < 0.06, "смерть не от старости редка");
   assert.ok(m.dead < m.removed && m.causes["здоровье"] > 0 && m.causes["болезнь"] > 0);
   assert.ok(m.byAge.at(-1)!.removed > m.byAge[0].removed * 2, "старые выбывают заметно чаще зрелых");
   assert.equal(m.curve.length, m.years + 1);
@@ -179,7 +184,9 @@ test("предупреждения здоровья появляются, ког
   setAt("health.bornChance", 0);
   setAt("health.familyChance", 0);
   setAt("health.ageTraitChance", 0);
-  setAt("health.agingStep", 60);
+  setAt("health.agingStep", 20);
+  setAt("health.oldDeath", 0);
+  setAt("health.ageMax", 30);
   const mild = healthWarnings(healthMetrics(800));
   assert.ok(mild.some((x) => x.startsWith("совет почти не меняется")) && mild.some((x) => x.startsWith("все одинаково здоровы")) && mild.some((x) => x.startsWith("болеют слишком редко")), mild.join("; "));
 });
