@@ -3,6 +3,7 @@
 import type { Axis, Sign, Star } from "../data/types";
 import { AXES, AXIS_NAMES } from "../data/core";
 import { SIGNS, NATURES, BAG } from "../data/natura";
+import { ORIGINS } from "../data/origins";
 import { BALANCE as B } from "./balance";
 import { rollPerson, type NaturaPerson } from "./natura";
 import { newWorld } from "./council/generate";
@@ -26,6 +27,8 @@ export interface NaturaMetrics {
   perNature: Record<string, { jaccard: number; nn: number; signNn: number }>; // по id натуры: похожесть рероллов, угадывание по чертам и по признакам
   count: Record<string, number>;              // по id черты: у скольких людей выпала
   kinds: { born: number; life: number; perk: number }; // черт на человека по видам
+  look: number;                               // доля людей с чертой облика
+  origins: Record<string, number>;            // по id происхождения: доля людей
 }
 
 const spread = (xs: number[]) => { const m = mean(xs); return Math.sqrt(mean(xs.map((v) => (v - m) * (v - m)))); };
@@ -58,9 +61,12 @@ export function naturaMetrics(rolls: number, seed = "натура"): NaturaMetri
   return metricsOf(rollAll(rolls, seed));
 }
 // Метрики по готовым людям; axesNow — нынешняя звезда совета, если её уже посчитали (эмулятор считает один раз).
+// Облик натурой не тянется, черты Сенешаля людям не выпадают: в метрики набора черт (похожесть, покрытие, частота, счёт на человека) они не входят.
+const drawn = (p: NaturaPerson) => p.traits.filter((t) => t.kind !== "look" && !t.seneschal);
 export function metricsOf(people: NaturaPerson[], axesNow: Record<Axis, AxisDist> = currentAxes()): NaturaMetrics {
   const rolls = people.length;
-  const sets = people.map((p) => new Set(p.traits.map((t) => t.id)));
+  const sets = people.map((p) => new Set(drawn(p).map((t) => t.id)));
+  const bag = BAG.filter((t) => t.kind !== "look" && !t.seneschal);
   // похожесть рероллов одной натуры
   const all: number[] = [];
   const perNature: NaturaMetrics["perNature"] = {};
@@ -107,7 +113,7 @@ export function metricsOf(people: NaturaPerson[], axesNow: Record<Axis, AxisDist
   // покрытие мешка
   const count = new Map<string, number>();
   for (const p of people) for (const t of p.traits) count.set(t.id, (count.get(t.id) ?? 0) + 1);
-  const common = BAG.filter((t) => t.rarity === "common").map((t) => ({ trait: t.name, share: round3((count.get(t.id) ?? 0) / Math.max(1, rolls)) }));
+  const common = bag.filter((t) => t.rarity === "common").map((t) => ({ trait: t.name, share: round3((count.get(t.id) ?? 0) / Math.max(1, rolls)) }));
   // стягивание: разброс признака внутри натуры
   const signSpread = Object.fromEntries(SIGNS.map((s) => {
     const per = NATURES.map((n) => spread(people.filter((p) => p.nature === n).map((p) => p.signs[s.id])));
@@ -115,13 +121,13 @@ export function metricsOf(people: NaturaPerson[], axesNow: Record<Axis, AxisDist
   })) as Record<Sign, number>;
   return {
     rolls,
-    traitsMean: round3(mean(people.map((p) => p.traits.length))),
+    traitsMean: round3(mean(people.map((p) => drawn(p).length))),
     jaccard: round3(median(all)),
     jaccardWorst: worst,
     nn: round3(hit / Math.max(1, people.length)),
     signNn: round3(signHit / Math.max(1, people.length)),
-    lifeShare: round3(mean(people.map((p) => p.traits.filter((t) => t.kind !== "born").length / Math.max(1, p.traits.length)))),
-    never: BAG.filter((t) => !count.has(t.id)).map((t) => t.name),
+    lifeShare: round3(mean(people.map((p) => drawn(p).filter((t) => t.kind !== "born").length / Math.max(1, drawn(p).length)))),
+    never: bag.filter((t) => !count.has(t.id)).map((t) => t.name),
     commonMax: common.reduce((a, b) => (b.share > a.share ? b : a), { trait: "", share: 0 }),
     signSpread,
     axes: axisDist(people.map((p) => p.star)),
@@ -133,6 +139,8 @@ export function metricsOf(people: NaturaPerson[], axesNow: Record<Axis, AxisDist
       life: round3(mean(people.map((p) => p.traits.filter((t) => t.kind === "life").length))),
       perk: round3(mean(people.map((p) => p.traits.filter((t) => t.kind === "perk").length))),
     },
+    look: round3(people.filter((p) => p.traits.some((t) => t.kind === "look")).length / Math.max(1, rolls)),
+    origins: Object.fromEntries(ORIGINS.map((o) => [o.id, round3(people.filter((p) => p.origin === o.id).length / Math.max(1, rolls))])),
   };
 }
 

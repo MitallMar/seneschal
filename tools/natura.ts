@@ -7,6 +7,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { AXES, AXIS_NAMES } from "../src/data/core";
 import { SIGNS, NATURES, BAG } from "../src/data/natura";
+import { ORIGINS } from "../src/data/origins";
 import { BALANCE } from "../src/sim/balance";
 import { growParty, type NaturaPerson } from "../src/sim/natura";
 import { naturaMetrics, naturaWarnings, type NaturaMetrics } from "../src/sim/natura-report";
@@ -18,11 +19,14 @@ const G = BALANCE.natura.goal;
 const pct = (v: number) => `${Math.round(v * 100)}%`;
 
 const m = naturaMetrics(rolls, seed);
-const kinds = (k: string) => BAG.filter((t) => t.kind === k).length;
-console.log(`Натур ${NATURES.length}, признаков ${SIGNS.length}, в мешке ${BAG.length}: врождённых ${kinds("born")}, нажитых ${kinds("life")}, перков ${kinds("perk")}.`);
+const kinds = (k: string) => BAG.filter((t) => t.kind === k && !t.seneschal).length;
+console.log(`Натур ${NATURES.length}, признаков ${SIGNS.length}, в мешке ${BAG.length}: людям — врождённых ${kinds("born")}, нажитых ${kinds("life")}, перков ${kinds("perk")}, облик ${kinds("look")};`
+  + ` мешок Сенешаля — ${BAG.filter((t) => t.seneschal).length}. Происхождений ${ORIGINS.length}.`);
 console.log(`Рероллов ${m.rolls} (семя «${seed}»), возраст ${BALANCE.natura.ageMin}–${BALANCE.natura.ageMax} лет. Черт на человека в среднем ${m.traitsMean.toFixed(1)}:`
   + ` врождённых ${m.kinds.born.toFixed(1)}, нажитых ${m.kinds.life.toFixed(1)}, перков ${m.kinds.perk.toFixed(1)}.`);
-console.log(`Доля нажитого у человека: ${pct(m.lifeShare)} — цель не меньше ${pct(G.lifeShare)}\n`);
+console.log(`Доля нажитого у человека: ${pct(m.lifeShare)} — цель не меньше ${pct(G.lifeShare)}`);
+console.log(`Облик: у ${pct(m.look)} людей (ручка ${pct(BALANCE.natura.lookShare)}); в метрики набора черт облик и мешок Сенешаля не входят.`);
+console.log(`Откуда и чей: ${ORIGINS.map((o) => `${o.name} ${pct(m.origins[o.id])}`).join(" · ")}\n`);
 console.log(`Похожесть рероллов одной натуры (медиана общих черт): ${m.jaccard.toFixed(2)} — цель не больше ${G.jaccard}`);
 console.log(`  самая однообразная натура: ${m.jaccardWorst.nature}, ${m.jaccardWorst.value.toFixed(2)}`);
 console.log(`Различимость: по признакам натура угадывается в ${pct(m.signNn)} случаев — цель не меньше ${pct(G.signNn)}`);
@@ -53,7 +57,8 @@ for (const p of growParty(seed, 5)) console.log(`  ${describe(p)}`);
 // снимок метрик: числа без списков, чтобы сравнение было коротким
 const flat = (x: NaturaMetrics): Record<string, number> => ({
   "черт на человека": x.traitsMean, "врождённых": x.kinds.born, "нажитых": x.kinds.life, "перков": x.kinds.perk, "доля нажитого": x.lifeShare,
-  "похожесть рероллов": x.jaccard, "различимость по признакам": x.signNn, "различимость по чертам": x.nn, "не выпали": x.never.length, "самая частая обычная": x.commonMax.share,
+  "похожесть рероллов": x.jaccard, "различимость по признакам": x.signNn, "различимость по чертам": x.nn, "не выпали": x.never.length, "с обликом": x.look, "самая частая обычная": x.commonMax.share,
+  ...Object.fromEntries(ORIGINS.map((o) => [`откуда: ${o.name}`, x.origins[o.id]])),
   ...Object.fromEntries(SIGNS.map((s) => [`разброс: ${s.plus}`, x.signSpread[s.id]])),
   ...Object.fromEntries(AXES.flatMap((a) => [[`${AXIS_NAMES[a]}: среднее`, x.axes[a].mean], [`${AXIS_NAMES[a]}: разброс`, x.axes[a].spread], [`${AXIS_NAMES[a]}: ведущая`, x.axes[a].top]])),
 });

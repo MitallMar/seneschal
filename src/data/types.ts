@@ -138,7 +138,8 @@ export interface NatureDef {
   crystals: SignVec[];
 }
 
-export type BagKind = "born" | "life" | "perk";       // врождённая, нажитая (до игры или в игре), перк (умение, открывается делом)
+// врождённая, нажитая (до игры или в игре), перк (умение, открывается делом), облик (вектора нет, натурой не тянется: у человека 0–1)
+export type BagKind = "born" | "life" | "perk" | "look";
 // Повод, по которому нажитая черта или перк появляются в игре: привычка, должность, отношения, перелом, поступок.
 export type BagTrigger = "habit" | "post" | "rel" | "break" | "deed";
 export type Rarity = "common" | "rare" | "exceptional";
@@ -182,7 +183,7 @@ export type ScaleKey = Want | Hold | "sluchay" | "obida" | "srok" | "dobro";
 // Поправка с оговоркой («страх +2 на кромке», «держит +2 — обиду своим»): действует только при условии и в общий счёт портрета не идёт.
 export interface TraitIf { chto: ScaleKey; v: number; kogda: string }
 // Фраза автора по полю целиком: в ней оговорки, которых нет в ключах словаря.
-export type TraitNoteKey = "vesy" | "podkhod" | "pamyat" | "golos" | "niti" | "svyazi" | "sledy" | "delo" | "likho" | "prochee";
+export type TraitNoteKey = "vesy" | "podkhod" | "pamyat" | "golos" | "niti" | "svyazi" | "sledy" | "delo" | "likho" | "derzhit" | "otdykh" | "lore" | "prochee";
 export interface TraitMemory { obida?: number; srok?: number; dobro?: number; pomnit?: MemKey[]; proshchaet?: MemKey[] }
 // top — пристрастие «сильнее любой другой черты»: берёт верх независимо от редкости.
 export interface TraitVoice { manner?: string; bias?: Bias; top?: boolean; note?: string }
@@ -232,6 +233,8 @@ export interface BagTrait extends TraitC3 {
   replaces?: string[];     // какие нажитые черты вытесняет (старая уходит, запись остаётся в утраченных)
   council?: boolean;       // та же черта уже работает в совете под этим id (LIFE_TRAITS)
   hidden?: boolean;        // открывается только поступком
+  nameF?: string;          // имя черты у женщины, если оно другое («Сохнет по чужому»)
+  seneschal?: boolean;     // черта мешка Сенешаля: обычным людям не выпадает
 }
 
 // ---------- Здоровье (задача И10, замысел — docs/design/zdorovye.md) ----------

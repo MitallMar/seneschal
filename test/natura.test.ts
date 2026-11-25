@@ -43,14 +43,16 @@ test("мешок: вектор из 1–3 признаков, описание �
   for (const t of BAG) {
     const n = Object.keys(t.vec).length;
     assert.ok(/^[a-z_]+$/.test(t.id) && t.name && t.desc && t.effect && t.source.length, t.id);
-    assert.ok(vecOk(t.vec) && n >= 1 && n <= 3, `${t.id}: вектор`);
+    // у облика вектора нет вовсе; у умений и черт на выбор из мешка Сенешаля он не задан
+    if (t.kind === "look" || (t.seneschal && n === 0)) assert.equal(n, 0, `${t.id}: вектора нет`);
+    else assert.ok(vecOk(t.vec) && n >= 1 && n <= 3, `${t.id}: вектор`);
     for (const id of [...(t.conflicts ?? []), ...(t.requires ?? []), ...(t.replaces ?? [])]) assert.ok(BAG.some((x) => x.id === id), `${t.id} → ${id}`);
     assert.ok(!t.conflicts?.includes(t.id) && !t.requires?.some((id) => t.conflicts?.includes(id)), t.id);
-    assert.equal(!!t.requires, t.kind === "perk", `${t.id}: requires — у перков и только у них`);
-    assert.equal(!!t.trigger, t.kind !== "born", `${t.id}: повод — у нажитых и перков, у врождённых его нет`);
+    assert.equal(!!t.requires, t.kind === "perk" && !t.seneschal, `${t.id}: requires — у перков людей и только у них`);
+    assert.equal(!!t.trigger, t.source.includes("life") && !t.seneschal, `${t.id}: повод — у того, что наживается в игре; у врождённого, облика и «только до игры» его нет`);
     if (t.trigger) assert.ok(TRIGGERS.includes(t.trigger), t.id);
-    assert.equal(t.source.includes("birth"), t.kind === "born", `${t.id}: source`);
-    if (t.source.includes("backstory")) assert.equal(t.kind, "life", `${t.id}: до игры наживаются только черты, не перки`);
+    if (t.kind !== "look") assert.equal(t.source.includes("birth"), t.kind === "born", `${t.id}: source`);
+    if (t.source.includes("backstory")) assert.ok(t.kind === "life" || t.kind === "look", `${t.id}: до игры наживаются только черты и облик, не перки`);
     for (const id of t.replaces ?? []) assert.equal(bagTrait(id).kind, "life", `${t.id} вытесняет ${id}: вытеснить можно только нажитое`);
     if (t.replaces) assert.equal(t.kind, "life", `${t.id}: вытесняет только нажитая черта`);
   }
@@ -105,7 +107,9 @@ test("три происхождения: врождённых одна-две, �
       assert.equal(p.age, age);
       assert.ok(born.length >= N.innateMin && born.length <= N.innateMax, `${n.id}: врождённых ${born.length}`);
       assert.equal(life.length, beforeCount(age), `${n.id}, ${age} лет: нажитых ${life.length}`);
-      assert.equal(p.traits.length, born.length + life.length, "перков до игры нет");
+      const look = p.traits.filter((t) => t.kind === "look");
+      assert.ok(look.length <= 1, `${n.id}: облик — не больше одной черты`);
+      assert.equal(p.traits.length, born.length + life.length + look.length, "перков до игры нет");
       assert.equal(new Set(ids(p)).size, p.traits.length);
       assert.deepEqual(p.anchors, born.map((t) => t.id), "врождённые черты — якоря");
       for (const t of life) assert.ok(BACKSTORY.some((ev) => ev.id === p.via[t.id]), `${t.id}: нажитая до игры черта пришла из события предыстории`);

@@ -111,3 +111,5 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
 .tag .by-trait { opacity: .85; }
 .tnote { padding: 3px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
 .tnote .muted { margin-left: 8px; }
+.tag.look { background: #8a7a5c; }
+.bush.sen { border-color: #6b4f86; }

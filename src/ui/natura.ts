@@ -1,11 +1,12 @@
 // Эмулятор натуры: страница, на которой видно всё наполнение генератора (признаки, натуры, мешок), прогон рероллов с графиками
 // и ручки раздела natura. Правил не считает: зовёт src/sim/natura.ts и src/sim/natura-report.ts.
-import type { Axis, Sign, SignVec, BagTrait, NatureDef, Star } from "../data/types";
+import type { Axis, Sign, SignVec, BagTrait, NatureDef, Star, TraitNoteKey } from "../data/types";
 import { AXES, AXIS_NAMES, POSTS, TRAITS, LIFE_TRAITS } from "../data/core";
 import { SIGNS, NATURES, BAG } from "../data/natura";
 import { BACKSTORY } from "../data/backstory";
 import { BALANCE, KNOBS, getAt, setAt, resetBalance, type KnobInfo } from "../sim/balance";
-import { growParty, rollPerson, bagTrait, cos, isFar, isContra, type NaturaPerson } from "../sim/natura";
+import { growParty, rollPerson, growSeneschal, bagTrait, originById, cos, isFar, isContra, type NaturaPerson } from "../sim/natura";
+import { MERA_NAMES } from "../data/origins";
 import { WANTS, HOLDS, APPROACHES, MEM_KEYS, MEM_SCALES, BIASES, CHANNELS, VIS_NAMES, THREADS, THREAD_HOW } from "../data/portrait";
 import { portrait, strengthWord, linkName, traitVis, type Portrait, type Src, type Part } from "../sim/portrait";
 import { rollAll, metricsOf, naturaWarnings, currentAxes, type NaturaMetrics } from "../sim/natura-report";
@@ -22,7 +23,7 @@ const val = (id: string) => ($(id) as HTMLInputElement | HTMLSelectElement).valu
 const pct = (v: number) => `${Math.round(v * 100)}%`;
 const f1 = (v: number) => v.toFixed(1).replace(".", ",");
 const f2 = (v: number) => v.toFixed(2).replace(".", ",");
-const KIND: Record<BagTrait["kind"], string> = { born: "врождённая", life: "нажитая", perk: "перк" };
+const KIND: Record<BagTrait["kind"], string> = { born: "врождённая", life: "нажитая", perk: "перк", look: "облик" };
 const TRIGGER: Record<string, string> = { habit: "привычка", post: "должность", rel: "отношения", break: "перелом", deed: "поступок" };
 const RARITY: Record<BagTrait["rarity"], string> = { common: "", rare: " ★", exceptional: " ★★" };
 const AXIS_RGB: Record<Axis, string> = { dolg: "75,93,138", vygoda: "160,120,42", zabota: "78,125,74", derzost: "161,69,46", obychai: "107,79,134" };
@@ -34,6 +35,7 @@ let hm: HealthMetrics;
 let shown: NaturaPerson | undefined; // человек из раздела «Один человек»: его же здоровье показано ниже
 const axesNow = currentAxes(); // нынешняя звезда совета от ручек натуры не зависит: считаем один раз
 let personRoll = 0;
+let asSeneschal = false; // в разделе «Один человек» показан Сенешаль: тот же движок, свой мешок
 
 // ---------- мелкие куски разметки ----------
 const vecTags = (v: SignVec) => (Object.entries(v) as [Sign, number][])
@@ -115,7 +117,8 @@ function renderMetrics() {
     card("Самая частая обычная черта", pct(m.commonMax.share), `«${esc(m.commonMax.trait)}» · цель: не больше ${pct(G.commonShare)}`, m.commonMax.share <= G.commonShare),
     card("Наименьший разброс признака", f2(minSpread), `цель: не ниже ${G.signSpread}`, minSpread >= G.signSpread),
     card("Черт на человека", f1(m.traitsMean), `врождённых ${f1(m.kinds.born)} · нажитых ${f1(m.kinds.life)} · перков ${f1(m.kinds.perk)}`, null),
-    card("В мешке", String(BAG.length), (["born", "life", "perk"] as const).map((k) => `${KIND[k]} ${BAG.filter((t) => t.kind === k).length}`).join(" · "), null),
+    card("В мешке", String(BAG.length), `${(["born", "life", "perk", "look"] as const).map((k) => `${KIND[k]} ${BAG.filter((t) => t.kind === k && !t.seneschal).length}`).join(" · ")}
+      · Сенешаль ${BAG.filter((t) => t.seneschal).length}`, null),
   ].join("");
   const warns = naturaWarnings(m);
   $("warnings").innerHTML = warns.length ? warns.map((x) => `<div class="warn">⚠ ${esc(x)}</div>`).join("") : `<div class="fine">Предупреждений нет: цели выполнены.</div>`;
@@ -127,7 +130,8 @@ function renderCharts() {
   const G = BALANCE.natura.goal;
   $("legend-kinds").innerHTML = (["born", "life", "perk"] as const).map((k) => `<span><span class="sw" style="background:var(--${k})"></span>${KIND[k]}</span>`).join("");
   // частота черт: две колонки, чтобы 84 строки не тянулись на три экрана
-  const rows = BAG.map((t) => ({ t, share: m.count[t.id] / n })).sort((a, b) => b.share - a.share);
+  // черты мешка Сенешаля людям не выпадают: в частотах их нет
+  const rows = BAG.filter((t) => !t.seneschal).map((t) => ({ t, share: m.count[t.id] / n })).sort((a, b) => b.share - a.share);
   const top = Math.max(G.commonShare * 1.2, rows[0]?.share ?? 0);
   const goalMark = `<div class="mark" style="left:${(G.commonShare / top * 100).toFixed(1)}%"></div>`;
   const cell = (r: { t: BagTrait; share: number }) => `<div title="${esc(r.t.desc)}">${esc(r.t.name)}${RARITY[r.t.rarity]}</div>
@@ -174,7 +178,7 @@ function renderCharts() {
 
 // ---------- один человек ----------
 function traitBlock(p: NaturaPerson, t: BagTrait) {
-  const origin = t.kind === "born" ? "врождённая" : p.inGame.includes(t.id) ? `в игре, повод — ${TRIGGER[t.trigger ?? ""]}` : `до игры: ${storyText(p.via[t.id])}`;
+  const origin = t.seneschal ? "мешок Сенешаля" : t.kind === "look" ? (t.source.includes("birth") ? "облик, врождённый" : "облик, нажитой") : t.kind === "born" ? "врождённая" : p.inGame.includes(t.id) ? `в игре, повод — ${TRIGGER[t.trigger ?? ""]}` : `до игры: ${storyText(p.via[t.id])}`;
   return `<div class="trait">${traitTag(t)} ${vecTags(t.vec)}<small><b>${esc(origin)}</b></small><small>${esc(t.desc)}. ${esc(t.effect)}.</small></div>`;
 }
 function personHtml(p: NaturaPerson) {
@@ -182,7 +186,15 @@ function personHtml(p: NaturaPerson) {
   const has = (id: string) => p.traits.some((t) => t.id === id);
   const bush = (title: string, id: string) => `<div class="bush"><h4>${title}</h4>${has(id) ? traitBlock(p, bagTrait(id)) : ""}${grown(id).map((t) => traitBlock(p, t)).join("")}</div>`;
   const contra = p.contra && p.contra !== p.far && has(p.contra) ? `<div class="bush"><h4>Противоречие: против ядра</h4>${traitBlock(p, bagTrait(p.contra))}</div>` : "";
-  const loose = p.traits.filter((t) => !p.anchors.includes(t.id) && t.id !== p.far && t.id !== p.contra && !p.from[t.id]);
+  const apart = (t: BagTrait) => t.kind === "look" || !!t.seneschal;
+  const loose = p.traits.filter((t) => !apart(t) && !p.anchors.includes(t.id) && t.id !== p.far && t.id !== p.contra && !p.from[t.id]);
+  const own = p.traits.filter((t) => t.seneschal), look = p.traits.filter((t) => t.kind === "look");
+  const senBush = own.length ? `<div class="bush sen"><h4>Мешок Сенешаля: ядро, умения, черты на выбор</h4>${own.map((t) => traitBlock(p, t)).join("")}</div>` : "";
+  const lookBush = look.length ? `<div class="bush"><h4>Облик: натурой не тянется</h4>${look.map((t) => traitBlock(p, t)).join("")}</div>` : "";
+  const o = originById(p.origin), shownAs = originById(p.originShown);
+  // происхождение Сенешаля задано сюжетом, а не генератором: у него строка не показывается
+  const whose = own.length ? "происхождение задано сюжетом" : `откуда: <b id="origin-name">${esc(o.name)}</b> <span class="muted">(${MERA_NAMES[o.mera]}${o.meraNote ? `, ${esc(o.meraNote)}` : ""})</span>${
+    o !== shownAs ? ` · на людях — <b id="origin-shown">${esc(shownAs.name)}</b>` : ""}`;
   const rest = loose.length ? `<div class="bush"><h4>Само по себе: след события, к якорям не тянется</h4>${loose.map((t) => traitBlock(p, t)).join("")}</div>` : "";
   const lost = p.lost.length ? `<p class="muted">Вытеснено новыми чертами: ${p.lost.map((id) => esc(bagTrait(id).name)).join(", ")}</p>` : "";
   const signs = SIGNS.map((s) => {
@@ -193,23 +205,39 @@ function personHtml(p: NaturaPerson) {
       <div>${esc(s.plus)}</div><div class="num">${v > 0 ? "+" : ""}${f1(v)}</div>`;
   }).join("");
   const star = AXES.map((a) => `<div>${AXIS_NAMES[a]}</div>${track(p.star[a] / 10, `var(--axis-${a})`)}<div class="num">${f1(p.star[a])}</div>`).join("");
-  const kinds = (["born", "life", "perk"] as const).map((k) => `${KIND[k]}: ${p.traits.filter((t) => t.kind === k).length}`).join(", ");
-  return `<p><b>${esc(p.nature.name)}</b>, ${p.age} лет · ядро: ${vecTags(p.nature.core)} · черт: ${p.traits.length} (${kinds})</p>${lost}
-    <div class="tree">${p.anchors.map((id, i) => bush(`Врождённый якорь ${i + 1} и его куст`, id)).join("")}${p.far ? bush("Дальний якорь (нажит) и его куст", p.far) : ""}${contra}${rest}</div>
+  const kinds = (["born", "life", "perk", "look"] as const).map((k) => `${KIND[k]}: ${p.traits.filter((t) => t.kind === k).length}`).join(", ");
+  return `<p>${own.length ? `<b id="is-seneschal">Сенешаль</b>, по натуре ` : ""}<b>${esc(p.nature.name)}</b>, ${p.age} лет · ${whose} · ядро: ${vecTags(p.nature.core)}
+    · черт: ${p.traits.length} (${kinds})</p>${lost}
+    <div class="tree">${senBush}${p.anchors.map((id, i) => bush(`Врождённый якорь ${i + 1} и его куст`, id)).join("")}
+    ${p.far ? bush("Дальний якорь (нажит) и его куст", p.far) : ""}${contra}${rest}${lookBush}</div>
     <div class="split"><div><h3>Признаки (чёрная метка — ядро)</h3><div class="bipolar">${signs}</div></div>
     <div><h3>Деловые склонности из признаков</h3><div class="bars">${star}</div></div></div>`;
 }
 // Портрет по Концепту 3: что выходит из признаков и особенного черт (правила — src/sim/portrait.ts).
 // У каждой строки видно, откуда она: метка ◆ и имя — от черты, без метки — от признака (имя полюса — в подсказке).
 const signed = (v: number) => `${v > 0 ? "+" : ""}${f1(v)}`;
-const NOTE_NAMES: Record<string, string> = {
-  vesy: "весы", podkhod: "подход", pamyat: "память", golos: "голос", niti: "нити", svyazi: "связи", sledy: "следы", delo: "дело", likho: "лихо", prochee: "ещё",
+const NOTE_NAMES: Record<TraitNoteKey, string> = {
+  vesy: "весы", podkhod: "подход", pamyat: "память", golos: "голос", niti: "нити", svyazi: "связи", sledy: "следы", delo: "дело", likho: "лихо", derzhit: "кто держит", otdykh: "отдых", lore: "опора в лоре", prochee: "ещё",
 };
 const whence = (x: Src | undefined) => (x ? (x.trait ? `от черты «${x.from}»` : `от признака: ${x.from}`) : "");
 const mark = (x: Src | undefined) => (x?.trait ? `<small class="by-trait">◆ ${esc(x.from)}</small>` : "");
 const none = (text = "—") => `<span class="muted">${text}</span>`;
+// Происхождение: мера, к чему тянет и с кем свой. В числа портрета не входит: с какой силой его складывать с признаками и чертами — не решено.
+function originRow(p: NaturaPerson): string {
+  const o = originById(p.origin), shownAs = originById(p.originShown);
+  const word = <K extends string>(keys: K[], list: { id: K; name: string }[]) => keys.map((k) => list.find((x) => x.id === k)!.name);
+  const bits = [
+    [...word(o.wants, WANTS), ...word(o.holds ?? [], HOLDS)].length ? `тянет и держит: ${esc([...word(o.wants, WANTS), ...word(o.holds ?? [], HOLDS)].join(", "))}` : "",
+    o.threads.length ? `нити: ${esc(word(o.threads, THREADS).map((x) => `«${x}»`).join(", "))}` : "",
+    o.ladit.length ? `свои: ${esc(o.ladit.map(linkName).join(", "))}` : "", o.neLadit.length ? `чужие: ${esc(o.neLadit.map(linkName).join(", "))}` : "",
+    o.often.length ? `чаще черты: ${esc(o.often.map((id) => bagTrait(id).name).join(", "))}` : "",
+  ].filter(Boolean);
+  return `<span class="tag role">${esc(o.name)}</span> мера — ${MERA_NAMES[o.mera]}${o.meraNote ? ` (${esc(o.meraNote)})` : ""}
+    ${o !== shownAs ? `<span class="tag minus">на людях — ${esc(shownAs.name)}</span>` : ""}
+    <div class="muted">${bits.join(" · ")}</div>${o.note ? `<div class="muted">${esc(o.note)}</div>` : ""}`;
+}
 function portraitBlock(p: NaturaPerson): string {
-  const P: Portrait = portrait(p), O = P.origin;
+  const P: Portrait = portrait(p), O = P.by;
   // число: слово, величина и из чего сложилось
   const sum = (parts: Part[]) => parts.map((x) => `${x.trait ? `черта «${x.from}»` : x.from} ${signed(x.v)}`).join(", ");
   const byTrait = (parts: Part[]) => { const t = parts.filter((x) => x.trait); return t.length ? `<small class="by-trait">◆ ${esc(t.map((x) => x.from).join(", "))}</small>` : ""; };
@@ -278,6 +306,8 @@ function portraitBlock(p: NaturaPerson): string {
     ${threads ? row("Нити", threads) : ""}
     ${deed || skills ? row("Дело", deed + skills) : ""}
     ${likho.length ? row("Лихо", likho.join("; ")) : ""}
+    ${P.alloys.length ? row("Сплав", P.alloys.map((a) => `<div class="trace"><span class="tag perk">${esc(a.name)}</span> ${esc(a.text)}</div>`).join("")) : ""}
+    ${p.traits.some((t) => t.seneschal) ? "" : row("Откуда и чей", originRow(p))}
   </div>
   <h3>Особенное черт: действие и слова автора по полям</h3><div id="portrait-traits">${special}</div>`;
 }
@@ -285,7 +315,9 @@ function renderPerson() {
   const nature = NATURES.find((x) => x.id === val("nature")) ?? NATURES[0];
   const seed = `${val("seed")}-человек-${personRoll}`;
   const age = val("age") ? Number(val("age")) : undefined;
-  shown = rollPerson(seed, nature, age);
+  shown = asSeneschal ? growSeneschal(seed, nature) : rollPerson(seed, nature, age);
+  $("seneschal").textContent = asSeneschal ? "Обычный человек" : "Сенешаль";
+  ($("age") as HTMLSelectElement).disabled = asSeneschal;
   $("person-view").innerHTML = personHtml(shown) + portraitBlock(shown);
   renderHealthPerson(seed);
   $("person-rerolls").innerHTML = Array.from({ length: 12 }, (_, i) => {
@@ -388,7 +420,7 @@ function renderHealth() {
 // ---------- таблицы ----------
 function renderTables() {
   const n = Math.max(1, people.length);
-  const born = BAG.filter((t) => t.kind === "born"), lifeBag = BAG.filter((t) => t.kind === "life");
+  const born = BAG.filter((t) => t.kind === "born" && !t.seneschal), lifeBag = BAG.filter((t) => t.kind === "life" && !t.seneschal);
   const names = (list?: string[]) => (list ?? []).map((id) => esc(bagTrait(id).name)).join(", ");
   // натуры
   $("table-natures").innerHTML = `<table><tr><th>Натура</th><th>Ядро</th><th>Точки кристаллизации: сколько врождённых черт у каждой</th>
@@ -470,6 +502,7 @@ $("export").addEventListener("click", exportKnobs);
 $("nature").addEventListener("change", () => { personRoll = 0; renderPerson(); });
 $("age").addEventListener("change", renderPerson);
 $("reroll").addEventListener("click", () => { personRoll++; renderPerson(); });
+$("seneschal").addEventListener("click", () => { asSeneschal = !asSeneschal; renderPerson(); });
 $("bag-kind").addEventListener("change", renderTables);
 $("bag-sort").addEventListener("change", renderTables);
 run();

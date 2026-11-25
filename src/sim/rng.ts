@@ -21,6 +21,11 @@ export class Rng {
   int(a: number, b: number): number {
     return Math.floor(this.range(a, b + 1));
   }
+  // Побочный ряд: свой генератор от нынешнего состояния и метки. Основной ряд он не сдвигает —
+  // новый слой (происхождение, облик) можно добавить, не меняя того, что уже тянулось из основного.
+  fork(label: string): Rng {
+    return new Rng(`${this.s}|${label}`);
+  }
   pick<T>(arr: T[]): T {
     return arr[Math.floor(this.next() * arr.length)];
   }
