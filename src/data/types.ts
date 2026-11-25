@@ -168,10 +168,10 @@ export type LinkGroup =
   | "palata" | "lesnye" | "byvalye" | "prishlye" | "khram" | "starozhily" | "derevni" | "chelyad" | "sluzhilye" | "kuptsy" | "sosedi" | "rodnya" | "likhie";
 export type PoleKey = `${Sign}+` | `${Sign}-`;
 export type LinkKey = LinkGroup | PoleKey;
-// Нити — линии судьбы; id предварительные, каталог со ступенями придёт отдельным материалом.
+// Нити — линии судьбы; каталог со ступенями — docs/design/niti.md.
 export type ThreadId =
   | "dengi" | "dolg" | "azart" | "pyanstvo" | "lyubov" | "krov" | "proshloe" | "soglyadatay" | "posuly" | "mest" | "khvor" | "nedosmotr" | "metka"
-  | "podsidet" | "uyti" | "nadel" | "svadba" | "gramota" | "propavshiy" | "svoy_dvor" | "obet" | "draka" | "sabotazh" | "rodnya" | "rebyonok" | "son" | "vina";
+  | "podsidet" | "uyti" | "nadel" | "svadba" | "gramota" | "propavshiy" | "svoy_dvor" | "obet" | "draka" | "sabotazh" | "rodnya" | "rebyonok" | "son" | "vina" | "svoe_delo" | "dobroe_imya" | "vernulsya";
 export type ThreadHow = "otkryvaet" | "tolkaet" | "tormozit" | "stupen";
 // Кто держит порок или тайну: роль-слот, генератор подставит человека.
 export type HolderRole =

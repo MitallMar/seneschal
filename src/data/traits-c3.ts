@@ -53,6 +53,7 @@ export const TRAITS_C3: Record<string, TraitC3 & { effect: string }> = {
     wants: { pochet: 1 },
     approach: { da: ["dar", "zastolye"] },
     memory: { pomnit: ["unizhenie"] },
+    threads: [{ nit: "dobroe_imya", kak: "tolkaet" }],
     links: { ladit: ["prishlye"] },
     traces: {
       lines: [
@@ -67,12 +68,14 @@ export const TRAITS_C3: Record<string, TraitC3 & { effect: string }> = {
       pamyat: "помнит особо унижение — отказ от его стола",
       svyazi: "ладит с пришлыми: новые люди первым делом попадают к нему за стол",
       sledy: "вид, присутствие — у него всегда гости; ведомость — припасы его места тают к праздникам",
+      niti: "толкает «доброе имя»",
     },
   },
   chuet_vygodu: {
     vis: "so_vremenem",
     effect: "На торге и в сделках с добром видит выгоду, которой не видят другие",
     approach: { da: ["vygoda"] },
+    threads: [{ nit: "svoe_delo", kak: "otkryvaet" }],
     links: { ladit: ["kuptsy"] },
     traces: {
       lines: [
@@ -86,6 +89,7 @@ export const TRAITS_C3: Record<string, TraitC3 & { effect: string }> = {
       svyazi: "ладит с купцами",
       sledy: "молва — с торга всегда с прибытком; ведомость — у его места лишнее добро к торгу",
       delo: "осенний торг и сделки с добром +1",
+      niti: "открывает «своё дело»: задумал → просит место и право → ставит → дело идёт",
     },
   },
   pomnit_rodstvo: {
@@ -93,13 +97,13 @@ export const TRAITS_C3: Record<string, TraitC3 & { effect: string }> = {
     effect: "Родню, даже дальнюю, тянет к себе и пристраивает; обиду роду помнит",
     ifs: [{ chto: "srok", v: 1, kogda: "обида роду" }],
     memory: { pomnit: ["obida_svoim"] },
-    threads: [{ nit: "rodnya", kak: "otkryvaet" }],
+    threads: [{ nit: "rodnya", kak: "otkryvaet" }, { nit: "vernulsya", kak: "tolkaet", uDrugogo: true }],
     links: { ladit: ["rodnya"] },
     traces: { lines: [{ gde: "molva", text: "у него полдеревни в родне" }] },
     notes: {
       vesy: "близкие — шире: дальняя родня тоже своя",
       pamyat: "обиду роду держит долго, держит +1",
-      niti: "открывает «родню пристроить» (rodnya)",
+      niti: "открывает «родню пристроить» (rodnya); у оставшихся толкает «вернулся»",
       svyazi: "ладит с родней — до слоя родства «из одного рода»",
       sledy: "молва — у него полдеревни в родне",
     },
@@ -292,7 +296,7 @@ export const TRAITS_C3: Record<string, TraitC3 & { effect: string }> = {
     effect: "Просьбе слабого не откажет, даже себе в убыток",
     wants: { chistaya_sovest: 1 },
     approach: { da: ["prosba"] },
-    threads: [{ nit: "rebyonok", kak: "tolkaet" }],
+    threads: [{ nit: "rebyonok", kak: "tolkaet" }, { nit: "dobroe_imya", kak: "otkryvaet" }],
     links: { ladit: ["derevni", "chelyad"] },
     traces: {
       lines: [
@@ -303,7 +307,7 @@ export const TRAITS_C3: Record<string, TraitC3 & { effect: string }> = {
     notes: {
       vesy: "чистая совесть +1",
       podkhod: "просьба слабого — вдовы, сироты, нищего, увечного — работает вдвое и даже себе в убыток",
-      niti: "толкает «ребёнок растёт» — скорее других возьмёт сироту",
+      niti: "толкает «ребёнок растёт» — скорее других возьмёт сироту; открывает «доброе имя»: помог → слушают → вес в деревне → зовут в старосты или в совет",
       svyazi: "ладит с деревнями и челядью",
       sledy: "вид — у его двора нищие; молва",
     },
@@ -467,7 +471,7 @@ export const TRAITS_C3: Record<string, TraitC3 & { effect: string }> = {
     wants: { dengi: -1 },
     approach: { da: ["prosba"] },
     memory: { proshchaet: ["dolg"] },
-    threads: [{ nit: "dolg", kak: "otkryvaet" }],
+    threads: [{ nit: "dolg", kak: "otkryvaet" }, { nit: "dobroe_imya", kak: "otkryvaet" }],
     traces: {
       lines: [
         { gde: "vid", text: "сам ходит в старом" },
@@ -478,7 +482,7 @@ export const TRAITS_C3: Record<string, TraitC3 & { effect: string }> = {
       vesy: "деньги −1 сверх признака",
       podkhod: "работает просьба любого, не только слабого",
       pamyat: "прощает легко долг — свои долги ему прощает, сам не напоминает",
-      niti: "открывает «долг» — раздал своё и сам занял",
+      niti: "открывает «долг» — раздал своё и сам занял; открывает «доброе имя»: помог → слушают → вес в деревне → зовут в старосты или в совет",
       sledy: "вид — сам ходит в старом; ведомость — казна и припасы его места не копятся",
     },
   },
@@ -583,13 +587,14 @@ export const TRAITS_C3: Record<string, TraitC3 & { effect: string }> = {
     threads: [
       { nit: "dengi", kak: "tormozit" },
       { nit: "posuly", kak: "tormozit" },
+      { nit: "dobroe_imya", kak: "tolkaet" },
     ],
     links: { ladit: ["palata", "derevni"] },
     traces: { lines: [{ gde: "doklad", text: "опись при нём не занизить" }] },
     notes: {
       podkhod: "не действуют крючок и просьба солгать",
       golos: "без пристрастия — сильнее любой другой черты",
-      niti: "тормозит «деньги» и «посулы»; чужую тайну, если спросят, выдаст",
+      niti: "тормозит «деньги» и «посулы»; чужую тайну, если спросят, выдаст; толкает «доброе имя»",
       svyazi: "ладит с палатой и деревнями — его слову верят",
       sledy: "доклад — опись при нём не занизить",
     },
@@ -697,12 +702,14 @@ export const TRAITS_C3: Record<string, TraitC3 & { effect: string }> = {
     holds: { pravilo: 1 },
     approach: { da: ["vremya"] },
     memory: { pomnit: ["slovo"], srok: 1 },
+    threads: [{ nit: "dobroe_imya", kak: "otkryvaet" }],
     traces: { lines: [{ gde: "molva", text: "«сказал — сделал»" }] },
     notes: {
       vesy: "правило +1 — наказ Сенешаля для него тоже слово",
       podkhod: "работает время — сдержанное ему слово весит вдвое",
       pamyat: "помнит особо нарушенное слово — и чужое, и Сенешаля; держит +1",
       sledy: "молва — «сказал — сделал»",
+      niti: "открывает «доброе имя»: помог → слушают → вес в деревне → зовут в старосты или в совет",
     },
   },
   chtit_primety: {
@@ -722,11 +729,13 @@ export const TRAITS_C3: Record<string, TraitC3 & { effect: string }> = {
     effect: "Обычай его убеждает, новшество обижает; кто ломал старину — помнит",
     approach: { net: ["novoe_delo"] },
     memory: { pomnit: ["starina"] },
+    threads: [{ nit: "svoe_delo", kak: "tormozit" }],
     traces: { lines: [{ gde: "molva", text: "«при дедах так не делали»" }] },
     notes: {
       podkhod: "новое дело не просто не действует — обижает",
       pamyat: "помнит особо сломанный обычай",
       sledy: "молва — «при дедах так не делали»",
+      niti: "тормозит «своё дело»",
     },
   },
   svoikh_ne_sdayot: {
@@ -812,7 +821,7 @@ export const TRAITS_C3: Record<string, TraitC3 & { effect: string }> = {
     ifs: [{ chto: "srok", v: 2, kogda: "обида своим — до смерти" }],
     approach: { da: ["cherez_blizkikh"] },
     memory: { pomnit: ["obida_svoim"] },
-    threads: [{ nit: "mest", kak: "otkryvaet" }],
+    threads: [{ nit: "mest", kak: "otkryvaet" }, { nit: "vernulsya", kak: "tolkaet", uDrugogo: true }],
     traces: {
       lines: [
         { gde: "vid", text: "родня всегда при нём" },
@@ -822,7 +831,7 @@ export const TRAITS_C3: Record<string, TraitC3 & { effect: string }> = {
     notes: {
       podkhod: "через близких работает вдвое — помоги его родне, и он твой",
       pamyat: "обиду своим держит +2 — до смерти",
-      niti: "открывает «месть» — за обиду родне",
+      niti: "открывает «месть» — за обиду родне; у оставшихся толкает «вернулся»",
       sledy: "вид — родня всегда при нём; молва",
     },
   },
@@ -975,7 +984,7 @@ export const TRAITS_C3: Record<string, TraitC3 & { effect: string }> = {
   prodast_i_kupit: {
     vis: "yavnaya",
     effect: "Ловко торгует — и казённым тоже, если не смотреть",
-    threads: [{ nit: "dengi", kak: "tolkaet" }],
+    threads: [{ nit: "dengi", kak: "tolkaet" }, { nit: "svoe_delo", kak: "tolkaet" }],
     links: { ladit: ["kuptsy"] },
     traces: {
       lines: [
@@ -985,7 +994,7 @@ export const TRAITS_C3: Record<string, TraitC3 & { effect: string }> = {
     },
     deed: [{ gde: "торг, поездка в Ваделу", sila: 1 }],
     notes: {
-      niti: "толкает «деньги» — продаёт казённое добро на сторону",
+      niti: "толкает «деньги» — продаёт казённое добро на сторону; толкает «своё дело»",
       svyazi: "ладит с купцами",
       sledy: "молва — «продаст и купит»; ведомость — добро ушло дешевле, чем стоило",
       delo: "торг, поездка в Ваделу +1",
@@ -1007,11 +1016,13 @@ export const TRAITS_C3: Record<string, TraitC3 & { effect: string }> = {
   nabil_ruku: {
     vis: "so_vremenem",
     effect: "Привычное делает ровно: место при нём не падает ниже «исправно»",
+    threads: [{ nit: "svoe_delo", kak: "otkryvaet" }],
     traces: { lines: [{ gde: "mesto", text: "исправно, без блеска" }] },
     deed: [{ gde: "привычное дело", sila: 1 }],
     notes: {
       sledy: "место — исправно, без блеска",
       delo: "привычное дело +1; место, которое он ведёт, от недосмотра не падает ниже «исправно» (беды — могут)",
+      niti: "открывает «своё дело»: задумал → просит место и право → ставит → дело идёт",
     },
   },
   obzhyogsya: {
@@ -1047,7 +1058,7 @@ export const TRAITS_C3: Record<string, TraitC3 & { effect: string }> = {
     effect: "Появилось что терять: за добро боится, с места не уйдёт; его обновы легко принять за краденое",
     ifs: [{ chto: "strakh", v: 1, kogda: "когда вариант грозит его добру" }],
     approach: { da: ["zashchita"] },
-    threads: [{ nit: "uyti", kak: "tormozit" }],
+    threads: [{ nit: "uyti", kak: "tormozit" }, { nit: "svoe_delo", kak: "tolkaet" }],
     traces: {
       yasnost: -1,
       lines: [
@@ -1058,7 +1069,7 @@ export const TRAITS_C3: Record<string, TraitC3 & { effect: string }> = {
     notes: {
       vesy: "страх +1, когда вариант грозит его добру",
       podkhod: "работает защита — охранить нажитое",
-      niti: "тормозит «уйти» — есть что терять",
+      niti: "тормозит «уйти» — есть что терять; толкает «своё дело»",
       svyazi: "завистливые к нему хуже",
       sledy: "вид — обновы; молва — «разжился». Ясность −1: честные обновы легко спутать со следом кражи",
     },
@@ -1330,11 +1341,12 @@ export const TRAITS_C3: Record<string, TraitC3 & { effect: string }> = {
     threads: [
       { nit: "podsidet", kak: "otkryvaet", uDrugogo: true },
       { nit: "mest", kak: "otkryvaet", uDrugogo: true },
+      { nit: "dobroe_imya", kak: "tormozit" },
     ],
     traces: { yasnost: -1, lines: [{ gde: "zhaloba", text: "на него наговаривают: жалобы путаные, то правда, то навет" }] },
     notes: {
       pamyat: "к недругам держит +1",
-      niti: "у недругов против него — «подсидеть» или «месть» (у другого)",
+      niti: "у недругов против него — «подсидеть» или «месть» (у другого); тормозит «доброе имя»",
       svyazi: "у него один-два недруга — в совете или в округе; с ними не сглаживается",
       sledy: "жалоба — на него наговаривают: жалобы путаные, то правда, то навет (ясность −1)",
     },
@@ -1747,20 +1759,23 @@ export const TRAITS_C3: Record<string, TraitC3 & { effect: string }> = {
   torgovaya_khvatka: {
     vis: "so_vremenem",
     effect: "Купец уезжает довольный и без кошеля: торг приносит больше серебра",
+    threads: [{ nit: "svoe_delo", kak: "otkryvaet" }],
     posts: ["ключник"],
     places: ["осенний торг", "поездка в Ваделу", "добро к торгу"],
     notes: {
       delo: "на торге серебра больше",
+      niti: "открывает «своё дело»: задумал → просит место и право → ставит → дело идёт",
     },
   },
   mirit: {
     vis: "so_vremenem",
     effect: "После него и кровники пьют из одной чаши: месть и драки кончаются миром",
+    threads: [{ nit: "dobroe_imya", kak: "tolkaet" }],
     deed: [{ gde: "суд и сход", sila: 1 }],
     posts: ["старосты"],
     places: ["суд и сход", "межа и покосы"],
     notes: {
-      niti: "«месть» и «драка» при нём чаще кончаются мировой",
+      niti: "«месть» и «драка» при нём чаще кончаются мировой; толкает «доброе имя»",
       delo: "суд и сход +1; ссоры в совете гаснут быстрее",
     },
   },
@@ -1884,11 +1899,13 @@ export const TRAITS_C3: Record<string, TraitC3 & { effect: string }> = {
   golos: {
     vis: "yavnaya",
     effect: "Когда он говорит, сход молчит",
+    threads: [{ nit: "dobroe_imya", kak: "tolkaet" }],
     deed: [{ gde: "сход", sila: 1 }],
     posts: ["старосты"],
     places: ["суд и сход", "большой сход на осеннем торге"],
     notes: {
       delo: "сход +1; деревни слушают его даже против своей выгоды",
+      niti: "толкает «доброе имя»",
     },
   },
   tsena: {
@@ -2172,12 +2189,12 @@ export const TRAITS_C3: Record<string, TraitC3 & { effect: string }> = {
     vis: "yavnaya",
     effect: "Работа не волк: место при нём ветшает",
     wants: { pokoy: 1 },
-    threads: [{ nit: "nedosmotr", kak: "otkryvaet" }],
+    threads: [{ nit: "nedosmotr", kak: "otkryvaet" }, { nit: "svoe_delo", kak: "tormozit" }],
     traces: { lines: [{ gde: "mesto", text: "запущено" }] },
     deed: [{ gde: "любое дело", sila: -1 }],
     notes: {
       vesy: "покой +1",
-      niti: "открывает «недосмотр»",
+      niti: "открывает «недосмотр»; тормозит «своё дело»",
       sledy: "место — запущено",
       delo: "−1",
     },
@@ -2208,6 +2225,7 @@ export const TRAITS_C3: Record<string, TraitC3 & { effect: string }> = {
     effect: "На словах герой, в беде бежит",
     approach: { da: ["pochtit"] },
     voice: { bias: "priukrashivaet" },
+    threads: [{ nit: "dobroe_imya", kak: "tormozit" }],
     traces: { lines: [{ gde: "molva", text: "рассказы о подвигах" }] },
     deed: [{ gde: "в беде", sila: -1 }],
     notes: {
@@ -2215,16 +2233,19 @@ export const TRAITS_C3: Record<string, TraitC3 & { effect: string }> = {
       golos: "приукрашивает — сильнее признака: подвиги, которых никто не видел",
       sledy: "молва — рассказы о подвигах; в беде видно, чего они стоят",
       delo: "в беде −1 — на словах герой, на деле бежит",
+      niti: "тормозит «доброе имя»",
     },
   },
   vral: {
     vis: "so_vremenem",
     effect: "Соврёт — недорого возьмёт: доклады с прикрасами, истории не сходятся",
     voice: { bias: "priukrashivaet" },
+    threads: [{ nit: "dobroe_imya", kak: "tormozit" }],
     traces: { yasnost: -1 },
     notes: {
       golos: "приукрашивает — доклад с прикрасами, истории не сходятся",
       sledy: "ясность −1 — по его словам следы путаются; при приёме пришлых — может приврать о прошлом (koncept-3.md, 8.3)",
+      niti: "тормозит «доброе имя»",
     },
   },
   znaetsya_s_likhimi: {
@@ -2460,10 +2481,12 @@ export const TRAITS_C3: Record<string, TraitC3 & { effect: string }> = {
   plotnik: {
     vis: "yavnaya",
     effect: "Топор у него поёт: стройка и ремонт мест идут дешевле",
+    threads: [{ nit: "svoe_delo", kak: "otkryvaet" }],
     deed: [{ gde: "стройка", sila: 1 }],
     places: ["стройка", "ступени мест", "рост замка (тын, острог)", "осмотр работ"],
     notes: {
       delo: "стройка +1 — ступень места поднимается дешевле в руках",
+      niti: "открывает «своё дело»: задумал → просит место и право → ставит → дело идёт",
     },
   },
   znaet_zemlyu: {
@@ -2489,30 +2512,36 @@ export const TRAITS_C3: Record<string, TraitC3 & { effect: string }> = {
   bortnik: {
     vis: "so_vremenem",
     effect: "Пчела его не жалит: мёда к торгу больше",
+    threads: [{ nit: "svoe_delo", kak: "otkryvaet" }],
     deed: [{ gde: "борти", sila: 1 }],
     places: ["борти", "мёд — добро к торгу"],
     notes: {
       delo: "борти +1 — мёда к торгу больше",
+      niti: "открывает «своё дело»: задумал → просит место и право → ставит → дело идёт",
     },
   },
   znaet_vodu: {
     vis: "so_vremenem",
     effect: "Где брод, где омут — знает: мельница и перевоз при нём надёжнее, разлив не застанет врасплох",
+    threads: [{ nit: "svoe_delo", kak: "otkryvaet" }],
     deed: [{ gde: "мельница и перевоз", sila: 1 }],
     places: ["мельница у залома", "перевоз", "разлив"],
     notes: {
       delo: "мельница и перевоз +1; разлив — беда мягче",
+      niti: "открывает «своё дело»: задумал → просит место и право → ставит → дело идёт",
     },
   },
   kuznets: {
     vis: "yavnaya",
     effect: "Железо его слушается: на смотре оружие и подковы в порядке",
+    threads: [{ nit: "svoe_delo", kak: "otkryvaet" }],
     links: { ladit: ["sluzhilye"] },
     deed: [{ gde: "кузня", sila: 1 }],
     places: ["кузня", "смотр — оружие и подковы"],
     notes: {
       svyazi: "ладит со служилыми",
       delo: "кузня +1; на смотре снаряжение исправно — недоимки по службе меньше",
+      niti: "открывает «своё дело»: задумал → просит место и право → ставит → дело идёт",
     },
   },
   strelok: {
