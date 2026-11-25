@@ -30,15 +30,23 @@ async def s_natura(br, errs):
     pt = await pg.evaluate("()=>window.__emu.portrait()")
     rows = await pg.evaluate("()=>[...document.querySelectorAll('#portrait .prow .ptitle')].map(x=>x.textContent)")
     ptext = await pg.inner_text('#portrait')
-    ok('портрет: десять строк — хочет, удерживает, подход, память, голос, доклад, связи, следы', rows == ['Хочет', 'Удерживает', 'Подход: работает', 'Подход: не действует', 'Память',
-       'Говорит', 'Доклад', 'Ладит', 'Не ладит', 'Следы'], rows)
+    ok('портрет: первые десять строк — хочет, удерживает, подход, память, голос, доклад, связи, следы; дальше — условия, нити, дело, лихо, когда они есть',
+       rows[:10] == ['Хочет', 'Удерживает', 'Подход: работает', 'Подход: не действует', 'Память', 'Говорит', 'Доклад', 'Ладит', 'Не ладит', 'Следы']
+       and all(r in ('При условии', 'Нити', 'Дело', 'Лихо') for r in rows[10:]), rows)
+    marks = await n('#portrait .by-trait')
+    from_traits = sum(1 for l in pt['traces']['lines'] if l['trait']) + len(pt['threads']) + len(pt['ifs']) + len(pt['deed'])
+    ok('портрет: у строки видно, откуда она — от черты (метка с именем) или от признака; ниже — особенное каждой черты с видимостью и действием',
+       marks >= from_traits > 0 and await n('#portrait-traits .tnote') == await n('#person-view .trait') and await n('#portrait-traits .tnote .tag.role') == await n('#portrait-traits .tnote')
+       and all(('от черты' in t.lower() or 'от признака' in t or 'Из чего' in t) for t in await pg.evaluate("()=>[...document.querySelectorAll('#portrait .prow .tag[title]')].map(x=>x.title)")),
+       (marks, from_traits))
     ok('портрет торгаша: выгода работает, желание денег названо словом, доклад с пристрастием, у следа подписана видимость',
        'vygoda' in pt['approach']['da'] and pt['wants']['dengi'] > 0.5 and 'деньги — ' in ptext and 'сильнее' in ptext and 'выгода' in ptext
        and (pt['voice']['bias'] == 'bez' or 'без пристрастия' not in ptext) and len(pt['voice']['manners']) >= 1
-       and await n('#portrait .trace') == len(pt['traces']['lines']) and ('со временем' in ptext or 'явная' in ptext or not pt['traces']['lines']), (pt['wants'], pt['approach'], pt['voice']))
+       and await n('#portrait .tline') == len(pt['traces']['lines']) and ('со временем' in ptext or 'явная' in ptext or not pt['traces']['lines']), (pt['wants'], pt['approach'], pt['voice']))
     await pg.evaluate("()=>window.__emu.setKnob('natura.portrait.notable', 5)")
     pt2 = await pg.evaluate("()=>window.__emu.portrait()")
-    ok('ручка порога действует: при пороге 5 списков по признакам нет, числа остаются', pt2['approach']['da'] == [] and pt2['traces']['lines'] == []
+    ok('ручка порога действует: при пороге 5 от признаков списков нет — остаётся только то, что дали черты; числа остаются',
+       not any(not x['trait'] for x in pt2['origin']['approach'].values()) and not any(not l['trait'] for l in pt2['traces']['lines'])
        and pt2['wants']['dengi'] == pt['wants']['dengi'] and 'как у всех' not in (await pg.inner_text('#portrait')).split('Удерживает')[0], pt2['approach'])
     await pg.evaluate("()=>window.__emu.setKnob('natura.portrait.notable', 2)")
     await pg.select_option('#age', '18'); young = await n('#person-view .trait')

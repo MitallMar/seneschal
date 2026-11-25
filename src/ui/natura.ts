@@ -6,8 +6,8 @@ import { SIGNS, NATURES, BAG } from "../data/natura";
 import { BACKSTORY } from "../data/backstory";
 import { BALANCE, KNOBS, getAt, setAt, resetBalance, type KnobInfo } from "../sim/balance";
 import { growParty, rollPerson, bagTrait, cos, isFar, isContra, type NaturaPerson } from "../sim/natura";
-import { WANTS, HOLDS, APPROACHES, MEM_KEYS, MEM_SCALES, BIASES, CHANNELS, VIS_NAMES } from "../data/portrait";
-import { portrait, strengthWord, linkName, traitVis, type Portrait } from "../sim/portrait";
+import { WANTS, HOLDS, APPROACHES, MEM_KEYS, MEM_SCALES, BIASES, CHANNELS, VIS_NAMES, THREADS, THREAD_HOW } from "../data/portrait";
+import { portrait, strengthWord, linkName, traitVis, type Portrait, type Src, type Part } from "../sim/portrait";
 import { rollAll, metricsOf, naturaWarnings, currentAxes, type NaturaMetrics } from "../sim/natura-report";
 import { postAxisTable } from "../sim/axes-report";
 import { HEALTH_TRAITS } from "../data/health";
@@ -200,49 +200,86 @@ function personHtml(p: NaturaPerson) {
     <div><h3>Деловые склонности из признаков</h3><div class="bars">${star}</div></div></div>`;
 }
 // Портрет по Концепту 3: что выходит из признаков и особенного черт (правила — src/sim/portrait.ts).
+// У каждой строки видно, откуда она: метка ◆ и имя — от черты, без метки — от признака (имя полюса — в подсказке).
 const signed = (v: number) => `${v > 0 ? "+" : ""}${f1(v)}`;
+const NOTE_NAMES: Record<string, string> = {
+  vesy: "весы", podkhod: "подход", pamyat: "память", golos: "голос", niti: "нити", svyazi: "связи", sledy: "следы", delo: "дело", likho: "лихо", prochee: "ещё",
+};
+const whence = (x: Src | undefined) => (x ? (x.trait ? `от черты «${x.from}»` : `от признака: ${x.from}`) : "");
+const mark = (x: Src | undefined) => (x?.trait ? `<small class="by-trait">◆ ${esc(x.from)}</small>` : "");
+const none = (text = "—") => `<span class="muted">${text}</span>`;
 function portraitBlock(p: NaturaPerson): string {
-  const P: Portrait = portrait(p);
-  const scale = <K extends string>(list: { id: K; name: string; desc: string }[], at: Record<K, number>) => {
+  const P: Portrait = portrait(p), O = P.origin;
+  // число: слово, величина и из чего сложилось
+  const sum = (parts: Part[]) => parts.map((x) => `${x.trait ? `черта «${x.from}»` : x.from} ${signed(x.v)}`).join(", ");
+  const byTrait = (parts: Part[]) => { const t = parts.filter((x) => x.trait); return t.length ? `<small class="by-trait">◆ ${esc(t.map((x) => x.from).join(", "))}</small>` : ""; };
+  const scale = <K extends string>(list: { id: K; name: string; desc: string }[], at: Record<K, number>, from: Record<K, Part[]>) => {
     const cells = list.filter((x) => strengthWord(at[x.id])).sort((a, b) => Math.abs(at[b.id]) - Math.abs(at[a.id])).map((x) =>
-      `<span class="tag ${at[x.id] > 0 ? "plus" : "minus"}" title="${esc(x.desc)}">${esc(x.name)} — ${strengthWord(at[x.id])} (${signed(at[x.id])})</span>`);
-    return cells.length ? cells.join("") : `<span class="muted">как у всех</span>`;
+      `<span class="tag ${at[x.id] > 0 ? "plus" : "minus"}" title="${esc(`${x.desc}. Из чего: ${sum(from[x.id])}`)}">${esc(x.name)} — ${strengthWord(at[x.id])} (${signed(at[x.id])})${byTrait(from[x.id])}</span>`);
+    return cells.length ? cells.join("") : none("как у всех");
   };
-  const words = <K extends string>(keys: K[], list: { id: K; name: string; desc: string }[], cls: string) => {
-    const cells = keys.map((k) => { const x = list.find((q) => q.id === k)!; return `<span class="tag ${cls}" title="${esc(x.desc)}">${esc(x.name)}</span>`; });
-    return cells.length ? cells.join("") : `<span class="muted">—</span>`;
+  const words = <K extends string>(keys: K[], list: { id: K; name: string; desc: string }[], cls: string, from: Partial<Record<K, Src>>) => {
+    const cells = keys.map((k) => {
+      const x = list.find((q) => q.id === k)!;
+      return `<span class="tag ${cls}" title="${esc(`${x.desc}. ${whence(from[k])}`)}">${esc(x.name)}${mark(from[k])}</span>`;
+    });
+    return cells.length ? cells.join("") : none();
   };
-  const linkTags = (keys: Portrait["links"]["ladit"], cls: string) => (keys.length ? keys.map((k) => `<span class="tag ${cls}">${esc(linkName(k))}</span>`).join("") : `<span class="muted">—</span>`);
+  const linkTags = (keys: Portrait["links"]["ladit"], cls: string) => (keys.length
+    ? keys.map((k) => `<span class="tag ${cls}" title="${esc(whence(O.links[k]))}">${esc(linkName(k))}${mark(O.links[k])}</span>`).join("") : none());
   const notes = (xs: string[]) => (xs.length ? `<div class="muted">${xs.map(esc).join("; ")}</div>` : "");
   const memory = MEM_SCALES.filter((m) => strengthWord(P.memory[m.id])).map((m) => {
     const v = P.memory[m.id];
-    return `<span class="tag ${v > 0 ? "plus" : "minus"}">${esc(m.name)}: ${v > 0 ? m.plus : m.minus} (${signed(v)})</span>`;
+    return `<span class="tag ${v > 0 ? "plus" : "minus"}" title="${esc(`Из чего: ${sum(O.memory[m.id])}`)}">${esc(m.name)}: ${v > 0 ? m.plus : m.minus} (${signed(v)})${byTrait(O.memory[m.id])}</span>`;
   });
-  const sluchay = strengthWord(P.sluchay) ? `<span class="tag ${P.sluchay > 0 ? "plus" : "minus"}">случай — ${P.sluchay > 0 ? "решения труднее предсказать" : "решения ровнее"}</span>` : "";
+  const sluchay = strengthWord(P.sluchay) ? `<span class="tag ${P.sluchay > 0 ? "plus" : "minus"}" title="${esc(`Из чего: ${sum(O.sluchay)}`)}">случай —
+    ${P.sluchay > 0 ? "решения труднее предсказать" : "решения ровнее"} (${signed(P.sluchay)})${byTrait(O.sluchay)}</span>` : "";
   const bias = BIASES.find((b) => b.id === P.voice.bias)!;
+  const manners = P.voice.manners.map((text, i) => `<span title="${esc(whence(O.manners[i]))}">${esc(text)}${mark(O.manners[i])}</span>`).join("; ");
   const shade = [P.traces.ten ? `о нём следов ${P.traces.ten > 0 ? "больше" : "меньше"} (${signed(P.traces.ten)})` : "",
-    P.traces.tenSfery ? `о его делах следов ${P.traces.tenSfery > 0 ? "больше" : "меньше"}` : "", P.traces.yasnost < 0 ? "следы путаные" : "",
-    P.traces.razgovor ? `разговор открывает ${P.traces.razgovor > 0 ? "больше" : "меньше"}` : ""].filter(Boolean);
-  const lines = P.traces.lines.map((l) => `<div class="trace"><span class="tag role">${esc(VIS_NAMES[l.vis])}</span>
-    ${esc(l.gde.map((g) => CHANNELS.find((c) => c.id === g)!.name).join(", "))}: ${esc(l.text)} <span class="muted">— ${esc(l.from)}</span></div>`).join("");
-  const hidden = p.traits.filter((t) => traitVis(t) !== "yavnaya").map((t) => `${t.name} (${VIS_NAMES[traitVis(t)]})`);
+    P.traces.tenSfery ? `о его делах следов ${P.traces.tenSfery > 0 ? "больше" : "меньше"} (${signed(P.traces.tenSfery)})` : "",
+    P.traces.yasnost ? (P.traces.yasnost < 0 ? "следы путаные" : "следы ясные") : "",
+    P.traces.razgovor ? `разговор открывает ${P.traces.razgovor > 0 ? "больше" : "меньше"}` : "",
+    P.traces.chuzhie ? `чужие тайны ${{ boltaet: "выбалтывает", uznayot: "узнаёт", molchit: "держит" }[P.traces.chuzhie]}` : ""].filter(Boolean);
+  const lines = P.traces.lines.map((l) => `<div class="trace tline"><span class="tag role">${esc(VIS_NAMES[l.vis])}</span>
+    ${esc(l.gde.map((g) => CHANNELS.find((c) => c.id === g)!.name).join(", "))}: ${esc(l.text)}
+    ${l.trait ? `<small class="by-trait">◆ ${esc(l.from)}</small>` : `<span class="muted">— ${esc(l.from)}</span>`}</div>`).join("");
+  const scaleName = (k: string) => [...WANTS, ...HOLDS, ...MEM_SCALES].find((x) => x.id === k)?.name ?? "случай";
+  const ifs = P.ifs.map((x) => `<div class="trace"><span class="tag ${x.v > 0 ? "plus" : "minus"}">${esc(scaleName(x.chto))} ${x.v > 0 ? "+" : "−"}${Math.abs(x.v)}</span>
+    ${esc(x.kogda)} <small class="by-trait">◆ ${esc(x.from)}</small></div>`).join("");
+  const threads = P.threads.map((x) => { const t = THREADS.find((q) => q.id === x.nit)!; return `<span class="tag role" title="${esc(`${t.desc}. От черты «${x.from}»`)}">${THREAD_HOW[x.kak]}
+    «${esc(t.name)}»${x.step ? ` — «${esc(x.step)}»` : ""}${x.uDrugogo ? " (у другого)" : ""}<small class="by-trait">◆ ${esc(x.from)}</small></span>`; }).join("");
+  const deed = P.deed.map((x) => `<span class="tag ${x.sila > 0 ? "plus" : "minus"}">${esc(x.gde)} ${x.sila > 0 ? "+" : "−"}${Math.abs(x.sila)}<small class="by-trait">◆ ${esc(x.from)}</small></span>`).join("");
+  const skills = p.traits.filter((t) => t.posts || t.places).map((t) => `<div class="trace"><b>${esc(t.name)}</b>${t.posts ? ` · должность: ${esc(t.posts.join(", "))}` : ""}
+    ${t.places ? ` · места и дела: ${esc(t.places.join(", "))}` : ""}</div>`).join("");
+  const likho = [P.likho > 0 ? `прикрывает лихо в своей сфере (+${f1(P.likho)})` : "", P.likhoYasnost > 0 ? `следы лиха в его сфере ярче (ясность +${f1(P.likhoYasnost)})` : ""].filter(Boolean);
   const row = (title: string, body: string) => `<div class="prow"><div class="ptitle">${title}</div><div>${body}</div></div>`;
   const speed = P.links.start ? `<div class="muted">отношения складываются ${P.links.start > 0 ? "быстрее" : "медленнее"}</div>` : "";
-  return `<h3>Портрет: что выходит из признаков и черт</h3><div id="portrait" class="portrait">
-    ${row("Хочет", scale(WANTS, P.wants))}
-    ${row("Удерживает", scale(HOLDS, P.holds) + sluchay + notes(P.holdNotes))}
-    ${row("Подход: работает", words(P.approach.da, APPROACHES, "plus"))}
-    ${row("Подход: не действует", words(P.approach.net, APPROACHES, "minus") + notes(P.approach.notes))}
-    ${row("Память", (memory.length ? memory.join("") : `<span class="muted">как у всех</span>`)
-      + (P.memory.pomnit.length ? ` помнит особо: ${words(P.memory.pomnit, MEM_KEYS, "role")}` : "") + (P.memory.proshchaet.length ? ` прощает легко: ${words(P.memory.proshchaet, MEM_KEYS, "role")}` : ""))}
-    ${row("Говорит", `${P.voice.manners.length ? esc(P.voice.manners.join("; ")) : `<span class="muted">без особой манеры</span>`}${notes(P.voice.notes)}`)}
-    ${row("Доклад", `<span class="tag ${P.voice.bias === "bez" ? "plus" : "minus"}" title="${esc(bias.desc)}">${esc(bias.name)}</span>
-      <span class="muted">${esc(bias.desc)}${P.voice.biasFrom ? ` — ${esc(P.voice.biasFrom)}` : ""}</span>`)}
+  const special = p.traits.map((t) => {
+    const own = P.notes.filter((n) => n.from === t.name).map((n) => `<div class="muted"><i>${NOTE_NAMES[n.key]}:</i> ${esc(n.text)}</div>`).join("");
+    return `<div class="tnote"><span class="tag ${t.kind}">${esc(t.name)}</span><span class="tag role">${esc(VIS_NAMES[traitVis(t)])}</span> ${esc(t.effect)}${own}</div>`;
+  }).join("");
+  return `<h3>Портрет: что выходит из признаков и черт <small class="muted">— метка <span class="by-trait">◆ имя</span> значит «от черты», без метки — от признака (какого — в подсказке)</small></h3>
+  <div id="portrait" class="portrait">
+    ${row("Хочет", scale(WANTS, P.wants, O.wants))}
+    ${row("Удерживает", scale(HOLDS, P.holds, O.holds) + sluchay + notes(P.holdNotes))}
+    ${row("Подход: работает", words(P.approach.da, APPROACHES, "plus", O.approach))}
+    ${row("Подход: не действует", words(P.approach.net, APPROACHES, "minus", O.approach) + notes(P.approach.notes))}
+    ${row("Память", (memory.length ? memory.join("") : none("как у всех"))
+      + (P.memory.pomnit.length ? ` помнит особо: ${words(P.memory.pomnit, MEM_KEYS, "role", O.memKeys)}` : "")
+      + (P.memory.proshchaet.length ? ` прощает легко: ${words(P.memory.proshchaet, MEM_KEYS, "role", O.memKeys)}` : ""))}
+    ${row("Говорит", `${manners || none("без особой манеры")}${notes(P.voice.notes)}`)}
+    ${row("Доклад", `<span class="tag ${P.voice.bias === "bez" ? "plus" : "minus"}" title="${esc(`${bias.desc}. ${whence(O.bias ?? undefined)}`)}">${esc(bias.name)}${mark(O.bias ?? undefined)}</span>
+      <span class="muted">${esc(bias.desc)}${O.bias && !O.bias.trait ? ` — ${esc(O.bias.from)}` : ""}</span>`)}
     ${row("Ладит", linkTags(P.links.ladit, "plus"))}
     ${row("Не ладит", linkTags(P.links.neLadit, "minus") + speed + notes(P.links.notes))}
-    ${row("Следы", `${lines || `<span class="muted">по признакам следов нет</span>`}${shade.length ? `<div class="muted">${shade.join("; ")}</div>` : ""}
-      ${hidden.length ? `<div class="muted">не на виду: ${esc(hidden.join(", "))}</div>` : ""}`)}
-  </div>`;
+    ${row("Следы", `${lines || none("следов нет")}${shade.length ? `<div class="muted">${shade.join("; ")}</div>` : ""}`)}
+    ${ifs ? row("При условии", ifs) : ""}
+    ${threads ? row("Нити", threads) : ""}
+    ${deed || skills ? row("Дело", deed + skills) : ""}
+    ${likho.length ? row("Лихо", likho.join("; ")) : ""}
+  </div>
+  <h3>Особенное черт: действие и слова автора по полям</h3><div id="portrait-traits">${special}</div>`;
 }
 function renderPerson() {
   const nature = NATURES.find((x) => x.id === val("nature")) ?? NATURES[0];

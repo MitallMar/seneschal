@@ -177,9 +177,17 @@ export type HolderRole =
   | "skupshchik" | "zaimodavets" | "korchmar" | "dayushchiy" | "zakazchik" | "ishchushchiy" | "stary_tovarishch" | "vozhak" | "mat_rebyonka" | "donoschitsa" | "muzh";
 
 export interface TraitApproach { da?: Approach[]; net?: Approach[]; note?: string }
+// Число, которому поправка положена: желание, удержка, случай или одно из трёх чисел памяти.
+export type ScaleKey = Want | Hold | "sluchay" | "obida" | "srok" | "dobro";
+// Поправка с оговоркой («страх +2 на кромке», «держит +2 — обиду своим»): действует только при условии и в общий счёт портрета не идёт.
+export interface TraitIf { chto: ScaleKey; v: number; kogda: string }
+// Фраза автора по полю целиком: в ней оговорки, которых нет в ключах словаря.
+export type TraitNoteKey = "vesy" | "podkhod" | "pamyat" | "golos" | "niti" | "svyazi" | "sledy" | "delo" | "likho" | "prochee";
 export interface TraitMemory { obida?: number; srok?: number; dobro?: number; pomnit?: MemKey[]; proshchaet?: MemKey[] }
-export interface TraitVoice { manner?: string; bias?: Bias; note?: string }
-export interface TraitThread { nit: ThreadId; kak: ThreadHow; uDrugogo?: boolean }
+// top — пристрастие «сильнее любой другой черты»: берёт верх независимо от редкости.
+export interface TraitVoice { manner?: string; bias?: Bias; top?: boolean; note?: string }
+// step — имя ступени, на которой черта появляется или уходит («чарка», «ждёт часа»).
+export interface TraitThread { nit: ThreadId; kak: ThreadHow; step?: string; uDrugogo?: boolean }
 export interface TraitLinks { ladit?: LinkKey[]; neLadit?: LinkKey[]; start?: number }
 export interface TraceLine { gde: Channel; text: string }
 export interface TraitTraces { ten?: number; tenSfery?: number; yasnost?: number; chuzhie?: "boltaet" | "uznayot" | "molchit"; razgovor?: number; lines?: TraceLine[] }
@@ -192,6 +200,7 @@ export interface TraitC3 {
   wants?: Partial<Record<Want, number>>;
   holds?: Partial<Record<Hold, number>>;
   sluchay?: number;         // доля случайности в выборе
+  ifs?: TraitIf[];          // поправки с оговоркой
   approach?: TraitApproach;
   memory?: TraitMemory;
   voice?: TraitVoice;
@@ -201,6 +210,10 @@ export interface TraitC3 {
   deed?: TraitDeed[];       // действие на силу дела: где и насколько
   holder?: TraitHolder[];   // кто держит
   likho?: number;           // плюс — порок даёт лиху прикрытие
+  likhoByWeights?: boolean; // прикрытие зависит от совести человека: нечестному — лихо, честному — ясность следов лиха (likho.md, раздел 5)
+  posts?: string[];         // у перка: должности Концепта 3, на которых он работает («любая» — на всякой)
+  places?: string[];        // у перка: места и дела
+  notes?: Partial<Record<TraitNoteKey, string>>;
 }
 
 // Черта или перк из мешка. Вектор по признакам — 1–3 ненулевых значения.
