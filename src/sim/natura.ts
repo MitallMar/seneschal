@@ -3,7 +3,7 @@
 import type { Axis, Star, Sign, SignVec, NatureDef, BagTrait, BagTrigger, BackstoryEvent } from "../data/types";
 import { AXES } from "../data/core";
 import { SIGNS, NATURES, BAG, SENESCHAL } from "../data/natura";
-import { ORIGINS, HIDDEN_ORIGINS, type OriginDef } from "../data/origins";
+import { ORIGINS, HIDDEN_ORIGINS, ORIGIN_PLACES, SENESCHAL_ORIGIN, type OriginDef, type OriginPlace } from "../data/origins";
 import { BACKSTORY } from "../data/backstory";
 import { BALANCE as B } from "./balance";
 import { Rng } from "./rng";
@@ -32,8 +32,9 @@ export interface NaturaPerson {
   star: Star;                  // деловые склонности, посчитанные из признаков
 }
 // taken — сколько раз черту уже взяли другие в этой партии (штраф за повтор); age — возраст; backstory — свои события предыстории вместо случайных.
-// origin — заданное происхождение вместо случайного.
-export interface GrowOpts { events?: SignVec[]; taken?: Map<string, number>; age?: number; backstory?: BackstoryEvent[]; origin?: string }
+// origin — заданное происхождение вместо случайного; place — где человек взялся: от места зависят доли происхождений (без него — общий фон);
+// ban — id черт, которые этому человеку не выпадают.
+export interface GrowOpts { events?: SignVec[]; taken?: Map<string, number>; age?: number; backstory?: BackstoryEvent[]; origin?: string; place?: OriginPlace; ban?: string[] }
 // Повод в игре: по нему отбираются нажитые черты и перки. often — черты происхождения человека: они выпадают чаще.
 export interface LifeOpts { events?: SignVec[]; taken?: Map<string, number>; trigger?: BagTrigger; often?: string[] }
 export const TRIGGERS: BagTrigger[] = ["habit", "post", "rel", "break", "deed"];
@@ -62,6 +63,14 @@ export const originById = (id: string): OriginDef => {
   if (!o) throw new Error(`Нет происхождения ${id}`);
   return o;
 };
+// Сенешаль — тот, у кого есть черты его мешка.
+export const isSeneschal = (p: NaturaPerson) => p.traits.some((t) => t.seneschal);
+// Вес происхождения в месте: редкость × поправка места. Ноль — здесь такого не бывает.
+export function placeWeight(o: OriginDef, place: OriginPlace = "fon"): number {
+  const at = ORIGIN_PLACES.find((x) => x.id === place)!;
+  if (at.only) return at.only.includes(o.id) ? rarityWeight(o) : 0;
+  return rarityWeight(o) * (at.often?.includes(o.id) ? B.natura.placeOften : at.seldom?.includes(o.id) ? B.natura.placeSeldom : 1);
+}
 export const natureById = (id: string): NatureDef => {
   const n = NATURES.find((x) => x.id === id);
   if (!n) throw new Error(`Нет натуры ${id}`);
@@ -123,9 +132,9 @@ function pickWeighted<T>(rng: Rng, items: T[], weight: (t: T) => number): T | un
 }
 // Кого можно взять: ещё не взят, для перка выполнено requires, ни с кем из взятых не в конфликте. Черты мешка Сенешаля обычным людям не выпадают.
 // swap — в игре нажитая черта может вытеснить ту, что названа у неё в replaces: тогда конфликт с ней не мешает.
-function allowed(p: NaturaPerson, kinds: BagTrait["kind"][], swap = false): BagTrait[] {
+function allowed(p: NaturaPerson, kinds: BagTrait["kind"][], swap = false, ban: string[] = []): BagTrait[] {
   const blocks = (held: BagTrait, t: BagTrait) => inConflict(held, t) && !(swap && held.kind === "life" && t.replaces?.includes(held.id) && !isAnchor(p, held.id));
-  return BAG.filter((t) => kinds.includes(t.kind) && !t.seneschal && !p.traits.includes(t) && !p.traits.some((x) => blocks(x, t))
+  return BAG.filter((t) => kinds.includes(t.kind) && !t.seneschal && !ban.includes(t.id) && !p.traits.includes(t) && !p.traits.some((x) => blocks(x, t))
     && (!t.requires || t.requires.some((id) => p.traits.some((x) => x.id === id))));
 }
 const isAnchor = (p: NaturaPerson, id: string) => p.anchors.includes(id) || p.far === id || p.contra === id;
@@ -155,7 +164,7 @@ export function growPerson(rng: Rng, nature: NatureDef, opts: GrowOpts = {}): Na
   const zero = signsOf(nature, []);
   // 0. откуда и чей: происхождение одно на человека; его черты выпадают чаще. Происхождение и облик тянутся из побочного ряда: основной они не сдвигают
   const side = rng.fork("откуда и чей");
-  const origin = opts.origin ? originById(opts.origin) : pickWeighted(side, ORIGINS, rarityWeight)!;
+  const origin = opts.origin ? originById(opts.origin) : pickWeighted(side, ORIGINS, (o) => placeWeight(o, opts.place))!;
   const p: NaturaPerson = {
     nature, age, origin: origin.id, originShown: origin.id, traits: [], anchors: [], far: "", contra: "", from: {}, via: {}, inGame: [], lost: [],
     events: opts.events ?? [], signs: zero, star: businessStar(zero),
@@ -164,7 +173,7 @@ export function growPerson(rng: Rng, nature: NatureDef, opts: GrowOpts = {}): Na
   // 1. врождённое
   const innate = rng.int(B.natura.innateMin, Math.max(B.natura.innateMin, B.natura.innateMax));
   for (const crystal of rng.shuffle(nature.crystals).slice(0, innate)) {
-    const t = pickWeighted(rng, allowed(p, ["born"]).filter((x) => cos(x.vec, crystal) > 0), w(crystal, opts.events));
+    const t = pickWeighted(rng, allowed(p, ["born"], false, opts.ban).filter((x) => cos(x.vec, crystal) > 0), w(crystal, opts.events));
     if (t) { p.traits.push(t); p.anchors.push(t.id); }
   }
   // 2. нажитое до игры
@@ -173,7 +182,7 @@ export function growPerson(rng: Rng, nature: NatureDef, opts: GrowOpts = {}): Na
   const hasContra = () => p.traits.find((x) => isContra(nature, x));
   story.slice(0, count).forEach((ev, i) => {
     const vec = eventVec(ev);
-    const life = allowed(p, ["life"]).filter((x) => x.source.includes("backstory"));
+    const life = allowed(p, ["life"], false, opts.ban).filter((x) => x.source.includes("backstory"));
     const far = i === 0, contra = !far && i === Math.min(count, story.length) - 1 && !hasContra();
     const narrowed = far ? life.filter((x) => isFar(nature, x)) : contra ? life.filter((x) => isContra(nature, x)) : life;
     const grow = far || contra ? undefined : growthTarget(rng, p);
@@ -193,18 +202,19 @@ export function growPerson(rng: Rng, nature: NatureDef, opts: GrowOpts = {}): Na
     const look = pickWeighted(side, BAG.filter((t) => t.kind === "look"), (t) => rarityWeight(t) * (origin.often.includes(t.id) ? B.natura.originWeight : 1));
     if (look) p.traits.push(look);
   }
-  hideOrigin(side, p);
+  hideOrigin(side, p, opts.place);
   return refresh(p);
 }
 // Скрытое происхождение. Беглый под чужим именем: настоящее — беглый, а на людях он зовётся кем-то другим (тем, кем вырос бы, или другим пришлым).
 // Знавал лучшие дни: настоящее — прежняя жизнь (служилый, торговый, искатель), на людях — простое: деревня или челядь.
-function hideOrigin(rng: Rng, p: NaturaPerson) {
+// На людях он зовётся тем, кто в этом месте бывает: при приёме пришлых — одним из пришлых.
+function hideOrigin(rng: Rng, p: NaturaPerson, place?: OriginPlace) {
   for (const rule of HIDDEN_ORIGINS) {
     if (!p.traits.some((t) => t.id === rule.trait)) continue;
     const real = rule.real.includes(p.origin) ? p.origin : pickWeighted(rng, ORIGINS.filter((o) => rule.real.includes(o.id)), rarityWeight)!.id;
     const plain = (id: string) => ["derevnya", "chelyad"].includes(originById(id).mera);
     if (p.originShown === real || (rule.simple && !plain(p.originShown))) {
-      p.originShown = pickWeighted(rng, ORIGINS.filter((o) => !rule.real.includes(o.id) && o.mera === "derevnya"), rarityWeight)!.id;
+      p.originShown = pickWeighted(rng, ORIGINS.filter((o) => !rule.real.includes(o.id) && o.mera === "derevnya"), (o) => placeWeight(o, place))!.id;
     }
     p.origin = real;
   }
@@ -233,30 +243,32 @@ export function growLife(rng: Rng, p: NaturaPerson, opts: LifeOpts = {}): BagTra
 }
 
 // Партия: люди растут по очереди, и черта, уже взятая кем-то, выпадает следующему реже. Без natureIds натуры случайные и не повторяются.
-export function growParty(seed: string, size: number, natureIds?: string[]): NaturaPerson[] {
+export function growParty(seed: string, size: number, natureIds?: string[], place?: OriginPlace): NaturaPerson[] {
   const rng = new Rng(seed);
   const natures = natureIds ? natureIds.map(natureById) : rng.shuffle(NATURES).slice(0, size);
   const taken = new Map<string, number>();
   return natures.map((n) => {
-    const p = growPerson(rng, n, { taken });
+    const p = growPerson(rng, n, { taken, place });
     for (const t of p.traits) taken.set(t.id, (taken.get(t.id) ?? 0) + 1);
     return p;
   });
 }
 
 // Один реролл для отчёта: случайный возраст (или заданный), рождение, предыстория и несколько поводов в игре.
-export function rollPerson(seed: string, nature: NatureDef, age?: number): NaturaPerson {
+export function rollPerson(seed: string, nature: NatureDef, age?: number, place?: OriginPlace): NaturaPerson {
   const rng = new Rng(seed);
-  const p = growPerson(rng, nature, { age });
+  const p = growPerson(rng, nature, { age, place });
   for (let i = 0; i < B.natura.lifeSteps; i++) growLife(rng, p, { trigger: rng.pick(TRIGGERS), events: [eventVec(rng.pick(BACKSTORY))] });
   return p;
 }
 
 // Сенешаль: тот же движок, мешок больше. Ядро из трёх черт у него всегда, часть умений из пяти и две-три черты его мешка — по генератору,
 // остальное растёт как у людей (cherty-dannye.md, раздел 9). Возраст и счёт — ручки natura.seneschal.
+// Откуда он — одно из четырёх происхождений поровну, из побочного ряда; тайного прошлого у него нет: рамка задана сюжетом (koncept-3.md, 13.1).
 export function growSeneschal(seed: string, nature: NatureDef): NaturaPerson {
   const rng = new Rng(seed), S = B.natura.seneschal;
-  const p = growPerson(rng, nature, { age: S.age });
+  const origin = rng.fork("откуда Сенешаль").pick(SENESCHAL_ORIGIN.ids);
+  const p = growPerson(rng, nature, { age: S.age, origin, ban: HIDDEN_ORIGINS.map((r) => r.trait) });
   const take = (ids: string[], n: number) => {
     for (const id of rng.shuffle(ids)) {
       if (n <= 0) break;

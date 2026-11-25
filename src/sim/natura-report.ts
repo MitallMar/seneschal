@@ -3,7 +3,7 @@
 import type { Axis, Sign, Star } from "../data/types";
 import { AXES, AXIS_NAMES } from "../data/core";
 import { SIGNS, NATURES, BAG } from "../data/natura";
-import { ORIGINS } from "../data/origins";
+import { ORIGINS, type OriginPlace } from "../data/origins";
 import { BALANCE as B } from "./balance";
 import { rollPerson, type NaturaPerson } from "./natura";
 import { newWorld } from "./council/generate";
@@ -52,13 +52,13 @@ export function currentAxes(seeds = 60): Record<Axis, AxisDist> {
   return axisDist(Array.from({ length: seeds }, (_, i) => newWorld(`натура-${i + 1}`).people.map((p) => p.startStar)).flat());
 }
 
-// rolls рероллов: натуры по кругу, у каждого реролла своя судьба. Одно семя — одни и те же числа.
-export function rollAll(rolls: number, seed = "натура"): NaturaPerson[] {
-  return Array.from({ length: rolls }, (_, i) => rollPerson(`${seed}-${i}`, NATURES[i % NATURES.length]));
+// rolls рероллов: натуры по кругу, у каждого реролла своя судьба. Одно семя — одни и те же числа. place — где люди взялись (без него — общий фон).
+export function rollAll(rolls: number, seed = "натура", place?: OriginPlace): NaturaPerson[] {
+  return Array.from({ length: rolls }, (_, i) => rollPerson(`${seed}-${i}`, NATURES[i % NATURES.length], undefined, place));
 }
 
-export function naturaMetrics(rolls: number, seed = "натура"): NaturaMetrics {
-  return metricsOf(rollAll(rolls, seed));
+export function naturaMetrics(rolls: number, seed = "натура", place?: OriginPlace): NaturaMetrics {
+  return metricsOf(rollAll(rolls, seed, place));
 }
 // Метрики по готовым людям; axesNow — нынешняя звезда совета, если её уже посчитали (эмулятор считает один раз).
 // Облик натурой не тянется, черты Сенешаля людям не выпадают: в метрики набора черт (похожесть, покрытие, частота, счёт на человека) они не входят.

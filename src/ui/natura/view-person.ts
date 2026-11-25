@@ -4,9 +4,9 @@ import { AXES, AXIS_NAMES } from "../../data/core";
 import { SIGNS, NATURES } from "../../data/natura";
 import { BALANCE } from "../../sim/balance";
 import { growParty, rollPerson, growSeneschal, bagTrait, originById, type NaturaPerson } from "../../sim/natura";
-import { MERA_NAMES } from "../../data/origins";
+import { MERA_NAMES, SENESCHAL_ORIGIN } from "../../data/origins";
 import { $, esc } from "../dom";
-import { app, val, f1, KIND, TRIGGER, vecTags, traitTag, roleOf, storyText, track, starLine } from "./app";
+import { app, val, place, f1, KIND, TRIGGER, vecTags, traitTag, roleOf, storyText, track, starLine } from "./app";
 import { portraitBlock } from "./view-portrait";
 import { renderHealthPerson } from "./view-health";
 
@@ -25,9 +25,11 @@ function personHtml(p: NaturaPerson) {
   const senBush = own.length ? `<div class="bush sen"><h4>Мешок Сенешаля: ядро, умения, черты на выбор</h4>${own.map((t) => traitBlock(p, t)).join("")}</div>` : "";
   const lookBush = look.length ? `<div class="bush"><h4>Облик: натурой не тянется</h4>${look.map((t) => traitBlock(p, t)).join("")}</div>` : "";
   const o = originById(p.origin), shownAs = originById(p.originShown);
-  // происхождение Сенешаля задано сюжетом, а не генератором: у него строка не показывается
-  const whose = own.length ? "происхождение задано сюжетом" : `откуда: <b id="origin-name">${esc(o.name)}</b> <span class="muted">(${MERA_NAMES[o.mera]}${o.meraNote ? `, ${esc(o.meraNote)}` : ""})</span>${
-    o !== shownAs ? ` · на людях — <b id="origin-app.shown">${esc(shownAs.name)}</b>` : ""}`;
+  // у Сенешаля рамка задана сюжетом, оттенок — происхождение из четырёх; мера у него всегда служба
+  const whose = own.length
+    ? `откуда: <b id="origin-name">${esc(o.name)}</b> <span class="muted">(${MERA_NAMES[SENESCHAL_ORIGIN.mera]}; ${esc(SENESCHAL_ORIGIN.frame)})</span>`
+    : `откуда: <b id="origin-name">${esc(o.name)}</b> <span class="muted">(${MERA_NAMES[o.mera]}${o.meraNote ? `, ${esc(o.meraNote)}` : ""})</span>${
+      o !== shownAs ? ` · на людях — <b id="origin-app.shown">${esc(shownAs.name)}</b>` : ""}`;
   const rest = loose.length ? `<div class="bush"><h4>Само по себе: след события, к якорям не тянется</h4>${loose.map((t) => traitBlock(p, t)).join("")}</div>` : "";
   const lost = p.lost.length ? `<p class="muted">Вытеснено новыми чертами: ${p.lost.map((id) => esc(bagTrait(id).name)).join(", ")}</p>` : "";
   const signs = SIGNS.map((s) => {
@@ -51,18 +53,18 @@ export function renderPerson() {
   const nature = NATURES.find((x) => x.id === val("nature")) ?? NATURES[0];
   const seed = `${val("seed")}-человек-${app.personRoll}`;
   const age = val("age") ? Number(val("age")) : undefined;
-  app.shown = app.asSeneschal ? growSeneschal(seed, nature) : rollPerson(seed, nature, age);
+  app.shown = app.asSeneschal ? growSeneschal(seed, nature) : rollPerson(seed, nature, age, place());
   $("seneschal").textContent = app.asSeneschal ? "Обычный человек" : "Сенешаль";
   ($("age") as HTMLSelectElement).disabled = app.asSeneschal;
   $("person-view").innerHTML = personHtml(app.shown) + portraitBlock(app.shown);
   renderHealthPerson(seed);
   $("person-rerolls").innerHTML = Array.from({ length: 12 }, (_, i) => {
-    const p = rollPerson(`${seed}-${i}`, nature, age);
+    const p = rollPerson(`${seed}-${i}`, nature, age, place());
     return `<div class="reroll"><span class="muted">${p.age} лет</span> ${p.traits.map((t) => traitTag(t, roleOf(p, t.id))).join("")}<div class="muted">${starLine(p.star)}</div></div>`;
   }).join("");
 }
 export function renderParty() {
-  const party = growParty(val("seed"), 10);
+  const party = growParty(val("seed"), 10, undefined, place());
   $("party-view").innerHTML = `<table><tr><th>Натура</th><th>Возраст</th><th>Черты</th><th>Склонности</th></tr>${party
     .map((p) => `<tr><td><b>${esc(p.nature.name)}</b></td><td class="c">${p.age}</td><td>${p.traits.map((t) => traitTag(t, roleOf(p, t.id))).join("")}</td><td>${starLine(p.star)}</td></tr>`).join("")}</table>`;
 }

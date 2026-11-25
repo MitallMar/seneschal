@@ -115,6 +115,8 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
 @media (max-width: 700px) { .prow { grid-template-columns: 1fr; } }
 .by-trait { margin-left: 5px; font-size: 11px; color: #6b4f86; white-space: nowrap; }
 .tag .by-trait { opacity: .85; }
+.by-origin { margin-left: 5px; font-size: 11px; color: #2f6f73; white-space: nowrap; }
+.tag .by-origin { opacity: .85; }
 .tnote { padding: 3px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
 .tnote .muted { margin-left: 8px; }
 .tag.look { background: #8a7a5c; }
@@ -126,8 +128,9 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
   <h1>Эмулятор натуры</h1>
   <label>Семя <input id="seed" value="натура"></label>
   <label>Рероллов
-    <select id="rolls"><option>300</option><option selected>600</option><option>1000</option><option>2000</option></select>
+    <select id="rolls"><option>300</option><option>600</option><option selected>1000</option><option>2000</option></select>
   </label>
+  <label title="Где люди взялись: от места зависит, какое происхождение встречается чаще">Место <select id="place"></select></label>
   <button id="run" class="primary">Прогнать</button>
   <span id="state" class="muted"></span>
   <nav>
@@ -2964,7 +2967,9 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
     nat("shchedry", "\u0428\u0438\u0440\u043E\u043A\u0430\u044F \u0434\u0443\u0448\u0430", { shchedrost: 3, obshchitelnost: 3, terpenie: -3 }),
     nat("znakhar", "\u0412\u0435\u0434\u0443\u043D", { vera: 3, lyubopytstvo: 3, obshchitelnost: -3 }),
     nat("vyskochka", "\u0412\u044B\u0441\u043A\u043E\u0447\u043A\u0430", { chestolyubie: 3, terpenie: -3, chestnost: -3 }),
-    nat("sobiratel", "\u0421\u043E\u0431\u0438\u0440\u0430\u0442\u0435\u043B\u044C", { terpenie: 3, poryadok: 3, shchedrost: -3 })
+    nat("sobiratel", "\u0421\u043E\u0431\u0438\u0440\u0430\u0442\u0435\u043B\u044C", { terpenie: 3, poryadok: 3, shchedrost: -3 }),
+    // И27д: тихий человек, довольный своим — натура с довольством малым в ядре
+    nat("domosed", "\u0414\u043E\u043C\u043E\u0441\u0435\u0434", { chestolyubie: -3, terpenie: 3, privyazannost: 3 })
   ];
   var RAW = [
     // --- врождённые ---
@@ -4613,6 +4618,253 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
     pick: ["bessonnitsa", "slabost_k_sirotam", "toskuet_po_zhene", "ustal", "sedina_v_borodu", "skrytny", "lyubit_okhotu", "molitvennik"]
   };
 
+  // src/data/origins.ts
+  var ALLOYS = [
+    {
+      id: "pravedny_skupets",
+      name: "\u041F\u0440\u0430\u0432\u0435\u0434\u043D\u044B\u0439 \u0441\u043A\u0443\u043F\u0435\u0446",
+      parts: [{ pole: "vera+", traits: ["chtit_primety", "stal_nabozhen"] }, { pole: "shchedrost-", traits: ["zimoy_snega"] }],
+      text: "\u0445\u0440\u0430\u043C\u0443 \u0434\u0430\u0451\u0442, \u043B\u044E\u0434\u044F\u043C \u043D\u0435\u0442: \u043E\u0431\u044B\u0447\u0430\u0439 \u0438 \u043F\u0440\u043E\u0441\u044C\u0431\u0430 \u0436\u0440\u0435\u0446\u0430 \u0440\u0430\u0431\u043E\u0442\u0430\u044E\u0442, \u043F\u0440\u043E\u0441\u044C\u0431\u0430 \u043B\u044E\u0434\u0435\u0439 \u2014 \u043D\u0435\u0442; \u0441\u043B\u0435\u0434: \u0432\u043A\u043B\u0430\u0434 \u0432 \u0445\u0440\u0430\u043C \u043F\u0440\u0438 \u043F\u0443\u0441\u0442\u043E\u043C \u0441\u0442\u043E\u043B\u0435",
+      c3: { approach: { da: ["obychay"], net: ["prosba"] } }
+    },
+    {
+      id: "strog_da_svoy",
+      name: "\u0421\u0442\u0440\u043E\u0433, \u0434\u0430 \u0441\u0432\u043E\u0439",
+      parts: [{ pole: "zhestkost+" }, { pole: "privyazannost+" }],
+      text: "\u0441\u0432\u043E\u0438\u0445 \u0431\u044C\u0451\u0442, \u043D\u043E \u0432 \u043E\u0431\u0438\u0434\u0443 \u043D\u0435 \u0434\u0430\u0451\u0442: \u0434\u043E\u043C\u0430 \u0441\u0435\u0447\u0451\u0442, \u043F\u0435\u0440\u0435\u0434 \u0447\u0443\u0436\u0438\u043C\u0438 \u0432\u044B\u0433\u043E\u0440\u0430\u0436\u0438\u0432\u0430\u0435\u0442; \u0441\u0432\u043E\u0438 \u0435\u0433\u043E \u0438 \u0431\u043E\u044F\u0442\u0441\u044F, \u0438 \u0434\u0435\u0440\u0436\u0430\u0442\u0441\u044F",
+      c3: { voice: { bias: "vygorazhivaet" } }
+    },
+    {
+      id: "vesyoly_vor",
+      name: "\u0412\u0435\u0441\u0451\u043B\u044B\u0439 \u0432\u043E\u0440",
+      parts: [{ pole: "obshchitelnost+" }, { traits: ["nechist_na_ruku"] }],
+      text: "\u0432\u0441\u0435 \u043B\u044E\u0431\u044F\u0442, \u0432\u0441\u0435 \u0437\u043D\u0430\u044E\u0442 \u2014 \u0438 \u043C\u043E\u043B\u0447\u0430\u0442: \u0432 \u043C\u043E\u043B\u0432\u0435 \u043F\u0440\u043E \u043D\u0435\u0433\u043E \u0448\u0443\u0442\u044F\u0442, \u0430 \u0436\u0430\u043B\u043E\u0431 \u0438 \u0434\u043E\u043D\u043E\u0441\u043E\u0432 \u043D\u0435\u0442"
+    },
+    {
+      id: "nabozhny_gulyaka",
+      name: "\u041D\u0430\u0431\u043E\u0436\u043D\u044B\u0439 \u0433\u0443\u043B\u044F\u043A\u0430",
+      parts: [{ pole: "vera+" }, { traits: ["gulyaka"] }],
+      text: "\u043F\u044C\u0451\u0442 \u0438 \u043A\u0430\u0435\u0442\u0441\u044F: \u043D\u0438\u0442\u044C \u043F\u044C\u044F\u043D\u0441\u0442\u0432\u0430 \u0445\u043E\u0434\u0438\u0442 \u043F\u043E \u043A\u0440\u0443\u0433\u0443 \u2014 \u0437\u0430\u043F\u043E\u0439, \u043F\u043E\u043A\u0430\u044F\u043D\u0438\u0435, \u0441\u043D\u043E\u0432\u0430 \u0437\u0430\u043F\u043E\u0439"
+    },
+    {
+      id: "tikhiy_omut",
+      name: "\u0422\u0438\u0445\u0438\u0439 \u043E\u043C\u0443\u0442",
+      parts: [{ pole: "obshchitelnost-" }, { pole: "chestnost-" }, { pole: "terpenie+" }],
+      text: "\u0441\u043B\u0435\u0434\u043E\u0432 \u043F\u043E\u0447\u0442\u0438 \u043D\u0435\u0442 (\u0442\u0435\u043D\u044C \u22122), \u043D\u043E \u043A\u0430\u0436\u0434\u044B\u0439 \u0441\u043B\u0435\u0434 \u043A\u0440\u0443\u043F\u043D\u044B\u0439 \u0438 \u044F\u0441\u043D\u044B\u0439",
+      c3: { traces: { ten: -2, yasnost: 1 } }
+    },
+    {
+      id: "chestny_upryamets",
+      name: "\u0427\u0435\u0441\u0442\u043D\u044B\u0439 \u0443\u043F\u0440\u044F\u043C\u0435\u0446",
+      parts: [{ pole: "chestnost+" }, { pole: "lyubopytstvo-" }],
+      text: "\u0441\u043A\u0430\u0436\u0435\u0442 \u043F\u0440\u0430\u0432\u0434\u0443 \u0438 \u043D\u0435 \u0441\u0434\u0432\u0438\u043D\u0435\u0442\u0441\u044F: \u0431\u0435\u0437 \u043F\u0440\u0438\u0441\u0442\u0440\u0430\u0441\u0442\u0438\u044F \u0438 \u0432 \u0441\u043F\u043E\u0440\u0435 \u043D\u0435 \u0443\u0441\u0442\u0443\u043F\u0430\u0435\u0442; \u0431\u0435\u0440\u0443\u0442 \u0435\u0433\u043E \u0442\u043E\u043B\u044C\u043A\u043E \u0441 \u0433\u043B\u0430\u0437\u0443 \u043D\u0430 \u0433\u043B\u0430\u0437 \u0438 \u0432\u0440\u0435\u043C\u0435\u043D\u0435\u043C",
+      c3: { voice: { bias: "bez", manner: "\u0432 \u0441\u043F\u043E\u0440\u0435 \u043D\u0435 \u0443\u0441\u0442\u0443\u043F\u0430\u0435\u0442" }, approach: { da: ["s_glazu_na_glaz", "vremya"] } }
+    }
+  ];
+  var MERA_NAMES = { chelyad: "\u0447\u0435\u043B\u044F\u0434\u044C", derevnya: "\u0434\u0435\u0440\u0435\u0432\u043D\u044F", sluzhba: "\u0441\u043B\u0443\u0436\u0431\u0430", verkh: "\u0432\u0435\u0440\u0445", otshib: "\u043D\u0430 \u043E\u0442\u0448\u0438\u0431\u0435" };
+  var ORIGINS = [
+    {
+      id: "starozhil",
+      name: "\u0417\u0434\u0435\u0448\u043D\u0438\u0439 \u0441\u0442\u0430\u0440\u043E\u0436\u0438\u043B",
+      mera: "derevnya",
+      wants: ["pokoy", "blizkie"],
+      threads: [],
+      ladit: ["starozhily"],
+      neLadit: ["prishlye"],
+      note: "\u0441\u0442\u0430\u0440\u043E\u0436\u0438\u043B\u044B \u2014 \u0441\u0432\u043E\u0438; \u043F\u0440\u0438\u0448\u043B\u044B\u0435 \u2014 \u0447\u0443\u0436\u0438\u0435",
+      often: ["kak_dedy", "prikipel", "pomnit_rodstvo"],
+      names: ["peasant"],
+      rarity: "common",
+      lore: "\u0441\u0442\u0430\u0440\u044B\u0435 \u0434\u0432\u043E\u0440\u044B \u043C\u0430\u0440\u043E\u043A"
+    },
+    {
+      id: "prishly_na_lgotu",
+      name: "\u041F\u0440\u0438\u0448\u043B\u044B\u0439 \u043D\u0430 \u043B\u044C\u0433\u043E\u0442\u0443",
+      mera: "derevnya",
+      wants: [],
+      threads: ["svoy_dvor", "uyti"],
+      ladit: ["prishlye"],
+      neLadit: [],
+      note: "\xAB\u0443\u0439\u0442\u0438\xBB \u2014 \u043A\u043E\u0433\u0434\u0430 \u043A\u043E\u043D\u0447\u0438\u0442\u0441\u044F \u043B\u044C\u0433\u043E\u0442\u0430",
+      often: ["stavit_svoy_dvor", "kopit_na_nadel"],
+      names: ["peasant"],
+      rarity: "common",
+      lore: "\u043B\u044C\u0433\u043E\u0442\u0430 \u2014 \u0434\u0435\u0441\u044F\u0442\u044C \u043B\u0435\u0442"
+    },
+    {
+      id: "vtoroy_syn",
+      name: "\u0412\u0442\u043E\u0440\u043E\u0439 \u0441\u044B\u043D \u0438\u0437 \u0442\u0435\u0441\u043D\u043E\u0433\u043E \u0434\u043E\u043C\u0435\u043D\u0430",
+      mera: "derevnya",
+      wants: [],
+      threads: ["nadel"],
+      ladit: ["prishlye"],
+      neLadit: [],
+      often: ["kopit_na_nadel", "metit_vysoko"],
+      names: ["peasant"],
+      rarity: "common",
+      lore: "\u0438\u0434\u0443\u0442 \u0432\u0442\u043E\u0440\u044B\u0435 \u0441\u044B\u043D\u043E\u0432\u044C\u044F \u0438\u0437 \u0442\u0435\u0441\u043D\u043E\u0433\u043E \u0434\u043E\u043C\u0435\u043D\u0430 \u0438 \u0441 \u0445\u0440\u0430\u043C\u043E\u0432\u043E\u0439 \u0437\u0435\u043C\u043B\u0438"
+    },
+    {
+      id: "beglyy_s_zakata",
+      name: "\u0411\u0435\u0433\u043B\u044B\u0439 \u0441 \u0437\u0430\u043A\u0430\u0442\u0430",
+      mera: "derevnya",
+      meraNote: "\u043D\u0438\u0436\u0435",
+      wants: [],
+      threads: ["proshloe"],
+      ladit: ["prishlye"],
+      neLadit: ["palata"],
+      note: "\xAB\u043F\u0440\u043E\u0448\u043B\u043E\u0435\xBB \u2014 \u0438\u0449\u0443\u0442; \u043F\u0430\u043B\u0430\u0442\u0430 \u043A\u043E\u0441\u0438\u0442\u0441\u044F",
+      often: ["khlebnul_likha", "nikomu"],
+      names: ["peasant"],
+      rarity: "rare",
+      lore: "\u0431\u0435\u0433\u043B\u044B\u0435 \u0441 \u0437\u0430\u043A\u0430\u0442\u0430 \u0441\u0438\u0434\u0435\u043B\u0438 \xAB\u043F\u043E \u0442\u043E\u043F\u043E\u0440\u0443\xBB; \u0445\u0440\u0430\u043C \u0442\u0440\u0435\u0431\u0443\u0435\u0442 \u0432\u044B\u0434\u0430\u0442\u044C \u0431\u0435\u0433\u043B\u044B\u0445"
+    },
+    {
+      id: "byvaly",
+      name: "\u0411\u044B\u0432\u0430\u043B\u044B\u0439",
+      mera: "derevnya",
+      wants: ["dengi"],
+      threads: ["draka"],
+      ladit: ["byvalye", "sluzhilye"],
+      neLadit: ["palata"],
+      often: ["ne_robkogo_desyatka", "gulyaka", "shram"],
+      names: ["castle"],
+      rarity: "common",
+      lore: "\u0430\u0440\u0442\u0435\u043B\u0438 \u0431\u044B\u0432\u0430\u043B\u044B\u0445 \u043D\u0430 \u0437\u0438\u043C\u0443 \u043A \u043E\u0441\u0442\u0440\u043E\u0436\u043A\u0430\u043C"
+    },
+    {
+      id: "iz_chelyadi",
+      name: "\u0412\u044B\u0441\u043B\u0443\u0436\u0438\u043B\u0441\u044F \u0438\u0437 \u0447\u0435\u043B\u044F\u0434\u0438",
+      mera: "chelyad",
+      meraNote: "\u0447\u0435\u043B\u044F\u0434\u044C \u2192 \u0441\u043B\u0443\u0436\u0431\u0430",
+      wants: ["mesto"],
+      threads: [],
+      ladit: ["chelyad"],
+      neLadit: ["gordost+"],
+      note: "\u0447\u0435\u043B\u044F\u0434\u044C \u2014 \u0441\u0432\u043E\u0438; \u0433\u043E\u0440\u0434\u044B\u0435 \u0441\u043C\u043E\u0442\u0440\u044F\u0442 \u0441\u0432\u044B\u0441\u043E\u043A\u0430",
+      often: ["privyk_podchinyatsya", "raspravil_plechi"],
+      names: ["peasant"],
+      rarity: "common",
+      lore: ""
+    },
+    {
+      id: "sluzhily_rod",
+      name: "\u0418\u0437 \u0441\u043B\u0443\u0436\u0438\u043B\u043E\u0433\u043E \u0440\u043E\u0434\u0430",
+      mera: "sluzhba",
+      wants: ["pochet"],
+      holds: ["pravilo"],
+      threads: [],
+      ladit: ["sluzhilye"],
+      neLadit: [],
+      often: ["sluzhaka", "derzhit_slovo"],
+      names: ["castle"],
+      rarity: "common",
+      lore: "\u0441\u043B\u0443\u0436\u0438\u043B\u044B\u0435 \u0432\u043E\u0435\u0432\u043E\u0434\u044B, \u043E\u0441\u0442\u0440\u043E\u0436\u043A\u0438"
+    },
+    {
+      id: "khramovy_vyuchenik",
+      name: "\u0425\u0440\u0430\u043C\u043E\u0432\u044B\u0439 \u0432\u044B\u0443\u0447\u0435\u043D\u0438\u043A",
+      mera: "sluzhba",
+      wants: ["chistaya_sovest"],
+      threads: [],
+      ladit: ["khram"],
+      neLadit: [],
+      often: ["knizhnik", "chtit_primety"],
+      names: ["castle"],
+      rarity: "rare",
+      lore: "\u0445\u0440\u0430\u043C\u043E\u0432\u0430\u044F \u0437\u0435\u043C\u043B\u044F \u0432 \u043F\u043E\u043B\u043E\u0441\u0435"
+    },
+    {
+      id: "polukrovka",
+      name: "\u041F\u043E\u043B\u0443\u043A\u0440\u043E\u0432\u043A\u0430 \u043B\u0435\u0441\u043D\u043E\u0439 \u043A\u0440\u043E\u0432\u0438",
+      mera: "otshib",
+      wants: [],
+      threads: ["metka"],
+      ladit: ["lesnye"],
+      neLadit: ["derevni"],
+      note: "\xAB\u043C\u0435\u0442\u043A\u0430\xBB \u2014 \u0432 \u043F\u0440\u0438\u043B\u0438\u0432 \u043F\u043E\u0447\u0442\u0438 \u043D\u0430\u0432\u0435\u0440\u043D\u044F\u043A\u0430 \u043C\u0435\u0447\u0435\u043D\u044B\u0439; \u043B\u0435\u0441\u043D\u044B\u0435 \u2014 \u0441\u0432\u043E\u0438, \u0434\u0435\u0440\u0435\u0432\u043D\u0438 \u043D\u0430\u0441\u0442\u043E\u0440\u043E\u0436\u0435\u043D\u044B",
+      often: ["slushaet_les", "govorit_po_lesnomu", "belaya_vorona"],
+      names: ["peasant", "forest"],
+      rarity: "exceptional",
+      lore: "\u0441\u0440\u043E\u043A \u0436\u0438\u0437\u043D\u0438 \u2014 \u043B\u043E\u0442\u0435\u0440\u0435\u044F, \u043C\u0435\u0442\u043A\u0430 \u0441\u0438\u043B\u044C\u043D\u0435\u0435, \u043F\u043E\u0436\u0438\u0440\u0430\u0442\u0435\u043B\u0435\u043C \u043D\u0435 \u0441\u0442\u0430\u043D\u0435\u0442"
+    },
+    {
+      id: "zamkovy_sirota",
+      name: "\u0417\u0430\u043C\u043A\u043E\u0432\u044B\u0439 \u0441\u0438\u0440\u043E\u0442\u0430",
+      mera: "chelyad",
+      wants: ["blizkie"],
+      threads: [],
+      ladit: ["chelyad"],
+      neLadit: [],
+      note: "\u0431\u043B\u0438\u0437\u043A\u0438\u0435 \u2014 \u0421\u0435\u043D\u0435\u0448\u0430\u043B\u044C: \u0431\u043B\u0438\u0437\u043E\u0441\u0442\u044C \u0438 \u0432\u0435\u0440\u043D\u043E\u0441\u0442\u044C \u043D\u0430 \u0441\u0442\u0430\u0440\u0442\u0435 \u0432\u044B\u0448\u0435; \u0433\u043E\u0434\u0438\u0442\u0441\u044F \u0432 \u0441\u0432\u043E\u0438 \u0443\u0448\u0438; \xAB\u041F\u0440\u0438\u0433\u0440\u0435\u043B \u0441\u0438\u0440\u043E\u0442\u0443\xBB \u2014 \u0443 \u0442\u0435\u0445, \u043A\u0442\u043E \u0440\u0430\u0441\u0442\u0438\u043B",
+      often: [],
+      names: ["castle"],
+      rarity: "rare",
+      lore: "\u043F\u043E\u0434\u043E\u0431\u0440\u0430\u043D\u043D\u044B\u0435 \u0421\u0435\u043D\u0435\u0448\u0430\u043B\u0435\u043C"
+    },
+    {
+      id: "iz_vadely",
+      name: "\u0413\u043E\u0440\u043E\u0436\u0430\u043D\u0438\u043D \u0438\u0437 \u0412\u0430\u0434\u0435\u043B\u044B",
+      mera: "sluzhba",
+      wants: ["dengi", "novoe"],
+      threads: [],
+      ladit: ["kuptsy", "palata"],
+      neLadit: ["derevni"],
+      note: "\u0434\u0435\u0440\u0435\u0432\u043D\u044F\u043C \u2014 \u0447\u0443\u0436\u0430\u043A",
+      often: ["knizhnik", "prodast_i_kupit", "povidal_svet"],
+      names: ["castle"],
+      rarity: "rare",
+      lore: "\u0412\u0430\u0434\u0435\u043B\u0430 \u2014 \u0431\u043B\u0438\u0436\u043D\u0438\u0439 \u0433\u043E\u0440\u043E\u0434"
+    },
+    {
+      id: "tull",
+      name: "\u0422\u0443\u043B\u043B",
+      mera: "otshib",
+      meraNote: "\u0441\u0432\u043E\u0438 \u0434\u0435\u0440\u0435\u0432\u043D\u0438",
+      wants: ["pokoy"],
+      threads: [],
+      ladit: [],
+      neLadit: [],
+      note: "\u0442\u043E\u0440\u0433\u0443\u044E\u0442 \u0441 \u0434\u0435\u0440\u0435\u0432\u043D\u044F\u043C\u0438; \u0434\u0435\u0440\u0436\u0430\u0442\u0441\u044F \u0441\u0432\u043E\u0438\u0445",
+      often: ["slushaet_les", "govorit_s_lesom"],
+      names: ["tull"],
+      rarity: "exceptional",
+      lore: "\u0442\u0443\u043B\u043B\u044C\u0438 \u0434\u0435\u0440\u0435\u0432\u043D\u0438 \u043D\u0430 \u0437\u0430\u043B\u0438\u0432\u043D\u044B\u0445 \u043B\u0443\u0433\u0430\u0445 \u043F\u043E\u043B\u043E\u0441\u044B; \u0442\u0443\u043B\u043B\u044B \u0443\u0445\u043E\u0434\u044F\u0442 \u0441 \u0437\u0430\u043B\u0438\u0432\u043D\u043E\u0433\u043E \u0440\u0430\u043D\u044C\u0448\u0435 \u0437\u0432\u0435\u0440\u044F \u2014 \u0432\u0435\u0440\u043D\u0435\u0439\u0448\u0430\u044F \u043F\u0440\u0438\u043C\u0435\u0442\u0430"
+    }
+  ];
+  var HIDDEN_ORIGINS = [
+    { trait: "luchshie_dni", real: ["sluzhily_rod", "iz_vadely", "byvaly"], simple: true },
+    { trait: "beglyy_pod_imenem", real: ["beglyy_s_zakata"] }
+  ];
+  var ORIGIN_PLACES = [
+    { id: "fon", name: "\u043E\u0431\u0449\u0438\u0439 \u0444\u043E\u043D", desc: "\u0432\u0441\u0435 \u043F\u0440\u043E\u0438\u0441\u0445\u043E\u0436\u0434\u0435\u043D\u0438\u044F \u2014 \u043F\u043E \u0441\u0432\u043E\u0435\u0439 \u0440\u0435\u0434\u043A\u043E\u0441\u0442\u0438" },
+    {
+      id: "derevnya",
+      name: "\u0434\u0435\u0440\u0435\u0432\u043D\u044F",
+      desc: "\u0447\u0430\u0449\u0435 \u0441\u0442\u0430\u0440\u043E\u0436\u0438\u043B\u044B \u0438 \u043F\u0440\u0438\u0448\u043B\u044B\u0435 \u043D\u0430 \u043B\u044C\u0433\u043E\u0442\u0443; \u0437\u0430\u043C\u043A\u043E\u0432\u044B\u0435, \u0441\u043B\u0443\u0436\u0438\u043B\u044B\u0435 \u0438 \u0433\u043E\u0440\u043E\u0434\u0441\u043A\u0438\u0435 \u2014 \u0440\u0435\u0434\u043A\u043E\u0441\u0442\u044C",
+      often: ["starozhil", "prishly_na_lgotu"],
+      seldom: ["iz_chelyadi", "zamkovy_sirota", "sluzhily_rod", "khramovy_vyuchenik", "iz_vadely"]
+    },
+    {
+      id: "zamok",
+      name: "\u0437\u0430\u043C\u043E\u043A",
+      desc: "\u0447\u0430\u0449\u0435 \u0447\u0435\u043B\u044F\u0434\u044C, \u0437\u0430\u043C\u043A\u043E\u0432\u044B\u0435 \u0441\u0438\u0440\u043E\u0442\u044B \u0438 \u0441\u043B\u0443\u0436\u0438\u043B\u044B\u0435; \u0434\u0435\u0440\u0435\u0432\u0435\u043D\u0441\u043A\u0438\u0435 \u0441\u0438\u0434\u0435\u043B\u044C\u0446\u044B \u2014 \u0440\u0435\u0434\u043A\u043E\u0441\u0442\u044C",
+      often: ["iz_chelyadi", "zamkovy_sirota", "sluzhily_rod"],
+      seldom: ["starozhil", "prishly_na_lgotu", "beglyy_s_zakata"]
+    },
+    {
+      id: "priyom",
+      name: "\u043F\u0440\u0438\u0451\u043C \u043F\u0440\u0438\u0448\u043B\u044B\u0445",
+      desc: "\u0442\u043E\u043B\u044C\u043A\u043E \u0431\u0435\u0433\u043B\u044B\u0435 \u0441 \u0437\u0430\u043A\u0430\u0442\u0430, \u0432\u0442\u043E\u0440\u044B\u0435 \u0441\u044B\u043D\u043E\u0432\u044C\u044F, \u0431\u044B\u0432\u0430\u043B\u044B\u0435 \u0438 \u043F\u0440\u0438\u0448\u043B\u044B\u0435 \u043D\u0430 \u043B\u044C\u0433\u043E\u0442\u0443",
+      only: ["beglyy_s_zakata", "vtoroy_syn", "byvaly", "prishly_na_lgotu"]
+    }
+  ];
+  var SENESCHAL_ORIGIN = {
+    ids: ["sluzhily_rod", "vtoroy_syn", "khramovy_vyuchenik", "iz_vadely"],
+    mera: "sluzhba",
+    frame: "\u043D\u0430\u0437\u043D\u0430\u0447\u0435\u043D \u043F\u0430\u043B\u0430\u0442\u043E\u0439 \u0443\u043F\u0440\u0430\u0432\u0438\u0442\u0435\u043B\u0435\u043C, \u0432\u044B\u0441\u043B\u0443\u0436\u0438\u043B\u0441\u044F"
+  };
+
   // src/sim/balance.ts
   var k = (v, min, max, step, label) => ({ v, min, max, step, label });
   var SPEC = {
@@ -4822,6 +5074,8 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
       axisGain: k(1.5, 0.5, 3, 0.1, "\u041D\u0430\u0442\u0443\u0440\u0430: \u043E\u0431\u0449\u0438\u0439 \u043C\u043D\u043E\u0436\u0438\u0442\u0435\u043B\u044C \u0432\u0435\u0441\u043E\u0432 \u0434\u0435\u043B\u043E\u0432\u044B\u0445 \u0441\u043A\u043B\u043E\u043D\u043D\u043E\u0441\u0442\u0435\u0439 (\u0432\u044B\u0448\u0435 \u2014 \u0445\u0430\u0440\u0430\u043A\u0442\u0435\u0440\u044B \u0440\u0435\u0437\u0447\u0435)"),
       lookShare: k(0.35, 0, 1, 0.05, "\u041D\u0430\u0442\u0443\u0440\u0430: \u0434\u043E\u043B\u044F \u043B\u044E\u0434\u0435\u0439 \u0441 \u0447\u0435\u0440\u0442\u043E\u0439 \u043E\u0431\u043B\u0438\u043A\u0430 (\u0443 \u0447\u0435\u043B\u043E\u0432\u0435\u043A\u0430 \u0435\u0451 \u043D\u0435\u0442 \u0438\u043B\u0438 \u043E\u0434\u043D\u0430)"),
       originWeight: k(2, 1, 6, 0.1, "\u041D\u0430\u0442\u0443\u0440\u0430: \u0432\u043E \u0441\u043A\u043E\u043B\u044C\u043A\u043E \u0440\u0430\u0437 \u0447\u0430\u0449\u0435 \u0432\u044B\u043F\u0430\u0434\u0430\u044E\u0442 \u0447\u0435\u0440\u0442\u044B, \u043D\u0430\u0437\u0432\u0430\u043D\u043D\u044B\u0435 \u0443 \u043F\u0440\u043E\u0438\u0441\u0445\u043E\u0436\u0434\u0435\u043D\u0438\u044F \u0447\u0435\u043B\u043E\u0432\u0435\u043A\u0430"),
+      placeOften: k(3, 1, 8, 0.5, "\u041D\u0430\u0442\u0443\u0440\u0430: \u0432\u043E \u0441\u043A\u043E\u043B\u044C\u043A\u043E \u0440\u0430\u0437 \u0447\u0430\u0449\u0435 \u0432 \u044D\u0442\u043E\u043C \u043C\u0435\u0441\u0442\u0435 \u0432\u0441\u0442\u0440\u0435\u0447\u0430\u0435\u0442\u0441\u044F \xAB\u0441\u0432\u043E\u0451\xBB \u043F\u0440\u043E\u0438\u0441\u0445\u043E\u0436\u0434\u0435\u043D\u0438\u0435 (\u0432 \u0434\u0435\u0440\u0435\u0432\u043D\u0435 \u2014 \u0441\u0442\u0430\u0440\u043E\u0436\u0438\u043B, \u0432 \u0437\u0430\u043C\u043A\u0435 \u2014 \u0447\u0435\u043B\u044F\u0434\u044C)"),
+      placeSeldom: k(0.3, 0, 1, 0.05, "\u041D\u0430\u0442\u0443\u0440\u0430: \u043C\u043D\u043E\u0436\u0438\u0442\u0435\u043B\u044C \u0434\u043B\u044F \u043F\u0440\u043E\u0438\u0441\u0445\u043E\u0436\u0434\u0435\u043D\u0438\u044F, \u043A\u043E\u0442\u043E\u0440\u043E\u0435 \u0432 \u044D\u0442\u043E\u043C \u043C\u0435\u0441\u0442\u0435 \u0440\u0435\u0434\u043A\u043E\u0441\u0442\u044C (\u0432 \u0434\u0435\u0440\u0435\u0432\u043D\u0435 \u2014 \u0441\u043B\u0443\u0436\u0438\u043B\u044B\u0439, \u0432 \u0437\u0430\u043C\u043A\u0435 \u2014 \u0441\u0442\u0430\u0440\u043E\u0436\u0438\u043B)"),
       // Сенешаль: ядро из трёх черт у него всегда, остальное — по этим числам (cherty-dannye.md, раздел 9)
       seneschal: {
         age: k(48, 30, 70, 1, "\u0421\u0435\u043D\u0435\u0448\u0430\u043B\u044C: \u0432\u043E\u0437\u0440\u0430\u0441\u0442 \u043D\u0430 \u043D\u0430\u0447\u0430\u043B\u043E"),
@@ -4836,6 +5090,7 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
         divisor: k(2.5, 0.5, 5, 0.1, "\u041F\u043E\u0440\u0442\u0440\u0435\u0442: \u0434\u0435\u043B\u0438\u0442\u0435\u043B\u044C \u0432\u043A\u043B\u0430\u0434\u0430 \u2014 \u043F\u0440\u0438\u0437\u043D\u0430\u043A \u0442\u0430\u043A\u043E\u0439 \u0432\u0435\u043B\u0438\u0447\u0438\u043D\u044B \u0434\u0430\u0451\u0442 \u0436\u0435\u043B\u0430\u043D\u0438\u044E, \u0443\u0434\u0435\u0440\u0436\u043A\u0435 \u0438 \u043F\u0430\u043C\u044F\u0442\u0438 \u0435\u0434\u0438\u043D\u0438\u0446\u0443"),
         wordFrom: k(0.5, 0.1, 2, 0.1, "\u041F\u043E\u0440\u0442\u0440\u0435\u0442: \u0441 \u0442\u0430\u043A\u043E\u0439 \u0432\u0435\u043B\u0438\u0447\u0438\u043D\u044B \u0436\u0435\u043B\u0430\u043D\u0438\u0435, \u0443\u0434\u0435\u0440\u0436\u043A\u0430 \u0438 \u043F\u0430\u043C\u044F\u0442\u044C \u043D\u0430\u0437\u0432\u0430\u043D\u044B \u0441\u043B\u043E\u0432\u043E\u043C \xAB\u0441\u0438\u043B\u044C\u043D\u0435\u0435\xBB \u0438\u043B\u0438 \xAB\u0441\u043B\u0430\u0431\u0435\u0435\xBB"),
         wordStrong: k(1.5, 0.5, 4, 0.1, "\u041F\u043E\u0440\u0442\u0440\u0435\u0442: \u0441 \u0442\u0430\u043A\u043E\u0439 \u0432\u0435\u043B\u0438\u0447\u0438\u043D\u044B \u2014 \xAB\u043D\u0430\u043C\u043D\u043E\u0433\u043E \u0441\u0438\u043B\u044C\u043D\u0435\u0435\xBB \u0438\u043B\u0438 \xAB\u043D\u0430\u043C\u043D\u043E\u0433\u043E \u0441\u043B\u0430\u0431\u0435\u0435\xBB"),
+        originForce: k(1, 0, 2, 0.5, "\u041F\u043E\u0440\u0442\u0440\u0435\u0442: \u0441\u043A\u043E\u043B\u044C\u043A\u043E \u043F\u0440\u043E\u0438\u0441\u0445\u043E\u0436\u0434\u0435\u043D\u0438\u0435 \u0434\u043E\u0431\u0430\u0432\u043B\u044F\u0435\u0442 \u0441\u0432\u043E\u0438\u043C \u0436\u0435\u043B\u0430\u043D\u0438\u044F\u043C \u0438 \u0443\u0434\u0435\u0440\u0436\u043A\u0430\u043C (1 \u2014 \u043A\u0430\u043A \u0447\u0435\u0440\u0442\u0430)"),
         honestFrom: k(0.5, 0, 3, 0.1, "\u041F\u043E\u0440\u0442\u0440\u0435\u0442: \u0441 \u0442\u0430\u043A\u043E\u0439 \u0441\u043E\u0432\u0435\u0441\u0442\u0438 \u0437\u0430\u0441\u0438\u0434\u0435\u0432\u0448\u0438\u0439\u0441\u044F \u0441\u043E \u0441\u0432\u044F\u0437\u044F\u043C\u0438 \u2014 \u0447\u0435\u0441\u0442\u043D\u044B\u0439: \u0435\u0433\u043E \u0441\u0432\u043E\u0438 \u043B\u044E\u0434\u0438 \u0434\u0435\u043B\u0430\u044E\u0442 \u0441\u043B\u0435\u0434\u044B \u043B\u0438\u0445\u0430 \u044F\u0440\u0447\u0435; \u043F\u0440\u0438 \u0441\u043E\u0432\u0435\u0441\u0442\u0438 \u043D\u0438\u0436\u0435 \u043D\u0443\u043B\u044F \u2014 \u043F\u0440\u0438\u043A\u0440\u044B\u0432\u0430\u044E\u0442 \u043B\u0438\u0445\u043E")
       },
       // деловые склонности из признаков: склонность = середина звезды + сумма (вес × признак)
@@ -5415,9 +5670,9 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
     w("obet", "\u043E\u0431\u0435\u0442", "\u0437\u0430\u0440\u043E\u043A \u2192 \u043F\u0430\u043B\u043E\u043C\u043D\u0438\u0447\u0435\u0441\u0442\u0432\u043E, \u0432\u043A\u043B\u0430\u0434 \u0432 \u0445\u0440\u0430\u043C; \u043D\u0430\u0440\u0443\u0448\u0435\u043D\u0438\u0435 \u2014 \u0442\u044F\u0433\u043E\u0441\u0442\u044C"),
     w("draka", "\u0434\u0440\u0430\u043A\u0430", "\u0441\u0442\u044B\u0447\u043A\u0430 \u2192 \u0436\u0430\u043B\u043E\u0431\u0430 \u0438\u043B\u0438 \u0440\u0430\u043D\u0430 \u2192 \u043C\u0438\u0440\u043E\u0432\u0430\u044F \u0438\u043B\u0438 \u043A\u0440\u043E\u0432\u043D\u0438\u043A"),
     w("sabotazh", "\u0442\u0438\u0445\u0438\u0439 \u0441\u0430\u0431\u043E\u0442\u0430\u0436", "\u043F\u0440\u043E\u0434\u0430\u0432\u0438\u043B\u0438 \u043D\u0430 \u0441\u043E\u0432\u0435\u0442\u0435 \u2192 \u0441\u0434\u0435\u043B\u0430\u043B \u043F\u043E-\u0441\u0432\u043E\u0435\u043C\u0443 \u2192 \u0440\u0430\u0441\u0445\u043E\u0436\u0434\u0435\u043D\u0438\u0435 \u0432\u0441\u043A\u0440\u044B\u043B\u043E\u0441\u044C \u2192 \u043E\u0431\u044A\u044F\u0441\u043D\u0435\u043D\u0438\u0435, \u0443\u0441\u0442\u0443\u043F\u043A\u0430 \u0438\u043B\u0438 \u0440\u0430\u0437\u0440\u044B\u0432"),
-    { ...w("rodnya", "\u0440\u043E\u0434\u043D\u044E \u043F\u0440\u0438\u0441\u0442\u0440\u043E\u0438\u0442\u044C", "\u043F\u0440\u043E\u0441\u0438\u0442 \u0437\u0430 \u0440\u043E\u0434\u043D\u044E \u2192 \u043F\u0440\u0438\u0441\u0442\u0440\u043E\u0438\u043B \u2192 \u0440\u043E\u0434\u043D\u044F \u043B\u0435\u043D\u0438\u0442\u0441\u044F \u0438\u043B\u0438 \u0432\u043E\u0440\u0443\u0435\u0442 \u2192 \u0432\u044B\u0433\u043D\u0430\u0442\u044C \u0438\u043B\u0438 \u0442\u0435\u0440\u043F\u0435\u0442\u044C"), proposed: true },
+    w("rodnya", "\u0440\u043E\u0434\u043D\u044E \u043F\u0440\u0438\u0441\u0442\u0440\u043E\u0438\u0442\u044C", "\u043F\u0440\u043E\u0441\u0438\u0442 \u0437\u0430 \u0440\u043E\u0434\u043D\u044E \u2192 \u043F\u0440\u0438\u0441\u0442\u0440\u043E\u0438\u043B \u2192 \u0440\u043E\u0434\u043D\u044F \u043B\u0435\u043D\u0438\u0442\u0441\u044F \u0438\u043B\u0438 \u0432\u043E\u0440\u0443\u0435\u0442 \u2192 \u0432\u044B\u0433\u043D\u0430\u0442\u044C \u0438\u043B\u0438 \u0442\u0435\u0440\u043F\u0435\u0442\u044C"),
     { ...w("rebyonok", "\u0440\u0435\u0431\u0451\u043D\u043E\u043A \u0440\u0430\u0441\u0442\u0451\u0442", "\u0432\u0437\u044F\u043B \u0441\u0438\u0440\u043E\u0442\u0443 \u2192 \u0440\u0430\u0441\u0442\u0451\u0442 \u2192 \u0443\u0447\u0435\u043D\u0438\u043A, \u043F\u043E\u043C\u043E\u0449\u043D\u0438\u043A, \u0447\u0435\u043B\u044F\u0434\u044C \u0432 \u0437\u0430\u043C\u043A\u0435"), proposed: true },
-    { ...w("son", "\u0441\u043E\u043D \u0441\u0431\u044B\u043B\u0441\u044F", "\u0432\u0438\u0434\u0435\u043B \u0441\u043E\u043D \u2192 \u0441\u0431\u044B\u043B\u043E\u0441\u044C \u2192 \u043A \u043D\u0435\u043C\u0443 \u0438\u0434\u0443\u0442 \u0441 \u0432\u043E\u043F\u0440\u043E\u0441\u0430\u043C\u0438, \u0445\u0440\u0430\u043C \u043A\u043E\u0441\u0438\u0442\u0441\u044F \u2192 \u043F\u043E\u0447\u0451\u0442 \u0438\u043B\u0438 \u0441\u0442\u0440\u0430\u0445 \u0438 \u043D\u0430\u0432\u0435\u0442"), proposed: true },
+    w("son", "\u0441\u043E\u043D \u0441\u0431\u044B\u043B\u0441\u044F", "\u0432\u0438\u0434\u0435\u043B \u0441\u043E\u043D \u2192 \u0441\u0431\u044B\u043B\u043E\u0441\u044C \u2192 \u043A \u043D\u0435\u043C\u0443 \u0438\u0434\u0443\u0442 \u0441 \u0432\u043E\u043F\u0440\u043E\u0441\u0430\u043C\u0438, \u0445\u0440\u0430\u043C \u043A\u043E\u0441\u0438\u0442\u0441\u044F \u2192 \u043F\u043E\u0447\u0451\u0442 \u0438\u043B\u0438 \u0441\u0442\u0440\u0430\u0445 \u0438 \u043D\u0430\u0432\u0435\u0442"),
     w("vina", "\u0441\u043A\u0440\u044B\u0442\u0430\u044F \u0432\u0438\u043D\u0430", "\u043F\u043E \u0435\u0433\u043E \u0432\u0438\u043D\u0435 \u043F\u043E\u0433\u0438\u0431 \u0447\u0435\u043B\u043E\u0432\u0435\u043A, \u0430 \u0437\u0430\u043F\u0438\u0441\u0430\u043B\u0438 \u043D\u0430 \u0437\u0432\u0435\u0440\u044F \u2192 \u043D\u043E\u0441\u0438\u0442 \u2192 \u043A\u0442\u043E-\u0442\u043E \u0437\u043D\u0430\u0435\u0442 \u2192 \u043F\u043E\u0432\u0438\u043D\u0438\u043B\u0441\u044F, \u0440\u0430\u0441\u043A\u0440\u044B\u0442, \u0431\u0435\u0436\u0430\u043B \u0438\u043B\u0438 \u0443\u043D\u0451\u0441 \u0441 \u0441\u043E\u0431\u043E\u0439")
   ];
   var THREAD_HOW = { otkryvaet: "\u043E\u0442\u043A\u0440\u044B\u0432\u0430\u0435\u0442", tolkaet: "\u0442\u043E\u043B\u043A\u0430\u0435\u0442", tormozit: "\u0442\u043E\u0440\u043C\u043E\u0437\u0438\u0442", stupen: "\u0441\u0442\u0443\u043F\u0435\u043D\u044C" };
@@ -5697,412 +5952,12 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
     }
   ];
 
-  // src/data/origins.ts
-  var ALLOYS = [
-    {
-      id: "pravedny_skupets",
-      name: "\u041F\u0440\u0430\u0432\u0435\u0434\u043D\u044B\u0439 \u0441\u043A\u0443\u043F\u0435\u0446",
-      parts: [{ pole: "vera+", traits: ["chtit_primety", "stal_nabozhen"] }, { pole: "shchedrost-", traits: ["zimoy_snega"] }],
-      text: "\u0445\u0440\u0430\u043C\u0443 \u0434\u0430\u0451\u0442, \u043B\u044E\u0434\u044F\u043C \u043D\u0435\u0442: \u043E\u0431\u044B\u0447\u0430\u0439 \u0438 \u043F\u0440\u043E\u0441\u044C\u0431\u0430 \u0436\u0440\u0435\u0446\u0430 \u0440\u0430\u0431\u043E\u0442\u0430\u044E\u0442, \u043F\u0440\u043E\u0441\u044C\u0431\u0430 \u043B\u044E\u0434\u0435\u0439 \u2014 \u043D\u0435\u0442; \u0441\u043B\u0435\u0434: \u0432\u043A\u043B\u0430\u0434 \u0432 \u0445\u0440\u0430\u043C \u043F\u0440\u0438 \u043F\u0443\u0441\u0442\u043E\u043C \u0441\u0442\u043E\u043B\u0435",
-      c3: { approach: { da: ["obychay"], net: ["prosba"] } }
-    },
-    {
-      id: "strog_da_svoy",
-      name: "\u0421\u0442\u0440\u043E\u0433, \u0434\u0430 \u0441\u0432\u043E\u0439",
-      parts: [{ pole: "zhestkost+" }, { pole: "privyazannost+" }],
-      text: "\u0441\u0432\u043E\u0438\u0445 \u0431\u044C\u0451\u0442, \u043D\u043E \u0432 \u043E\u0431\u0438\u0434\u0443 \u043D\u0435 \u0434\u0430\u0451\u0442: \u0434\u043E\u043C\u0430 \u0441\u0435\u0447\u0451\u0442, \u043F\u0435\u0440\u0435\u0434 \u0447\u0443\u0436\u0438\u043C\u0438 \u0432\u044B\u0433\u043E\u0440\u0430\u0436\u0438\u0432\u0430\u0435\u0442; \u0441\u0432\u043E\u0438 \u0435\u0433\u043E \u0438 \u0431\u043E\u044F\u0442\u0441\u044F, \u0438 \u0434\u0435\u0440\u0436\u0430\u0442\u0441\u044F",
-      c3: { voice: { bias: "vygorazhivaet" } }
-    },
-    {
-      id: "vesyoly_vor",
-      name: "\u0412\u0435\u0441\u0451\u043B\u044B\u0439 \u0432\u043E\u0440",
-      parts: [{ pole: "obshchitelnost+" }, { traits: ["nechist_na_ruku"] }],
-      text: "\u0432\u0441\u0435 \u043B\u044E\u0431\u044F\u0442, \u0432\u0441\u0435 \u0437\u043D\u0430\u044E\u0442 \u2014 \u0438 \u043C\u043E\u043B\u0447\u0430\u0442: \u0432 \u043C\u043E\u043B\u0432\u0435 \u043F\u0440\u043E \u043D\u0435\u0433\u043E \u0448\u0443\u0442\u044F\u0442, \u0430 \u0436\u0430\u043B\u043E\u0431 \u0438 \u0434\u043E\u043D\u043E\u0441\u043E\u0432 \u043D\u0435\u0442"
-    },
-    {
-      id: "nabozhny_gulyaka",
-      name: "\u041D\u0430\u0431\u043E\u0436\u043D\u044B\u0439 \u0433\u0443\u043B\u044F\u043A\u0430",
-      parts: [{ pole: "vera+" }, { traits: ["gulyaka"] }],
-      text: "\u043F\u044C\u0451\u0442 \u0438 \u043A\u0430\u0435\u0442\u0441\u044F: \u043D\u0438\u0442\u044C \u043F\u044C\u044F\u043D\u0441\u0442\u0432\u0430 \u0445\u043E\u0434\u0438\u0442 \u043F\u043E \u043A\u0440\u0443\u0433\u0443 \u2014 \u0437\u0430\u043F\u043E\u0439, \u043F\u043E\u043A\u0430\u044F\u043D\u0438\u0435, \u0441\u043D\u043E\u0432\u0430 \u0437\u0430\u043F\u043E\u0439"
-    },
-    {
-      id: "tikhiy_omut",
-      name: "\u0422\u0438\u0445\u0438\u0439 \u043E\u043C\u0443\u0442",
-      parts: [{ pole: "obshchitelnost-" }, { pole: "chestnost-" }, { pole: "terpenie+" }],
-      text: "\u0441\u043B\u0435\u0434\u043E\u0432 \u043F\u043E\u0447\u0442\u0438 \u043D\u0435\u0442 (\u0442\u0435\u043D\u044C \u22122), \u043D\u043E \u043A\u0430\u0436\u0434\u044B\u0439 \u0441\u043B\u0435\u0434 \u043A\u0440\u0443\u043F\u043D\u044B\u0439 \u0438 \u044F\u0441\u043D\u044B\u0439",
-      c3: { traces: { ten: -2, yasnost: 1 } }
-    },
-    {
-      id: "chestny_upryamets",
-      name: "\u0427\u0435\u0441\u0442\u043D\u044B\u0439 \u0443\u043F\u0440\u044F\u043C\u0435\u0446",
-      parts: [{ pole: "chestnost+" }, { pole: "lyubopytstvo-" }],
-      text: "\u0441\u043A\u0430\u0436\u0435\u0442 \u043F\u0440\u0430\u0432\u0434\u0443 \u0438 \u043D\u0435 \u0441\u0434\u0432\u0438\u043D\u0435\u0442\u0441\u044F: \u0431\u0435\u0437 \u043F\u0440\u0438\u0441\u0442\u0440\u0430\u0441\u0442\u0438\u044F \u0438 \u0432 \u0441\u043F\u043E\u0440\u0435 \u043D\u0435 \u0443\u0441\u0442\u0443\u043F\u0430\u0435\u0442; \u0431\u0435\u0440\u0443\u0442 \u0435\u0433\u043E \u0442\u043E\u043B\u044C\u043A\u043E \u0441 \u0433\u043B\u0430\u0437\u0443 \u043D\u0430 \u0433\u043B\u0430\u0437 \u0438 \u0432\u0440\u0435\u043C\u0435\u043D\u0435\u043C",
-      c3: { voice: { bias: "bez", manner: "\u0432 \u0441\u043F\u043E\u0440\u0435 \u043D\u0435 \u0443\u0441\u0442\u0443\u043F\u0430\u0435\u0442" }, approach: { da: ["s_glazu_na_glaz", "vremya"] } }
-    }
-  ];
-  var MERA_NAMES = { chelyad: "\u0447\u0435\u043B\u044F\u0434\u044C", derevnya: "\u0434\u0435\u0440\u0435\u0432\u043D\u044F", sluzhba: "\u0441\u043B\u0443\u0436\u0431\u0430", verkh: "\u0432\u0435\u0440\u0445", otshib: "\u043D\u0430 \u043E\u0442\u0448\u0438\u0431\u0435" };
-  var ORIGINS = [
-    {
-      id: "starozhil",
-      name: "\u0417\u0434\u0435\u0448\u043D\u0438\u0439 \u0441\u0442\u0430\u0440\u043E\u0436\u0438\u043B",
-      mera: "derevnya",
-      wants: ["pokoy", "blizkie"],
-      threads: [],
-      ladit: ["starozhily"],
-      neLadit: ["prishlye"],
-      note: "\u0441\u0442\u0430\u0440\u043E\u0436\u0438\u043B\u044B \u2014 \u0441\u0432\u043E\u0438; \u043F\u0440\u0438\u0448\u043B\u044B\u0435 \u2014 \u0447\u0443\u0436\u0438\u0435",
-      often: ["kak_dedy", "prikipel", "pomnit_rodstvo"],
-      names: ["peasant"],
-      rarity: "common",
-      lore: "\u0441\u0442\u0430\u0440\u044B\u0435 \u0434\u0432\u043E\u0440\u044B \u043C\u0430\u0440\u043E\u043A"
-    },
-    {
-      id: "prishly_na_lgotu",
-      name: "\u041F\u0440\u0438\u0448\u043B\u044B\u0439 \u043D\u0430 \u043B\u044C\u0433\u043E\u0442\u0443",
-      mera: "derevnya",
-      wants: [],
-      threads: ["svoy_dvor", "uyti"],
-      ladit: ["prishlye"],
-      neLadit: [],
-      note: "\xAB\u0443\u0439\u0442\u0438\xBB \u2014 \u043A\u043E\u0433\u0434\u0430 \u043A\u043E\u043D\u0447\u0438\u0442\u0441\u044F \u043B\u044C\u0433\u043E\u0442\u0430",
-      often: ["stavit_svoy_dvor", "kopit_na_nadel"],
-      names: ["peasant"],
-      rarity: "common",
-      lore: "\u043B\u044C\u0433\u043E\u0442\u0430 \u2014 \u0434\u0435\u0441\u044F\u0442\u044C \u043B\u0435\u0442"
-    },
-    {
-      id: "vtoroy_syn",
-      name: "\u0412\u0442\u043E\u0440\u043E\u0439 \u0441\u044B\u043D \u0438\u0437 \u0442\u0435\u0441\u043D\u043E\u0433\u043E \u0434\u043E\u043C\u0435\u043D\u0430",
-      mera: "derevnya",
-      wants: [],
-      threads: ["nadel"],
-      ladit: ["prishlye"],
-      neLadit: [],
-      often: ["kopit_na_nadel", "metit_vysoko"],
-      names: ["peasant"],
-      rarity: "common",
-      lore: "\u0438\u0434\u0443\u0442 \u0432\u0442\u043E\u0440\u044B\u0435 \u0441\u044B\u043D\u043E\u0432\u044C\u044F \u0438\u0437 \u0442\u0435\u0441\u043D\u043E\u0433\u043E \u0434\u043E\u043C\u0435\u043D\u0430 \u0438 \u0441 \u0445\u0440\u0430\u043C\u043E\u0432\u043E\u0439 \u0437\u0435\u043C\u043B\u0438"
-    },
-    {
-      id: "beglyy_s_zakata",
-      name: "\u0411\u0435\u0433\u043B\u044B\u0439 \u0441 \u0437\u0430\u043A\u0430\u0442\u0430",
-      mera: "derevnya",
-      meraNote: "\u043D\u0438\u0436\u0435",
-      wants: [],
-      threads: ["proshloe"],
-      ladit: ["prishlye"],
-      neLadit: ["palata"],
-      note: "\xAB\u043F\u0440\u043E\u0448\u043B\u043E\u0435\xBB \u2014 \u0438\u0449\u0443\u0442; \u043F\u0430\u043B\u0430\u0442\u0430 \u043A\u043E\u0441\u0438\u0442\u0441\u044F",
-      often: ["khlebnul_likha", "nikomu"],
-      names: ["peasant"],
-      rarity: "rare",
-      lore: "\u0431\u0435\u0433\u043B\u044B\u0435 \u0441 \u0437\u0430\u043A\u0430\u0442\u0430 \u0441\u0438\u0434\u0435\u043B\u0438 \xAB\u043F\u043E \u0442\u043E\u043F\u043E\u0440\u0443\xBB; \u0445\u0440\u0430\u043C \u0442\u0440\u0435\u0431\u0443\u0435\u0442 \u0432\u044B\u0434\u0430\u0442\u044C \u0431\u0435\u0433\u043B\u044B\u0445"
-    },
-    {
-      id: "byvaly",
-      name: "\u0411\u044B\u0432\u0430\u043B\u044B\u0439",
-      mera: "derevnya",
-      wants: ["dengi"],
-      threads: ["draka"],
-      ladit: ["byvalye", "sluzhilye"],
-      neLadit: ["palata"],
-      often: ["ne_robkogo_desyatka", "gulyaka", "shram"],
-      names: ["castle"],
-      rarity: "common",
-      lore: "\u0430\u0440\u0442\u0435\u043B\u0438 \u0431\u044B\u0432\u0430\u043B\u044B\u0445 \u043D\u0430 \u0437\u0438\u043C\u0443 \u043A \u043E\u0441\u0442\u0440\u043E\u0436\u043A\u0430\u043C"
-    },
-    {
-      id: "iz_chelyadi",
-      name: "\u0412\u044B\u0441\u043B\u0443\u0436\u0438\u043B\u0441\u044F \u0438\u0437 \u0447\u0435\u043B\u044F\u0434\u0438",
-      mera: "chelyad",
-      meraNote: "\u0447\u0435\u043B\u044F\u0434\u044C \u2192 \u0441\u043B\u0443\u0436\u0431\u0430",
-      wants: ["mesto"],
-      threads: [],
-      ladit: ["chelyad"],
-      neLadit: ["gordost+"],
-      note: "\u0447\u0435\u043B\u044F\u0434\u044C \u2014 \u0441\u0432\u043E\u0438; \u0433\u043E\u0440\u0434\u044B\u0435 \u0441\u043C\u043E\u0442\u0440\u044F\u0442 \u0441\u0432\u044B\u0441\u043E\u043A\u0430",
-      often: ["privyk_podchinyatsya", "raspravil_plechi"],
-      names: ["peasant"],
-      rarity: "common",
-      lore: ""
-    },
-    {
-      id: "sluzhily_rod",
-      name: "\u0418\u0437 \u0441\u043B\u0443\u0436\u0438\u043B\u043E\u0433\u043E \u0440\u043E\u0434\u0430",
-      mera: "sluzhba",
-      wants: ["pochet"],
-      holds: ["pravilo"],
-      threads: [],
-      ladit: ["sluzhilye"],
-      neLadit: [],
-      often: ["sluzhaka", "derzhit_slovo"],
-      names: ["castle"],
-      rarity: "common",
-      lore: "\u0441\u043B\u0443\u0436\u0438\u043B\u044B\u0435 \u0432\u043E\u0435\u0432\u043E\u0434\u044B, \u043E\u0441\u0442\u0440\u043E\u0436\u043A\u0438"
-    },
-    {
-      id: "khramovy_vyuchenik",
-      name: "\u0425\u0440\u0430\u043C\u043E\u0432\u044B\u0439 \u0432\u044B\u0443\u0447\u0435\u043D\u0438\u043A",
-      mera: "sluzhba",
-      wants: ["chistaya_sovest"],
-      threads: [],
-      ladit: ["khram"],
-      neLadit: [],
-      often: ["knizhnik", "chtit_primety"],
-      names: ["castle"],
-      rarity: "rare",
-      lore: "\u0445\u0440\u0430\u043C\u043E\u0432\u0430\u044F \u0437\u0435\u043C\u043B\u044F \u0432 \u043F\u043E\u043B\u043E\u0441\u0435"
-    },
-    {
-      id: "polukrovka",
-      name: "\u041F\u043E\u043B\u0443\u043A\u0440\u043E\u0432\u043A\u0430 \u043B\u0435\u0441\u043D\u043E\u0439 \u043A\u0440\u043E\u0432\u0438",
-      mera: "otshib",
-      wants: [],
-      threads: ["metka"],
-      ladit: ["lesnye"],
-      neLadit: ["derevni"],
-      note: "\xAB\u043C\u0435\u0442\u043A\u0430\xBB \u2014 \u0432 \u043F\u0440\u0438\u043B\u0438\u0432 \u043F\u043E\u0447\u0442\u0438 \u043D\u0430\u0432\u0435\u0440\u043D\u044F\u043A\u0430 \u043C\u0435\u0447\u0435\u043D\u044B\u0439; \u043B\u0435\u0441\u043D\u044B\u0435 \u2014 \u0441\u0432\u043E\u0438, \u0434\u0435\u0440\u0435\u0432\u043D\u0438 \u043D\u0430\u0441\u0442\u043E\u0440\u043E\u0436\u0435\u043D\u044B",
-      often: ["slushaet_les", "govorit_po_lesnomu", "belaya_vorona"],
-      names: ["peasant", "forest"],
-      rarity: "exceptional",
-      lore: "\u0441\u0440\u043E\u043A \u0436\u0438\u0437\u043D\u0438 \u2014 \u043B\u043E\u0442\u0435\u0440\u0435\u044F, \u043C\u0435\u0442\u043A\u0430 \u0441\u0438\u043B\u044C\u043D\u0435\u0435, \u043F\u043E\u0436\u0438\u0440\u0430\u0442\u0435\u043B\u0435\u043C \u043D\u0435 \u0441\u0442\u0430\u043D\u0435\u0442"
-    },
-    {
-      id: "zamkovy_sirota",
-      name: "\u0417\u0430\u043C\u043A\u043E\u0432\u044B\u0439 \u0441\u0438\u0440\u043E\u0442\u0430",
-      mera: "chelyad",
-      wants: ["blizkie"],
-      threads: [],
-      ladit: ["chelyad"],
-      neLadit: [],
-      note: "\u0431\u043B\u0438\u0437\u043A\u0438\u0435 \u2014 \u0421\u0435\u043D\u0435\u0448\u0430\u043B\u044C: \u0431\u043B\u0438\u0437\u043E\u0441\u0442\u044C \u0438 \u0432\u0435\u0440\u043D\u043E\u0441\u0442\u044C \u043D\u0430 \u0441\u0442\u0430\u0440\u0442\u0435 \u0432\u044B\u0448\u0435; \u0433\u043E\u0434\u0438\u0442\u0441\u044F \u0432 \u0441\u0432\u043E\u0438 \u0443\u0448\u0438; \xAB\u041F\u0440\u0438\u0433\u0440\u0435\u043B \u0441\u0438\u0440\u043E\u0442\u0443\xBB \u2014 \u0443 \u0442\u0435\u0445, \u043A\u0442\u043E \u0440\u0430\u0441\u0442\u0438\u043B",
-      often: [],
-      names: ["castle"],
-      rarity: "rare",
-      lore: "\u043F\u043E\u0434\u043E\u0431\u0440\u0430\u043D\u043D\u044B\u0435 \u0421\u0435\u043D\u0435\u0448\u0430\u043B\u0435\u043C"
-    },
-    {
-      id: "iz_vadely",
-      name: "\u0413\u043E\u0440\u043E\u0436\u0430\u043D\u0438\u043D \u0438\u0437 \u0412\u0430\u0434\u0435\u043B\u044B",
-      mera: "sluzhba",
-      wants: ["dengi", "novoe"],
-      threads: [],
-      ladit: ["kuptsy", "palata"],
-      neLadit: ["derevni"],
-      note: "\u0434\u0435\u0440\u0435\u0432\u043D\u044F\u043C \u2014 \u0447\u0443\u0436\u0430\u043A",
-      often: ["knizhnik", "prodast_i_kupit", "povidal_svet"],
-      names: ["castle"],
-      rarity: "rare",
-      lore: "\u0412\u0430\u0434\u0435\u043B\u0430 \u2014 \u0431\u043B\u0438\u0436\u043D\u0438\u0439 \u0433\u043E\u0440\u043E\u0434"
-    },
-    {
-      id: "tull",
-      name: "\u0422\u0443\u043B\u043B",
-      mera: "otshib",
-      meraNote: "\u0441\u0432\u043E\u0438 \u0434\u0435\u0440\u0435\u0432\u043D\u0438",
-      wants: ["pokoy"],
-      threads: [],
-      ladit: [],
-      neLadit: [],
-      note: "\u0442\u043E\u0440\u0433\u0443\u044E\u0442 \u0441 \u0434\u0435\u0440\u0435\u0432\u043D\u044F\u043C\u0438; \u0434\u0435\u0440\u0436\u0430\u0442\u0441\u044F \u0441\u0432\u043E\u0438\u0445",
-      often: ["slushaet_les", "govorit_s_lesom"],
-      names: ["tull"],
-      rarity: "exceptional",
-      lore: "\u0442\u0443\u043B\u043B\u044C\u0438 \u0434\u0435\u0440\u0435\u0432\u043D\u0438 \u043D\u0430 \u0437\u0430\u043B\u0438\u0432\u043D\u044B\u0445 \u043B\u0443\u0433\u0430\u0445 \u043F\u043E\u043B\u043E\u0441\u044B; \u0442\u0443\u043B\u043B\u044B \u0443\u0445\u043E\u0434\u044F\u0442 \u0441 \u0437\u0430\u043B\u0438\u0432\u043D\u043E\u0433\u043E \u0440\u0430\u043D\u044C\u0448\u0435 \u0437\u0432\u0435\u0440\u044F \u2014 \u0432\u0435\u0440\u043D\u0435\u0439\u0448\u0430\u044F \u043F\u0440\u0438\u043C\u0435\u0442\u0430"
-    }
-  ];
-  var HIDDEN_ORIGINS = [
-    { trait: "luchshie_dni", real: ["sluzhily_rod", "iz_vadely", "byvaly"], simple: true },
-    { trait: "beglyy_pod_imenem", real: ["beglyy_s_zakata"] }
-  ];
-
   // src/sim/util.ts
   var clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   var round1 = (v) => Math.round(v * 10) / 10;
   var round2 = (v) => Math.round(v * 100) / 100;
   var round3 = (v) => Math.round(v * 1e3) / 1e3;
   var mean = (xs) => xs.length ? xs.reduce((s, v) => s + v, 0) / xs.length : 0;
-
-  // src/sim/portrait.ts
-  var RARITY_RANK = { common: 0, rare: 1, exceptional: 2 };
-  var traitVis = (t) => t.vis ?? (t.hidden ? "skrytaya" : "yavnaya");
-  function polesOf(signs) {
-    return SIGNS.filter((s) => signs[s.id]).map((s) => {
-      const plus = signs[s.id] > 0;
-      return { rule: POLE_RULES.find((r) => r.sign === s.id && r.plus === plus), v: Math.abs(signs[s.id]), name: plus ? s.plus : s.minus };
-    }).sort((a, b) => b.v - a.v);
-  }
-  var isNotable = (v) => Math.abs(v) >= BALANCE.natura.portrait.notable;
-  var isStrong = (v) => Math.abs(v) >= BALANCE.natura.portrait.strong;
-  function strengthWord(v) {
-    const P = BALANCE.natura.portrait, a = Math.abs(v);
-    if (a < P.wordFrom) return "";
-    return v > 0 ? a >= P.wordStrong ? "\u043D\u0430\u043C\u043D\u043E\u0433\u043E \u0441\u0438\u043B\u044C\u043D\u0435\u0435" : "\u0441\u0438\u043B\u044C\u043D\u0435\u0435" : a >= P.wordStrong ? "\u043D\u0430\u043C\u043D\u043E\u0433\u043E \u0441\u043B\u0430\u0431\u0435\u0435" : "\u0441\u043B\u0430\u0431\u0435\u0435";
-  }
-  function linkName(key) {
-    const group = LINK_GROUPS.find((g) => g.id === key);
-    if (group) return group.name;
-    const sign = key.slice(0, -1);
-    return key.endsWith("+") ? POLE_PEOPLE[sign].plus : POLE_PEOPLE[sign].minus;
-  }
-  var Sided = class {
-    constructor() {
-      this.at = /* @__PURE__ */ new Map();
-    }
-    put(keys, second, force, src) {
-      for (const k2 of keys ?? []) {
-        const was = this.at.get(k2);
-        if (!was || force > was.force || force === was.force && second) this.at.set(k2, { second, force, src });
-      }
-    }
-    origin() {
-      return Object.fromEntries([...this.at].map(([k2, x]) => [k2, x.src]));
-    }
-    side(second, order) {
-      const mine = [...this.at].filter(([, x]) => x.second === second).map(([k2]) => k2);
-      return [...order.filter((k2) => mine.includes(k2)), ...mine.filter((k2) => !order.includes(k2))];
-    }
-  };
-  function alloysOf(signs, traits = []) {
-    const P = BALANCE.natura.portrait, has = (ids) => !!ids?.some((id) => traits.some((t) => t.id === id));
-    const value = (pole) => signs[pole.slice(0, -1)] * (pole.endsWith("+") ? 1 : -1);
-    return ALLOYS.filter((a) => {
-      const need = a.parts.some((x) => has(x.traits)) ? P.notable : P.strong;
-      return a.parts.every((x) => has(x.traits) || !!x.pole && value(x.pole) >= need);
-    });
-  }
-  function portraitOf(signs, own = []) {
-    const P = BALANCE.natura.portrait, poles = polesOf(signs), notable = poles.filter((p) => isNotable(p.v));
-    const alloys = alloysOf(signs, own);
-    const traits = [...own, ...alloys.map((a) => ({
-      id: a.id,
-      name: `\u0441\u043F\u043B\u0430\u0432 \xAB${a.name}\xBB`,
-      desc: a.text,
-      effect: a.text,
-      kind: "life",
-      vec: {},
-      rarity: "common",
-      source: [],
-      ...a.c3
-    }))];
-    const zero = (list) => Object.fromEntries(list.map((x) => [x.id, 0]));
-    const parts = (list) => Object.fromEntries(list.map((x) => [x.id, []]));
-    const MEM = [{ id: "obida" }, { id: "srok" }, { id: "dobro" }];
-    const wants = zero(WANTS), holds = zero(HOLDS), mem = zero(MEM);
-    const from = { wants: parts(WANTS), holds: parts(HOLDS), sluchay: [], memory: parts(MEM) };
-    const add = (sum2, log, key, v, src) => {
-      if (v) {
-        sum2[key] += v;
-        log[key].push({ ...src, v: round2(v) });
-      }
-    };
-    let sluchay = 0, start = 0, ten = 0, tenSfery = 0, yasnost = 0, razgovor = 0, likho = 0, likhoYasnost = 0;
-    let chuzhie;
-    const chance = (v, src) => {
-      if (v) {
-        sluchay += v;
-        from.sluchay.push({ ...src, v: round2(v) });
-      }
-    };
-    for (const { rule: r, v, name } of poles) {
-      const k2 = v / P.divisor, src = { from: name, trait: false };
-      for (const x of WANTS) add(wants, from.wants, x.id, (r.wants?.[x.id] ?? 0) * k2, src);
-      for (const x of HOLDS) add(holds, from.holds, x.id, (r.holds?.[x.id] ?? 0) * k2, src);
-      chance((r.sluchay ?? 0) * k2, src);
-      for (const x of MEM) add(mem, from.memory, x.id, (r[x.id] ?? 0) * k2, src);
-    }
-    const approach = new Sided(), links = new Sided(), memory = new Sided();
-    const holdNotes = [], approachNotes = [], linkNotes = [], voiceNotes = [], lines = [];
-    for (const { rule: r, v, name } of notable) {
-      const src = { from: name, trait: false };
-      approach.put(r.da, false, v, src);
-      approach.put(r.net, true, v, src);
-      links.put(r.ladit, false, v, src);
-      links.put(r.neLadit, true, v, src);
-      memory.put(r.pomnit, false, v, src);
-      if (r.holdNote) holdNotes.push(`${name}: ${r.holdNote}`);
-      if (r.netNote) approachNotes.push(`${name}: ${r.netNote}`);
-      if (r.linkNote) linkNotes.push(`${name}: ${r.linkNote}`);
-      start += r.start ?? 0;
-      ten += r.ten ?? 0;
-      yasnost += r.yasnost ?? 0;
-      if (r.trace) lines.push({ gde: r.trace.gde, text: r.trace.text, vis: isStrong(v) ? "yavnaya" : "so_vremenem", from: name, trait: false });
-    }
-    const mannered = notable.filter((p) => p.rule.manner).slice(0, 2);
-    const biased = notable.find((p) => p.rule.bias && (!p.rule.biasStrong || isStrong(p.v)));
-    let bias = biased?.rule.bias ?? "bez", biasSrc = biased ? { from: biased.name, trait: false } : null, biasRank = -1;
-    const top = Number.MAX_SAFE_INTEGER, said = [];
-    const ifs = [], threads = [], deed = [], holder2 = [], notes = [];
-    traits.forEach((t, i) => {
-      const src = { from: t.name, trait: true }, force = top - traits.length + i;
-      for (const x of WANTS) add(wants, from.wants, x.id, t.wants?.[x.id], src);
-      for (const x of HOLDS) add(holds, from.holds, x.id, t.holds?.[x.id], src);
-      chance(t.sluchay, src);
-      for (const x of MEM) add(mem, from.memory, x.id, t.memory?.[x.id], src);
-      approach.put(t.approach?.da, false, force, src);
-      approach.put(t.approach?.net, true, force, src);
-      links.put(t.links?.ladit, false, force, src);
-      links.put(t.links?.neLadit, true, force, src);
-      memory.put(t.memory?.pomnit, false, force, src);
-      memory.put(t.memory?.proshchaet, true, force, src);
-      if (t.approach?.note) approachNotes.push(`${t.name}: ${t.approach.note}`);
-      if (t.voice?.note) voiceNotes.push(`${t.name}: ${t.voice.note}`);
-      if (t.voice?.manner) said.push({ text: t.voice.manner, src });
-      const rank = RARITY_RANK[t.rarity] + (t.voice?.top ? Object.keys(RARITY_RANK).length : 0);
-      if (t.voice?.bias && rank >= biasRank) {
-        bias = t.voice.bias;
-        biasSrc = src;
-        biasRank = rank;
-      }
-      start += t.links?.start ?? 0;
-      ten += t.traces?.ten ?? 0;
-      tenSfery += t.traces?.tenSfery ?? 0;
-      yasnost += t.traces?.yasnost ?? 0;
-      razgovor += t.traces?.razgovor ?? 0;
-      chuzhie = t.traces?.chuzhie ?? chuzhie;
-      for (const l of t.traces?.lines ?? []) lines.push({ gde: [l.gde], text: l.text, vis: traitVis(t), from: t.name, trait: true });
-      for (const x of t.ifs ?? []) ifs.push({ ...x, from: t.name });
-      for (const x of t.threads ?? []) threads.push({ ...x, from: t.name });
-      for (const x of t.deed ?? []) deed.push({ ...x, from: t.name });
-      for (const x of t.holder ?? []) holder2.push({ ...x, from: t.name });
-      for (const [key, text] of Object.entries(t.notes ?? {})) notes.push({ key, from: t.name, text });
-      likho += t.likho ?? 0;
-    });
-    const sovest = round2(holds.sovest);
-    const cover = traits.filter((x) => x.likhoByWeights).length;
-    if (sovest < 0) likho += cover;
-    else if (sovest >= P.honestFrom) likhoYasnost += cover;
-    const rounded = (o) => Object.fromEntries(Object.entries(o).map(([k2, v]) => [k2, round2(v)]));
-    const approachOrder = APPROACHES.map((x) => x.id), memOrder = MEM_KEYS.map((x) => x.id), linkOrder = LINK_GROUPS.map((x) => x.id);
-    return {
-      wants: rounded(wants),
-      holds: rounded(holds),
-      holdNotes,
-      sluchay: round2(sluchay),
-      approach: { da: approach.side(false, approachOrder), net: approach.side(true, approachOrder), notes: approachNotes },
-      memory: { ...rounded(mem), pomnit: memory.side(false, memOrder), proshchaet: memory.side(true, memOrder) },
-      voice: { manners: [...said.map((x) => x.text), ...mannered.map((p) => p.rule.manner)], bias, biasFrom: biasSrc?.from ?? "", notes: voiceNotes },
-      links: { ladit: links.side(false, linkOrder), neLadit: links.side(true, linkOrder), start: round2(start), notes: linkNotes },
-      traces: { ten: round2(ten), tenSfery: round2(tenSfery), yasnost: round2(yasnost), razgovor: round2(razgovor), chuzhie, lines },
-      ifs,
-      threads,
-      deed,
-      holder: holder2,
-      likho: round2(likho),
-      likhoYasnost: round2(likhoYasnost),
-      notes,
-      alloys: alloys.map((a) => ({ id: a.id, name: a.name, text: a.text })),
-      by: {
-        ...from,
-        approach: approach.origin(),
-        memKeys: memory.origin(),
-        links: links.origin(),
-        manners: [...said.map((x) => x.src), ...mannered.map((p) => ({ from: p.name, trait: false }))],
-        bias: biasSrc
-      }
-    };
-  }
-  var portrait = (p) => portraitOf(p.signs, p.traits);
 
   // src/data/core.ts
   var AXES = ["dolg", "vygoda", "zabota", "derzost", "obychai"];
@@ -6321,6 +6176,12 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
     if (!o) throw new Error(`\u041D\u0435\u0442 \u043F\u0440\u043E\u0438\u0441\u0445\u043E\u0436\u0434\u0435\u043D\u0438\u044F ${id}`);
     return o;
   };
+  var isSeneschal = (p) => p.traits.some((t) => t.seneschal);
+  function placeWeight(o, place2 = "fon") {
+    const at = ORIGIN_PLACES.find((x) => x.id === place2);
+    if (at.only) return at.only.includes(o.id) ? rarityWeight(o) : 0;
+    return rarityWeight(o) * (at.often?.includes(o.id) ? BALANCE.natura.placeOften : at.seldom?.includes(o.id) ? BALANCE.natura.placeSeldom : 1);
+  }
   var natureById = (id) => {
     const n = NATURES.find((x) => x.id === id);
     if (!n) throw new Error(`\u041D\u0435\u0442 \u043D\u0430\u0442\u0443\u0440\u044B ${id}`);
@@ -6369,9 +6230,9 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
     }
     return items[items.length - 1];
   }
-  function allowed(p, kinds, swap = false) {
+  function allowed(p, kinds, swap = false, ban = []) {
     const blocks = (held, t) => inConflict(held, t) && !(swap && held.kind === "life" && t.replaces?.includes(held.id) && !isAnchor(p, held.id));
-    return BAG.filter((t) => kinds.includes(t.kind) && !t.seneschal && !p.traits.includes(t) && !p.traits.some((x) => blocks(x, t)) && (!t.requires || t.requires.some((id) => p.traits.some((x) => x.id === id))));
+    return BAG.filter((t) => kinds.includes(t.kind) && !t.seneschal && !ban.includes(t.id) && !p.traits.includes(t) && !p.traits.some((x) => blocks(x, t)) && (!t.requires || t.requires.some((id) => p.traits.some((x) => x.id === id))));
   }
   var isAnchor = (p, id) => p.anchors.includes(id) || p.far === id || p.contra === id;
   function growthTarget(rng, p) {
@@ -6393,7 +6254,7 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
     const age = opts.age ?? rng.int(BALANCE.natura.ageMin, Math.max(BALANCE.natura.ageMin, BALANCE.natura.ageMax));
     const zero = signsOf(nature, []);
     const side = rng.fork("\u043E\u0442\u043A\u0443\u0434\u0430 \u0438 \u0447\u0435\u0439");
-    const origin = opts.origin ? originById(opts.origin) : pickWeighted(side, ORIGINS, rarityWeight);
+    const origin = opts.origin ? originById(opts.origin) : pickWeighted(side, ORIGINS, (o) => placeWeight(o, opts.place));
     const p = {
       nature,
       age,
@@ -6414,7 +6275,7 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
     const w2 = (target, events) => (t) => candidateWeight(nature, p.traits, t, target, { events, taken: opts.taken, often: origin.often });
     const innate = rng.int(BALANCE.natura.innateMin, Math.max(BALANCE.natura.innateMin, BALANCE.natura.innateMax));
     for (const crystal of rng.shuffle(nature.crystals).slice(0, innate)) {
-      const t = pickWeighted(rng, allowed(p, ["born"]).filter((x) => cos(x.vec, crystal) > 0), w2(crystal, opts.events));
+      const t = pickWeighted(rng, allowed(p, ["born"], false, opts.ban).filter((x) => cos(x.vec, crystal) > 0), w2(crystal, opts.events));
       if (t) {
         p.traits.push(t);
         p.anchors.push(t.id);
@@ -6425,7 +6286,7 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
     const hasContra = () => p.traits.find((x) => isContra(nature, x));
     story.slice(0, count).forEach((ev, i) => {
       const vec = eventVec(ev);
-      const life = allowed(p, ["life"]).filter((x) => x.source.includes("backstory"));
+      const life = allowed(p, ["life"], false, opts.ban).filter((x) => x.source.includes("backstory"));
       const far = i === 0, contra = !far && i === Math.min(count, story.length) - 1 && !hasContra();
       const narrowed = far ? life.filter((x) => isFar(nature, x)) : contra ? life.filter((x) => isContra(nature, x)) : life;
       const grow = far || contra ? void 0 : growthTarget(rng, p);
@@ -6443,16 +6304,16 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
       const look = pickWeighted(side, BAG.filter((t) => t.kind === "look"), (t) => rarityWeight(t) * (origin.often.includes(t.id) ? BALANCE.natura.originWeight : 1));
       if (look) p.traits.push(look);
     }
-    hideOrigin(side, p);
+    hideOrigin(side, p, opts.place);
     return refresh(p);
   }
-  function hideOrigin(rng, p) {
+  function hideOrigin(rng, p, place2) {
     for (const rule of HIDDEN_ORIGINS) {
       if (!p.traits.some((t) => t.id === rule.trait)) continue;
       const real = rule.real.includes(p.origin) ? p.origin : pickWeighted(rng, ORIGINS.filter((o) => rule.real.includes(o.id)), rarityWeight).id;
       const plain = (id) => ["derevnya", "chelyad"].includes(originById(id).mera);
       if (p.originShown === real || rule.simple && !plain(p.originShown)) {
-        p.originShown = pickWeighted(rng, ORIGINS.filter((o) => !rule.real.includes(o.id) && o.mera === "derevnya"), rarityWeight).id;
+        p.originShown = pickWeighted(rng, ORIGINS.filter((o) => !rule.real.includes(o.id) && o.mera === "derevnya"), (o) => placeWeight(o, place2)).id;
       }
       p.origin = real;
     }
@@ -6475,25 +6336,26 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
     refresh(p);
     return t;
   }
-  function growParty(seed, size, natureIds) {
+  function growParty(seed, size, natureIds, place2) {
     const rng = new Rng(seed);
     const natures = natureIds ? natureIds.map(natureById) : rng.shuffle(NATURES).slice(0, size);
     const taken = /* @__PURE__ */ new Map();
     return natures.map((n) => {
-      const p = growPerson(rng, n, { taken });
+      const p = growPerson(rng, n, { taken, place: place2 });
       for (const t of p.traits) taken.set(t.id, (taken.get(t.id) ?? 0) + 1);
       return p;
     });
   }
-  function rollPerson(seed, nature, age) {
+  function rollPerson(seed, nature, age, place2) {
     const rng = new Rng(seed);
-    const p = growPerson(rng, nature, { age });
+    const p = growPerson(rng, nature, { age, place: place2 });
     for (let i = 0; i < BALANCE.natura.lifeSteps; i++) growLife(rng, p, { trigger: rng.pick(TRIGGERS), events: [eventVec(rng.pick(BACKSTORY))] });
     return p;
   }
   function growSeneschal(seed, nature) {
     const rng = new Rng(seed), S = BALANCE.natura.seneschal;
-    const p = growPerson(rng, nature, { age: S.age });
+    const origin = rng.fork("\u043E\u0442\u043A\u0443\u0434\u0430 \u0421\u0435\u043D\u0435\u0448\u0430\u043B\u044C").pick(SENESCHAL_ORIGIN.ids);
+    const p = growPerson(rng, nature, { age: S.age, origin, ban: HIDDEN_ORIGINS.map((r) => r.trait) });
     const take = (ids, n) => {
       for (const id of rng.shuffle(ids)) {
         if (n <= 0) break;
@@ -6508,6 +6370,195 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
     take(SENESCHAL.pick, rng.int(S.pickMin, Math.max(S.pickMin, S.pickMax)));
     return refresh(p);
   }
+
+  // src/sim/portrait.ts
+  var RARITY_RANK = { common: 0, rare: 1, exceptional: 2 };
+  var traitVis = (t) => t.vis ?? (t.hidden ? "skrytaya" : "yavnaya");
+  function polesOf(signs) {
+    return SIGNS.filter((s) => signs[s.id]).map((s) => {
+      const plus = signs[s.id] > 0;
+      return { rule: POLE_RULES.find((r) => r.sign === s.id && r.plus === plus), v: Math.abs(signs[s.id]), name: plus ? s.plus : s.minus };
+    }).sort((a, b) => b.v - a.v);
+  }
+  var isNotable = (v) => Math.abs(v) >= BALANCE.natura.portrait.notable;
+  var isStrong = (v) => Math.abs(v) >= BALANCE.natura.portrait.strong;
+  function strengthWord(v) {
+    const P = BALANCE.natura.portrait, a = Math.abs(v);
+    if (a < P.wordFrom) return "";
+    return v > 0 ? a >= P.wordStrong ? "\u043D\u0430\u043C\u043D\u043E\u0433\u043E \u0441\u0438\u043B\u044C\u043D\u0435\u0435" : "\u0441\u0438\u043B\u044C\u043D\u0435\u0435" : a >= P.wordStrong ? "\u043D\u0430\u043C\u043D\u043E\u0433\u043E \u0441\u043B\u0430\u0431\u0435\u0435" : "\u0441\u043B\u0430\u0431\u0435\u0435";
+  }
+  function linkName(key) {
+    const group = LINK_GROUPS.find((g) => g.id === key);
+    if (group) return group.name;
+    const sign = key.slice(0, -1);
+    return key.endsWith("+") ? POLE_PEOPLE[sign].plus : POLE_PEOPLE[sign].minus;
+  }
+  var Sided = class {
+    constructor() {
+      this.at = /* @__PURE__ */ new Map();
+    }
+    put(keys, second, force, src) {
+      for (const k2 of keys ?? []) {
+        const was = this.at.get(k2);
+        if (!was || force > was.force || force === was.force && second) this.at.set(k2, { second, force, src });
+      }
+    }
+    origin() {
+      return Object.fromEntries([...this.at].map(([k2, x]) => [k2, x.src]));
+    }
+    side(second, order) {
+      const mine = [...this.at].filter(([, x]) => x.second === second).map(([k2]) => k2);
+      return [...order.filter((k2) => mine.includes(k2)), ...mine.filter((k2) => !order.includes(k2))];
+    }
+  };
+  function alloysOf(signs, traits = []) {
+    const P = BALANCE.natura.portrait, has = (ids) => !!ids?.some((id) => traits.some((t) => t.id === id));
+    const value = (pole) => signs[pole.slice(0, -1)] * (pole.endsWith("+") ? 1 : -1);
+    return ALLOYS.filter((a) => {
+      const need = a.parts.some((x) => has(x.traits)) ? P.notable : P.strong;
+      return a.parts.every((x) => has(x.traits) || !!x.pole && value(x.pole) >= need);
+    });
+  }
+  function portraitOf(signs, own = [], whence2) {
+    const P = BALANCE.natura.portrait, poles = polesOf(signs), notable = poles.filter((p) => isNotable(p.v));
+    const alloys = alloysOf(signs, own);
+    const traits = [...own, ...alloys.map((a) => ({
+      id: a.id,
+      name: `\u0441\u043F\u043B\u0430\u0432 \xAB${a.name}\xBB`,
+      desc: a.text,
+      effect: a.text,
+      kind: "life",
+      vec: {},
+      rarity: "common",
+      source: [],
+      ...a.c3
+    }))];
+    const zero = (list) => Object.fromEntries(list.map((x) => [x.id, 0]));
+    const parts = (list) => Object.fromEntries(list.map((x) => [x.id, []]));
+    const MEM = [{ id: "obida" }, { id: "srok" }, { id: "dobro" }];
+    const wants = zero(WANTS), holds = zero(HOLDS), mem = zero(MEM);
+    const from = { wants: parts(WANTS), holds: parts(HOLDS), sluchay: [], memory: parts(MEM) };
+    const add = (sum2, log, key, v, src) => {
+      if (v) {
+        sum2[key] += v;
+        log[key].push({ ...src, v: round2(v) });
+      }
+    };
+    let sluchay = 0, start = 0, ten = 0, tenSfery = 0, yasnost = 0, razgovor = 0, likho = 0, likhoYasnost = 0;
+    let chuzhie;
+    const chance = (v, src) => {
+      if (v) {
+        sluchay += v;
+        from.sluchay.push({ ...src, v: round2(v) });
+      }
+    };
+    for (const { rule: r, v, name } of poles) {
+      const k2 = v / P.divisor, src = { from: name, trait: false };
+      for (const x of WANTS) add(wants, from.wants, x.id, (r.wants?.[x.id] ?? 0) * k2, src);
+      for (const x of HOLDS) add(holds, from.holds, x.id, (r.holds?.[x.id] ?? 0) * k2, src);
+      chance((r.sluchay ?? 0) * k2, src);
+      for (const x of MEM) add(mem, from.memory, x.id, (r[x.id] ?? 0) * k2, src);
+    }
+    const approach = new Sided(), links = new Sided(), memory = new Sided();
+    const holdNotes = [], approachNotes = [], linkNotes = [], voiceNotes = [], lines = [];
+    for (const { rule: r, v, name } of notable) {
+      const src = { from: name, trait: false };
+      approach.put(r.da, false, v, src);
+      approach.put(r.net, true, v, src);
+      links.put(r.ladit, false, v, src);
+      links.put(r.neLadit, true, v, src);
+      memory.put(r.pomnit, false, v, src);
+      if (r.holdNote) holdNotes.push(`${name}: ${r.holdNote}`);
+      if (r.netNote) approachNotes.push(`${name}: ${r.netNote}`);
+      if (r.linkNote) linkNotes.push(`${name}: ${r.linkNote}`);
+      start += r.start ?? 0;
+      ten += r.ten ?? 0;
+      yasnost += r.yasnost ?? 0;
+      if (r.trace) lines.push({ gde: r.trace.gde, text: r.trace.text, vis: isStrong(v) ? "yavnaya" : "so_vremenem", from: name, trait: false });
+    }
+    const mannered = notable.filter((p) => p.rule.manner).slice(0, 2);
+    const biased = notable.find((p) => p.rule.bias && (!p.rule.biasStrong || isStrong(p.v)));
+    let bias = biased?.rule.bias ?? "bez", biasSrc = biased ? { from: biased.name, trait: false } : null, biasRank = -1;
+    const top = Number.MAX_SAFE_INTEGER, said = [];
+    const ifs = [], threads = [], deed = [], holder2 = [], notes = [];
+    if (whence2) {
+      const o = whence2.origin, src = { from: o.name, trait: false, origin: true }, force = top - traits.length - 1;
+      for (const k2 of o.wants) add(wants, from.wants, k2, P.originForce, src);
+      for (const k2 of o.holds ?? []) add(holds, from.holds, k2, P.originForce, src);
+      links.put(o.ladit, false, force, src);
+      if (!whence2.noStrangers) links.put(o.neLadit, true, force, src);
+      for (const nit of o.threads) threads.push({ nit, kak: "tolkaet", from: o.name, origin: true });
+    }
+    traits.forEach((t, i) => {
+      const src = { from: t.name, trait: true }, force = top - traits.length + i;
+      for (const x of WANTS) add(wants, from.wants, x.id, t.wants?.[x.id], src);
+      for (const x of HOLDS) add(holds, from.holds, x.id, t.holds?.[x.id], src);
+      chance(t.sluchay, src);
+      for (const x of MEM) add(mem, from.memory, x.id, t.memory?.[x.id], src);
+      approach.put(t.approach?.da, false, force, src);
+      approach.put(t.approach?.net, true, force, src);
+      links.put(t.links?.ladit, false, force, src);
+      links.put(t.links?.neLadit, true, force, src);
+      memory.put(t.memory?.pomnit, false, force, src);
+      memory.put(t.memory?.proshchaet, true, force, src);
+      if (t.approach?.note) approachNotes.push(`${t.name}: ${t.approach.note}`);
+      if (t.voice?.note) voiceNotes.push(`${t.name}: ${t.voice.note}`);
+      if (t.voice?.manner) said.push({ text: t.voice.manner, src });
+      const rank = RARITY_RANK[t.rarity] + (t.voice?.top ? Object.keys(RARITY_RANK).length : 0);
+      if (t.voice?.bias && rank >= biasRank) {
+        bias = t.voice.bias;
+        biasSrc = src;
+        biasRank = rank;
+      }
+      start += t.links?.start ?? 0;
+      ten += t.traces?.ten ?? 0;
+      tenSfery += t.traces?.tenSfery ?? 0;
+      yasnost += t.traces?.yasnost ?? 0;
+      razgovor += t.traces?.razgovor ?? 0;
+      chuzhie = t.traces?.chuzhie ?? chuzhie;
+      for (const l of t.traces?.lines ?? []) lines.push({ gde: [l.gde], text: l.text, vis: traitVis(t), from: t.name, trait: true });
+      for (const x of t.ifs ?? []) ifs.push({ ...x, from: t.name });
+      for (const x of t.threads ?? []) threads.push({ ...x, from: t.name });
+      for (const x of t.deed ?? []) deed.push({ ...x, from: t.name });
+      for (const x of t.holder ?? []) holder2.push({ ...x, from: t.name });
+      for (const [key, text] of Object.entries(t.notes ?? {})) notes.push({ key, from: t.name, text });
+      likho += t.likho ?? 0;
+    });
+    const sovest = round2(holds.sovest);
+    const cover = traits.filter((x) => x.likhoByWeights).length;
+    if (sovest < 0) likho += cover;
+    else if (sovest >= P.honestFrom) likhoYasnost += cover;
+    const rounded = (o) => Object.fromEntries(Object.entries(o).map(([k2, v]) => [k2, round2(v)]));
+    const approachOrder = APPROACHES.map((x) => x.id), memOrder = MEM_KEYS.map((x) => x.id), linkOrder = LINK_GROUPS.map((x) => x.id);
+    return {
+      wants: rounded(wants),
+      holds: rounded(holds),
+      holdNotes,
+      sluchay: round2(sluchay),
+      approach: { da: approach.side(false, approachOrder), net: approach.side(true, approachOrder), notes: approachNotes },
+      memory: { ...rounded(mem), pomnit: memory.side(false, memOrder), proshchaet: memory.side(true, memOrder) },
+      voice: { manners: [...said.map((x) => x.text), ...mannered.map((p) => p.rule.manner)], bias, biasFrom: biasSrc?.from ?? "", notes: voiceNotes },
+      links: { ladit: links.side(false, linkOrder), neLadit: links.side(true, linkOrder), start: round2(start), notes: linkNotes },
+      traces: { ten: round2(ten), tenSfery: round2(tenSfery), yasnost: round2(yasnost), razgovor: round2(razgovor), chuzhie, lines },
+      ifs,
+      threads,
+      deed,
+      holder: holder2,
+      likho: round2(likho),
+      likhoYasnost: round2(likhoYasnost),
+      notes,
+      alloys: alloys.map((a) => ({ id: a.id, name: a.name, text: a.text })),
+      by: {
+        ...from,
+        approach: approach.origin(),
+        memKeys: memory.origin(),
+        links: links.origin(),
+        manners: [...said.map((x) => x.src), ...mannered.map((p) => ({ from: p.name, trait: false }))],
+        bias: biasSrc
+      }
+    };
+  }
+  var portrait = (p) => portraitOf(p.signs, p.traits, { origin: originById(p.origin), noStrangers: isSeneschal(p) });
 
   // src/data/rumors.ts
   var RUMORS_AXIS = {
@@ -8071,8 +8122,8 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
   function currentAxes(seeds = 60) {
     return axisDist(Array.from({ length: seeds }, (_, i) => newWorld(`\u043D\u0430\u0442\u0443\u0440\u0430-${i + 1}`).people.map((p) => p.startStar)).flat());
   }
-  function rollAll(rolls, seed = "\u043D\u0430\u0442\u0443\u0440\u0430") {
-    return Array.from({ length: rolls }, (_, i) => rollPerson(`${seed}-${i}`, NATURES[i % NATURES.length]));
+  function rollAll(rolls, seed = "\u043D\u0430\u0442\u0443\u0440\u0430", place2) {
+    return Array.from({ length: rolls }, (_, i) => rollPerson(`${seed}-${i}`, NATURES[i % NATURES.length], void 0, place2));
   }
   var drawn = (p) => p.traits.filter((t) => t.kind !== "look" && !t.seneschal);
   function metricsOf(people, axesNow2 = currentAxes()) {
@@ -8663,6 +8714,7 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
     }
   };
   var val = (id) => $(id).value;
+  var place = () => val("place");
   var pct = (v) => `${Math.round(v * 100)}%`;
   var f1 = (v) => v.toFixed(1).replace(".", ",");
   var f2 = (v) => v.toFixed(2).replace(".", ",");
@@ -8812,29 +8864,31 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
     lore: "\u043E\u043F\u043E\u0440\u0430 \u0432 \u043B\u043E\u0440\u0435",
     prochee: "\u0435\u0449\u0451"
   };
-  var whence = (x) => x ? x.trait ? `\u043E\u0442 \u0447\u0435\u0440\u0442\u044B \xAB${x.from}\xBB` : `\u043E\u0442 \u043F\u0440\u0438\u0437\u043D\u0430\u043A\u0430: ${x.from}` : "";
-  var mark = (x) => x?.trait ? `<small class="by-trait">\u25C6 ${esc(x.from)}</small>` : "";
+  var whence = (x) => x ? x.trait ? `\u043E\u0442 \u0447\u0435\u0440\u0442\u044B \xAB${x.from}\xBB` : x.origin ? `\u043E\u0442 \u043F\u0440\u043E\u0438\u0441\u0445\u043E\u0436\u0434\u0435\u043D\u0438\u044F \xAB${x.from}\xBB` : `\u043E\u0442 \u043F\u0440\u0438\u0437\u043D\u0430\u043A\u0430: ${x.from}` : "";
+  var byOrigin = (name) => `<small class="by-origin">\u25C7 ${esc(name)}</small>`;
+  var mark = (x) => x?.trait ? `<small class="by-trait">\u25C6 ${esc(x.from)}</small>` : x?.origin ? byOrigin(x.from) : "";
   var none = (text = "\u2014") => `<span class="muted">${text}</span>`;
   function originRow(p) {
-    const o = originById(p.origin), shownAs = originById(p.originShown);
+    const o = originById(p.origin), shownAs = originById(p.originShown), sen = isSeneschal(p);
     const word = (keys, list) => keys.map((k2) => list.find((x) => x.id === k2).name);
     const bits = [
       [...word(o.wants, WANTS), ...word(o.holds ?? [], HOLDS)].length ? `\u0442\u044F\u043D\u0435\u0442 \u0438 \u0434\u0435\u0440\u0436\u0438\u0442: ${esc([...word(o.wants, WANTS), ...word(o.holds ?? [], HOLDS)].join(", "))}` : "",
       o.threads.length ? `\u043D\u0438\u0442\u0438: ${esc(word(o.threads, THREADS).map((x) => `\xAB${x}\xBB`).join(", "))}` : "",
       o.ladit.length ? `\u0441\u0432\u043E\u0438: ${esc(o.ladit.map(linkName).join(", "))}` : "",
-      o.neLadit.length ? `\u0447\u0443\u0436\u0438\u0435: ${esc(o.neLadit.map(linkName).join(", "))}` : "",
+      o.neLadit.length ? `\u0447\u0443\u0436\u0438\u0435: ${esc(o.neLadit.map(linkName).join(", "))}${sen ? " \u2014 \u043A \u0421\u0435\u043D\u0435\u0448\u0430\u043B\u044E \u043D\u0435 \u043F\u0440\u0438\u043C\u0435\u043D\u044F\u044E\u0442\u0441\u044F" : ""}` : "",
       o.often.length ? `\u0447\u0430\u0449\u0435 \u0447\u0435\u0440\u0442\u044B: ${esc(o.often.map((id) => bagTrait(id).name).join(", "))}` : ""
     ].filter(Boolean);
-    return `<span class="tag role">${esc(o.name)}</span> \u043C\u0435\u0440\u0430 \u2014 ${MERA_NAMES[o.mera]}${o.meraNote ? ` (${esc(o.meraNote)})` : ""}
+    const mera = sen ? `${MERA_NAMES[SENESCHAL_ORIGIN.mera]} (${esc(SENESCHAL_ORIGIN.frame)})` : `${MERA_NAMES[o.mera]}${o.meraNote ? ` (${esc(o.meraNote)})` : ""}`;
+    return `<span class="tag role">${esc(o.name)}</span> \u043C\u0435\u0440\u0430 \u2014 ${mera}
     ${o !== shownAs ? `<span class="tag minus">\u043D\u0430 \u043B\u044E\u0434\u044F\u0445 \u2014 ${esc(shownAs.name)}</span>` : ""}
-    <div class="muted">${bits.join(" \xB7 ")}</div>${o.note ? `<div class="muted">${esc(o.note)}</div>` : ""}`;
+    <div class="muted">${bits.join(" \xB7 ")}</div>${o.note && !sen ? `<div class="muted">${esc(o.note)}</div>` : ""}`;
   }
   function portraitBlock(p) {
     const P = portrait(p), O = P.by;
-    const sum2 = (parts) => parts.map((x) => `${x.trait ? `\u0447\u0435\u0440\u0442\u0430 \xAB${x.from}\xBB` : x.from} ${signed(x.v)}`).join(", ");
+    const sum2 = (parts) => parts.map((x) => `${x.trait ? `\u0447\u0435\u0440\u0442\u0430 \xAB${x.from}\xBB` : x.origin ? `\u043F\u0440\u043E\u0438\u0441\u0445\u043E\u0436\u0434\u0435\u043D\u0438\u0435 \xAB${x.from}\xBB` : x.from} ${signed(x.v)}`).join(", ");
     const byTrait = (parts) => {
-      const t = parts.filter((x) => x.trait);
-      return t.length ? `<small class="by-trait">\u25C6 ${esc(t.map((x) => x.from).join(", "))}</small>` : "";
+      const t = parts.filter((x) => x.trait), o = parts.find((x) => x.origin);
+      return (t.length ? `<small class="by-trait">\u25C6 ${esc(t.map((x) => x.from).join(", "))}</small>` : "") + (o ? byOrigin(o.from) : "");
     };
     const scale = (list, at, from) => {
       const cells = list.filter((x) => strengthWord(at[x.id])).sort((a, b) => Math.abs(at[b.id]) - Math.abs(at[a.id])).map((x) => `<span class="tag ${at[x.id] > 0 ? "plus" : "minus"}" title="${esc(`${x.desc}. \u0418\u0437 \u0447\u0435\u0433\u043E: ${sum2(from[x.id])}`)}">${esc(x.name)} \u2014 ${strengthWord(at[x.id])} (${signed(at[x.id])})${byTrait(from[x.id])}</span>`);
@@ -8871,9 +8925,9 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
     const ifs = P.ifs.map((x) => `<div class="trace"><span class="tag ${x.v > 0 ? "plus" : "minus"}">${esc(scaleName(x.chto))} ${x.v > 0 ? "+" : "\u2212"}${Math.abs(x.v)}</span>
     ${esc(x.kogda)} <small class="by-trait">\u25C6 ${esc(x.from)}</small></div>`).join("");
     const threads = P.threads.map((x) => {
-      const t = THREADS.find((q) => q.id === x.nit);
-      return `<span class="tag role" title="${esc(`${t.desc}. \u041E\u0442 \u0447\u0435\u0440\u0442\u044B \xAB${x.from}\xBB`)}">${THREAD_HOW[x.kak]}
-    \xAB${esc(t.name)}\xBB${x.step ? ` \u2014 \xAB${esc(x.step)}\xBB` : ""}${x.uDrugogo ? " (\u0443 \u0434\u0440\u0443\u0433\u043E\u0433\u043E)" : ""}<small class="by-trait">\u25C6 ${esc(x.from)}</small></span>`;
+      const t = THREADS.find((q) => q.id === x.nit), how = x.origin ? "\u0441\u043A\u043B\u043E\u043D\u0435\u043D \u043A \u043D\u0438\u0442\u0438" : THREAD_HOW[x.kak];
+      return `<span class="tag role" title="${esc(`${t.desc}. ${x.origin ? `\u041E\u0442 \u043F\u0440\u043E\u0438\u0441\u0445\u043E\u0436\u0434\u0435\u043D\u0438\u044F \xAB${x.from}\xBB` : `\u041E\u0442 \u0447\u0435\u0440\u0442\u044B \xAB${x.from}\xBB`}`)}">${how}
+    \xAB${esc(t.name)}\xBB${x.step ? ` \u2014 \xAB${esc(x.step)}\xBB` : ""}${x.uDrugogo ? " (\u0443 \u0434\u0440\u0443\u0433\u043E\u0433\u043E)" : ""}${x.origin ? byOrigin(x.from) : `<small class="by-trait">\u25C6 ${esc(x.from)}</small>`}</span>`;
     }).join("");
     const deed = P.deed.map((x) => `<span class="tag ${x.sila > 0 ? "plus" : "minus"}">${esc(x.gde)} ${x.sila > 0 ? "+" : "\u2212"}${Math.abs(x.sila)}<small class="by-trait">\u25C6 ${esc(x.from)}</small></span>`).join("");
     const skills = p.traits.filter((t) => t.posts || t.places).map((t) => `<div class="trace"><b>${esc(t.name)}</b>${t.posts ? ` \xB7 \u0434\u043E\u043B\u0436\u043D\u043E\u0441\u0442\u044C: ${esc(t.posts.join(", "))}` : ""}
@@ -8885,7 +8939,7 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
       const own = P.notes.filter((n) => n.from === t.name).map((n) => `<div class="muted"><i>${NOTE_NAMES[n.key]}:</i> ${esc(n.text)}</div>`).join("");
       return `<div class="tnote"><span class="tag ${t.kind}">${esc(t.name)}</span><span class="tag role">${esc(VIS_NAMES[traitVis(t)])}</span> ${esc(t.effect)}${own}</div>`;
     }).join("");
-    return `<h3>\u041F\u043E\u0440\u0442\u0440\u0435\u0442: \u0447\u0442\u043E \u0432\u044B\u0445\u043E\u0434\u0438\u0442 \u0438\u0437 \u043F\u0440\u0438\u0437\u043D\u0430\u043A\u043E\u0432 \u0438 \u0447\u0435\u0440\u0442 <small class="muted">\u2014 \u043C\u0435\u0442\u043A\u0430 <span class="by-trait">\u25C6 \u0438\u043C\u044F</span> \u0437\u043D\u0430\u0447\u0438\u0442 \xAB\u043E\u0442 \u0447\u0435\u0440\u0442\u044B\xBB, \u0431\u0435\u0437 \u043C\u0435\u0442\u043A\u0438 \u2014 \u043E\u0442 \u043F\u0440\u0438\u0437\u043D\u0430\u043A\u0430 (\u043A\u0430\u043A\u043E\u0433\u043E \u2014 \u0432 \u043F\u043E\u0434\u0441\u043A\u0430\u0437\u043A\u0435)</small></h3>
+    return `<h3>\u041F\u043E\u0440\u0442\u0440\u0435\u0442: \u0447\u0442\u043E \u0432\u044B\u0445\u043E\u0434\u0438\u0442 \u0438\u0437 \u043F\u0440\u0438\u0437\u043D\u0430\u043A\u043E\u0432 \u0438 \u0447\u0435\u0440\u0442 <small class="muted">\u2014 \u043C\u0435\u0442\u043A\u0430 <span class="by-trait">\u25C6 \u0438\u043C\u044F</span> \u0437\u043D\u0430\u0447\u0438\u0442 \xAB\u043E\u0442 \u0447\u0435\u0440\u0442\u044B\xBB, <span class="by-origin">\u25C7 \u0438\u043C\u044F</span> \u2014 \xAB\u043E\u0442 \u043F\u0440\u043E\u0438\u0441\u0445\u043E\u0436\u0434\u0435\u043D\u0438\u044F\xBB, \u0431\u0435\u0437 \u043C\u0435\u0442\u043A\u0438 \u2014 \u043E\u0442 \u043F\u0440\u0438\u0437\u043D\u0430\u043A\u0430 (\u043A\u0430\u043A\u043E\u0433\u043E \u2014 \u0432 \u043F\u043E\u0434\u0441\u043A\u0430\u0437\u043A\u0435)</small></h3>
   <div id="portrait" class="portrait">
     ${row("\u0425\u043E\u0447\u0435\u0442", scale(WANTS, P.wants, O.wants))}
     ${row("\u0423\u0434\u0435\u0440\u0436\u0438\u0432\u0430\u0435\u0442", scale(HOLDS, P.holds, O.holds) + sluchay + notes(P.holdNotes))}
@@ -8903,7 +8957,7 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
     ${deed || skills ? row("\u0414\u0435\u043B\u043E", deed + skills) : ""}
     ${likho.length ? row("\u041B\u0438\u0445\u043E", likho.join("; ")) : ""}
     ${P.alloys.length ? row("\u0421\u043F\u043B\u0430\u0432", P.alloys.map((a) => `<div class="trace"><span class="tag perk">${esc(a.name)}</span> ${esc(a.text)}</div>`).join("")) : ""}
-    ${p.traits.some((t) => t.seneschal) ? "" : row("\u041E\u0442\u043A\u0443\u0434\u0430 \u0438 \u0447\u0435\u0439", originRow(p))}
+    ${row("\u041E\u0442\u043A\u0443\u0434\u0430 \u0438 \u0447\u0435\u0439", originRow(p))}
   </div>
   <h3>\u041E\u0441\u043E\u0431\u0435\u043D\u043D\u043E\u0435 \u0447\u0435\u0440\u0442: \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0435 \u0438 \u0441\u043B\u043E\u0432\u0430 \u0430\u0432\u0442\u043E\u0440\u0430 \u043F\u043E \u043F\u043E\u043B\u044F\u043C</h3><div id="portrait-traits">${special}</div>`;
   }
@@ -9011,7 +9065,7 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
     const senBush = own.length ? `<div class="bush sen"><h4>\u041C\u0435\u0448\u043E\u043A \u0421\u0435\u043D\u0435\u0448\u0430\u043B\u044F: \u044F\u0434\u0440\u043E, \u0443\u043C\u0435\u043D\u0438\u044F, \u0447\u0435\u0440\u0442\u044B \u043D\u0430 \u0432\u044B\u0431\u043E\u0440</h4>${own.map((t) => traitBlock(p, t)).join("")}</div>` : "";
     const lookBush = look.length ? `<div class="bush"><h4>\u041E\u0431\u043B\u0438\u043A: \u043D\u0430\u0442\u0443\u0440\u043E\u0439 \u043D\u0435 \u0442\u044F\u043D\u0435\u0442\u0441\u044F</h4>${look.map((t) => traitBlock(p, t)).join("")}</div>` : "";
     const o = originById(p.origin), shownAs = originById(p.originShown);
-    const whose = own.length ? "\u043F\u0440\u043E\u0438\u0441\u0445\u043E\u0436\u0434\u0435\u043D\u0438\u0435 \u0437\u0430\u0434\u0430\u043D\u043E \u0441\u044E\u0436\u0435\u0442\u043E\u043C" : `\u043E\u0442\u043A\u0443\u0434\u0430: <b id="origin-name">${esc(o.name)}</b> <span class="muted">(${MERA_NAMES[o.mera]}${o.meraNote ? `, ${esc(o.meraNote)}` : ""})</span>${o !== shownAs ? ` \xB7 \u043D\u0430 \u043B\u044E\u0434\u044F\u0445 \u2014 <b id="origin-app.shown">${esc(shownAs.name)}</b>` : ""}`;
+    const whose = own.length ? `\u043E\u0442\u043A\u0443\u0434\u0430: <b id="origin-name">${esc(o.name)}</b> <span class="muted">(${MERA_NAMES[SENESCHAL_ORIGIN.mera]}; ${esc(SENESCHAL_ORIGIN.frame)})</span>` : `\u043E\u0442\u043A\u0443\u0434\u0430: <b id="origin-name">${esc(o.name)}</b> <span class="muted">(${MERA_NAMES[o.mera]}${o.meraNote ? `, ${esc(o.meraNote)}` : ""})</span>${o !== shownAs ? ` \xB7 \u043D\u0430 \u043B\u044E\u0434\u044F\u0445 \u2014 <b id="origin-app.shown">${esc(shownAs.name)}</b>` : ""}`;
     const rest = loose.length ? `<div class="bush"><h4>\u0421\u0430\u043C\u043E \u043F\u043E \u0441\u0435\u0431\u0435: \u0441\u043B\u0435\u0434 \u0441\u043E\u0431\u044B\u0442\u0438\u044F, \u043A \u044F\u043A\u043E\u0440\u044F\u043C \u043D\u0435 \u0442\u044F\u043D\u0435\u0442\u0441\u044F</h4>${loose.map((t) => traitBlock(p, t)).join("")}</div>` : "";
     const lost = p.lost.length ? `<p class="muted">\u0412\u044B\u0442\u0435\u0441\u043D\u0435\u043D\u043E \u043D\u043E\u0432\u044B\u043C\u0438 \u0447\u0435\u0440\u0442\u0430\u043C\u0438: ${p.lost.map((id) => esc(bagTrait(id).name)).join(", ")}</p>` : "";
     const signs = SIGNS.map((s) => {
@@ -9034,18 +9088,18 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
     const nature = NATURES.find((x) => x.id === val("nature")) ?? NATURES[0];
     const seed = `${val("seed")}-\u0447\u0435\u043B\u043E\u0432\u0435\u043A-${app.personRoll}`;
     const age = val("age") ? Number(val("age")) : void 0;
-    app.shown = app.asSeneschal ? growSeneschal(seed, nature) : rollPerson(seed, nature, age);
+    app.shown = app.asSeneschal ? growSeneschal(seed, nature) : rollPerson(seed, nature, age, place());
     $("seneschal").textContent = app.asSeneschal ? "\u041E\u0431\u044B\u0447\u043D\u044B\u0439 \u0447\u0435\u043B\u043E\u0432\u0435\u043A" : "\u0421\u0435\u043D\u0435\u0448\u0430\u043B\u044C";
     $("age").disabled = app.asSeneschal;
     $("person-view").innerHTML = personHtml(app.shown) + portraitBlock(app.shown);
     renderHealthPerson(seed);
     $("person-rerolls").innerHTML = Array.from({ length: 12 }, (_, i) => {
-      const p = rollPerson(`${seed}-${i}`, nature, age);
+      const p = rollPerson(`${seed}-${i}`, nature, age, place());
       return `<div class="reroll"><span class="muted">${p.age} \u043B\u0435\u0442</span> ${p.traits.map((t) => traitTag(t, roleOf(p, t.id))).join("")}<div class="muted">${starLine(p.star)}</div></div>`;
     }).join("");
   }
   function renderParty() {
-    const party = growParty(val("seed"), 10);
+    const party = growParty(val("seed"), 10, void 0, place());
     $("party-view").innerHTML = `<table><tr><th>\u041D\u0430\u0442\u0443\u0440\u0430</th><th>\u0412\u043E\u0437\u0440\u0430\u0441\u0442</th><th>\u0427\u0435\u0440\u0442\u044B</th><th>\u0421\u043A\u043B\u043E\u043D\u043D\u043E\u0441\u0442\u0438</th></tr>${party.map((p) => `<tr><td><b>${esc(p.nature.name)}</b></td><td class="c">${p.age}</td><td>${p.traits.map((t) => traitTag(t, roleOf(p, t.id))).join("")}</td><td>${starLine(p.star)}</td></tr>`).join("")}</table>`;
   }
 
@@ -9121,10 +9175,10 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
   var axesNow = currentAxes();
   function run() {
     const rolls = Number(val("rolls")), seed = val("seed").trim() || "\u043D\u0430\u0442\u0443\u0440\u0430";
-    app.people = rollAll(rolls, seed);
+    app.people = rollAll(rolls, seed, place());
     app.m = metricsOf(app.people, axesNow);
     app.hm = healthMetrics(1200, seed);
-    $("state").textContent = `${rolls} \u0440\u0435\u0440\u043E\u043B\u043B\u043E\u0432, \u0441\u0435\u043C\u044F \xAB${seed}\xBB`;
+    $("state").textContent = `${rolls} \u0440\u0435\u0440\u043E\u043B\u043B\u043E\u0432, \u0441\u0435\u043C\u044F \xAB${seed}\xBB, \u043C\u0435\u0441\u0442\u043E \u2014 ${ORIGIN_PLACES.find((x) => x.id === place()).name}`;
     renderMetrics();
     renderCharts();
     renderPerson();
@@ -9134,6 +9188,7 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
   }
   app.run = run;
   $("nature").innerHTML = NATURES.map((x) => `<option value="${x.id}">${esc(x.name)}</option>`).join("");
+  $("place").innerHTML = ORIGIN_PLACES.map((x) => `<option value="${x.id}" title="${esc(x.desc)}">${esc(x.name)}</option>`).join("");
   renderKnobs();
   renderCouncil();
   $("knobs").addEventListener("input", (e) => {
@@ -9143,6 +9198,7 @@ svg.plot text { font-size: 11px; fill: var(--muted); }
   $("run").addEventListener("click", run);
   $("rolls").addEventListener("change", run);
   $("seed").addEventListener("change", run);
+  $("place").addEventListener("change", run);
   $("reset").addEventListener("click", () => {
     resetBalance();
     renderKnobs();

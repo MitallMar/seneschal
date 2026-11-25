@@ -1,12 +1,13 @@
 // Точка входа эмулятора натуры: страница, на которой видно всё наполнение генератора (признаки, натуры, мешок), прогон рероллов с графиками
 // и ручки разделов natura и health. Правил не считает: зовёт src/sim/natura.ts, portrait.ts, health.ts и их отчёты. Панели — view-*.ts, состояние — app.ts.
 import { NATURES } from "../../data/natura";
+import { ORIGIN_PLACES } from "../../data/origins";
 import { setAt, resetBalance } from "../../sim/balance";
 import { portrait, type Portrait } from "../../sim/portrait";
 import { rollAll, metricsOf, currentAxes, type NaturaMetrics } from "../../sim/natura-report";
 import { healthMetrics, type HealthMetrics } from "../../sim/health-report";
 import { $, esc } from "../dom";
-import { app, val } from "./app";
+import { app, val, place } from "./app";
 import { renderKnobs, onKnob, exportKnobs } from "./knobs";
 import { renderMetrics, renderCharts } from "./view-metrics";
 import { renderPerson, renderParty } from "./view-person";
@@ -17,10 +18,10 @@ const axesNow = currentAxes(); // нынешняя звезда совета о�
 
 function run() {
   const rolls = Number(val("rolls")), seed = val("seed").trim() || "натура";
-  app.people = rollAll(rolls, seed);
+  app.people = rollAll(rolls, seed, place());
   app.m = metricsOf(app.people, axesNow);
   app.hm = healthMetrics(1200, seed);
-  $("state").textContent = `${rolls} рероллов, семя «${seed}»`;
+  $("state").textContent = `${rolls} рероллов, семя «${seed}», место — ${ORIGIN_PLACES.find((x) => x.id === place())!.name}`;
   renderMetrics();
   renderCharts();
   renderPerson();
@@ -31,6 +32,7 @@ function run() {
 
 app.run = run;
 $("nature").innerHTML = NATURES.map((x) => `<option value="${x.id}">${esc(x.name)}</option>`).join("");
+$("place").innerHTML = ORIGIN_PLACES.map((x) => `<option value="${x.id}" title="${esc(x.desc)}">${esc(x.name)}</option>`).join("");
 renderKnobs();
 renderCouncil();
 $("knobs").addEventListener("input", (e) => {
@@ -40,6 +42,7 @@ $("knobs").addEventListener("input", (e) => {
 $("run").addEventListener("click", run);
 $("rolls").addEventListener("change", run);
 $("seed").addEventListener("change", run);
+$("place").addEventListener("change", run);
 $("reset").addEventListener("click", () => { resetBalance(); renderKnobs(); run(); });
 $("export").addEventListener("click", exportKnobs);
 $("nature").addEventListener("change", () => { app.personRoll = 0; renderPerson(); });
