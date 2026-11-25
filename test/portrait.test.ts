@@ -26,7 +26,7 @@ const trait = (id: string, extra: Partial<BagTrait> = {}): BagTrait => ({
 
 test("словарь: размеры как в cherty-dannye.md, id не повторяются, у каждого слово для экрана", () => {
   assert.deepEqual([WANTS, HOLDS, APPROACHES, MEM_KEYS, BIASES, CHANNELS, LINK_GROUPS, HOLDER_ROLES].map((x) => x.length), [7, 4, 21, 11, 8, 8, 13, 12]);
-  assert.deepEqual([THREADS.filter((t) => !t.proposed).length, THREADS.filter((t) => t.proposed).length, MEM_SCALES.length], [22, 5, 3]);
+  assert.deepEqual([THREADS.filter((t) => !t.proposed).length, THREADS.filter((t) => t.proposed).length, MEM_SCALES.length], [24, 3, 3]);
   for (const list of [WANTS, HOLDS, APPROACHES, MEM_KEYS, BIASES, CHANNELS, LINK_GROUPS, HOLDER_ROLES, THREADS]) {
     assert.equal(new Set(list.map((x) => x.id)).size, list.length);
     for (const x of list) assert.ok(/^[a-z_]+$/.test(x.id) && x.name && x.desc, x.id);
@@ -440,7 +440,8 @@ test("каталог нитей: имя «ребёнок на стороне», 
   const thread = (id: string) => THREADS.find((t) => t.id === id)!, role = (id: string) => HOLDER_ROLES.find((r) => r.id === id)!;
   assert.deepEqual([thread("krov").name, thread("krov").desc], ["ребёнок на стороне", "мать просит → растёт → узнают"]);
   assert.match(thread("proshloe").desc, /«лучшие дни».*признать/);
-  assert.deepEqual([thread("vina").name, thread("vina").proposed, thread("draka").proposed], ["скрытая вина", true, undefined]);
+  assert.deepEqual([thread("vina").name, thread("vina").proposed, thread("draka").proposed, thread("sabotazh").proposed], ["скрытая вина", undefined, undefined, undefined]);
+  assert.deepEqual(THREADS.filter((t) => t.proposed).map((t) => t.id), ["rodnya", "rebyonok", "son"]);
   assert.deepEqual([role("svidetel").name, role("svidetel").likho], ["свидетель", undefined]);
   // «Знавал лучшие дни» — только до игры; «Скрывает вину» — в игре, по поступку
   const was = bag("luchshie_dni"), guilt = bag("skryvaet_vinu");
