@@ -6,6 +6,8 @@ import { SIGNS, NATURES, BAG } from "../data/natura";
 import { BACKSTORY } from "../data/backstory";
 import { BALANCE, KNOBS, getAt, setAt, resetBalance, type KnobInfo } from "../sim/balance";
 import { growParty, rollPerson, bagTrait, cos, isFar, isContra, type NaturaPerson } from "../sim/natura";
+import { WANTS, HOLDS, APPROACHES, MEM_KEYS, MEM_SCALES, BIASES, CHANNELS, VIS_NAMES } from "../data/portrait";
+import { portrait, strengthWord, linkName, traitVis, type Portrait } from "../sim/portrait";
 import { rollAll, metricsOf, naturaWarnings, currentAxes, type NaturaMetrics } from "../sim/natura-report";
 import { postAxisTable } from "../sim/axes-report";
 import { HEALTH_TRAITS } from "../data/health";
@@ -52,6 +54,7 @@ const GROUPS: { title: string; open: boolean; has: (path: string) => boolean }[]
   { title: "Сколько черт и откуда", open: true, has: (p) => /^natura\.(innate|before|adultAge|eventList|lifeSteps|ageM|perkWeight)/.test(p) },
   { title: "Рост древа", open: true, has: (p) => /^natura\.[a-zA-Z]+$/.test(p) && !/innate|before|adultAge|eventList|lifeSteps|ageM|perkWeight|signSoft|coreScale|axisGain/.test(p) },
   { title: "Признаки и склонности", open: false, has: (p) => /^natura\.(signSoft|coreScale|axisGain)/.test(p) },
+  { title: "Портрет: пороги признаков", open: false, has: (p) => p.startsWith("natura.portrait.") },
   { title: "Веса деловых склонностей", open: false, has: (p) => p.startsWith("natura.w.") },
   { title: "Поправки середины склонностей", open: false, has: (p) => p.startsWith("natura.shift.") },
   { title: "Цели отчёта о натуре", open: false, has: (p) => p.startsWith("natura.goal.") },
@@ -196,12 +199,57 @@ function personHtml(p: NaturaPerson) {
     <div class="split"><div><h3>Признаки (чёрная метка — ядро)</h3><div class="bipolar">${signs}</div></div>
     <div><h3>Деловые склонности из признаков</h3><div class="bars">${star}</div></div></div>`;
 }
+// Портрет по Концепту 3: что выходит из признаков и особенного черт (правила — src/sim/portrait.ts).
+const signed = (v: number) => `${v > 0 ? "+" : ""}${f1(v)}`;
+function portraitBlock(p: NaturaPerson): string {
+  const P: Portrait = portrait(p);
+  const scale = <K extends string>(list: { id: K; name: string; desc: string }[], at: Record<K, number>) => {
+    const cells = list.filter((x) => strengthWord(at[x.id])).sort((a, b) => Math.abs(at[b.id]) - Math.abs(at[a.id])).map((x) =>
+      `<span class="tag ${at[x.id] > 0 ? "plus" : "minus"}" title="${esc(x.desc)}">${esc(x.name)} — ${strengthWord(at[x.id])} (${signed(at[x.id])})</span>`);
+    return cells.length ? cells.join("") : `<span class="muted">как у всех</span>`;
+  };
+  const words = <K extends string>(keys: K[], list: { id: K; name: string; desc: string }[], cls: string) => {
+    const cells = keys.map((k) => { const x = list.find((q) => q.id === k)!; return `<span class="tag ${cls}" title="${esc(x.desc)}">${esc(x.name)}</span>`; });
+    return cells.length ? cells.join("") : `<span class="muted">—</span>`;
+  };
+  const linkTags = (keys: Portrait["links"]["ladit"], cls: string) => (keys.length ? keys.map((k) => `<span class="tag ${cls}">${esc(linkName(k))}</span>`).join("") : `<span class="muted">—</span>`);
+  const notes = (xs: string[]) => (xs.length ? `<div class="muted">${xs.map(esc).join("; ")}</div>` : "");
+  const memory = MEM_SCALES.filter((m) => strengthWord(P.memory[m.id])).map((m) => {
+    const v = P.memory[m.id];
+    return `<span class="tag ${v > 0 ? "plus" : "minus"}">${esc(m.name)}: ${v > 0 ? m.plus : m.minus} (${signed(v)})</span>`;
+  });
+  const sluchay = strengthWord(P.sluchay) ? `<span class="tag ${P.sluchay > 0 ? "plus" : "minus"}">случай — ${P.sluchay > 0 ? "решения труднее предсказать" : "решения ровнее"}</span>` : "";
+  const bias = BIASES.find((b) => b.id === P.voice.bias)!;
+  const shade = [P.traces.ten ? `о нём следов ${P.traces.ten > 0 ? "больше" : "меньше"} (${signed(P.traces.ten)})` : "",
+    P.traces.tenSfery ? `о его делах следов ${P.traces.tenSfery > 0 ? "больше" : "меньше"}` : "", P.traces.yasnost < 0 ? "следы путаные" : "",
+    P.traces.razgovor ? `разговор открывает ${P.traces.razgovor > 0 ? "больше" : "меньше"}` : ""].filter(Boolean);
+  const lines = P.traces.lines.map((l) => `<div class="trace"><span class="tag role">${esc(VIS_NAMES[l.vis])}</span>
+    ${esc(l.gde.map((g) => CHANNELS.find((c) => c.id === g)!.name).join(", "))}: ${esc(l.text)} <span class="muted">— ${esc(l.from)}</span></div>`).join("");
+  const hidden = p.traits.filter((t) => traitVis(t) !== "yavnaya").map((t) => `${t.name} (${VIS_NAMES[traitVis(t)]})`);
+  const row = (title: string, body: string) => `<div class="prow"><div class="ptitle">${title}</div><div>${body}</div></div>`;
+  const speed = P.links.start ? `<div class="muted">отношения складываются ${P.links.start > 0 ? "быстрее" : "медленнее"}</div>` : "";
+  return `<h3>Портрет: что выходит из признаков и черт</h3><div id="portrait" class="portrait">
+    ${row("Хочет", scale(WANTS, P.wants))}
+    ${row("Удерживает", scale(HOLDS, P.holds) + sluchay + notes(P.holdNotes))}
+    ${row("Подход: работает", words(P.approach.da, APPROACHES, "plus"))}
+    ${row("Подход: не действует", words(P.approach.net, APPROACHES, "minus") + notes(P.approach.notes))}
+    ${row("Память", (memory.length ? memory.join("") : `<span class="muted">как у всех</span>`)
+      + (P.memory.pomnit.length ? ` помнит особо: ${words(P.memory.pomnit, MEM_KEYS, "role")}` : "") + (P.memory.proshchaet.length ? ` прощает легко: ${words(P.memory.proshchaet, MEM_KEYS, "role")}` : ""))}
+    ${row("Говорит", `${P.voice.manners.length ? esc(P.voice.manners.join("; ")) : `<span class="muted">без особой манеры</span>`}${notes(P.voice.notes)}`)}
+    ${row("Доклад", `<span class="tag ${P.voice.bias === "bez" ? "plus" : "minus"}" title="${esc(bias.desc)}">${esc(bias.name)}</span>
+      <span class="muted">${esc(bias.desc)}${P.voice.biasFrom ? ` — ${esc(P.voice.biasFrom)}` : ""}</span>`)}
+    ${row("Ладит", linkTags(P.links.ladit, "plus"))}
+    ${row("Не ладит", linkTags(P.links.neLadit, "minus") + speed + notes(P.links.notes))}
+    ${row("Следы", `${lines || `<span class="muted">по признакам следов нет</span>`}${shade.length ? `<div class="muted">${shade.join("; ")}</div>` : ""}
+      ${hidden.length ? `<div class="muted">не на виду: ${esc(hidden.join(", "))}</div>` : ""}`)}
+  </div>`;
+}
 function renderPerson() {
   const nature = NATURES.find((x) => x.id === val("nature")) ?? NATURES[0];
   const seed = `${val("seed")}-человек-${personRoll}`;
   const age = val("age") ? Number(val("age")) : undefined;
   shown = rollPerson(seed, nature, age);
-  $("person-view").innerHTML = personHtml(shown);
+  $("person-view").innerHTML = personHtml(shown) + portraitBlock(shown);
   renderHealthPerson(seed);
   $("person-rerolls").innerHTML = Array.from({ length: 12 }, (_, i) => {
     const p = rollPerson(`${seed}-${i}`, nature, age);
@@ -391,7 +439,7 @@ run();
 
 // Для автопроверок в браузере (test/e2e/smoke.py, раздел natura).
 declare global {
-  interface Window { __emu: { run: () => void; setKnob: (path: string, v: number) => number; metrics: () => NaturaMetrics; health: () => HealthMetrics; people: () => number } }
+  interface Window { __emu: { run: () => void; setKnob: (path: string, v: number) => number; metrics: () => NaturaMetrics; health: () => HealthMetrics; people: () => number; portrait: () => Portrait | null } }
 }
 window.__emu = {
   run,
@@ -399,4 +447,5 @@ window.__emu = {
   metrics: () => m,
   health: () => hm,
   people: () => people.length,
+  portrait: () => (shown ? portrait(shown) : null),
 };

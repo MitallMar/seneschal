@@ -100,3 +100,10 @@ td.core { outline: 2px solid var(--ink); outline-offset: -2px; font-weight: 700;
 .strip i.winter { opacity: .75; }
 svg.plot { width: 100%; max-width: 560px; height: auto; }
 svg.plot text { font-size: 11px; fill: var(--muted); }
+
+/* портрет по Концепту 3 */
+.portrait { display: grid; gap: 3px; }
+.prow { display: grid; grid-template-columns: 170px 1fr; gap: 8px; padding: 3px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
+.ptitle { color: var(--muted); }
+.trace { margin: 1px 0; }
+@media (max-width: 700px) { .prow { grid-template-columns: 1fr; } }
