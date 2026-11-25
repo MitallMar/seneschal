@@ -329,6 +329,11 @@ const RAW: Omit<BagTrait, "effect">[] = [
     trigger: "habit" },
   { id: "znaetsya_s_likhimi", name: "Знается с лихими людьми", desc: "Знает, кому сбыть и у кого купить", kind: "life", vec: { chestnost: -1, obshchitelnost: 1 }, rarity: "rare", source: ["backstory", "life"],
     trigger: "rel", hidden: true },
+  // Н17 и Н18 — из каталога нитей (И27г; niti.md, раздел 5): третья ветвь «прошлого» и ступень «скрытой вины»
+  { id: "luchshie_dni", name: "Знавал лучшие дни", desc: "Был кем-то другим и молчит об этом", kind: "life", vec: { gordost: 1, obshchitelnost: -1 }, rarity: "rare", source: ["backstory"],
+    hidden: true },
+  { id: "skryvaet_vinu", name: "Скрывает вину", desc: "По его вине погиб человек, а записали на зверя", kind: "life", vec: { chestnost: -1, smelost: -1 }, rarity: "common", source: ["life"],
+    trigger: "deed", hidden: true },
   // --- добрые нити (7.2) ---
   { id: "kopit_na_nadel", name: "Копит на надел", desc: "Копит на свою землю", kind: "life", vec: { terpenie: 1, poryadok: 1 }, rarity: "common", source: ["backstory", "life"],
     trigger: "habit" },

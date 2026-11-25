@@ -3,7 +3,7 @@
 import type { Axis, Star, Sign, SignVec, NatureDef, BagTrait, BagTrigger, BackstoryEvent } from "../data/types";
 import { AXES } from "../data/core";
 import { SIGNS, NATURES, BAG, SENESCHAL } from "../data/natura";
-import { ORIGINS, HIDDEN_ORIGIN, type OriginDef } from "../data/origins";
+import { ORIGINS, HIDDEN_ORIGINS, type OriginDef } from "../data/origins";
 import { BACKSTORY } from "../data/backstory";
 import { BALANCE as B } from "./balance";
 import { Rng } from "./rng";
@@ -196,11 +196,18 @@ export function growPerson(rng: Rng, nature: NatureDef, opts: GrowOpts = {}): Na
   hideOrigin(side, p);
   return refresh(p);
 }
-// Беглый под чужим именем: настоящее происхождение — беглый, а на людях он зовётся кем-то другим (тем, кем вырос бы, или другим пришлым).
+// Скрытое происхождение. Беглый под чужим именем: настоящее — беглый, а на людях он зовётся кем-то другим (тем, кем вырос бы, или другим пришлым).
+// Знавал лучшие дни: настоящее — прежняя жизнь (служилый, торговый, искатель), на людях — простое: деревня или челядь.
 function hideOrigin(rng: Rng, p: NaturaPerson) {
-  if (!p.traits.some((t) => t.id === HIDDEN_ORIGIN.trait)) return;
-  if (p.originShown === HIDDEN_ORIGIN.real) p.originShown = pickWeighted(rng, ORIGINS.filter((o) => o.id !== HIDDEN_ORIGIN.real && o.mera === "derevnya"), rarityWeight)!.id;
-  p.origin = HIDDEN_ORIGIN.real;
+  for (const rule of HIDDEN_ORIGINS) {
+    if (!p.traits.some((t) => t.id === rule.trait)) continue;
+    const real = rule.real.includes(p.origin) ? p.origin : pickWeighted(rng, ORIGINS.filter((o) => rule.real.includes(o.id)), rarityWeight)!.id;
+    const plain = (id: string) => ["derevnya", "chelyad"].includes(originById(id).mera);
+    if (p.originShown === real || (rule.simple && !plain(p.originShown))) {
+      p.originShown = pickWeighted(rng, ORIGINS.filter((o) => !rule.real.includes(o.id) && o.mera === "derevnya"), rarityWeight)!.id;
+    }
+    p.origin = real;
+  }
 }
 
 // Жизнь в игре: по поводу (привычка, должность, отношения, перелом, поступок) человек наживает черту или перк.
