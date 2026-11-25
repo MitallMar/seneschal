@@ -225,7 +225,9 @@ const STRIP_LEGEND = `<div class="legend"><span><span class="sw" style="backgrou
   <span><span class="sw" style="background:#9a9a9a"></span>выбыл со службы</span><span><span class="sw" style="background:#24211c"></span>умер</span></div>`;
 function liveStory(h: Health, age: number, seed: string) {
   const states: SeasonState[] = [];
-  liveThrough(new Rng(seed), h, age, BALANCE.health.years * SEASONS_IN_YEAR, states);
+  const seasons = BALANCE.health.years * SEASONS_IN_YEAR;
+  liveThrough(new Rng(seed), h, age, seasons, states);
+  while (states.length < seasons) states.push("dead");   // умер раньше срока: лента дорисовывается до конца партии
   return states;
 }
 function renderHealthPerson(seed: string) {
@@ -263,7 +265,8 @@ function renderHealth() {
     card("Из совета в пять человек", f1(hm.removed * 5), "выбывает за партию в среднем", null),
     card("Сезонов в постели", pct(hm.offShare), `цель: ${pct(G.offMin)}–${pct(G.offMax)} · слегали хотя бы раз ${pct(hm.sickEver)}`, hm.offShare >= G.offMin && hm.offShare <= G.offMax),
     card("Половина доживает до", `${hm.life.median} лет`, `цель: не меньше ${G.medianLife} · здоровые ${hm.life.medianHealthy}, с дурной чертой ${hm.life.medianBad}`, hm.life.median >= G.medianLife),
-    card(`Доживают до ${Hb.elderFrom} лет`, pct(hm.life.reachElder), `цель: не меньше ${pct(G.reachElder)} · до ${Hb.lifeMax - 10} — ${pct(hm.life.reachMax)}`, hm.life.reachElder >= G.reachElder),
+    card(`Доживают до ${Hb.elderFrom} лет`, pct(hm.life.reachElder), `цель: не меньше ${pct(G.reachElder)}`, hm.life.reachElder >= G.reachElder),
+    card(`Доживают до ${G.lateAge} лет`, pct(hm.life.reachLate), `цель: не больше ${pct(G.lateMax)} · предел жизни ${Hb.lifeMax}`, hm.life.reachLate <= G.lateMax),
     card("Дурная черта с рождения", pct(hm.badBorn), `цель: ${pct(G.badBornMin)}–${pct(G.badBornMax)}`, hm.badBorn >= G.badBornMin && hm.badBorn <= G.badBornMax),
     card("Наследственная у родни носителя", pct(hm.kinShare.withKin), `в среднем у людей — ${pct(hm.kinShare.base)}`, null),
     card("Нажили черту здоровья", pct(hm.gained), `за ${hm.years} лет партии`, null),

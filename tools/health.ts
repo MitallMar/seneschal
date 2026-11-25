@@ -26,7 +26,7 @@ console.log(`  ещё служат по годам: ${m.curve.filter((_, y) => y
 console.log(`Слегали хотя бы раз: ${pct(m.sickEver)}; в постели ${pct(m.offShare)} сезонов — цель ${pct(G.offMin)}–${pct(G.offMax)}; нажили черту здоровья ${pct(m.gained)}`);
 console.log(`Дурная черта здоровья с рождения: у ${pct(m.badBorn)} — цель ${pct(G.badBornMin)}–${pct(G.badBornMax)}`);
 console.log(`Наследственная черта: у ${pct(m.kinShare.base)} людей; у родни носителя — у ${pct(m.kinShare.withKin)}`);
-console.log(`Срок жизни взрослого: половина доживает до ${m.life.median} лет — цель не меньше ${G.medianLife}; до ${H.elderFrom} — ${pct(m.life.reachElder)} (цель не меньше ${pct(G.reachElder)}); до ${H.lifeMax - 10} — ${pct(m.life.reachMax)}`);
+console.log(`Срок жизни взрослого: половина доживает до ${m.life.median} лет — цель не меньше ${G.medianLife}; до ${H.elderFrom} — ${pct(m.life.reachElder)} (цель не меньше ${pct(G.reachElder)}); до ${G.lateAge} — ${pct(m.life.reachLate)} (цель не больше ${pct(G.lateMax)})`);
 console.log(`  здоровые с рождения — до ${m.life.medianHealthy}, с дурной чертой — до ${m.life.medianBad}`);
 console.log("\nЧерты здоровья к концу партии:");
 for (const t of HEALTH_TRAITS) console.log(`  ${t.name.padEnd(22)} ${ORIGIN[t.origin].padEnd(15)} ${pct(m.traitShare[t.id]).padStart(5)}`);
@@ -37,7 +37,7 @@ console.log(warnings.length ? `\nПредупреждения:\n${warnings.map((
 const flat = (x: HealthMetrics): Record<string, number> => ({
   "выбыло за партию": x.removed, "умерло за партию": x.dead, ...Object.fromEntries(Object.entries(x.causes).map(([key, v]) => [`причина: ${key}`, v])),
   "слегали": x.sickEver, "сезонов в постели": x.offShare, "нажили черту": x.gained, "дурная черта с рождения": x.badBorn,
-  "наследственная у родни носителя": x.kinShare.withKin, "половина доживает до": x.life.median, "доживают до глубокой старости": x.life.reachElder, "доживают до предела": x.life.reachMax,
+  "наследственная у родни носителя": x.kinShare.withKin, "половина доживает до": x.life.median, "доживают до глубокой старости": x.life.reachElder, "доживают до возраста единиц": x.life.reachLate, "доживают до предела": x.life.reachMax,
 });
 if (process.argv.includes("--diff")) {
   if (!existsSync(file)) console.log("\nСнимка ещё нет: сначала npm run health -- --save");
