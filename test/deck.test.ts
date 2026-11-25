@@ -34,10 +34,10 @@ test("первая пачка: 40 карточек, номера и id не по
   for (const c of DECK) assert.ok(c.source.texts.length >= 1 && c.source.texts.every((n) => n >= 1 && n <= 112) && (c.source.how === "perenos") === !!c.source.from, c.id);
 });
 
-test("уровень и вид: у события и эпизода — уровень, у эпизода — дело из каталога, у предания и вести уровня нет", () => {
+test("уровень и вид: у события, эпизода и вести — уровень, у эпизода — дело из каталога, у предания уровня нет", () => {
   assert.equal(DEALS.length, 15);
   for (const c of DECK) {
-    if (c.kind === "predanie" || c.kind === "vest") assert.equal(c.level, undefined, c.id);
+    if (c.kind === "predanie") assert.equal(c.level, undefined, c.id);
     else assert.ok(c.level && CARD_LEVELS[c.level], `${c.id}: нет уровня`);
     assert.equal(c.kind === "epizod", !!c.delo, `${c.id}: дело — у эпизода и только у него`);
     if (c.delo) assert.ok(ids(DEALS).includes(c.delo), `${c.id}: дело ${c.delo}`);
@@ -45,7 +45,9 @@ test("уровень и вид: у события и эпизода — уров
     for (const v of c.variants) if (v.outcome.delo) assert.ok(ids(DEALS).includes(v.outcome.delo), `${c.id}: дело в исходе`);
   }
   assert.deepEqual(DECK.filter((c) => c.kind === "epizod").map((c) => c.n), [1, 2, 3, 31, 36, 38]);
-  assert.deepEqual([cardById("srok_vyshel").kind, cardById("sosed_ushyol_perezhdat").kind], ["predanie", "vest"]);
+  // предание решает тот, до кого дошла молва; весть о соседе — стол: за владение с соседом и палатой решает только Сенешаль
+  assert.deepEqual([cardById("srok_vyshel").kind, cardById("srok_vyshel").level, cardById("sosed_ushyol_perezhdat").kind, cardById("sosed_ushyol_perezhdat").level],
+    ["predanie", undefined, "vest", "stol"]);
   assert.deepEqual(DECK.filter((c) => c.tags?.includes("beda")).map((c) => c.n), [17, 34]);
 });
 
@@ -77,33 +79,42 @@ test("кто: каждый слот завязки, вариантов, исхо
   // условия из карточек: стражник с «Пристрастился к чарке»; у одного из троих — «Нечист на руку»
   assert.equal(cardById("pyan_v_dozore").who[0].trait, "charka");
   assert.deepEqual(cardById("ukho_snova").oneOf, { slots: ["мужик", "писарь", "десятник"], trait: "nechist_na_ruku" });
+  // «Мешки с мельницы»: вор — помощник ключника с «Нечист на руку»
+  assert.deepEqual(cardById("meshki_s_melnitsy").who.map((r) => [r.slot, r.trait]), [["мельник", undefined], ["меченый", undefined], ["помощник ключника", "nechist_na_ruku"], ["ключник", undefined]]);
 });
 
-test("варианты: три-четыре; метки «кому по душе» — только из словаря; слова карточек переведены одной таблицей", () => {
+test("варианты: у каждой карточки три-четыре, всего 124; у каждого — хотя бы одна метка из словаря и непустой исход", () => {
   assert.equal(new Set(LIKE_WORDS.map((w) => w.word)).size, LIKE_WORDS.length);
-  for (const w of LIKE_WORDS) assert.ok(w.likes.length >= 1 && w.likes.every((k) => LIKES.includes(k)), `слово «${w.word}»`);
-  const without = DECK.filter((c) => !c.variants.length);
-  // у двух карточек вариантов нет в самом документе: они помечены, остальным положено три-четыре
-  assert.deepEqual(without.map((c) => c.n), [32, 37]);
-  for (const c of without) assert.ok(c.noVariants, c.id);
-  for (const c of DECK.filter((x) => x.variants.length)) {
-    assert.ok(c.variants.length >= 3 && c.variants.length <= 4 && !c.noVariants, `${c.id}: вариантов ${c.variants.length}`);
+  for (const w of LIKE_WORDS) assert.ok(w.says && w.likes.length >= 1 && w.likes.every((k) => LIKES.includes(k)), `слово «${w.word}»`);
+  assert.equal(DECK.reduce((n, c) => n + c.variants.length, 0), 124);
+  for (const c of DECK) {
+    assert.ok(c.variants.length >= 3 && c.variants.length <= 4, `${c.id}: вариантов ${c.variants.length}`);
     for (const v of c.variants) {
       assert.ok(v.text && /^[А-ЯЁ«]/.test(v.text), `${c.id}: вариант без текста`);
-      assert.ok(v.likes.every((k) => LIKES.includes(k)), `${c.id}: метка не из словаря — ${v.likes.join(", ")}`);
+      assert.ok(v.likes.length >= 1 && v.likes.every((k) => LIKES.includes(k)), `${c.id}: «${v.text}» — метки ${v.likes.join(", ") || "нет"}`);
+      assert.ok(v.outcome.text, `${c.id}: «${v.text}» — исход пуст`);
       assert.deepEqual(v.likes, [...new Set(v.words.flatMap((x) => LIKE_WORDS.find((q) => q.word === x)!.likes))], `${c.id}: метки — по таблице слов`);
     }
   }
-  // каждое слово таблицы встречается в пачке; неясные переводы помечены
+  // четыре варианта — у трёх карточек: первой и двух дописанных автором
+  assert.deepEqual(DECK.filter((c) => c.variants.length === 4).map((c) => c.n), [1, 2, 32, 37]);
+  // каждое слово таблицы встречается в пачке
   const used = new Set(DECK.flatMap((c) => c.variants.flatMap((v) => v.words)));
   assert.deepEqual(LIKE_WORDS.filter((w) => !used.has(w.word)).map((w) => w.word), []);
-  assert.deepEqual(LIKE_WORDS.filter((w) => w.unsure).map((w) => w.word), ["забота", "мир", "правда", "основа"]);
-  // примеры перевода: «порядок» — людям порядка, «выгода» — желание денег, «по душе боящимся» — удержка «страх»
+  assert.equal(LIKE_WORDS.length, 30);
+  // перевод по ответам автора: «забота» — мягкие, «мир» — мягкие и смиренные, «по правде» — прямые и совесть
+  const likes = (word: string) => LIKE_WORDS.find((w) => w.word === word)!.likes;
+  assert.deepEqual([likes("забота"), likes("мир"), likes("правда")], [["zhestkost-"], ["zhestkost-", "gordost-"], ["chestnost+", "sovest"]]);
+  assert.deepEqual([likes("близкие"), likes("место"), likes("верность"), likes("честолюбие")], [["blizkie"], ["mesto"], ["vernost"], ["chestolyubie+"]]);
   const first = cardById("mezha_do_sukhoy_beryozy").variants;
-  assert.deepEqual(first.map((v) => v.likes), [["lyubopytstvo-"], ["poryadok+"], ["terpenie+"], []]);
+  assert.deepEqual(first.map((v) => v.likes), [["lyubopytstvo-"], ["poryadok+"], ["zhestkost-", "gordost-"], ["gordost-", "pokoy"]]);
   assert.deepEqual(cardById("kosyat_pod_ruku").variants[1].likes, ["smelost+", "zhestkost+"]);
-  assert.deepEqual(cardById("izba_starika").variants[1].likes, ["strakh"]);
-  assert.ok(cardById("pomol_ispolu_na_zalome").variants[2].likes.includes("osnova"));
+  assert.deepEqual(cardById("izba_starika").variants.map((v) => v.likes), [["chestnost+", "sovest", "terpenie+"], ["strakh"], ["zhestkost-", "smelost+"]]);
+  // где забота стоит серебра, добра или дохода — рядом щедрость: 6, 9, 20, 25, 28, 29; у 5 и 7 — одна забота
+  const care = (withGift: boolean) => DECK.filter((c) => c.variants.some((v) => v.words.includes("забота") && v.words.includes("щедрость") === withGift)).map((c) => c.n);
+  assert.deepEqual([care(true), care(false)], [[6, 9, 20, 25, 28, 29], [5, 7]]);
+  // «основа» — у шести вариантов
+  assert.deepEqual(DECK.filter((c) => c.variants.some((v) => v.likes.includes("osnova"))).map((c) => c.n), [4, 6, 7, 8, 11, 22]);
 });
 
 test("исходы: серебро числом, хлеб и сено словами, дворы, слово Сенешаля, отношения; нити и черты — из словаря и мешка", () => {
@@ -129,22 +140,22 @@ test("исходы: серебро числом, хлеб и сено слова
   assert.deepEqual(cardById("smotr_metki").variants[1].outcome.trait, "pryachet_mechenoe");
 });
 
-test("лихо: у карточек из likho.md, раздел 10, исходы двигают лихо в обе стороны или только вверх", () => {
+test("лихо: у шести карточек из likho.md, раздел 10, исходы двигают лихо", () => {
   const likho = (id: string) => cardById(id).variants.map((v) => v.outcome.likho ?? 0);
   assert.deepEqual(likho("dobro_broshennykh_dvorov"), [-1, 1, 0]);
   assert.deepEqual(likho("pyan_v_dozore"), [-1, 1, 0]);
   assert.deepEqual(likho("drova_v_dolg"), [1, 1, 0]);
   assert.deepEqual(likho("dve_knigi_skupshchika"), [-1, 1, 1]);
   assert.deepEqual(likho("sol_po_vadelinskoy_tsene"), [0, 1, 0]);
-  // «Мешки с мельницы» — шестая из списка, но вариантов у неё в документе нет
-  assert.ok(cardById("meshki_s_melnitsy").noVariants?.includes("Лихо"));
+  // «Мешки с мельницы»: поймать с поличным — падает; взять мукой и промолчать — растёт
+  assert.deepEqual(likho("meshki_s_melnitsy"), [-1, 0, 1, 1]);
   // у остальных карточек лиха в исходах нет
-  assert.deepEqual(DECK.filter((c) => c.variants.some((v) => v.outcome.likho)).map((c) => c.n), [11, 19, 25, 26, 30]);
+  assert.deepEqual(DECK.filter((c) => c.variants.some((v) => v.outcome.likho)).map((c) => c.n), [11, 19, 25, 26, 30, 37]);
 });
 
 test("следы: канал из словаря и текст", () => {
   for (const c of DECK) for (const t of c.traces) assert.ok(t.text && t.gde.length >= 1 && t.gde.every((g) => ids(CHANNELS).includes(g)), `${c.id}: след`);
-  assert.equal(DECK.reduce((s, c) => s + c.traces.length, 0), 27);
+  assert.equal(DECK.reduce((s, c) => s + c.traces.length, 0), 29);
   assert.deepEqual(cardById("sledy_na_ldu").traces[0].gde, ["ushi", "prisutstvie"]);
   assert.deepEqual(cardById("ukho_snova").traces, [{ gde: ["vedomost"], text: "головных больше, чем убитых зверей" }]);
 });
@@ -162,5 +173,8 @@ test("нити и «дальше»: ступень и начало нити — 
   assert.deepEqual(DECK.filter((c) => c.thread).map((c) => [c.n, c.thread!.nit, c.thread!.start ?? false]),
     [[16, "dengi", false], [19, "pyanstvo", false], [23, "dengi", false], [25, "dolg", true], [35, "metka", true]]);
   assert.deepEqual(DECK.flatMap((c) => c.dalshe.filter((d) => d.nit).map((d) => [c.n, d.nit])), [[14, "metka"], [25, "dolg"], [30, "svadba"], [32, "metka"], [37, "dengi"]]);
+  assert.deepEqual(DECK.flatMap((c) => c.dalshe.filter((d) => d.card).map((d) => [c.n, d.card])), [[28, "utonul_v_obkhod"]]);
+  // «Смотр метки» — зима: помеченных детей проверяют на пятой и десятой зиме
+  assert.deepEqual([cardById("smotr_metki").when, cardById("smotr_metki").whenNote], ["zima", "перед смотром метки"]);
   assert.equal(DECK.flatMap((c) => c.dalshe.filter((d) => d.budet)).length, 6);
 });
