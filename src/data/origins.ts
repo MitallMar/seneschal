@@ -119,5 +119,11 @@ export const ORIGINS: OriginDef[] = [
     lore: "тулльи деревни на заливных лугах полосы; туллы уходят с заливного раньше зверя — вернейшая примета",
   },
 ];
-// У «Беглого под чужим именем» настоящее происхождение — «Беглый с заката», а на людях — другое.
-export const HIDDEN_ORIGIN = { trait: "beglyy_pod_imenem", real: "beglyy_s_zakata" };
+// Черты, с которыми человек зовётся на людях не тем, кто он есть. real — кем он был на самом деле: одно из списка (выпавшее само — остаётся).
+// simple — на людях только простое происхождение: деревня или челядь. Если черт две, верх берёт последняя в списке.
+// «Знавал лучшие дни»: прежнее — по строке «Дело» черты: служилый, торговый, искатель. «Беглый под чужим именем»: настоящее — «Беглый с заката».
+export interface HiddenOrigin { trait: string; real: string[]; simple?: boolean }
+export const HIDDEN_ORIGINS: HiddenOrigin[] = [
+  { trait: "luchshie_dni", real: ["sluzhily_rod", "iz_vadely", "byvaly"], simple: true },
+  { trait: "beglyy_pod_imenem", real: ["beglyy_s_zakata"] },
+];

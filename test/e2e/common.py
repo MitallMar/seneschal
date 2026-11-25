@@ -8,7 +8,7 @@ from playwright.async_api import async_playwright
 ROOT = Path(__file__).resolve().parents[2]
 DIST = ROOT / 'dist' / 'index.html'
 PAGE = DIST.as_uri()
-BAG = 186                                              # черт и перков в мешке натуры (src/data/natura.ts)
+BAG = 188                                              # черт и перков в мешке натуры (src/data/natura.ts)
 BAG_SENESCHAL = 15                                     # из них — мешок Сенешаля: людям не выпадают
 EMU = (ROOT / 'dist' / 'natura.html').as_uri()           # эмулятор натуры — вторая собранная страница
 CHROME = os.environ.get('CHROME', '/usr/bin/google-chrome')

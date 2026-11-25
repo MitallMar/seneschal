@@ -171,11 +171,11 @@ export type LinkKey = LinkGroup | PoleKey;
 // Нити — линии судьбы; id предварительные, каталог со ступенями придёт отдельным материалом.
 export type ThreadId =
   | "dengi" | "dolg" | "azart" | "pyanstvo" | "lyubov" | "krov" | "proshloe" | "soglyadatay" | "posuly" | "mest" | "khvor" | "nedosmotr" | "metka"
-  | "podsidet" | "uyti" | "nadel" | "svadba" | "gramota" | "propavshiy" | "svoy_dvor" | "obet" | "draka" | "sabotazh" | "rodnya" | "rebyonok" | "son";
+  | "podsidet" | "uyti" | "nadel" | "svadba" | "gramota" | "propavshiy" | "svoy_dvor" | "obet" | "draka" | "sabotazh" | "rodnya" | "rebyonok" | "son" | "vina";
 export type ThreadHow = "otkryvaet" | "tolkaet" | "tormozit" | "stupen";
 // Кто держит порок или тайну: роль-слот, генератор подставит человека.
 export type HolderRole =
-  | "skupshchik" | "zaimodavets" | "korchmar" | "dayushchiy" | "zakazchik" | "ishchushchiy" | "stary_tovarishch" | "vozhak" | "mat_rebyonka" | "donoschitsa" | "muzh";
+  | "skupshchik" | "zaimodavets" | "korchmar" | "dayushchiy" | "zakazchik" | "ishchushchiy" | "stary_tovarishch" | "vozhak" | "mat_rebyonka" | "donoschitsa" | "muzh" | "svidetel";
 
 export interface TraitApproach { da?: Approach[]; net?: Approach[]; note?: string }
 // Число, которому поправка положена: желание, удержка, случай или одно из трёх чисел памяти.
