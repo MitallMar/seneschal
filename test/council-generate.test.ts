@@ -173,8 +173,8 @@ test("генерация: все пять должностей заняты ра
   }
 });
 
-test("границы звезды ключевого персонажа соблюдаются: у Веданы Обычай не ниже 5", () => {
-  for (const seed of SEEDS) assert.ok(newWorld(seed).people.find((p) => p.name === "Ведана")!.star.obychai >= 5, seed);
+test("границы звезды ключевого персонажа соблюдаются: у Добравы Обычай не ниже 5", () => {
+  for (const seed of SEEDS) assert.ok(newWorld(seed).people.find((p) => p.name === "Добрава")!.star.obychai >= 5, seed);
 });
 
 test("слова отношений, лояльности и опыта переключаются на порогах", () => {

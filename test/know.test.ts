@@ -13,6 +13,7 @@ import { talk, nextTalk, linksOf, linksText } from "../src/sim/council/talk";
 import { holder, getRel, setRel, topAxis, type Person, type World } from "../src/sim/state";
 import { axisKnown, axisWord, fitWord, headOpinion, rumorCheck, forecast, traitLabel } from "../src/sim/council/know";
 import { gainTrait, breakdown } from "../src/sim/council/traits";
+import { dative } from "../src/sim/council/people";
 import { fix, pair } from "./_world";
 
 const SEEDS = ["замок", "лес", "герцог", "test", "7", "осень-3", "Ведана", "x"];
@@ -383,7 +384,8 @@ test("имя цели в названии черты стоит в датель�
   const w = newWorld("падеж");
   const trait = LIFE_TRAITS.find((t) => t.id === "zlopamyatny_k")!;
   const label = (name: string) => traitLabel(w, { trait, target: w.people.find((p) => p.name === name)!.id });
-  assert.deepEqual(["Остап", "Ведана", "Ярема", "Тихон"].map(label), ["Злопамятный к Остапу", "Злопамятный к Ведане", "Злопамятный к Яреме", "Злопамятный к Тихону"]);
+  assert.deepEqual(["Гарвин", "Добрава", "Орсия", "Тишан"].map(label), ["Злопамятный к Гарвину", "Злопамятный к Добраве", "Злопамятный к Орсии", "Злопамятный к Тишану"]);
+  assert.deepEqual(["Кело", "Алея", "Айвэ", "Арвель", "Ратша"].map(dative), ["Кело", "Алее", "Айвэ", "Арвелю", "Ратше"], "имена из мешков: несклоняемые, на -я и на мягкий знак");
 });
 
 test("перелом: резкий сдвиг звезды, новая черта, запись в летописи и биографии", () => {

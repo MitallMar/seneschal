@@ -44,7 +44,12 @@ export function addStar(star: Star, shift: Partial<Star>, k = 1) {
 
 export const noAxes = (): Record<Axis, number> => ({ dolg: 0, vygoda: 0, zabota: 0, derzost: 0, obychai: 0 });
 
-// «к Остапу», «к Ведане»: дательный падеж имени для черты с целью
-export const dative = (name: string) => (name.endsWith("а") ? `${name.slice(0, -1)}е` : `${name}у`);
+// «к Гарвину», «к Добраве», «к Орсии»: дательный падеж имени для черты с целью. Имена на -о, -э, -у, -е не склоняются.
+export function dative(name: string): string {
+  if (name.endsWith("ия")) return `${name.slice(0, -1)}и`;
+  if (/[ая]$/.test(name)) return `${name.slice(0, -1)}е`;
+  if (/[йь]$/.test(name)) return `${name.slice(0, -1)}ю`;
+  return /[оэуеи]$/.test(name) ? name : `${name}у`;
+}
 
 export const lower = (text: string) => text.charAt(0).toLowerCase() + text.slice(1);
