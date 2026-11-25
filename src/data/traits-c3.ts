@@ -420,10 +420,12 @@ export const TRAITS_C3: Record<string, TraitC3 & { effect: string }> = {
   vsyo_po_polkam: {
     vis: "yavnaya",
     effect: "Место при нём в порядке — это видно; опыт на должности набирает быстрее",
+    threads: [{ nit: "nedosmotr", kak: "tormozit" }],
     traces: { lines: [{ gde: "mesto", text: "опрятно, видно на картинке" }] },
     notes: {
       sledy: "место — опрятно, видно на картинке",
       delo: "опыт на должности набирает быстрее",
+      niti: "тормозит «недосмотр»",
     },
   },
   volny_veter: {
@@ -588,13 +590,14 @@ export const TRAITS_C3: Record<string, TraitC3 & { effect: string }> = {
       { nit: "dengi", kak: "tormozit" },
       { nit: "posuly", kak: "tormozit" },
       { nit: "dobroe_imya", kak: "tolkaet" },
+      { nit: "vina", kak: "tormozit" },
     ],
     links: { ladit: ["palata", "derevni"] },
     traces: { lines: [{ gde: "doklad", text: "опись при нём не занизить" }] },
     notes: {
       podkhod: "не действуют крючок и просьба солгать",
       golos: "без пристрастия — сильнее любой другой черты",
-      niti: "тормозит «деньги» и «посулы»; чужую тайну, если спросят, выдаст; толкает «доброе имя»",
+      niti: "тормозит «деньги» и «посулы»; чужую тайну, если спросят, выдаст; толкает «доброе имя»; тормозит «скрытую вину»",
       svyazi: "ладит с палатой и деревнями — его слову верят",
       sledy: "доклад — опись при нём не занизить",
     },
@@ -605,12 +608,14 @@ export const TRAITS_C3: Record<string, TraitC3 & { effect: string }> = {
     ifs: [{ chto: "pravilo", v: -1, kogda: "к наказу, с которым он не согласен" }],
     approach: { da: ["s_glazu_na_glaz"], net: ["dovod", "sila"] },
     voice: { manner: "в споре не уступает: сказал «нет» — значит, нет" },
+    threads: [{ nit: "sabotazh", kak: "tolkaet" }],
     traces: { lines: [{ gde: "molva", text: "«упёрся»" }] },
     notes: {
       vesy: "правило −1 к наказу, с которым он не согласен",
       podkhod: "работает с глазу на глаз (koncept-3.md, 8.1: упрямого — прямотой наедине); не действуют довод и сила",
       golos: "в споре не уступает: сказал «нет» — значит, нет",
       sledy: "молва — «упёрся»",
+      niti: "толкает «тихий саботаж»",
     },
   },
   glaz_almaz: {
@@ -702,14 +707,14 @@ export const TRAITS_C3: Record<string, TraitC3 & { effect: string }> = {
     holds: { pravilo: 1 },
     approach: { da: ["vremya"] },
     memory: { pomnit: ["slovo"], srok: 1 },
-    threads: [{ nit: "dobroe_imya", kak: "otkryvaet" }],
+    threads: [{ nit: "dobroe_imya", kak: "otkryvaet" }, { nit: "sabotazh", kak: "tormozit" }],
     traces: { lines: [{ gde: "molva", text: "«сказал — сделал»" }] },
     notes: {
       vesy: "правило +1 — наказ Сенешаля для него тоже слово",
       podkhod: "работает время — сдержанное ему слово весит вдвое",
       pamyat: "помнит особо нарушенное слово — и чужое, и Сенешаля; держит +1",
       sledy: "молва — «сказал — сделал»",
-      niti: "открывает «доброе имя»: помог → слушают → вес в деревне → зовут в старосты или в совет",
+      niti: "открывает «доброе имя»: помог → слушают → вес в деревне → зовут в старосты или в совет; тормозит «тихий саботаж»",
     },
   },
   chtit_primety: {
@@ -745,12 +750,13 @@ export const TRAITS_C3: Record<string, TraitC3 & { effect: string }> = {
     ifs: [{ chto: "vernost", v: 1, kogda: "если Сенешаль ему свой" }],
     approach: { da: ["cherez_blizkikh"] },
     voice: { bias: "vygorazhivaet", top: true },
+    threads: [{ nit: "vina", kak: "tolkaet" }],
     traces: { tenSfery: -1 },
     notes: {
       vesy: "близкие +1 сверх признака: свои выше Сенешаля; если Сенешаль ему свой — верность +1",
       podkhod: "через близких работает; не действует крючок на своих — «сдай его» бесполезно",
       golos: "выгораживает своих — сильнее любой другой черты",
-      niti: "тормозит раскрытие тайных нитей у своих — прикроет и вора",
+      niti: "тормозит раскрытие тайных нитей у своих — прикроет и вора; толкает «скрытую вину» — прикроет своего",
       sledy: "тень сферы −1 — что творят его люди, видно хуже",
     },
   },
@@ -933,7 +939,7 @@ export const TRAITS_C3: Record<string, TraitC3 & { effect: string }> = {
     wants: { chistaya_sovest: 1 },
     approach: { da: ["stydit"] },
     memory: { pomnit: ["proval"] },
-    threads: [{ nit: "obet", kak: "otkryvaet" }],
+    threads: [{ nit: "obet", kak: "otkryvaet" }, { nit: "vina", kak: "tormozit" }],
     traces: {
       lines: [
         { gde: "vid", text: "постится" },
@@ -944,7 +950,7 @@ export const TRAITS_C3: Record<string, TraitC3 & { effect: string }> = {
       vesy: "чистая совесть +1 сверх признака",
       podkhod: "работает «пристыдить» — покается",
       pamyat: "помнит особо провал — как свой грех: после провала винит себя",
-      niti: "открывает «обет»; его нити пороков чаще кончаются покаянием — паломничество, вклад в храм",
+      niti: "открывает «обет»; его нити пороков чаще кончаются покаянием — паломничество, вклад в храм; тормозит «скрытую вину»",
       sledy: "вид — постится; присутствие — у треб",
     },
   },
@@ -1135,6 +1141,7 @@ export const TRAITS_C3: Record<string, TraitC3 & { effect: string }> = {
     approach: { da: ["pochtit"] },
     memory: { pomnit: ["zasluga"] },
     voice: { manner: "на совете говорит громче, чем прежде" },
+    threads: [{ nit: "sabotazh", kak: "tolkaet" }],
     traces: { lines: [{ gde: "vid", text: "держится увереннее" }] },
     notes: {
       vesy: "правило −1 — наказы слушает хуже",
@@ -1142,6 +1149,7 @@ export const TRAITS_C3: Record<string, TraitC3 & { effect: string }> = {
       pamyat: "помнит особо непризнанную заслугу",
       golos: "на совете говорит громче, чем прежде",
       sledy: "вид — держится увереннее",
+      niti: "толкает «тихий саботаж»",
     },
   },
   sluzhaka: {
@@ -1212,6 +1220,7 @@ export const TRAITS_C3: Record<string, TraitC3 & { effect: string }> = {
     effect: "Дело спорится, место при нём крепнет; учить себя не даёт",
     approach: { da: ["pochtit"], net: ["sila"] },
     voice: { manner: "о своём деле — с гордостью" },
+    threads: [{ nit: "nedosmotr", kak: "tormozit" }],
     traces: { lines: [{ gde: "mesto", text: "крепнет, видно на картинке" }] },
     deed: [{ gde: "на своей должности", sila: 1 }],
     notes: {
@@ -1219,6 +1228,7 @@ export const TRAITS_C3: Record<string, TraitC3 & { effect: string }> = {
       golos: "о своём деле — с гордостью",
       sledy: "место — крепнет, видно на картинке",
       delo: "на своей должности +1, случайностей меньше; место может дойти до «крепко»",
+      niti: "тормозит «недосмотр»",
     },
   },
   obros_svyazyami: {
@@ -1229,13 +1239,14 @@ export const TRAITS_C3: Record<string, TraitC3 & { effect: string }> = {
     threads: [
       { nit: "posuly", kak: "tolkaet" },
       { nit: "rodnya", kak: "tolkaet" },
+      { nit: "sabotazh", kak: "tolkaet" },
     ],
     traces: { tenSfery: -1, lines: [{ gde: "molva", text: "«у него везде свои»" }] },
     likhoByWeights: true,
     notes: {
       vesy: "правило −1 — наказы слушает хуже",
       golos: "в споре его трудно сдвинуть",
-      niti: "толкает «посулы» и «родню пристроить»",
+      niti: "толкает «посулы» и «родню пристроить»; толкает «тихий саботаж»",
       svyazi: "в его сфере у него везде свои люди; его помощник — его человек (koncept-3.md, 9.3)",
       sledy: "тень сферы −1 — свои прикрывают; молва — «у него везде свои»",
       likho: "по весам человека (likho.md, раздел 5). Нечестный — совесть ниже нуля или завербован — лихо +1 в его сфере. Честный — его свои люди работают на Сенешаля: следы лиха в сфере ярче, ясность +1. Посередине — ничего",
@@ -1296,7 +1307,7 @@ export const TRAITS_C3: Record<string, TraitC3 & { effect: string }> = {
     effect: "После перелома держится храма: через жреца его можно взять, грешить ему труднее",
     holds: { pravilo: 1 },
     approach: { da: ["obychay"] },
-    threads: [{ nit: "obet", kak: "otkryvaet" }],
+    threads: [{ nit: "obet", kak: "otkryvaet" }, { nit: "dengi", kak: "tormozit" }, { nit: "pyanstvo", kak: "tormozit" }],
     links: { ladit: ["khram"] },
     traces: {
       lines: [
@@ -1307,7 +1318,7 @@ export const TRAITS_C3: Record<string, TraitC3 & { effect: string }> = {
     notes: {
       vesy: "правило +1 — старое правило для него опора",
       podkhod: "обычай работает вдвое — через жреца его можно взять",
-      niti: "открывает «обет»; его нити пороков тормозятся — проповедь будит совесть (пример Неждана, koncept-3.md, 10)",
+      niti: "открывает «обет»; его нити пороков тормозятся — проповедь будит совесть (пример Неждана, koncept-3.md, 10); тормозит «деньги»; тормозит «пьянство»",
       svyazi: "ладит с храмом",
       sledy: "присутствие — у треб; вид — перемена",
     },
@@ -1316,20 +1327,23 @@ export const TRAITS_C3: Record<string, TraitC3 & { effect: string }> = {
     vis: "so_vremenem",
     effect: "Раз сболтнул — хватило: ни свои, ни чужие тайны от него не узнать",
     voice: { manner: "на вопросы о других — «не знаю»" },
+    threads: [{ nit: "proshloe", kak: "tormozit" }, { nit: "vina", kak: "tolkaet" }],
     traces: { razgovor: -1, chuzhie: "molchit", yasnost: -1 },
     notes: {
       golos: "на вопросы о других — «не знаю»",
       sledy: "разговор −1; чужие тайны — держит; его тайные нити — ясность −1",
+      niti: "тормозит «прошлое»; толкает «скрытую вину»",
     },
   },
   ottayal: {
     vis: "so_vremenem",
     effect: "Кто-то отогрел: снова видит в людях людей и верен тому, кто это сделал",
     memory: { dobro: 1 },
+    threads: [{ nit: "rebyonok", kak: "tolkaet" }],
     traces: { lines: [{ gde: "molva", text: "«оттаял»" }] },
     notes: {
       pamyat: "добро +1 сверх признака",
-      niti: "часто идёт рядом с «любовью» или «ребёнок растёт» — кто-то его отогрел",
+      niti: "часто идёт рядом с «любовью» или «ребёнок растёт» — кто-то его отогрел; толкает «ребёнок растёт»",
       svyazi: "к тому, кто отогрел, — близость и верность растут; если это Сенешаль — верность +1 (взаимное влияние, koncept-3.md, 8.1)",
       sledy: "молва — «оттаял»",
     },
@@ -1475,6 +1489,7 @@ export const TRAITS_C3: Record<string, TraitC3 & { effect: string }> = {
     holds: { pravilo: 1 },
     approach: { da: ["sila", "ustav"] },
     voice: { manner: "на совете повторяет за старшим, ждёт слова Сенешаля" },
+    threads: [{ nit: "sabotazh", kak: "tormozit" }],
     deed: [{ gde: "без наказа и без старшего", sila: -1 }],
     notes: {
       vesy: "правило +1 сверх признака",
@@ -1482,6 +1497,7 @@ export const TRAITS_C3: Record<string, TraitC3 & { effect: string }> = {
       golos: "на совете повторяет за старшим, ждёт слова Сенешаля",
       svyazi: "ладит с теми, кто привык командовать",
       delo: "без наказа и без старшего −1",
+      niti: "тормозит «тихий саботаж»",
     },
   },
   v_dorogu: {
@@ -1586,12 +1602,14 @@ export const TRAITS_C3: Record<string, TraitC3 & { effect: string }> = {
     ifs: [{ chto: "pravilo", v: -1, kogda: "к наказу, который не даёт ему прав" }],
     approach: { da: ["volya"] },
     voice: { manner: "на совете — «сам решу»" },
+    threads: [{ nit: "sabotazh", kak: "tolkaet" }],
     deed: [{ gde: "срочный эпизод", sila: 1 }],
     notes: {
       vesy: "правило −1 к наказу, который не даёт ему прав",
       podkhod: "работает воля — права в рамке; наказ без прав помнит как унижение",
       golos: "на совете — «сам решу»",
       delo: "срочный эпизод +1 — решает быстро",
+      niti: "толкает «тихий саботаж»",
     },
   },
   smirilsya: {
@@ -1635,6 +1653,7 @@ export const TRAITS_C3: Record<string, TraitC3 & { effect: string }> = {
     approach: { da: ["delo"], net: ["dar", "prosba", "zastolye"] },
     memory: { pomnit: ["slovo"] },
     voice: { bias: "chernit" },
+    threads: [{ nit: "lyubov", kak: "tormozit" }],
     links: { start: -1 },
     notes: {
       podkhod: "работает только дело, со временем; не действуют дар, застолье, просьба — всё подозрительно",
@@ -1642,6 +1661,7 @@ export const TRAITS_C3: Record<string, TraitC3 & { effect: string }> = {
       golos: "чернит — видит умысел и там, где его нет",
       svyazi: "отношения складываются вдвое медленнее",
       sledy: "чужое враньё распознаёт — обмануть его трудно",
+      niti: "тормозит «любовь»",
     },
   },
   zamaterel: {
@@ -1770,12 +1790,12 @@ export const TRAITS_C3: Record<string, TraitC3 & { effect: string }> = {
   mirit: {
     vis: "so_vremenem",
     effect: "После него и кровники пьют из одной чаши: месть и драки кончаются миром",
-    threads: [{ nit: "dobroe_imya", kak: "tolkaet" }],
+    threads: [{ nit: "dobroe_imya", kak: "tolkaet" }, { nit: "draka", kak: "tormozit", uDrugogo: true }, { nit: "mest", kak: "tormozit", uDrugogo: true }],
     deed: [{ gde: "суд и сход", sila: 1 }],
     posts: ["старосты"],
     places: ["суд и сход", "межа и покосы"],
     notes: {
-      niti: "«месть» и «драка» при нём чаще кончаются мировой; толкает «доброе имя»",
+      niti: "«месть» и «драка» при нём чаще кончаются мировой; толкает «доброе имя»; у другого тормозит «драку» и «месть»: у людей рядом с ним эти нити чаще кончаются мировой",
       delo: "суд и сход +1; ссоры в совете гаснут быстрее",
     },
   },
@@ -2411,11 +2431,11 @@ export const TRAITS_C3: Record<string, TraitC3 & { effect: string }> = {
   khorosh_soboy: {
     vis: "yavnaya",
     effect: "Глаз не отвести: сходятся с ним легче, завидуют чаще",
-    threads: [{ nit: "lyubov", kak: "tolkaet" }],
+    threads: [{ nit: "lyubov", kak: "tolkaet" }, { nit: "svadba", kak: "tolkaet" }],
     links: { start: 1 },
     traces: { lines: [{ gde: "vid", text: "хорош собой" }] },
     notes: {
-      niti: "толкает «любовь»",
+      niti: "толкает «любовь»; толкает «свадьбу»",
       svyazi: "знакомство +1, роман легче; завистливые хуже",
       sledy: "вид",
     },
