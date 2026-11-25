@@ -1,6 +1,6 @@
 // Кризисы сторон и падение «под чужой рукой» (задача И14, замысел — docs/design/hozyaystvo.md, разделы 9–10): тяжёлые события сторон,
 // их выходы и шрамы, новый барон, его свита и внеочередной сбор. Правила — src/sim/fall/, числа — раздел fall в src/sim/balance.ts.
-import type { Category, GameEvent, Side } from "./types";
+import type { Category, GameEvent, Side, Star } from "./types";
 
 // Стороны, у которых бывает кризис: с И11б — все шесть.
 export const CRISIS_SIDES: Side[] = ["brod", "opushka", "kuptsy", "zamok", "les", "dvor"];
@@ -92,10 +92,18 @@ export const LEVY: { id: string; title: string; text: string; accepts: Category[
 };
 
 // Новый барон. Первый — проситель: соседний род своего добился. Если проситель уже пал (опозорен) — человек двора.
-export interface BaronEntry { id: string; name: string; female: boolean; age: number; who: string }
+// Натура (словом) и склонности заданы здесь, под образ: генератор натуры барона не растит — правка мешка черт ход партий не меняет.
+// По склонностям барон выбирает курс: Ратша берёт с земли своё («Копим к подати»), Доброгнева наводит порядок двора («Порядок на дорогах»).
+export interface BaronEntry { id: string; name: string; female: boolean; age: number; who: string; nature: string; star: Star }
 export const BARONS: BaronEntry[] = [
-  { id: "prositel", name: "Ратша", female: false, age: 44, who: "проситель из соседнего рода" },
-  { id: "dvor", name: "Доброгнева", female: true, age: 51, who: "человек двора" },
+  {
+    id: "prositel", name: "Ратша", female: false, age: 44, who: "проситель из соседнего рода",
+    nature: "Властолюбец", star: { dolg: 5, vygoda: 8, zabota: 2, derzost: 6, obychai: 3 },
+  },
+  {
+    id: "dvor", name: "Доброгнева", female: true, age: 51, who: "человек двора",
+    nature: "Служилый", star: { dolg: 8, vygoda: 3, zabota: 3, derzost: 5, obychai: 6 },
+  },
 ];
 
 // Свита барона: пришлые, которых он ставит на должности. Черты — id из TRAITS.
