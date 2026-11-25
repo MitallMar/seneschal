@@ -604,6 +604,10 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
       seekOdd: k(0.5, 0, 3, 0.25, "\u0418\u0441\u043A\u0430\u0442\u0435\u043B\u044C: \u0438\u0441\u0445\u043E\u0434 \u043D\u0435\u043E\u0431\u044B\u0447\u0435\u043D, \u0435\u0441\u043B\u0438 \u0432\u044B\u0445\u043E\u0434\u0438\u0442 \u0437\u0430 \u043A\u0440\u0430\u044F \u043F\u0440\u0438\u0432\u044B\u0447\u043D\u044B\u0445 \u0431\u043E\u0442\u043E\u0432 \u043D\u0430 \u0441\u0442\u043E\u043B\u044C\u043A\u043E \u0438\u0445 \u0440\u0430\u0437\u043C\u0430\u0445\u043E\u0432"),
       seekKeep: k(1, 0, 5, 0.25, "\u0418\u0441\u043A\u0430\u0442\u0435\u043B\u044C: \u043D\u0435\u043E\u0431\u044B\u0447\u043D\u0430\u044F \u0441\u0442\u0440\u0430\u0442\u0435\u0433\u0438\u044F \u043D\u0435 \u043F\u0440\u043E\u0438\u0433\u0440\u044B\u0432\u0430\u0435\u0442, \u0435\u0441\u043B\u0438 \u0432\u043D\u0435\u0441\u043B\u0430 \u043F\u043E\u0434\u0430\u0442\u0438 \u043C\u0435\u043D\u044C\u0448\u0435 \xAB\u0425\u043E\u0437\u044F\u0438\u043D\u0430\xBB \u043D\u0435 \u0431\u043E\u043B\u044C\u0448\u0435 \u0447\u0435\u043C \u043D\u0430 \u0441\u0442\u043E\u043B\u044C\u043A\u043E \u043C\u0435\u0440")
     },
+    // имена: мешки и генератор имени (src/sim/names.ts, замысел — docs/design/imena.md). К партии пока не подключён.
+    names: {
+      tint: k(0.6, 0, 1, 0.05, "\u0418\u043C\u0435\u043D\u0430: \u0434\u043E\u043B\u044F \u0441\u043B\u0430\u0432\u044F\u043D\u0441\u043A\u043E\u0433\u043E \u043E\u0442\u0442\u0435\u043D\u043A\u0430 \u0443 \u043A\u0440\u0435\u0441\u0442\u044C\u044F\u043D \u043C\u0430\u0440\u043E\u043A (\u043E\u0441\u0442\u0430\u043B\u044C\u043D\u044B\u0435 \u2014 \u0438\u0437 \u043E\u0441\u043D\u043E\u0432\u044B)")
+    },
     // натура: рост древа черт от точек кристаллизации (src/sim/natura.ts, замысел — docs/design/natura.md). К совету не подключена.
     natura: {
       innateMin: k(1, 0, 3, 1, "\u041D\u0430\u0442\u0443\u0440\u0430: \u0432\u0440\u043E\u0436\u0434\u0451\u043D\u043D\u044B\u0445 \u0447\u0435\u0440\u0442 \u043D\u0435 \u043C\u0435\u043D\u044C\u0448\u0435 (\u043E\u043D\u0438 \u0436\u0435 \u044F\u043A\u043E\u0440\u044F \u044F\u0434\u0440\u0430)"),
@@ -1202,16 +1206,16 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
     { id: "pokoy", text: "\u0445\u043E\u0447\u0435\u0442 \u043F\u043E\u043A\u043E\u044F \u0438 \u0447\u0442\u043E\u0431\u044B \u0435\u0433\u043E \u043D\u0435 \u0442\u0440\u043E\u0433\u0430\u043B\u0438" }
   ];
   var ROSTER = [
-    { name: "\u041E\u0441\u0442\u0430\u043F", female: false, age: 52, trait: "upryamy", mark: "tyazhelaya_ruka" },
-    { name: "\u0412\u0435\u0434\u0430\u043D\u0430", female: true, age: 61, trait: "nabozhny", mark: "slyshit_les", bounds: { obychai: [5, 10] } },
-    { name: "\u0420\u0430\u0434\u0438\u043C", female: false, age: 34, trait: "chestolyubivy" },
-    { name: "\u041C\u0438\u043B\u0438\u0446\u0430", female: true, age: 45, trait: "skupoy" },
-    { name: "\u0422\u0438\u0445\u043E\u043D", female: false, age: 58, trait: "myagkiy" },
-    { name: "\u0417\u043B\u0430\u0442\u0430", female: true, age: 27, trait: "goryachiy", mark: "tyanet_vniz" },
-    { name: "\u041D\u0435\u0436\u0434\u0430\u043D", female: false, age: 40, trait: "khitry" },
-    { name: "\u041B\u044E\u0431\u0430\u0432\u0430", female: true, age: 38, trait: "verny" },
-    { name: "\u042F\u0440\u0435\u043C\u0430", female: false, age: 23, trait: "zlopamyatny", mark: "ne_mozhet_lgat" },
-    { name: "\u0412\u0441\u0435\u0441\u043B\u0430\u0432\u0430", female: true, age: 49, trait: "ostorozhny" }
+    { name: "\u0413\u0430\u0440\u0432\u0438\u043D", female: false, age: 52, trait: "upryamy", mark: "tyazhelaya_ruka" },
+    { name: "\u0414\u043E\u0431\u0440\u0430\u0432\u0430", female: true, age: 61, trait: "nabozhny", mark: "slyshit_les", bounds: { obychai: [5, 10] } },
+    { name: "\u0414\u0435\u0441\u0442\u0430\u043D", female: false, age: 34, trait: "chestolyubivy" },
+    { name: "\u041C\u0435\u043B\u0438\u0442\u0430", female: true, age: 45, trait: "skupoy" },
+    { name: "\u0422\u0438\u0448\u0430\u043D", female: false, age: 58, trait: "myagkiy" },
+    { name: "\u0420\u0435\u0439\u043D\u0430", female: true, age: 27, trait: "goryachiy", mark: "tyanet_vniz" },
+    { name: "\u041B\u043E\u0442\u0438\u0441", female: false, age: 40, trait: "khitry" },
+    { name: "\u0425\u0435\u043B\u044C\u0434\u0430", female: true, age: 38, trait: "verny" },
+    { name: "\u0422\u0435\u043D\u0440\u0438\u043A", female: false, age: 23, trait: "zlopamyatny", mark: "ne_mozhet_lgat" },
+    { name: "\u041E\u0440\u0441\u0438\u044F", female: true, age: 49, trait: "ostorozhny" }
   ];
 
   // src/data/rumors.ts
@@ -2624,7 +2628,12 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
     for (const a of AXES) if (shift[a]) star[a] += shift[a] * k2;
   }
   var noAxes = () => ({ dolg: 0, vygoda: 0, zabota: 0, derzost: 0, obychai: 0 });
-  var dative = (name) => name.endsWith("\u0430") ? `${name.slice(0, -1)}\u0435` : `${name}\u0443`;
+  function dative(name) {
+    if (name.endsWith("\u0438\u044F")) return `${name.slice(0, -1)}\u0438`;
+    if (/[ая]$/.test(name)) return `${name.slice(0, -1)}\u0435`;
+    if (/[йь]$/.test(name)) return `${name.slice(0, -1)}\u044E`;
+    return /[оэуеи]$/.test(name) ? name : `${name}\u0443`;
+  }
   var lower = (text) => text.charAt(0).toLowerCase() + text.slice(1);
 
   // src/data/events.ts
@@ -7209,6 +7218,7 @@ body.knobs-open .top, body.knobs-open main { margin-left: 340px; }
     order: "\u041F\u043E\u0440\u044F\u0434\u043E\u043A",
     fall: "\u041A\u0440\u0438\u0437\u0438\u0441\u044B \u0438 \u043F\u0430\u0434\u0435\u043D\u0438\u0435",
     season: "\u0421\u0435\u0437\u043E\u043D",
+    names: "\u0418\u043C\u0435\u043D\u0430",
     report: "\u0426\u0435\u043B\u0438 \u043E\u0442\u0447\u0451\u0442\u0430 \u043E\u0441\u0435\u0439"
   };
   var SUB_NAMES = {

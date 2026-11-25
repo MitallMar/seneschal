@@ -99,15 +99,17 @@ export const ASPIRATIONS: AspirationDef[] = [
 ];
 
 // Ключевые персонажи хозяйства: черта и метка — авторские, звезда прогоняется в границах.
+// Имена — из мешков (src/data/names.ts, задача И26): люди замка — из основы, двое старожилов из деревень (Добрава, Тишан) — из славянского оттенка.
+// Номер человека — его место в списке: порядок не менять.
 export const ROSTER: RosterEntry[] = [
-  { name: "Остап", female: false, age: 52, trait: "upryamy", mark: "tyazhelaya_ruka" },
-  { name: "Ведана", female: true, age: 61, trait: "nabozhny", mark: "slyshit_les", bounds: { obychai: [5, 10] } },
-  { name: "Радим", female: false, age: 34, trait: "chestolyubivy" },
-  { name: "Милица", female: true, age: 45, trait: "skupoy" },
-  { name: "Тихон", female: false, age: 58, trait: "myagkiy" },
-  { name: "Злата", female: true, age: 27, trait: "goryachiy", mark: "tyanet_vniz" },
-  { name: "Неждан", female: false, age: 40, trait: "khitry" },
-  { name: "Любава", female: true, age: 38, trait: "verny" },
-  { name: "Ярема", female: false, age: 23, trait: "zlopamyatny", mark: "ne_mozhet_lgat" },
-  { name: "Всеслава", female: true, age: 49, trait: "ostorozhny" },
+  { name: "Гарвин", female: false, age: 52, trait: "upryamy", mark: "tyazhelaya_ruka" },
+  { name: "Добрава", female: true, age: 61, trait: "nabozhny", mark: "slyshit_les", bounds: { obychai: [5, 10] } },
+  { name: "Дестан", female: false, age: 34, trait: "chestolyubivy" },
+  { name: "Мелита", female: true, age: 45, trait: "skupoy" },
+  { name: "Тишан", female: false, age: 58, trait: "myagkiy" },
+  { name: "Рейна", female: true, age: 27, trait: "goryachiy", mark: "tyanet_vniz" },
+  { name: "Лотис", female: false, age: 40, trait: "khitry" },
+  { name: "Хельда", female: true, age: 38, trait: "verny" },
+  { name: "Тенрик", female: false, age: 23, trait: "zlopamyatny", mark: "ne_mozhet_lgat" },
+  { name: "Орсия", female: true, age: 49, trait: "ostorozhny" },
 ];
