@@ -4,15 +4,18 @@ import { test, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import type { Sign, BagTrait, SignVec } from "../src/data/types";
 import { TRAITS } from "../src/data/core";
-import { SIGNS, NATURES, BAG } from "../src/data/natura";
+import { SIGNS, NATURES, BAG, SENESCHAL } from "../src/data/natura";
+import { ALLOYS, ORIGINS, MERA_NAMES, HIDDEN_ORIGIN } from "../src/data/origins";
+import { NAMES_PEOPLE } from "../src/data/names";
 import { TRAITS_C3, COUNCIL_TO_BAG } from "../src/data/traits-c3";
 import {
   WANTS, HOLDS, APPROACHES, MEM_KEYS, MEM_SCALES, BIASES, CHANNELS, LINK_GROUPS, HOLDER_ROLES, THREADS, POLE_RULES, POLE_PEOPLE, VIS_NAMES,
 } from "../src/data/portrait";
 import { BALANCE, resetBalance, setAt } from "../src/sim/balance";
 import { Rng } from "../src/sim/rng";
-import { growPerson } from "../src/sim/natura";
-import { portraitOf, portrait, polesOf, traitVis, strengthWord, linkName, isNotable, isStrong } from "../src/sim/portrait";
+import { growPerson, growSeneschal, rollPerson, growLife, originById } from "../src/sim/natura";
+import { rollAll, metricsOf } from "../src/sim/natura-report";
+import { portraitOf, portrait, alloysOf, polesOf, traitVis, strengthWord, linkName, isNotable, isStrong } from "../src/sim/portrait";
 
 afterEach(() => resetBalance());
 
@@ -172,8 +175,11 @@ test("один и тот же человек — один и тот же пор�
 const bag = (id: string): BagTrait => { const t = BAG.find((x) => x.id === id); assert.ok(t, `в мешке нет ${id}`); return t; };
 const zero = signs({});
 
-test("мешок: у каждой из 131 черты и перка есть видимость и новая строка действия; id прежние", () => {
-  assert.deepEqual([BAG.length, BAG.filter((t) => t.kind !== "perk").length, BAG.filter((t) => t.kind === "perk").length], [131, 109, 22]);
+test("мешок: у каждой черты и перка есть видимость и строка действия; в мешке 186, как в cherty-dannye.md", () => {
+  const people = BAG.filter((t) => !t.seneschal), count = (list: BagTrait[], kind: string) => list.filter((t) => t.kind === kind).length;
+  // люди: 109 прежних черт + 16 пороков и тайн + 5 добрых нитей, 6 облика, 22 + 13 перков; Сенешаль: ядро 3, умения 4 (пятое — общее с людьми), на выбор 8
+  assert.deepEqual([BAG.length, count(people, "born") + count(people, "life"), count(people, "look"), count(people, "perk")], [186, 130, 6, 35]);
+  assert.deepEqual([BAG.filter((t) => t.seneschal).length, SENESCHAL.core.length, SENESCHAL.skills.length, SENESCHAL.pick.length], [15, 3, 5, 8]);
   assert.deepEqual(Object.keys(TRAITS_C3).sort(), BAG.map((t) => t.id).sort(), "особенное записано ровно для черт мешка");
   for (const t of BAG) {
     assert.ok(t.vis && VIS_NAMES[t.vis], `${t.id}: нет видимости`);
@@ -182,13 +188,15 @@ test("мешок: у каждой из 131 черты и перка есть в�
     assert.ok(t.name && t.desc && t.vec && t.rarity && t.source.length, `${t.id}: прежние поля на месте`);
   }
   // умение видно по делу: сразу видны только четыре
-  assert.deepEqual(BAG.filter((t) => t.kind === "perk" && t.vis === "yavnaya").map((t) => t.id).sort(), ["golos", "knizhnik", "lekar", "stroevaya_vypravka"]);
-  assert.ok(BAG.filter((t) => t.kind === "perk").every((t) => t.vis !== "skrytaya" && (t.places?.length || t.posts?.length)), "у перка есть должность или места");
+  assert.deepEqual(BAG.filter((t) => t.kind === "perk" && !t.seneschal && t.vis === "yavnaya").map((t) => t.id).sort(),
+    ["golos", "knizhnik", "kuznets", "lekar", "plotnik", "povitukha", "stroevaya_vypravka"]);
+  assert.ok(BAG.filter((t) => t.kind === "perk" && !t.seneschal).every((t) => t.vis !== "skrytaya" && (t.places?.length || t.posts?.length)), "у перка есть должность или места");
+  assert.equal(BAG.filter((t) => t.vis === "skrytaya").length, 11, "скрытых было две, стало одиннадцать");
 });
 
 test("мешок: ключи полей — только из словаря", () => {
   const ids = <T extends { id: string }>(list: T[]) => list.map((x) => x.id);
-  const scale = [...ids(WANTS), ...ids(HOLDS), "sluchay", ...ids(MEM_SCALES)], noteKeys = ["vesy", "podkhod", "pamyat", "golos", "niti", "svyazi", "sledy", "delo", "likho", "prochee"];
+  const scale = [...ids(WANTS), ...ids(HOLDS), "sluchay", ...ids(MEM_SCALES)], noteKeys = ["vesy", "podkhod", "pamyat", "golos", "niti", "svyazi", "sledy", "delo", "likho", "derzhit", "otdykh", "lore", "prochee"];
   for (const t of BAG) {
     const at = (what: string, k: string, list: string[]) => assert.ok(list.includes(k), `${t.id}: ${what} ${k} нет в словаре`);
     for (const k of Object.keys(t.wants ?? {})) at("желание", k, ids(WANTS));
@@ -231,16 +239,16 @@ test("настоящая черта перекрывает признак по �
   assert.ok(portraitOf(hard).approach.da.includes("sila"));
   const master = portraitOf(hard, [bag("master_dela")]);
   assert.ok(master.approach.net.includes("sila") && !master.approach.da.includes("sila") && master.approach.da.includes("pochtit"));
-  assert.deepEqual(master.origin.approach.sila, { from: "Мастер своего дела", trait: true });
+  assert.deepEqual(master.by.approach.sila, { from: "Мастер своего дела", trait: true });
   // Гордость: «пристыдить» не действует; «Постится и кается»: работает — покается
   const proud = signs({ gordost: 3 });
   assert.ok(portraitOf(proud).approach.net.includes("stydit") && portraitOf(proud, [bag("postitsya_i_kaetsya")]).approach.da.includes("stydit"));
   // Щедрость ладит с деревнями по признаку, «Хлебосол» добавляет пришлых и почёт сверх признака Гордости
   const host = portraitOf(signs({ gordost: 2.5, shchedrost: 3 }), [bag("khlebosol")]);
   assert.deepEqual([host.wants.pochet, host.links.ladit], [2, ["prishlye", "derevni"]]);
-  assert.deepEqual(host.origin.wants.pochet, [{ from: "Гордость", trait: false, v: 1 }, { from: "Хлебосол", trait: true, v: 1 }]);
-  assert.deepEqual([host.origin.approach.dar, host.origin.approach.pochtit], [{ from: "Хлебосол", trait: true }, { from: "Гордость", trait: false }]);
-  assert.deepEqual([host.origin.links.prishlye?.trait, host.origin.links.derevni?.trait, host.origin.memKeys.unizhenie?.from], [true, false, "Хлебосол"]);
+  assert.deepEqual(host.by.wants.pochet, [{ from: "Гордость", trait: false, v: 1 }, { from: "Хлебосол", trait: true, v: 1 }]);
+  assert.deepEqual([host.by.approach.dar, host.by.approach.pochtit], [{ from: "Хлебосол", trait: true }, { from: "Гордость", trait: false }]);
+  assert.deepEqual([host.by.links.prishlye?.trait, host.by.links.derevni?.trait, host.by.memKeys.unizhenie?.from], [true, false, "Хлебосол"]);
   assert.ok(host.notes.some((n) => n.key === "podkhod" && n.from === "Хлебосол" && n.text.includes("принять его хлеб")), "фраза автора дошла до портрета");
 });
 
@@ -258,7 +266,7 @@ test("пристрастие «сильнее любой другой черты
   const rare = trait("r", { rarity: "exceptional", voice: { bias: "chernit" } });
   for (const order of [[bag("kak_na_dukhu"), rare, bag("yazyk_bez_kostey")], [rare, bag("yazyk_bez_kostey"), bag("kak_na_dukhu")]]) {
     const p = portraitOf(signs({ smelost: 4 }), order);
-    assert.deepEqual([p.voice.bias, p.voice.biasFrom, p.origin.bias], ["bez", "Как на духу", { from: "Как на духу", trait: true }]);
+    assert.deepEqual([p.voice.bias, p.voice.biasFrom, p.by.bias], ["bez", "Как на духу", { from: "Как на духу", trait: true }]);
   }
   assert.equal(portraitOf(zero, [bag("chtit_primety")]).voice.bias, "znameniya", "«Чтит приметы» видит знамения и без сильной Веры");
   assert.deepEqual(portraitOf(zero, [bag("charka")]).voice, { manners: ["доклад путаный"], bias: "preumenshaet", biasFrom: "Пристрастился к чарке", notes: [] });
@@ -293,4 +301,166 @@ test("черты совета → мешок: у каждой из десяти 
     assert.ok(pair.how && (pair.bag.length > 0 || pair.support?.length), `${id}: ни пары, ни поддержки`);
   }
   assert.deepEqual([COUNCIL_TO_BAG.verny.bag, COUNCIL_TO_BAG.verny.support], [[], ["derzhit_slovo", "svoikh_ne_sdayot"]]);
+});
+
+// ---------- новые черты, облик, умения, сплавы, мешок Сенешаля, «Откуда и чей» (задача И27в; cherty-dannye.md, разделы 7–10) ----------
+
+const NEW_IDS = {
+  poroki: ["nechist_na_ruku", "v_dolgakh", "igraet_v_kosti", "sokhnet_po_chuzhoy", "grekh_na_storone", "beglyy_pod_imenem", "gulyal_na_doroge", "pishet_v_palatu", "beryot_posuly", "krovnik",
+    "skryvaet_khvor", "lezheboka", "pryachet_mechenoe", "khvastun", "vral", "znaetsya_s_likhimi"],
+  dobrye: ["kopit_na_nadel", "doch_na_vydanye", "uchitsya_gramote", "ishchet_propavshego", "stavit_svoy_dvor"],
+  oblik: ["khorosh_soboy", "ryaboy", "silach", "shram", "sedoy", "zaikaetsya"],
+  umeniya: ["plotnik", "znaet_zemlyu", "khodit_za_skotom", "bortnik", "znaet_vodu", "kuznets", "strelok", "konny", "govorit_po_lesnomu", "povitukha", "uchit_detey", "oboznik", "pomnit_predaniya"],
+};
+
+test("новые черты: все id из cherty-dannye.md есть в мешке — пороки и тайны, добрые нити, облик, умения", () => {
+  for (const id of Object.values(NEW_IDS).flat()) bag(id);
+  for (const id of [...NEW_IDS.poroki, ...NEW_IDS.dobrye]) assert.equal(bag(id).kind, "life", id);
+  for (const id of NEW_IDS.umeniya) assert.ok(bag(id).kind === "perk" && bag(id).requires?.length === 4 && bag(id).places?.length, `${id}: умение с требованиями и местами`);
+  // скрытые пороки и те, кого кто-то держит
+  assert.deepEqual(NEW_IDS.poroki.filter((id) => bag(id).vis === "skrytaya"),
+    ["nechist_na_ruku", "sokhnet_po_chuzhoy", "grekh_na_storone", "beglyy_pod_imenem", "gulyal_na_doroge", "pishet_v_palatu", "skryvaet_khvor", "pryachet_mechenoe", "znaetsya_s_likhimi"]);
+  assert.deepEqual(bag("nechist_na_ruku").holder, [{ role: "skupshchik", likho: true }]);
+  assert.deepEqual([bag("beryot_posuly").likho, bag("znaetsya_s_likhimi").likho, bag("znaetsya_s_likhimi").links?.ladit], [1, 1, ["likhie"]]);
+  assert.deepEqual([bag("sokhnet_po_chuzhoy").nameF, bag("nechist_na_ruku").conflicts], ["Сохнет по чужому", ["kak_na_dukhu"]]);
+  // «только до игры» — без повода в игре: в игре не наживается
+  for (const id of ["beglyy_pod_imenem", "gulyal_na_doroge"]) assert.deepEqual([bag(id).source, bag(id).trigger], [["backstory"], undefined], id);
+  // порок доходит до портрета: кто держит, лихо, нить
+  const p = portraitOf(zero, [bag("beryot_posuly"), bag("v_dolgakh")]);
+  assert.deepEqual([p.likho, p.holder.map((h) => h.role), p.wants.dengi, p.holds.sovest], [1, ["dayushchiy", "zaimodavets"], 2, -1]);
+  assert.ok(p.threads.some((x) => x.nit === "dolg" && x.step === "занял") && p.threads.some((x) => x.nit === "dengi" && x.kak === "otkryvaet"));
+  assert.ok(p.notes.some((n) => n.key === "derzhit" && n.from === "В долгах"));
+});
+
+test("облик: вектора нет, у человека не больше одной черты, доля — ручка; признаков облик не меняет", () => {
+  for (const id of NEW_IDS.oblik) assert.deepEqual([bag(id).kind, Object.keys(bag(id).vec).length, bag(id).vis], ["look", 0, "yavnaya"], id);
+  const people = rollAll(600, "облик"), withLook = people.filter((p) => p.traits.some((t) => t.kind === "look"));
+  assert.ok(people.every((p) => p.traits.filter((t) => t.kind === "look").length <= 1));
+  assert.ok(Math.abs(withLook.length / people.length - BALANCE.natura.lookShare) < 0.06, `доля с обликом ${withLook.length / people.length}`);
+  assert.equal(new Set(withLook.map((p) => p.traits.find((t) => t.kind === "look")!.id)).size, 6, "выпадают все шесть");
+  // в игре облик не наживается
+  const p = rollPerson("облик-в-игре", NATURES[0]);
+  for (let i = 0; i < 12; i++) assert.notEqual(growLife(new Rng(`жизнь-${i}`), p)?.kind, "look");
+  setAt("natura.lookShare", 0);
+  const bare = rollAll(200, "облик");
+  assert.ok(bare.every((x) => !x.traits.some((t) => t.kind === "look")));
+  // облик и происхождение тянутся из побочного ряда: остальные черты и признаки у тех же людей те же
+  for (let i = 0; i < 200; i++) {
+    assert.deepEqual(bare[i].traits.map((t) => t.id), people[i].traits.filter((t) => t.kind !== "look").map((t) => t.id));
+    assert.deepEqual(bare[i].signs, people[i].signs);
+  }
+  setAt("natura.lookShare", 1);
+  assert.ok(rollAll(60, "облик").every((x) => x.traits.filter((t) => t.kind === "look").length === 1));
+});
+
+test("мешок Сенешаля: его черты людям не выпадают; у Сенешаля ядро всегда, умения и черты — по ручкам", () => {
+  const S = BALANCE.natura.seneschal, own = BAG.filter((t) => t.seneschal).map((t) => t.id);
+  assert.deepEqual([...SENESCHAL.core, ...SENESCHAL.skills.filter((id) => id !== "pomnit_predaniya"), ...SENESCHAL.pick].sort(), [...own].sort());
+  assert.ok(!bag("pomnit_predaniya").seneschal, "«Помнит предания» — общее умение с людьми");
+  const people = rollAll(600, "люди");
+  for (const p of people) {
+    for (let i = 0; i < 4; i++) growLife(new Rng(`${p.age}-${i}`), p);
+    assert.ok(!p.traits.some((t) => t.seneschal), "черта Сенешаля выпала обычному человеку");
+  }
+  for (const n of NATURES.slice(0, 12)) {
+    const s = growSeneschal(`сенешаль-${n.id}`, n), ids = s.traits.map((t) => t.id);
+    assert.deepEqual(s, growSeneschal(`сенешаль-${n.id}`, n), "одно семя — один Сенешаль");
+    assert.equal(s.age, S.age);
+    assert.deepEqual(ids.slice(0, 3), SENESCHAL.core, "ядро из трёх черт — всегда и первым");
+    assert.equal(ids.filter((id) => SENESCHAL.skills.includes(id)).length, S.skills, `${n.id}: умений`);
+    const picked = ids.filter((id) => SENESCHAL.pick.includes(id)).length;
+    assert.ok(picked >= S.pickMin && picked <= S.pickMax, `${n.id}: черт из мешка ${picked}`);
+    assert.ok(!(ids.includes("lyubit_okhotu") && ids.includes("molitvennik")), "«Любит охоту» не уживается с «Молитвенником»");
+    assert.ok(s.traits.length > 3 + S.skills + picked, "остальное — как у людей");
+    assert.equal(new Set(ids).size, ids.length);
+    // ядро видно в портрете: совесть и «новое»
+    const p = portrait(s);
+    assert.ok(p.by.holds.sovest.some((x) => x.from === "Золотое правило" && x.v === 2) && p.by.wants.novoe.some((x) => x.from === "Мечта о дороге" && x.v === 2));
+  }
+  setAt("natura.seneschal.skills", 5); setAt("natura.seneschal.pickMin", 0); setAt("natura.seneschal.pickMax", 0);
+  const full = growSeneschal("все умения", NATURES[0]).traits.map((t) => t.id);
+  assert.ok(SENESCHAL.skills.every((id) => full.includes(id)) && !SENESCHAL.pick.some((id) => full.includes(id)), "ручки действуют сразу");
+});
+
+test("«Откуда и чей»: двенадцать происхождений, ссылки ведут в словарь и в мешок; у каждого человека оно есть", () => {
+  assert.equal(ORIGINS.length, 12);
+  assert.equal(new Set(ORIGINS.map((o) => o.id)).size, 12);
+  const ids = <T extends { id: string }>(list: T[]) => list.map((x) => x.id);
+  for (const o of ORIGINS) {
+    assert.ok(/^[a-z_]+$/.test(o.id) && o.name && MERA_NAMES[o.mera], o.id);
+    for (const k of o.wants) assert.ok(ids(WANTS).includes(k), `${o.id}: желание ${k}`);
+    for (const k of o.holds ?? []) assert.ok(ids(HOLDS).includes(k), `${o.id}: удержка ${k}`);
+    for (const k of o.threads) assert.ok(ids(THREADS).includes(k), `${o.id}: нить ${k}`);
+    for (const k of [...o.ladit, ...o.neLadit]) assert.ok(linkName(k), `${o.id}: связь ${k}`);
+    for (const id of o.often) bag(id);
+    for (const g of o.names) assert.ok(g === "peasant" || g === "castle" || g in NAMES_PEOPLE, `${o.id}: мешок имён ${g}`);
+    assert.equal(originById(o.id), o);
+  }
+  assert.throws(() => originById("net_takogo"), /Нет происхождения/);
+  const people = rollAll(1000, "откуда");
+  assert.ok(people.every((p) => ORIGINS.some((o) => o.id === p.origin) && ORIGINS.some((o) => o.id === p.originShown)));
+  const share = metricsOf(people).origins;
+  assert.ok(ORIGINS.every((o) => share[o.id] > 0), "встречаются все двенадцать");
+  assert.ok(share.starozhil > share.khramovy_vyuchenik && share.khramovy_vyuchenik > share.tull, `обычные чаще редких: ${JSON.stringify(share)}`);
+  assert.equal(growPerson(new Rng("задано"), NATURES[0], { origin: "tull" }).originShown, "tull");
+});
+
+test("черты происхождения выпадают чаще, и вес — ручка", () => {
+  const often = (weight: number) => {
+    setAt("natura.originWeight", weight);
+    const people = Array.from({ length: 400 }, (_, i) => rollPerson(`род-${i}`, NATURES[i % NATURES.length]));
+    // у старожила: «Как деды жили», «Прикипел к месту», «Помнит родство»
+    const own = people.filter((p) => p.origin === "starozhil");
+    return own.filter((p) => p.traits.some((t) => originById("starozhil").often.includes(t.id))).length / own.length;
+  };
+  const plain = often(1), pulled = often(4);
+  assert.ok(pulled > plain + 0.05, `при весе 4 — ${pulled}, без веса — ${plain}`);
+});
+
+test("беглый под чужим именем: настоящее происхождение — беглый, на людях — другое", () => {
+  const all = Array.from({ length: 3000 }, (_, i) => growPerson(new Rng(`беглый-${i}`), NATURES[i % NATURES.length], { age: 60 }));
+  const hidden = all.filter((p) => p.traits.some((t) => t.id === HIDDEN_ORIGIN.trait));
+  assert.ok(hidden.length >= 5, `беглых под чужим именем ${hidden.length}`);
+  for (const p of hidden) assert.ok(p.origin === HIDDEN_ORIGIN.real && p.originShown !== HIDDEN_ORIGIN.real, `${p.origin} / ${p.originShown}`);
+  for (const p of all.filter((x) => !hidden.includes(x))) assert.equal(p.origin, p.originShown);
+});
+
+test("сплавы: появляются ровно при своём условии — оба полюса сильные или черта плюс заметный полюс", () => {
+  assert.equal(ALLOYS.length, 6);
+  for (const a of ALLOYS) for (const part of a.parts) { assert.ok(part.pole || part.traits?.length, a.id); for (const id of part.traits ?? []) bag(id); }
+  const names = (sg: SignVec, traits: BagTrait[] = []) => alloysOf(signs(sg), traits).map((a) => a.id);
+  // оба полюса сильные: 3,5 и выше
+  assert.deepEqual(names({ zhestkost: 3.5, privyazannost: 3.5 }), ["strog_da_svoy"]);
+  assert.deepEqual(names({ zhestkost: 3.4, privyazannost: 4 }), []);
+  assert.deepEqual(names({ chestnost: 4, lyubopytstvo: -3.5 }), ["chestny_upryamets"]);
+  assert.deepEqual(names({ chestnost: 4, lyubopytstvo: 3.5 }), [], "нужен свой полюс: косность, а не любопытство");
+  // три полюса — все три
+  assert.deepEqual(names({ obshchitelnost: -4, chestnost: -4, terpenie: 4 }), ["tikhiy_omut"]);
+  assert.deepEqual(names({ obshchitelnost: -4, chestnost: -4, terpenie: 3 }), []);
+  // черта плюс заметный полюс: от 2
+  assert.deepEqual(names({ obshchitelnost: 2 }, [bag("nechist_na_ruku")]), ["vesyoly_vor"]);
+  assert.deepEqual(names({ obshchitelnost: 1.9 }, [bag("nechist_na_ruku")]), []);
+  assert.deepEqual(names({ obshchitelnost: 5 }), [], "без черты «Нечист на руку» весёлого вора нет");
+  assert.deepEqual(names({ vera: 2 }, [bag("gulyaka")]), ["nabozhny_gulyaka"]);
+  // «Праведный скупец»: вера и скупость — признаками, чертами или вперемешку
+  assert.deepEqual(names({ vera: 3.5, shchedrost: -3.5 }), ["pravedny_skupets"]);
+  assert.deepEqual(names({ vera: 3, shchedrost: -3 }), []);
+  assert.deepEqual(names({}, [bag("stal_nabozhen"), bag("zimoy_snega")]), ["pravedny_skupets"]);
+  assert.deepEqual(names({ shchedrost: -2 }, [bag("chtit_primety")]), ["pravedny_skupets"]);
+  assert.deepEqual(names({ shchedrost: -1.9 }, [bag("chtit_primety")]), []);
+  setAt("natura.portrait.strong", 3);
+  assert.deepEqual(names({ vera: 3, shchedrost: -3 }), ["pravedny_skupets"], "ручка порога действует сразу");
+});
+
+test("сплав в портрете: имя, особенность и то, что из неё легло на ключи", () => {
+  const omut = portraitOf(signs({ obshchitelnost: -4, chestnost: -4, terpenie: 4 }));
+  assert.deepEqual(omut.alloys.map((a) => a.name), ["Тихий омут"]);
+  // Замкнутость даёт тень −1, сплав — ещё −2; Лукавство — ясность −1, сплав — +1
+  assert.deepEqual([omut.traces.ten, omut.traces.yasnost], [-3, 0]);
+  const stubborn = portraitOf(signs({ chestnost: 4, lyubopytstvo: -3.5 }));
+  assert.deepEqual([stubborn.voice.bias, stubborn.voice.biasFrom, stubborn.voice.manners[0]], ["bez", "сплав «Честный упрямец»", "в споре не уступает"]);
+  assert.ok(stubborn.approach.da.includes("vremya") && stubborn.by.approach.vremya?.from === "сплав «Честный упрямец»");
+  const miser = portraitOf(signs({ shchedrost: -2 }), [bag("chtit_primety"), bag("zhaleet_ubogikh")]);
+  assert.ok(miser.approach.net.includes("prosba") && miser.approach.da.includes("obychay"), "сплав ложится поверх черт: просьба людей не действует");
+  assert.deepEqual(portraitOf(signs({ zhestkost: 3 })).alloys, []);
 });

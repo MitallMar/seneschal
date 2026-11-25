@@ -15,7 +15,7 @@ async def s_natura(br, errs):
        and 'Предупреждений нет' in await pg.inner_text('#warnings'), await pg.inner_text('#warnings'))
     ok('метрики в целях: рероллы не похожи, натура читается по признакам, нажитого больше половины', m['jaccard'] <= 0.5 and m['signNn'] >= 0.7
        and 0.2 <= m['nn'] <= 0.6 and m['lifeShare'] >= 0.6 and m['kinds']['life'] > m['kinds']['born'], (m['jaccard'], m['nn'], m['signNn'], m['kinds']))
-    ok('графики: строка на каждую черту мешка и на каждую натуру, тепловые карты 30 натур', await n('#chart-traits .track') == BAG
+    ok('графики: строка на каждую черту мешка и на каждую натуру, тепловые карты 30 натур', await n('#chart-traits .track') == BAG - BAG_SENESCHAL
        and await n('#chart-natures .track') == 90 and await n('#heat-signs tr') == 31 and await n('#heat-axes tr') == 31 and await n('#heat-signs td.core') == 90)
     ok('таблицы наполнения: 30 натур, весь мешок, 12 признаков, черты и должности совета', await n('#table-natures tr') == 31 and await n('#table-bag tr') == BAG + 1
        and await n('#table-signs tr') == 13 and await n('#table-key tr') == 11 and await n('#table-life tr') >= 12 and await n('#table-posts tr') == 6)
@@ -32,7 +32,7 @@ async def s_natura(br, errs):
     ptext = await pg.inner_text('#portrait')
     ok('портрет: первые десять строк — хочет, удерживает, подход, память, голос, доклад, связи, следы; дальше — условия, нити, дело, лихо, когда они есть',
        rows[:10] == ['Хочет', 'Удерживает', 'Подход: работает', 'Подход: не действует', 'Память', 'Говорит', 'Доклад', 'Ладит', 'Не ладит', 'Следы']
-       and all(r in ('При условии', 'Нити', 'Дело', 'Лихо') for r in rows[10:]), rows)
+       and all(r in ('При условии', 'Нити', 'Дело', 'Лихо', 'Сплав', 'Откуда и чей') for r in rows[10:]), rows)
     marks = await n('#portrait .by-trait')
     from_traits = sum(1 for l in pt['traces']['lines'] if l['trait']) + len(pt['threads']) + len(pt['ifs']) + len(pt['deed'])
     ok('портрет: у строки видно, откуда она — от черты (метка с именем) или от признака; ниже — особенное каждой черты с видимостью и действием',
@@ -46,14 +46,28 @@ async def s_natura(br, errs):
     await pg.evaluate("()=>window.__emu.setKnob('natura.portrait.notable', 5)")
     pt2 = await pg.evaluate("()=>window.__emu.portrait()")
     ok('ручка порога действует: при пороге 5 от признаков списков нет — остаётся только то, что дали черты; числа остаются',
-       not any(not x['trait'] for x in pt2['origin']['approach'].values()) and not any(not l['trait'] for l in pt2['traces']['lines'])
+       not any(not x['trait'] for x in pt2['by']['approach'].values()) and not any(not l['trait'] for l in pt2['traces']['lines'])
        and pt2['wants']['dengi'] == pt['wants']['dengi'] and 'как у всех' not in (await pg.inner_text('#portrait')).split('Удерживает')[0], pt2['approach'])
     await pg.evaluate("()=>window.__emu.setKnob('natura.portrait.notable', 2)")
+    ok('портрет: последняя строка — «Откуда и чей»: происхождение с мерой', rows[-1] == 'Откуда и чей' and await n('#origin-name') == 1
+       and 'мера —' in await pg.inner_text('#portrait') and 'откуда:' in await pg.inner_text('#person-view'), rows[-1])
+    await pg.click('#seneschal')
+    sen = await pg.inner_text('#person-view')
+    sp = await pg.evaluate("()=>window.__emu.portrait()")
+    ok('кнопка «Сенешаль»: 48 лет, ядро из трёх черт, свой куст в древе, в портрете совесть и «новое» от ядра', await n('#is-seneschal') == 1 and '48 лет' in sen
+       and all(x in sen for x in ('Золотое правило', 'Крепкая основа', 'Мечта о дороге', 'Мешок Сенешаля')) and await n('#person-view .bush.sen .trait') in (6, 7, 8)
+       and any(x['from'] == 'Золотое правило' for x in sp['by']['holds']['sovest']) and any(x['from'] == 'Мечта о дороге' for x in sp['by']['wants']['novoe'])
+       and await pg.evaluate("()=>document.getElementById('age').disabled") and await pg.inner_text('#seneschal') == 'Обычный человек', await n('#person-view .bush.sen .trait'))
+    await pg.click('#seneschal')
+    ok('вторая кнопка возвращает обычного человека', await n('#is-seneschal') == 0 and await pg.inner_text('#seneschal') == 'Сенешаль' and 'Торгаш' in await pg.inner_text('#person-view'))
     await pg.select_option('#age', '18'); young = await n('#person-view .trait')
     await pg.select_option('#age', '70'); old = await n('#person-view .trait')
     ok('возраст: у старого черт больше, чем у только что повзрослевшего', '70 лет' in await pg.inner_text('#person-view') and old > young, (young, old))
     await pg.select_option('#bag-kind', 'perk')
-    ok('мешок фильтруется по виду: перки', await n('#table-bag tr') == 23)
+    ok('мешок фильтруется по виду: перки — 35 умений людей и 4 умения Сенешаля', await n('#table-bag tr') == 40)
+    await pg.select_option('#bag-kind', 'look')
+    ok('мешок фильтруется по виду: облик — шесть черт', await n('#table-bag tr') == 7)
+    await pg.select_option('#bag-kind', 'perk')
     knobs = await n('#knobs input[type=range]')
     ok('ручки: все ручки раздела natura, изменённых нет', knobs >= 40 and await n('#knobs .knob.changed') == 0, knobs)
     await pg.evaluate("()=>{const el=document.querySelector(\"input[data-knob='natura.lifeSteps']\"); el.value='5'; el.dispatchEvent(new Event('input',{bubbles:true}));}")

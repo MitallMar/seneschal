@@ -6,6 +6,7 @@ import type {
 } from "../data/types";
 import { SIGNS } from "../data/natura";
 import { POLE_RULES, WANTS, HOLDS, APPROACHES, MEM_KEYS, LINK_GROUPS, POLE_PEOPLE, type PoleRule, type MemScale } from "../data/portrait";
+import { ALLOYS, type AlloyDef } from "../data/origins";
 import { BALANCE as B } from "./balance";
 import { round2 } from "./util";
 import type { NaturaPerson } from "./natura";
@@ -33,8 +34,9 @@ export interface Portrait {
   likho: number;                                // прикрытие лиху от пороков и от засидевшегося с нечистой совестью
   likhoYasnost: number;                         // плюс — следы лиха в его сфере ярче: свои люди честного работают на Сенешаля
   notes: { key: TraitNoteKey; from: string; text: string }[]; // фразы автора по полям черт: оговорки, которых нет в ключах
+  alloys: { id: string; name: string; text: string }[]; // сплавы: имя и особенность, когда сошлись все части
   // откуда каждая строка: у чисел — слагаемые, у списков — чей ключ взял верх
-  origin: {
+  by: {
     wants: Record<Want, Part[]>; holds: Record<Hold, Part[]>; sluchay: Part[]; memory: Record<MemScale, Part[]>;
     approach: Partial<Record<Approach, Src>>; memKeys: Partial<Record<MemKey, Src>>; links: Partial<Record<LinkKey, Src>>;
     manners: Src[]; bias: Src | null;
@@ -87,9 +89,24 @@ class Sided<K extends string> {
   }
 }
 
+// Сплавы человека: все части сошлись. Часть дана чертой — она у человека есть; полюсом — он не слабее порога.
+// Сошлись одни признаки — нужны сильные полюса; хотя бы одна часть дана чертой — полюсам хватит заметного.
+export function alloysOf(signs: Record<Sign, number>, traits: BagTrait[] = []): AlloyDef[] {
+  const P = B.natura.portrait, has = (ids: string[] | undefined) => !!ids?.some((id) => traits.some((t) => t.id === id));
+  const value = (pole: string) => signs[pole.slice(0, -1) as Sign] * (pole.endsWith("+") ? 1 : -1);
+  return ALLOYS.filter((a) => {
+    const need = a.parts.some((x) => has(x.traits)) ? P.notable : P.strong;
+    return a.parts.every((x) => has(x.traits) || (!!x.pole && value(x.pole) >= need));
+  });
+}
 // Портрет по признакам и чертам. Черты — в порядке появления у человека: последняя нажита позже всех.
-export function portraitOf(signs: Record<Sign, number>, traits: BagTrait[] = []): Portrait {
+// Особенность сплава ложится поверх всего — как у черты, нажитой последней.
+export function portraitOf(signs: Record<Sign, number>, own: BagTrait[] = []): Portrait {
   const P = B.natura.portrait, poles = polesOf(signs), notable = poles.filter((p) => isNotable(p.v));
+  const alloys = alloysOf(signs, own);
+  const traits: BagTrait[] = [...own, ...alloys.map((a): BagTrait => ({
+    id: a.id, name: `сплав «${a.name}»`, desc: a.text, effect: a.text, kind: "life", vec: {}, rarity: "common", source: [], ...a.c3,
+  }))];
   const zero = <K extends string>(list: { id: K }[]) => Object.fromEntries(list.map((x) => [x.id, 0])) as Record<K, number>;
   const parts = <K extends string>(list: { id: K }[]) => Object.fromEntries(list.map((x) => [x.id, [] as Part[]])) as Record<K, Part[]>;
   const MEM: { id: MemScale }[] = [{ id: "obida" }, { id: "srok" }, { id: "dobro" }];
@@ -129,7 +146,7 @@ export function portraitOf(signs: Record<Sign, number>, traits: BagTrait[] = [])
   const biased = notable.find((p) => p.rule.bias && (!p.rule.biasStrong || isStrong(p.v)));
   let bias: Bias = biased?.rule.bias ?? "bez", biasSrc: Src | null = biased ? { from: biased.name, trait: false } : null, biasRank = -1;
   // особенное черт поверх признаков
-  const top = Number.MAX_SAFE_INTEGER, own: { text: string; src: Src }[] = [];
+  const top = Number.MAX_SAFE_INTEGER, said: { text: string; src: Src }[] = [];
   const ifs: Portrait["ifs"] = [], threads: Portrait["threads"] = [], deed: Portrait["deed"] = [], holder: Portrait["holder"] = [], notes: Portrait["notes"] = [];
   traits.forEach((t, i) => {
     const src: Src = { from: t.name, trait: true }, force = top - traits.length + i;
@@ -142,7 +159,7 @@ export function portraitOf(signs: Record<Sign, number>, traits: BagTrait[] = [])
     memory.put(t.memory?.pomnit, false, force, src); memory.put(t.memory?.proshchaet, true, force, src);
     if (t.approach?.note) approachNotes.push(`${t.name}: ${t.approach.note}`);
     if (t.voice?.note) voiceNotes.push(`${t.name}: ${t.voice.note}`);
-    if (t.voice?.manner) own.push({ text: t.voice.manner, src });
+    if (t.voice?.manner) said.push({ text: t.voice.manner, src });
     // из двух черт с пристрастием — у более редкой, при равной редкости — у нажитой позже; «сильнее любой другой черты» — выше всякой редкости
     const rank = RARITY_RANK[t.rarity] + (t.voice?.top ? Object.keys(RARITY_RANK).length : 0);
     if (t.voice?.bias && rank >= biasRank) { bias = t.voice.bias; biasSrc = src; biasRank = rank; }
@@ -168,13 +185,14 @@ export function portraitOf(signs: Record<Sign, number>, traits: BagTrait[] = [])
     wants: rounded(wants), holds: rounded(holds), holdNotes, sluchay: round2(sluchay),
     approach: { da: approach.side(false, approachOrder), net: approach.side(true, approachOrder), notes: approachNotes },
     memory: { ...rounded(mem), pomnit: memory.side(false, memOrder), proshchaet: memory.side(true, memOrder) },
-    voice: { manners: [...own.map((x) => x.text), ...mannered.map((p) => p.rule.manner!)], bias, biasFrom: biasSrc?.from ?? "", notes: voiceNotes },
+    voice: { manners: [...said.map((x) => x.text), ...mannered.map((p) => p.rule.manner!)], bias, biasFrom: biasSrc?.from ?? "", notes: voiceNotes },
     links: { ladit: links.side(false, linkOrder), neLadit: links.side(true, linkOrder), start: round2(start), notes: linkNotes },
     traces: { ten: round2(ten), tenSfery: round2(tenSfery), yasnost: round2(yasnost), razgovor: round2(razgovor), chuzhie, lines },
     ifs, threads, deed, holder, likho: round2(likho), likhoYasnost: round2(likhoYasnost), notes,
-    origin: {
+    alloys: alloys.map((a) => ({ id: a.id, name: a.name, text: a.text })),
+    by: {
       ...from, approach: approach.origin(), memKeys: memory.origin(), links: links.origin(),
-      manners: [...own.map((x) => x.src), ...mannered.map((p): Src => ({ from: p.name, trait: false }))], bias: biasSrc,
+      manners: [...said.map((x) => x.src), ...mannered.map((p): Src => ({ from: p.name, trait: false }))], bias: biasSrc,
     },
   };
 }
