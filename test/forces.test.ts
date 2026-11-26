@@ -64,7 +64,7 @@ test("повестка: пять строк, забота — по срокам 
     for (const m of f.moves) for (const k of m.vid) assert.ok(a.sredstva.includes(k), `${f.id} «${m.name}»: вида ${k} нет в средствах`);
   }
   assert.deepEqual(forceById("svetlost").agenda.sredstva, ["trebovanie", "proverka", "milost", "udar", "verbovka", "prislat", "otvet"]);
-  // у Ратши строки «Средства» в документе нет — есть четыре пути; средства собраны из его ходов (вопрос автору)
+  // у Ратши ещё четыре пути к цели; средства — по видам его двенадцати ходов (sily.md, 15.2)
   const r = forceById("ratsha").agenda;
   assert.equal(r.puti?.length, 4);
   assert.deepEqual([...r.sredstva].sort(), [...new Set(forceById("ratsha").moves.flatMap((m) => m.vid))].sort());
@@ -121,7 +121,7 @@ test("ходы: по 12 у силы; вид — из словаря, срок �
       const at = `${f.id} «${m.name}»`;
       assert.ok(m.name && m.povod && m.text && m.kto.length, at);
       for (const k of m.vid) assert.ok(KINDS.includes(k), `${at}: вид ${k}`);
-      assert.ok(m.vid.length <= 2 && (m.vid.length > 0 || m.vidNote), `${at}: вид`);
+      assert.ok(m.vid.length >= 1 && m.vid.length <= 2, `${at}: вид`);
       assert.ok(m.when.length > 0 && uniq(m.when) && m.when.every((w) => CARD_WHEN[w]), `${at}: срок`);
       if (m.when.length > 1) assert.ok(!m.when.includes("lyuboy"), `${at}: «в любой месяц» рядом со сроком`);
       if (m.stupen) {
@@ -137,8 +137,9 @@ test("ходы: по 12 у силы; вид — из словаря, срок �
       if (m.openNote) assert.ok(m.open, at);
     }
   }
-  // вид не из словаря — только у «Смотра по ледоходу»: в документе он «календарный» (вопрос автору)
-  assert.deepEqual(all.filter((m) => !m.vid.length).map((m) => [m.id, m.vidNote]), [["smotr_po_ledokhodu", "календарный"]]);
+  // «Смотр по ледоходу» — проверка: «календарный» — это срок, а не вид (решение автора 26.11.2026)
+  const smotr = forceById("svetlost").moves[8];
+  assert.deepEqual([smotr.id, smotr.vid, smotr.vidNote, smotr.when], ["smotr_po_ledokhodu", ["proverka"], undefined, ["ledokhod"]]);
   // два вида — только у «Отсрочки у сборщицы»: милость или ответ
   assert.deepEqual(all.filter((m) => m.vid.length > 1).map((m) => [m.id, m.vid]), [["otsrochka_u_sborshchitsy", ["milost", "otvet"]]]);
   // палата ходит больше открыто, Ратша — скрыто
@@ -162,6 +163,10 @@ test("опоры: у «его светлости» три, у Ратши — г�
   const verdict = forceById("svetlost").anchors[0];
   assert.deepEqual([verdict.srok, verdict.chasto, verdict.outcomes.length], ["sanny_put", "каждый год", 6]);
   assert.equal(forceById("svetlost").moves.find((m) => m.opora)?.id, "revizor");
+  // новое трёхлетье воеводы — опора из таблицы раздела 9: весна третьего года, раз в акт
+  const term = forceById("svetlost").anchors[2];
+  assert.deepEqual([term.srok, term.chasto], ["ledokhod", "раз в акт"]);
+  assert.match(term.srokNote, /^весной третьего года/);
 });
 
 test("где входит Сенешаль, тайны и ссылки: дела — из каталога, тайны — из словаря, нити и карточки существуют", () => {
