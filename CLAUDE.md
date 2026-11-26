@@ -49,6 +49,7 @@
 | Имена: мешки, генератор имени, тёзки, склад имён | `imena.md` | `src/data/names.ts`, `src/sim/names.ts`, `src/data/core.ts`, `test/e2e/common.py` | «Имена» |
 | Колода событий: карточка, первая пачка, слова «кому по душе» → метки словаря | `koloda.md` | `src/data/deck.ts`, `src/data/portrait.ts` | «Колода событий» |
 | Каталог нитей: запись нити, ступени и следы, развязки, переходы и карта переходов | `niti.md` | `src/data/threads.ts`, `src/data/portrait.ts` | «Каталог нитей» |
+| Внешние силы: общий словарь, повестка и шкалы, представители, ходы и опоры, соседи-сторона, набросок гильдии | `sily.md` | `src/data/forces.ts`, `src/data/deck.ts`, `src/data/portrait.ts` | «Внешние силы» |
 | Эмулятор натуры: графики, таблицы, панель ручек | — | `src/ui/natura/` (панели `view-*.ts`, `app.ts`, `main.ts`), `src/ui/natura.html`, `src/ui/natura.css`, `src/sim/natura-report.ts` | «Эмулятор натуры» |
 | Прогон без экрана, сводка по партии | — | `tools/headless.ts` | «Прогон без экрана, сводка по партии» |
 | Сборка страниц (каждая — один HTML) | — | `tools/build.mjs` | «Сборка страниц» |
