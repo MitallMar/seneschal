@@ -187,17 +187,16 @@ test("где входит Сенешаль, тайны и ссылки: дела
   assert.deepEqual(dela("ratsha"), ["v_stavku", "v_vadelu", "vyezdnoy_sud"]);
 });
 
-test("соседи — сторона: доверие словами со стартом, желания и встречные требования, карточки колоды и названия для Ч6, жрец союза", () => {
+test("соседи — сторона: доверие словами со стартом, желания и встречные требования, карточки колоды и жрец союза", () => {
   assert.deepEqual([NEIGHBORS.id, NEIGHBORS.act], ["sosedi", 1]);
   assert.deepEqual(NEIGHBORS.doverie.steps, ["косятся", "терпят", "ладят", "заодно"]);
   assert.ok(NEIGHBORS.doverie.steps.includes(NEIGHBORS.doverie.start));
   assert.equal(NEIGHBORS.doverie.start, "терпят");
   assert.deepEqual([NEIGHBORS.marki.length, NEIGHBORS.khotyat.length, NEIGHBORS.vstrechnye.length], [5, 4, 4]);
-  assert.deepEqual(NEIGHBORS.cards, [1, 2, 8, 40]);
+  // четыре карточки первой пачки и восемь второй (Ч6, пачка 6.6) — вся тема «соседи по Талице»
+  assert.deepEqual(NEIGHBORS.cards, [1, 2, 8, 40, 136, 137, 138, 139, 140, 141, 142, 143]);
   for (const n of NEIGHBORS.cards) assert.ok(CARDS.includes(n), `карточка ${n}`);
-  assert.equal(NEIGHBORS.budut.length, 8);
-  // будущих карточек в первой пачке ещё нет
-  assert.deepEqual(NEIGHBORS.budut.filter((name) => DECK.some((c) => c.name === name)), []);
+  assert.deepEqual(DECK.filter((c) => c.theme === "sosedi").map((c) => c.n), NEIGHBORS.cards.slice(4));
   assert.match(NEIGHBORS.zhrets, /засчитывается в условие «в храме есть жрец»/);
   // стороне не положены повестка, ходы и опоры
   assert.ok(!("moves" in NEIGHBORS) && !("agenda" in NEIGHBORS) && !("anchors" in NEIGHBORS));

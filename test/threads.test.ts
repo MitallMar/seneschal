@@ -144,16 +144,28 @@ test("карточки-ступени: с номером — карточка к
   for (const t of THREAD_DEFS) {
     assert.ok(t.cards.length >= 6, `${t.id}: карточек ${t.cards.length}`);
     for (const c of t.cards) {
-      const byName = DECK.find((d) => norm(d.name) === norm(c.name));
+      // одно название у двух нитей: карточка-ступень другой нити — не эта карточка («Соседка косится» — 126, ступень «метки», а не «ребёнка на стороне»)
+      const mine = (d: (typeof DECK)[number]) => !d.thread || d.thread.nit === t.id || d.thread.ili === t.id;
+      const byName = DECK.find((d) => norm(d.name) === norm(c.name) && mine(d));
       if (c.card) assert.equal(DECK.find((d) => d.n === c.card)?.id, byName?.id, `${t.id}: «${c.name}» (${c.card}) — в колоде под этим номером другая карточка`);
       else assert.equal(byName, undefined, `${t.id}: «${c.name}» есть в колоде под № ${byName?.n} — нужен номер`);
       if (c.obrazets) assert.ok(DECK.some((d) => d.n === c.obrazets), `${t.id}: образец ${c.obrazets}`);
       if (c.tekst) assert.ok(c.tekst >= 1 && c.tekst <= 112, `${t.id}: текст мира № ${c.tekst}`);
     }
   }
-  const linked = THREAD_DEFS.flatMap((t) => t.cards.filter((c) => c.card).map((c) => [t.id, c.card]));
-  assert.deepEqual(linked, [["dolg", 25], ["dolg", 30], ["pyanstvo", 19], ["metka", 35], ["metka", 32], ["metka", 14], ["uyti", 7], ["nadel", 11], ["nadel", 6],
-    ["svadba", 30], ["svadba", 32], ["svadba", 31], ["vernulsya", 6]]);
+  const linked = THREAD_DEFS.flatMap((t) => t.cards.filter((c) => c.card).map((c): [string, number] => [t.id, c.card!]));
+  // первая пачка — 13 ссылок; вторая (И32) — 29: ступени «денег», «пьянства», «любви», «прошлого» и «метки», по одной у «тихого саботажа» и «свадьбы»
+  assert.deepEqual(linked.filter(([, n]) => n <= 40), [["dolg", 25], ["dolg", 30], ["pyanstvo", 19], ["metka", 35], ["metka", 32], ["metka", 14], ["uyti", 7],
+    ["nadel", 11], ["nadel", 6], ["svadba", 30], ["svadba", 32], ["svadba", 31], ["vernulsya", 6]]);
+  const second = (id: string) => linked.filter(([t, n]) => t === id && n > 40).map(([, n]) => n);
+  assert.deepEqual([second("dengi"), second("pyanstvo"), second("lyubov"), second("proshloe")], [[76, 77, 78, 79, 80], [81, 82, 83, 84], [85, 86, 87, 88, 89], [90, 91, 92, 93, 94]]);
+  assert.deepEqual([second("sabotazh"), second("metka"), second("svadba")], [[67], [123, 124, 125, 126, 127, 128, 129, 130], [138]]);
+  assert.equal(linked.length, 42);
+  // карточка-ступень второй пачки стоит на ступени или развязке своей нити
+  for (const [id, n] of linked.filter(([, k]) => k > 40)) {
+    const card = DECK.find((d) => d.n === n)!;
+    assert.ok(card.thread && (card.thread.nit === id || card.thread.ili === id), `${id}: карточка ${n} не называет нить`);
+  }
   assert.deepEqual(THREAD_DEFS.flatMap((t) => t.cards.filter((c) => c.obrazets).map((c) => [t.id, c.obrazets])), [["dengi", 26], ["posuly", 3]]);
 });
 
