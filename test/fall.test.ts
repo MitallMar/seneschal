@@ -3,9 +3,10 @@
 import { test, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { AXES } from "../src/data/core";
+import { AXES, ROSTER } from "../src/data/core";
 import { CRISES, CRISIS_SIDES, STIR_SIDES, RETINUE, BARONS } from "../src/data/fall";
 import { NATURES } from "../src/data/natura";
+import { NAMES_BASE, RESERVED_NAMES } from "../src/data/names";
 import { COURSES } from "../src/data/economy";
 import { BALANCE, resetBalance, setAt } from "../src/sim/balance";
 import { newWorld } from "../src/sim/council/generate";
@@ -195,8 +196,15 @@ test("бароны: натура и склонности заданы данны
     assert.deepEqual(Object.keys(b.star).sort(), [...AXES].sort());
     assert.ok(AXES.every((a) => Number.isInteger(b.star[a]) && b.star[a] >= 0 && b.star[a] <= 10), `${b.name}: склонности в шкале звезды`);
   }
+  // имена свиты и второго барона — из основы мешков, по полу, без тёзок между собой и с людьми прототипа (И26а); Ратша — имя сюжета
+  const fromBag = [...RETINUE, BARONS[1]];
+  for (const p of fromBag) assert.ok(NAMES_BASE[p.female ? "f" : "m"].includes(p.name), `${p.name}: имя не из основы`);
+  const all = [...fromBag.map((p) => p.name), ...ROSTER.map((r) => r.name)];
+  assert.equal(new Set(all).size, all.length, "тёзки среди свиты, барона и людей прототипа");
+  assert.deepEqual(RETINUE.map((r) => r.name), ["Корден", "Мадра", "Валдер", "Гертина", "Павен", "Селвея"]);
+  assert.ok(RESERVED_NAMES.includes(BARONS[0].name));
   const course = (i: number) => baronCourse({ ...BARONS[i], def: BARONS[i].id });
-  assert.deepEqual([BARONS[0].name, course(0), BARONS[1].name, course(1)], ["Ратша", "kopim", "Доброгнева", "dorogi"]);
+  assert.deepEqual([BARONS[0].name, course(0), BARONS[1].name, course(1)], ["Ратша", "kopim", "Белисса", "dorogi"]);
   // один и тот же барон в любой партии: мешок черт и семя на него не влияют
   const a = fallNow(rich(calm()), "проверка").baron, b = fallNow(rich(newWorld("другое семя")), "проверка").baron;
   assert.deepEqual([a.nature, a.star], [b.nature, b.star]);
