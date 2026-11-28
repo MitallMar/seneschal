@@ -221,11 +221,14 @@ test("исходы второй пачки: шкалы сил словом, до
       if (o.zhetonHod) assert.ok(o.zhetonHod.zheton && ["sorvan", "sdvinut", "ugroza", "tsel"].includes(o.zhetonHod.chto), `${c.id}: жетон`);
     }
   }
-  assert.deepEqual(withOut((o) => o.shkala), ["95.1", "96.1", "96.4", "97.1", "97.4", "100.1", "100.4", "101.3", "101.4", "102.1", "104.3", "105.1", "118.1", "118.3", "141.1", "141.3", "141.4"]);
+  // 50.4 «палата присматривается» и 103.4 «недоимка в книгу смотра» записаны шкалой при разметке исходов словами (И33)
+  assert.deepEqual(withOut((o) => o.shkala),
+    ["50.4", "95.1", "96.1", "96.4", "97.1", "97.4", "100.1", "100.4", "101.3", "101.4", "102.1", "103.4", "104.3", "105.1", "118.1", "118.3", "141.1", "141.3", "141.4"]);
   assert.deepEqual(withOut((o) => o.doverie), ["54.4", "83.3", "83.4", "102.4", "136.1", "137.1", "137.3", "138.1", "138.2", "138.3", "139.2", "140.1", "140.3", "141.1", "141.2", "141.3", "142.1", "142.4", "143.1", "143.2"]);
   assert.deepEqual(withOut((o) => o.tyagota), ["48.1", "58.1", "78.4", "95.2", "97.3", "100.3", "102.2", "105.2", "105.4", "118.2", "129.3"]);
   assert.deepEqual(withOut((o) => o.zheton), ["10.1", "53.4", "73.1"]);
-  assert.deepEqual(withOut((o) => o.zhetonHod), ["54.2", "70.4", "79.3", "96.4", "101.1", "103.3"]);
+  // пять из одиннадцати — из исходов словами (И33): 57.2 и 57.4 «к смотру опоздали», 66.3 «подать в срок», 101.2 «подать мёдом», 103.4 «недоимка»
+  assert.deepEqual(withOut((o) => o.zhetonHod), ["54.2", "57.2", "57.4", "66.3", "70.4", "79.3", "96.4", "101.1", "101.2", "103.3", "103.4"]);
   // отступное (118): акт идёт дальше «под чужой рукой» по уговору — против совести Сенешаля
   assert.deepEqual(withOut((o) => o.podChuzhoyRukoy), ["118.2"]);
   assert.deepEqual(cardById("sosed_v_gostyakh").variants.map((v) => v.outcome.shkala), [[{ sila: "ratsha", scale: "napor", v: -1 }], undefined, [{ sila: "ratsha", scale: "napor", v: 1 }], undefined]);
@@ -237,7 +240,7 @@ test("исходы второй пачки: шкалы сил словом, до
   // серебро второй пачки — словами «трата», «большая трата», «приход»
   const serebro = (k: number) => SECOND.reduce((s, c) => s + c.variants.filter((v) => v.outcome.serebro === k).length, 0);
   assert.deepEqual([serebro(-1), serebro(-2), serebro(1)], [28, 6, 5]);
-  assert.deepEqual(withOut((o) => (o.dvory && o.dvory > 0 ? o.dvory : undefined)).filter((x) => +x.split(".")[0] > 40), ["47.1", "88.1", "138.1", "142.2"]);
+  assert.deepEqual(withOut((o) => (o.dvory && o.dvory > 0 ? o.dvory : undefined)).filter((x) => +x.split(".")[0] > 40), ["47.1", "88.1", "88.2", "88.4", "138.1", "142.2"]);
   assert.deepEqual(withOut((o) => o.trait).filter((x) => +x.split(".")[0] > 40), ["91.1", "93.2"]);
 });
 
@@ -273,8 +276,8 @@ test("следы: канал из словаря и текст; во второ�
   }
   const traces = (list: DeckCard[]) => list.reduce((s, c) => s + c.traces.length, 0);
   assert.deepEqual([traces(FIRST), traces(SECOND)], [29, 165]);
-  // след без канала — карточка его не называет: гонец у ворот, жетон на дорожке, приговор у храма
-  assert.deepEqual(DECK.flatMap((c) => c.traces.filter((t) => t.gde.length === 0).map(() => c.n)), [48, 92, 95, 96, 101, 106, 107, 108, 109, 109, 111, 119, 122]);
+  // след без канала — карточка его не называет: четырём канал дан по тексту строки (И33), два — оговорки, семь — дело само на виду
+  assert.deepEqual(DECK.flatMap((c) => c.traces.filter((t) => t.gde.length === 0).map(() => c.n)), [92, 95, 96, 101, 108, 109, 111, 119, 122]);
   assert.deepEqual(cardById("nedostacha_na_myshey").traces, [{ gde: ["vedomost"], text: "мелкая недостача", yasnost: "smutno", note: "видят ясно «Глаз-алмаз» и «Чует ложь»" }]);
   assert.deepEqual(cardById("muzh_vernulsya_ranshe").traces, [{ gde: ["zhaloba"], text: "жалоба у ворот", yasnost: "yasno" }, { gde: ["molva"], text: "молва громкая", yasnost: "gromko" }]);
   assert.deepEqual(cardById("sveli_koney_u_perevoza").traces[2], { gde: ["ushi"], text: "у служилого свежие деньги", note: "если сводили свои" });
