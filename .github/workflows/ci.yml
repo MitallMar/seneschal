@@ -1,11 +1,15 @@
-# Проверка на каждый push в main и на каждый pull request, публикация на GitHub Pages из main (по умолчанию выключена).
+# Проверка на каждый push в main и на каждый pull request, где менялся не только текст; публикация на GitHub Pages из main (по умолчанию выключена).
 # Что делает и как читать результат: docs/TESTING.md, раздел «Проверка на GitHub (CI)».
 name: Проверка и публикация
 
+# Правка одних документов (docs/ и любые .md) проверку не запускает: игра от неё не меняется, тесты документов не читают.
+# Тронут хоть один другой файл — проверка идёт целиком. Запустить руками можно всегда: Actions → Run workflow.
 on:
   push:
     branches: [main]
+    paths-ignore: ['docs/**', '**/*.md']
   pull_request:
+    paths-ignore: ['docs/**', '**/*.md']
   workflow_dispatch:
 
 permissions:
