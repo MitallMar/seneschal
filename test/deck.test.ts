@@ -64,8 +64,10 @@ test("источник: как есть, переносом или по доку
     if (c.source.how === "po_zamyslu") assert.ok(c.source.po, `${c.id}: по какому документу`);
   }
   for (const c of FIRST) assert.ok(c.source.texts.length >= 1 && (c.source.how === "perenos") === !!c.source.from, c.id);
-  // у двух переносов второй пачки карточка не называет, откуда
-  assert.deepEqual(nums(DECK.filter((c) => c.source.how === "perenos" && !c.source.from)), [47, 116]);
+  // у каждого переноса сказано, откуда (ответ автора 28.11.2026: 47 — из Гарей, 116 — с Сороки)
+  assert.deepEqual(nums(DECK.filter((c) => (c.source.how === "perenos") !== !!c.source.from)), []);
+  assert.deepEqual([cardById("izba_do_razbora").source, cardById("smanit_dvor").source],
+    [{ how: "perenos", from: "из Гарей, за Холодной", texts: [23] }, { how: "perenos", from: "с Сороки", texts: [56] }]);
   assert.deepEqual(cardById("vozhak_u_ostrozhka").source, { how: "perenos", from: "с Крайнего", texts: [75, 76, 77] });
   assert.deepEqual(cardById("tiun_nad_starostami").source, { how: "po_zamyslu", texts: [98], po: "по koncept-3.md, 9.1; тиун владетеля —" });
 });
@@ -141,16 +143,16 @@ test("варианты: у карточки три-четыре, в первой
   assert.deepEqual([total(FIRST), total(SECOND)], [124, 348]);
   // без вариантов — скрытые ходы, «Ловушка с долей» (её открытая сторона — карточка 48 «Доля») и четыре опоры
   assert.deepEqual(nums(DECK.filter((c) => c.variants.length === 0)), [98, 99, 107, 108, 109, 110, 111, 112, 113, 114, 115, 117, 119, 120, 121, 122]);
-  // вопрос автору (koloda.md, раздел 8): у «Съездить самому» в «Двух докладах» слов «кому по душе» нет
-  const noWords = DECK.flatMap((c) => c.variants.filter((v) => v.words.length === 0).map((v) => [c.n, v.text]));
-  assert.deepEqual(noWords, [[74, "Съездить самому"]]);
+  // вариантов без метки в колоде нет: «Съездить самому» в «Двух докладах» — по душе любопытным (ответ автора 28.11.2026)
+  assert.deepEqual(DECK.flatMap((c) => c.variants.filter((v) => v.words.length === 0 || v.likes.length === 0).map((v) => [c.n, v.text])), []);
+  assert.deepEqual(cardById("dva_doklada").variants[3].likes, ["lyubopytstvo+"]);
   for (const c of DECK) {
     if (noVariants(c)) { assert.equal(c.variants.length, 0, `${c.id}: варианты у половины карточки`); continue; }
     assert.ok(c.variants.length >= 3 && c.variants.length <= 4, `${c.id}: вариантов ${c.variants.length}`);
     if (c.n > 40) assert.equal(c.variants.length, 4, `${c.id}: во второй пачке вариантов четыре`);
     for (const v of c.variants) {
       assert.ok(v.text && /^[А-ЯЁ«]/.test(v.text), `${c.id}: вариант без текста`);
-      assert.ok((v.likes.length >= 1 || (c.n === 74 && v.words.length === 0)) && v.likes.every((k) => LIKES.includes(k)), `${c.id}: «${v.text}» — метки ${v.likes.join(", ") || "нет"}`);
+      assert.ok(v.likes.length >= 1 && v.likes.every((k) => LIKES.includes(k)), `${c.id}: «${v.text}» — метки ${v.likes.join(", ") || "нет"}`);
       assert.ok(v.outcome.text, `${c.id}: «${v.text}» — исход пуст`);
       assert.deepEqual(v.likes, [...new Set(v.words.flatMap((x) => LIKE_WORDS.find((q) => q.word === x)!.likes))], `${c.id}: метки — по таблице слов`);
     }
@@ -256,8 +258,9 @@ test("лихо: у шести карточек первой пачки из likh
   assert.deepEqual(likho("skupshchik_prosit_mesto_u_perevoza"), [1, 0, 0, 0]);
   assert.deepEqual(likho("oblava_v_korchme_a_tam_pusto"), [0, 0, -1, 1]);
   assert.deepEqual(likho("dolya"), [0, 0, -1, 0]);
-  // «Приписка»: посадить пришлых без отбора — «лихо» словом варианта
+  // «Приписка»: посадить пришлых без отбора — лихо растёт (приём пришлых без устройства, likho.md, 3); избы «до разбора» — «дальше» на карточку 47
   assert.deepEqual(likho("pripiska"), [0, 0, 1, 0]);
+  assert.deepEqual(cardById("pripiska").dalshe.map((d) => d.card), ["revizor", "izba_do_razbora"]);
 });
 
 test("следы: канал из словаря и текст; во второй пачке — ещё ясность и оговорка, канал назван не у всех", () => {
@@ -306,14 +309,16 @@ test("вторая пачка: карточки-ступени стоят на �
   // поле «Повод»: нить и ступень по каталогу нитей (пачки 6.3 и 6.5), «Согласился на совете» — ступень «тихого саботажа», «Свадьба через межу» — «любовь» или «свадьба»
   const steps = SECOND.filter((c) => c.thread).map((c) => `${c.n} ${c.thread!.nit}${c.thread!.step ? ` «${c.thread!.step}»` : ""}${c.thread!.ili ? ` или ${c.thread!.ili}` : ""}`);
   assert.deepEqual(steps, [
-    "67 sabotazh", "76 dengi «соблазн»", "77 dengi «первая кража»", "78 dengi «привычка»", "79 dengi «не остановиться»", "80 dengi «не остановиться»",
+    "67 sabotazh «продавили»", "76 dengi «соблазн»", "77 dengi «первая кража»", "78 dengi «привычка»", "79 dengi «не остановиться»", "80 dengi «не остановиться»",
     "81 pyanstvo «чарка»", "82 pyanstvo «запой»", "83 pyanstvo «провал»", "84 pyanstvo «под откос»",
     "85 lyubov «приглянулись»", "86 lyubov «встречи»", "87 lyubov «подарки и просьбы»", "88 lyubov «подарки и просьбы»", "89 lyubov «огласка»",
     "90 proshloe «тихо живёт»", "91 proshloe «весть»", "92 proshloe «пришли»", "93 proshloe «узнали»", "94 proshloe «узнали»",
     "123 metka «смотр»", "124 metka «прячут»", "125 metka «прячут»", "126 metka «кто-то знает»", "127 metka «кто-то знает»", "128 metka или svadba",
     "129 metka «смотр»", "130 metka «записан»", "138 lyubov или svadba",
   ]);
-  for (const c of SECOND.filter((x) => x.thread?.step)) assert.match(c.povod ?? "", /^Нить «/, `${c.id}: нить и ступень стоят в поводе`);
+  // у 67 ступень названа в строке источника: «ступень „Продавили“ нити „тихий саботаж“»
+  for (const c of SECOND.filter((x) => x.thread?.step && x.n !== 67)) assert.match(c.povod ?? "", /^Нить «/, `${c.id}: нить и ступень стоят в поводе`);
+  assert.match(cardById("soglasilsya_na_sovete").source.po!, /^ступень «Продавили» нити «тихий саботаж»/);
   assert.deepEqual(SECOND.filter((c) => c.thread?.vetv).map((c) => [c.n, c.thread!.vetv]), [[91, "лихой"], [92, "беглый"], [93, "лучшие дни"], [94, "лучшие дни"], [125, "своя метка"]]);
   // «дальше» на карточку, которой нет, — списком (koloda.md, раздел 8)
   assert.deepEqual(SECOND.flatMap((c) => c.dalshe.filter((d) => d.budet).map((d) => [c.n, d.budet])), [
@@ -350,8 +355,9 @@ test("поле «Сила»: все 24 хода сил есть в колоде 
     }
   }
   assert.deepEqual(nums(DECK.filter((c) => c.kind === "khod" && !c.hod!.open)), [98, 99, 107, 108, 109, 110, 111, 112, 113, 114, 115]);
-  // «исполнения» нет только у «Сманить двор»: карточка его не пишет
-  assert.deepEqual(nums(DECK.filter((c) => c.kind === "khod" && !c.ispolnenie)), [116]);
+  // «исполнение» есть у каждого хода; у «Сманить двор» сманивает свояк двора за межой (ответ автора 28.11.2026)
+  assert.deepEqual(nums(DECK.filter((c) => c.kind === "khod" && !c.ispolnenie)), []);
+  assert.match(cardById("smanit_dvor").ispolnenie!, /^Сманивает свояк двора за межой/);
   // открытая сторона скрытого хода — другая карточка: «Скупить долги» — 45, «Ловушка с долей» — 48; та знает свою силу и номер хода
   assert.deepEqual(DECK.filter((c) => c.hod?.otkrytaya).map((c) => [c.n, c.hod!.otkrytaya]), [[110, "zaimodavets_na_osennem_torge"], [117, "dolya"]]);
   for (const c of DECK.filter((x) => x.hod?.otkrytaya)) assert.deepEqual([cardById(c.hod!.otkrytaya!).sila!.sila, cardById(c.hod!.otkrytaya!).sila!.hod], [c.sila!.sila, c.sila!.hod]);

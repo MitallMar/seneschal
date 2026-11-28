@@ -144,9 +144,7 @@ test("карточки-ступени: с номером — карточка к
   for (const t of THREAD_DEFS) {
     assert.ok(t.cards.length >= 6, `${t.id}: карточек ${t.cards.length}`);
     for (const c of t.cards) {
-      // одно название у двух нитей: карточка-ступень другой нити — не эта карточка («Соседка косится» — 126, ступень «метки», а не «ребёнка на стороне»)
-      const mine = (d: (typeof DECK)[number]) => !d.thread || d.thread.nit === t.id || d.thread.ili === t.id;
-      const byName = DECK.find((d) => norm(d.name) === norm(c.name) && mine(d));
+      const byName = DECK.find((d) => norm(d.name) === norm(c.name));
       if (c.card) assert.equal(DECK.find((d) => d.n === c.card)?.id, byName?.id, `${t.id}: «${c.name}» (${c.card}) — в колоде под этим номером другая карточка`);
       else assert.equal(byName, undefined, `${t.id}: «${c.name}» есть в колоде под № ${byName?.n} — нужен номер`);
       if (c.obrazets) assert.ok(DECK.some((d) => d.n === c.obrazets), `${t.id}: образец ${c.obrazets}`);
@@ -166,6 +164,9 @@ test("карточки-ступени: с номером — карточка к
     const card = DECK.find((d) => d.n === n)!;
     assert.ok(card.thread && (card.thread.nit === id || card.thread.ili === id), `${id}: карточка ${n} не называет нить`);
   }
+  // «Соседка косится» — карточка 126, ступень «метки»; у «ребёнка на стороне» будущая карточка зовётся «Соседка знает» (ответ автора 28.11.2026)
+  const names = (id: string) => threadDef(id as never).cards.map((c) => c.name);
+  assert.ok(names("krov").includes("Соседка знает") && !names("krov").includes("Соседка косится") && names("metka").includes("Соседка косится"));
   assert.deepEqual(THREAD_DEFS.flatMap((t) => t.cards.filter((c) => c.obrazets).map((c) => [t.id, c.obrazets])), [["dengi", 26], ["posuly", 3]]);
 });
 
