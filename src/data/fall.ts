@@ -93,7 +93,7 @@ export const LEVY: { id: string; title: string; text: string; accepts: Category[
 
 // Новый барон. Первый — проситель: соседний род своего добился. Если проситель уже пал (опозорен) — человек двора.
 // Натура (словом) и склонности заданы здесь, под образ: генератор натуры барона не растит — правка мешка черт ход партий не меняет.
-// По склонностям барон выбирает курс: Ратша берёт с земли своё («Копим к подати»), Доброгнева наводит порядок двора («Порядок на дорогах»).
+// По склонностям барон выбирает курс: Ратша берёт с земли своё («Копим к подати»), Белисса наводит порядок двора («Порядок на дорогах»).
 export interface BaronEntry { id: string; name: string; female: boolean; age: number; who: string; nature: string; star: Star }
 export const BARONS: BaronEntry[] = [
   {
@@ -101,20 +101,20 @@ export const BARONS: BaronEntry[] = [
     nature: "Властолюбец", star: { dolg: 5, vygoda: 8, zabota: 2, derzost: 6, obychai: 3 },
   },
   {
-    id: "dvor", name: "Доброгнева", female: true, age: 51, who: "человек двора",
+    id: "dvor", name: "Белисса", female: true, age: 51, who: "человек двора",
     nature: "Служилый", star: { dolg: 8, vygoda: 3, zabota: 3, derzost: 5, obychai: 6 },
   },
 ];
 
-// Свита барона: пришлые, которых он ставит на должности. Черты — id из TRAITS.
+// Свита барона: пришлые, которых он ставит на должности. Черты — id из TRAITS. Имена свиты и второго барона — из основы мешков (src/data/names.ts), подобраны вручную (И26а).
 export interface RetinueEntry { name: string; female: boolean; age: number; trait: string }
 export const RETINUE: RetinueEntry[] = [
-  { name: "Жирослав", female: false, age: 39, trait: "skupoy" },
-  { name: "Малуша", female: true, age: 33, trait: "khitry" },
-  { name: "Вышата", female: false, age: 47, trait: "upryamy" },
-  { name: "Горислава", female: true, age: 42, trait: "chestolyubivy" },
-  { name: "Путята", female: false, age: 29, trait: "goryachiy" },
-  { name: "Звенислава", female: true, age: 55, trait: "ostorozhny" },
+  { name: "Корден", female: false, age: 39, trait: "skupoy" },
+  { name: "Мадра", female: true, age: 33, trait: "khitry" },
+  { name: "Валдер", female: false, age: 47, trait: "upryamy" },
+  { name: "Гертина", female: true, age: 42, trait: "chestolyubivy" },
+  { name: "Павен", female: false, age: 29, trait: "goryachiy" },
+  { name: "Селвея", female: true, age: 55, trait: "ostorozhny" },
 ];
 
 // Как барон пал: путь двора (подать и указы), путь земли (кризисы сторон), броня (лес выжил его сам), прыжок (остаток забрал конец акта).
